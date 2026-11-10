@@ -138,7 +138,7 @@ $router->get('/', static function (): void {
     $featuredProperties=$pdo->query("SELECT p.*,(SELECT pm.file_path FROM property_media pm WHERE pm.property_id=p.id ORDER BY pm.is_cover DESC,pm.sort_order,pm.id LIMIT 1) AS cover_image FROM properties p WHERE p.status='published' ORDER BY p.created_at DESC,p.id DESC LIMIT 8")->fetchAll();
     $latestProperties=$pdo->query("SELECT p.*,(SELECT pm.file_path FROM property_media pm WHERE pm.property_id=p.id ORDER BY pm.is_cover DESC,pm.sort_order,pm.id LIMIT 1) AS cover_image FROM properties p WHERE p.status='published' ORDER BY p.id DESC LIMIT 4")->fetchAll();
     $categories=$pdo->query('SELECT id,name,slug FROM property_categories WHERE is_active=1 ORDER BY sort_order,name LIMIT 8')->fetchAll();
-    $homeSections=[];foreach($pdo->query('SELECT * FROM homepage_sections WHERE is_active=1 ORDER BY sort_order,id')->fetchAll() as $section){$homeSections[$section['section_key']]=$section;}
+    $homeSections=[];foreach($pdo->query('SELECT * FROM homepage_sections ORDER BY sort_order,id')->fetchAll() as $section){$homeSections[$section['section_key']]=$section;}
     $locationCountries=$pdo->query("SELECT id,name FROM locations WHERE location_type='country' AND is_active=1 ORDER BY sort_order,name")->fetchAll();
     require APP_ROOT.'/views/site/landing.php';
 });
