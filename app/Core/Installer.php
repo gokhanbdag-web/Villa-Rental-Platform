@@ -10,9 +10,8 @@ final class Installer
 {
     public static function isInstalled(): bool
     {
-        $config = dirname(__DIR__, 2) . '/config/config.php';
-        $lock = dirname(__DIR__, 2) . '/storage/installed.lock';
-        return is_file($config) && is_file($lock);
+        $root = dirname(__DIR__, 2);
+        return is_file($root . '/config/config.php') && is_file($root . '/storage/installed.lock');
     }
 
     public static function connect(array $db): PDO
@@ -29,7 +28,7 @@ final class Installer
     public static function install(array $input): void
     {
         if (self::isInstalled()) throw new \RuntimeException('Sistem zaten kurulu.');
-        $mode = $input['mode'] ?? '';
+        $mode = (string)($input['mode'] ?? '');
         if (!in_array($mode, ['single_vendor', 'multi_vendor'], true)) throw new \InvalidArgumentException('İşletme modeli geçersiz.');
         $username = trim((string)($input['admin_username'] ?? ''));
         $email = filter_var(trim((string)($input['admin_email'] ?? '')), FILTER_VALIDATE_EMAIL);
@@ -48,42 +47,59 @@ final class Installer
             'user' => trim((string)($input['db_user'] ?? '')),
             'password' => (string)($input['db_password'] ?? ''),
         ];
-        if ($db['host'] === '' || $db['name'] === '' || $db['user'] === '') {
-            throw new \InvalidArgumentException('Veritabanı alanları zorunludur.');
+        if ($db['host'] === '' || $db['name'] === '' || $db['user'] === '' || $db['port'] < 1 || $db['port'] > 65535) {
+            throw new \InvalidArgumentException('Veritabanı bağlantı alanlarını kontrol edin.');
+        }
+        if (!preg_match('/^[A-Za-z0-9_]+$/', $db['name'])) throw new \InvalidArgumentException('Veritabanı adı yalnızca harf, rakam ve alt çizgi içerebilir.');
+
+        $root = dirname(__DIR__, 2);
+        foreach (['config', 'storage'] as $directory) {
+            $path = $root . '/' . $directory;
+            if (!is_dir($path) && !mkdir($path, 0750, true) && !is_dir($path)) {
+                throw new \RuntimeException($directory . ' dizini oluşturulamadı.');
+            }
+            if (!is_writable($path)) throw new \RuntimeException($directory . ' dizini PHP tarafından yazılabilir olmalıdır.');
         }
 
         $pdo = self::connect($db);
-        $schema = file_get_contents(dirname(__DIR__, 2) . '/database/schema.sql');
-        if ($schema === false) throw new \RuntimeException('Veritabanı şeması okunamadı.');
-        $pdo->beginTransaction();
+        $schemaFiles = [$root . '/database/schema.sql'];
+        $migrations = glob($root . '/database/migrations/*.sql') ?: [];
+        sort($migrations, SORT_STRING);
+        $schemaFiles = array_merge($schemaFiles, $migrations);
+
         try {
-            foreach (preg_split('/;\s*(?:\r?\n|$)/', trim($schema)) as $statement) {
-                $statement = trim($statement);
-                if ($statement !== '') $pdo->exec($statement);
+            foreach ($schemaFiles as $file) {
+                if (!is_file($file) || !is_readable($file)) throw new \RuntimeException('Şema dosyası okunamadı: ' . basename($file));
+                $sql = file_get_contents($file);
+                if ($sql === false) throw new \RuntimeException('Şema dosyası okunamadı.');
+                foreach (preg_split('/;\\s*(?:\\r?\\n|$)/', trim($sql)) as $statement) {
+                    $statement = trim($statement);
+                    if ($statement !== '') $pdo->exec($statement);
+                }
             }
-            $hash = password_hash($password, PASSWORD_DEFAULT);
+
+            $pdo->beginTransaction();
             $stmt = $pdo->prepare('INSERT INTO users (username,email,password_hash,role,status,created_at) VALUES (?,?,?,?,?,NOW())');
-            $stmt->execute([$username, $email, $hash, 'super_admin', 'active']);
+            $stmt->execute([$username, $email, password_hash($password, PASSWORD_DEFAULT), 'super_admin', 'active']);
             $settings = [
                 'app.mode' => $mode,
                 'app.locale' => 'tr',
                 'app.timezone' => 'Europe/Istanbul',
                 'app.installed_at' => date(DATE_ATOM),
-                'app.currency' => 'TRY'
+                'app.currency' => 'TRY',
             ];
             $stmt = $pdo->prepare('INSERT INTO settings (setting_key,setting_value,autoload) VALUES (?,?,1)');
             foreach ($settings as $key => $value) $stmt->execute([$key, $value]);
             $pdo->commit();
 
-            $root = dirname(__DIR__, 2);
-            if (!is_dir($root . '/config')) mkdir($root . '/config', 0750, true);
-            if (!is_dir($root . '/storage')) mkdir($root . '/storage', 0750, true);
             $config = ['database' => $db, 'app' => ['timezone' => 'Europe/Istanbul']];
-            $php = "<?php\ndeclare(strict_types=1);\nreturn " . var_export($config, true) . ";\n";
+            $php = "<?php\\ndeclare(strict_types=1);\\nreturn " . var_export($config, true) . ";\\n";
             if (file_put_contents($root . '/config/config.php', $php, LOCK_EX) === false) {
-                throw new \RuntimeException('Yapılandırma dosyası yazılamadı. config dizinini yazılabilir yapın.');
+                throw new \RuntimeException('Yapılandırma dosyası yazılamadı.');
             }
-            file_put_contents($root . '/storage/installed.lock', date(DATE_ATOM), LOCK_EX);
+            if (file_put_contents($root . '/storage/installed.lock', date(DATE_ATOM), LOCK_EX) === false) {
+                throw new \RuntimeException('Kurulum kilidi oluşturulamadı.');
+            }
         } catch (Throwable $e) {
             if ($pdo->inTransaction()) $pdo->rollBack();
             throw $e;
