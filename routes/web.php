@@ -519,6 +519,17 @@ $router->get('/page/{slug}', static function (array $params): void {
     require APP_ROOT.'/views/site/page.php';
 });
 
+
+$router->get('/admin/settings', static function (): void {
+    Auth::requireRole(['super_admin','admin']);$settings=Database::connection()->query("SELECT setting_key,setting_value FROM settings WHERE setting_key IN ('platform.commission_percent','app.currency','app.timezone')")->fetchAll(PDO::FETCH_KEY_PAIR);require APP_ROOT.'/views/admin/settings.php';
+});
+$router->post('/admin/settings', static function (): void {
+    Auth::requireRole(['super_admin','admin']);verify_csrf();$commission=(float)($_POST['commission']??12);$currency=strtoupper(trim((string)($_POST['currency']??'TRY')));$timezone=trim((string)($_POST['timezone']??'Europe/Istanbul'));
+    if($commission<0||$commission>50||!preg_match('/^[A-Z]{3}$/',$currency)||!in_array($timezone,DateTimeZone::listIdentifiers(),true)){http_response_code(422);exit('Ayar değerlerini kontrol edin.');}
+    $s=Database::connection()->prepare('INSERT INTO settings(setting_key,setting_value,autoload) VALUES(?,?,1) ON DUPLICATE KEY UPDATE setting_value=VALUES(setting_value),autoload=1');
+    $s->execute(['platform.commission_percent',(string)$commission]);$s->execute(['app.currency',$currency]);$s->execute(['app.timezone',$timezone]);redirect('/admin/settings');
+});
+
 $router->get('/admin/content', static function (): void {
     Auth::requireRole(['super_admin', 'admin']);
     $pdo = Database::connection();
