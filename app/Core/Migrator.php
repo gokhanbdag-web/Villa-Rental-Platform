@@ -11,6 +11,9 @@ final class Migrator
     public static function run(PDO $pdo, ?string $root = null): void
     {
         $root ??= dirname(__DIR__, 2);
+        $lock = (int)$pdo->query("SELECT GET_LOCK('villa_platform_migrations',15)")->fetchColumn();
+        if ($lock !== 1) throw new \\RuntimeException('Could not acquire migration lock.');
+        try {
         $pdo->exec("CREATE TABLE IF NOT EXISTS schema_migrations (
             migration VARCHAR(190) PRIMARY KEY,
             applied_at DATETIME NOT NULL
@@ -36,6 +39,9 @@ final class Migrator
             } catch (Throwable $e) {
                 throw new \RuntimeException('Migration failed: ' . $name . ' - ' . $e->getMessage(), 0, $e);
             }
+        }
+        } finally {
+            $pdo->query("SELECT RELEASE_LOCK('villa_platform_migrations')")->fetchColumn();
         }
     }
 }
