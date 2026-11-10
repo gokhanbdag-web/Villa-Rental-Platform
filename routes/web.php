@@ -18,6 +18,23 @@ function villa_resolve_location(PDO $pdo): array {
     if(!$country||!$city||($ids['district']&&!$district)||($ids['neighborhood']&&!$neighborhood)||($neighborhood&&!$district))throw new InvalidArgumentException('Lütfen ülke ve şehir seçin; alt konum seçimlerini kontrol edin.');
     return ['location_country_id'=>$ids['country'],'location_city_id'=>$ids['city'],'location_district_id'=>$district?$ids['district']:null,'location_neighborhood_id'=>$neighborhood?$ids['neighborhood']:null,'country'=>$country['name'],'city'=>$city['name'],'district'=>$district['name']??'','neighborhood'=>$neighborhood['name']??''];
 }
+$router->get('/admin/homepage', static function (): void {
+    Auth::requireRole(['super_admin','admin']);$pdo=Database::connection();
+    $sections=$pdo->query('SELECT * FROM homepage_sections ORDER BY sort_order,id')->fetchAll();
+    require APP_ROOT.'/views/admin/homepage.php';
+});
+$router->post('/admin/homepage', static function (): void {
+    Auth::requireRole(['super_admin','admin']);verify_csrf();$pdo=Database::connection();
+    $allowed=['hero','destinations','featured','styles','gallery','hosts'];
+    $stmt=$pdo->prepare('UPDATE homepage_sections SET title=?,subtitle=?,image_url=?,is_active=?,sort_order=? WHERE section_key=?');
+    foreach($allowed as $key){$row=$_POST['sections'][$key]??null;if(!is_array($row))continue;
+        $title=trim((string)($row['title']??''));$subtitle=trim((string)($row['subtitle']??''));$image=trim((string)($row['image_url']??''));
+        if($image!==''&&!filter_var($image,FILTER_VALIDATE_URL))$image='';
+        $stmt->execute([mb_substr($title,0,190),mb_substr($subtitle,0,500),$image,isset($row['is_active'])?1:0,max(0,min(99,(int)($row['sort_order']??10))),$key]);
+    }
+    redirect('/admin/homepage');
+});
+
 $router->get('/locations/children', static function (): void {
     header('Content-Type: application/json; charset=utf-8');$parentId=max(0,(int)($_GET['parent_id']??0));
     $s=Database::connection()->prepare('SELECT id,name FROM locations WHERE parent_id=? AND is_active=1 ORDER BY sort_order,name');$s->execute([$parentId]);echo json_encode($s->fetchAll(),JSON_UNESCAPED_UNICODE|JSON_THROW_ON_ERROR);
@@ -121,6 +138,7 @@ $router->get('/', static function (): void {
     $featuredProperties=$pdo->query("SELECT p.*,(SELECT pm.file_path FROM property_media pm WHERE pm.property_id=p.id ORDER BY pm.is_cover DESC,pm.sort_order,pm.id LIMIT 1) AS cover_image FROM properties p WHERE p.status='published' ORDER BY p.created_at DESC,p.id DESC LIMIT 8")->fetchAll();
     $latestProperties=$pdo->query("SELECT p.*,(SELECT pm.file_path FROM property_media pm WHERE pm.property_id=p.id ORDER BY pm.is_cover DESC,pm.sort_order,pm.id LIMIT 1) AS cover_image FROM properties p WHERE p.status='published' ORDER BY p.id DESC LIMIT 4")->fetchAll();
     $categories=$pdo->query('SELECT id,name,slug FROM property_categories WHERE is_active=1 ORDER BY sort_order,name LIMIT 8')->fetchAll();
+    $homeSections=[];foreach($pdo->query('SELECT * FROM homepage_sections WHERE is_active=1 ORDER BY sort_order,id')->fetchAll() as $section){$homeSections[$section['section_key']]=$section;}
     $locationCountries=$pdo->query("SELECT id,name FROM locations WHERE location_type='country' AND is_active=1 ORDER BY sort_order,name")->fetchAll();
     require APP_ROOT.'/views/site/landing.php';
 });
@@ -177,6 +195,15 @@ $router->get('/konaklamalar', static function (): void {
     $sql .= ' ORDER BY ' . $orderBy . ' LIMIT ' . $perPage . ' OFFSET ' . (($currentPage-1)*$perPage);
     $stmt=$pdo->prepare($sql); $stmt->execute($params); $properties=$stmt->fetchAll();
     require APP_ROOT . '/views/site/listing.php';
+});
+
+$router->get('/destinasyonlar', static function (): void {
+    $pdo=Database::connection();$user=Auth::user();$locale='tr';
+    try{$locale=(string)($pdo->query("SELECT setting_value FROM settings WHERE setting_key='app.locale' LIMIT 1")->fetchColumn() ?: 'tr');}catch(Throwable $e){}
+    $contentStmt=$pdo->prepare('SELECT content_key,content_value FROM site_content WHERE language_code=?');$contentStmt->execute([$locale]);$content=$contentStmt->fetchAll(PDO::FETCH_KEY_PAIR);
+    $nav=$pdo->prepare('SELECT label,url,target FROM navigation_items WHERE location=? AND language_code=? AND is_active=1 ORDER BY sort_order,id');$nav->execute(['header',$locale]);$navigation=$nav->fetchAll();$nav->execute(['footer',$locale]);$footerNavigation=$nav->fetchAll();
+    $destinations=$pdo->query("SELECT city,COUNT(*) AS property_count,(SELECT pm.file_path FROM property_media pm JOIN properties p2 ON p2.id=pm.property_id WHERE p2.city=p.city AND p2.status='published' ORDER BY pm.is_cover DESC,pm.sort_order,pm.id LIMIT 1) AS cover_image FROM properties p WHERE p.status='published' AND p.city<>'' GROUP BY city ORDER BY property_count DESC,city ASC")->fetchAll();
+    require APP_ROOT.'/views/site/destinations.php';
 });
 
 $router->get('/villa/{slug}', static function (array $params): void {
