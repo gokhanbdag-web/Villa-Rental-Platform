@@ -1,6 +1,6 @@
 <?php declare(strict_types=1); $editing = !empty($property['id']); ?>
 <?php
-$locationPdo = \\App\\Core\\Database::connection();
+$locationPdo = \App\Core\Database::connection();
 $selectedCountry=(int)($property['location_country_id']??0);$selectedCity=(int)($property['location_city_id']??0);$selectedDistrict=(int)($property['location_district_id']??0);$selectedNeighborhood=(int)($property['location_neighborhood_id']??0);
 $countryOptions=$locationPdo->query("SELECT id,name FROM locations WHERE location_type='country' AND is_active=1 ORDER BY sort_order,name")->fetchAll();
 $childOptions=static function(int $parent) use($locationPdo): array {if(!$parent)return [];$s=$locationPdo->prepare('SELECT id,name FROM locations WHERE parent_id=? AND is_active=1 ORDER BY sort_order,name');$s->execute([$parent]);return $s->fetchAll();};
