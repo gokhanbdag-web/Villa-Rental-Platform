@@ -19,13 +19,18 @@ $router->get('/', static function (): void {
     $navStmt = $pdo->prepare('SELECT label,url,target FROM navigation_items WHERE location=? AND language_code=? AND is_active=1 ORDER BY sort_order,id');
     $navStmt->execute(['header',$locale]);
     $navigation = $navStmt->fetchAll();
+    $footerStmt = $pdo->prepare('SELECT label,url,target FROM navigation_items WHERE location=? AND language_code=? AND is_active=1 ORDER BY sort_order,id');
+    $footerStmt->execute(['footer',$locale]); $footerNavigation = $footerStmt->fetchAll();
+    $categories = $pdo->query('SELECT id,name,slug FROM property_categories WHERE is_active=1 ORDER BY sort_order,name')->fetchAll();
     $city = trim((string)($_GET['city'] ?? ''));
     $guests = max(0,(int)($_GET['guests'] ?? 0));
-    $filters = ['city' => $city, 'guests' => $guests];
+    $categoryId = max(0,(int)($_GET['category'] ?? 0));
+    $filters = ['city' => $city, 'guests' => $guests, 'category' => $categoryId];
     $sql = "SELECT p.*, (SELECT pm.file_path FROM property_media pm WHERE pm.property_id=p.id ORDER BY pm.is_cover DESC,pm.sort_order,pm.id LIMIT 1) AS cover_image FROM properties p WHERE p.status='published'";
     $params = [];
     if ($city !== '') { $sql .= ' AND (p.city LIKE ? OR p.district LIKE ? OR p.country LIKE ?)'; $like='%'.$city.'%'; array_push($params,$like,$like,$like); }
     if ($guests > 0) { $sql .= ' AND p.max_guests >= ?'; $params[]=$guests; }
+    if ($categoryId > 0) { $sql .= ' AND p.category_id = ?'; $params[]=$categoryId; }
     $sql .= ' ORDER BY p.created_at DESC,p.id DESC LIMIT 48';
     $stmt=$pdo->prepare($sql); $stmt->execute($params); $properties=$stmt->fetchAll();
     require APP_ROOT . '/views/site/home.php';
