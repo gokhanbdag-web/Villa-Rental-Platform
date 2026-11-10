@@ -72,7 +72,7 @@ function delete_property_uploads(PDO $pdo, int $propertyId): void {
     foreach ($stmt->fetchAll(PDO::FETCH_COLUMN) as $path) {
         $path = (string)$path;
         if (!str_starts_with($path, 'uploads/properties/')) continue;
-        $full = APP_ROOT . '/' . $path;
+        $full = APP_ROOT . '/public/' . $path;
         if (is_file($full)) @unlink($full);
     }
 }
