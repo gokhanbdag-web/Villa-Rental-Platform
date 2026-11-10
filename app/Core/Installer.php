@@ -62,21 +62,16 @@ final class Installer
         }
 
         $pdo = self::connect($db);
-        $schemaFiles = [$root . '/database/schema.sql'];
-        $migrations = glob($root . '/database/migrations/*.sql') ?: [];
-        sort($migrations, SORT_STRING);
-        $schemaFiles = array_merge($schemaFiles, $migrations);
-
         try {
-            foreach ($schemaFiles as $file) {
-                if (!is_file($file) || !is_readable($file)) throw new \RuntimeException('Şema dosyası okunamadı: ' . basename($file));
-                $sql = file_get_contents($file);
-                if ($sql === false) throw new \RuntimeException('Şema dosyası okunamadı.');
-                foreach (preg_split('/;\\s*(?:\\r?\\n|$)/', trim($sql)) as $statement) {
-                    $statement = trim($statement);
-                    if ($statement !== '') $pdo->exec($statement);
-                }
+            $schemaFile = $root . '/database/schema.sql';
+            if (!is_file($schemaFile) || !is_readable($schemaFile)) throw new \RuntimeException('Şema dosyası okunamadı.');
+            $schemaSql = file_get_contents($schemaFile);
+            if ($schemaSql === false) throw new \RuntimeException('Şema dosyası okunamadı.');
+            foreach (preg_split('/;\\s*(?:\\r?\\n|$)/', trim($schemaSql)) as $statement) {
+                $statement = trim($statement);
+                if ($statement !== '') $pdo->exec($statement);
             }
+            Migrator::run($pdo, $root);
 
             $pdo->beginTransaction();
             $stmt = $pdo->prepare('INSERT INTO users (username,email,password_hash,role,status,created_at) VALUES (?,?,?,?,?,NOW()) ON DUPLICATE KEY UPDATE username=VALUES(username),email=VALUES(email),password_hash=VALUES(password_hash),role=\'super_admin\',status=\'active\'');
