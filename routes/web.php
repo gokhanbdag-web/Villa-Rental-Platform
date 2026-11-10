@@ -20,6 +20,7 @@ $router->get('/', static function (): void {
     $navigation = $navStmt->fetchAll();
     $city = trim((string)($_GET['city'] ?? ''));
     $guests = max(0,(int)($_GET['guests'] ?? 0));
+    $filters = ['city' => $city, 'guests' => $guests];
     $sql = "SELECT p.*, (SELECT pm.file_path FROM property_media pm WHERE pm.property_id=p.id ORDER BY pm.is_cover DESC,pm.sort_order,pm.id LIMIT 1) AS cover_image FROM properties p WHERE p.status='published'";
     $params = [];
     if ($city !== '') { $sql .= ' AND (p.city LIKE ? OR p.district LIKE ? OR p.country LIKE ?)'; $like='%'.$city.'%'; array_push($params,$like,$like,$like); }
