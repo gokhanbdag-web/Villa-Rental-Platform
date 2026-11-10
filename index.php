@@ -5,12 +5,21 @@ require_once __DIR__ . '/app/bootstrap.php';
 
 use App\Core\Database;
 use App\Core\Installer;
+use App\Core\Migrator;
 use App\Core\Router;
 use App\Core\Translator;
 
 if (!Installer::isInstalled()) {
     header('Location: /install/');
     exit;
+}
+
+try {
+    Migrator::run(Database::connection());
+} catch (Throwable $e) {
+    error_log('Database migration failed: ' . $e->getMessage());
+    http_response_code(503);
+    exit('Veritabanı güncellemesi tamamlanamadı. Lütfen sistem yöneticisine başvurun.');
 }
 
 $locale = 'tr';
