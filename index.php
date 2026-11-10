@@ -70,6 +70,11 @@ if ($isAdminPage) {
         if (preg_match('/<body\b[^>]*>(.*?)<\/body>/is', $html, $bodyMatch)) {
             $bodyContent = $bodyMatch[1];
         }
+        // Preserve page-specific CSS from the original document head.
+        if (preg_match('/<head\b[^>]*>(.*?)<\/head>/is', $html, $headMatch)) {
+            preg_match_all('/<style\b[^>]*>.*?<\/style>/is', $headMatch[1], $styleMatches);
+            $bodyContent = implode("\n", $styleMatches[0] ?? []) . $bodyContent;
+        }
         if ($requestPath === '/admin' || $requestPath === '/admin/') {
             if (preg_match('/<main\b[^>]*>(.*?)<\/main>/is', $bodyContent, $mainMatch)) {
                 $bodyContent = $mainMatch[1];
