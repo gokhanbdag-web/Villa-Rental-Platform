@@ -59,7 +59,7 @@ function store_property_uploads(PDO $pdo, int $propertyId): void {
         if (!isset($allowed[$mime])) continue;
         $filename = bin2hex(random_bytes(18)) . '.' . $allowed[$mime];
         if (!move_uploaded_file($tmp, $directory . '/' . $filename)) continue;
-        $relative = 'public/uploads/properties/' . $filename;
+        $relative = 'uploads/properties/' . $filename;
         $alt = trim((string)($_POST['title'] ?? 'Villa fotoğrafı'));
         $insert->execute([$propertyId,$relative,$alt,$cover,$i]);
         $cover = 0;
@@ -71,7 +71,7 @@ function delete_property_uploads(PDO $pdo, int $propertyId): void {
     $stmt->execute([$propertyId]);
     foreach ($stmt->fetchAll(PDO::FETCH_COLUMN) as $path) {
         $path = (string)$path;
-        if (!str_starts_with($path, 'public/uploads/properties/')) continue;
+        if (!str_starts_with($path, 'uploads/properties/')) continue;
         $full = APP_ROOT . '/' . $path;
         if (is_file($full)) @unlink($full);
     }
