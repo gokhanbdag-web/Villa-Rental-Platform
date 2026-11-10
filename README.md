@@ -30,8 +30,10 @@ Requirements: PHP 8.2+, MySQL 8+ (or compatible MariaDB), PDO MySQL, Fileinfo, a
 1. Upload the repository files to the hosting account.
 2. Prefer setting the web root to the repository's `public/` directory. A `public/index.php` entrypoint routes requests to the application outside the public directory. If your host cannot use that layout, the repository root can be used temporarily with the supplied root `.htaccess`.
 3. Ensure PHP can write to `config/`, `storage/`, and `public/uploads/`.
-4. Visit the domain. The application redirects to `/install/` while not installed.
+4. Visit the domain or subdirectory URL. The application redirects to that installation's `/install/` path while not installed.
 5. Enter the database credentials, initial administrator account, and platform mode.
-6. Sign in at `/login`.
+6. Sign in at the installation's `/login` path.
+
+The application detects its base URL automatically and supports installation either at the domain root or inside a subdirectory (for example, `https://example.com/villas/`). Root-relative links, form actions, redirects, routing, and session cookie paths are adjusted to the detected installation path.
 
 The installer runs `database/schema.sql` and every `database/migrations/*.sql` file in lexical order. Keep the `config/` and `storage/` directories outside the public document root. Review host-specific Apache/PHP permissions before deployment.
