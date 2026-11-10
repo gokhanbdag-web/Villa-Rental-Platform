@@ -9,7 +9,7 @@ Native PHP 8.2+ and MySQL villa rental platform. No PHP framework is used. The f
 - Database-driven public homepage, category and destination search, villa detail pages, editable header/footer navigation, and editable CMS pages.
 - Admin content editor for homepage copy, site name and footer content.
 - Admin listing CRUD, category management, local image uploads (JPEG/PNG/WebP with MIME validation and size limits), and availability / seasonal price rules.
-- Guest registration, authenticated booking requests, date-overlap checks, nightly pricing from calendar rules, guest booking history, admin booking approval/cancellation, and in-app notifications.
+- Guest registration, authenticated booking requests, date-overlap checks, nightly pricing from calendar rules, guest booking history, admin booking approval/cancellation, favorites, booking-scoped guest/host messaging, guest reviews with admin moderation, and in-app notifications.
 - Multi-vendor onboarding, vendor approval, vendor listing management, vendor-specific calendars, and per-vendor commission rates.
 - Booking financial ledger, platform commission calculation, payment transaction, payout and notification database structures.
 - 36 editable Turkish demo villa listings with 36 local SVG placeholder illustrations under `public/demo/villas/`.
@@ -18,7 +18,7 @@ Native PHP 8.2+ and MySQL villa rental platform. No PHP framework is used. The f
 ## Important operational notes
 
 - Payment gateway processing is not connected yet. `payments.enabled` defaults to `0`; booking requests are stored as unpaid and no card payment is taken.
-- Email/SMS delivery, payout execution, review moderation, messaging, favorites, advanced permissions, translation management UI, and full automated integration/security tests remain to be implemented.
+- Email/SMS delivery, payment gateway integration, payout execution, advanced permissions, translation management UI, and full automated integration/security tests remain to be implemented.
 - The current codebase is an active development build, not a production-ready booking service. Do not accept real payments or rely on it for live inventory until the remaining modules are implemented and a real PHP/MySQL deployment test and security review have passed.
 - The sample villa illustrations are local SVG artwork, not photographs of real properties. Demo listings can be edited, unpublished, or deleted from the admin panel.
 
