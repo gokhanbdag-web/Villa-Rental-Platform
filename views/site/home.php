@@ -29,7 +29,7 @@ main{padding:58px 0 80px}.section-top{display:flex;justify-content:space-between
 </head>
 <body>
 <header><div class="wrap head"><a class="brand" href="/"><?= e($siteName) ?></a><nav>
-<?php foreach ($navigation as $item): ?><a href="<?= e($item['url']) ?>" target="<?= e($item['target']) ?>"><?= e($item['label']) ?></a><?php endforeach; ?>
+<?php foreach ($navigation as $item): ?><a href="<?= e($item['url']) ?>" target="<?= e($item['target']) ?>"><?= e($item['label']) ?></a><?php endforeach; ?><?php if (($mode ?? 'single_vendor') === 'multi_vendor'): ?><a href="/vendor/register">Ev sahibi olun</a><?php endif; ?>
 </nav></div></header>
 <section class="hero"><div class="wrap">
 <div class="eyebrow"><?= e($content['home_eyebrow'] ?? '') ?></div>
