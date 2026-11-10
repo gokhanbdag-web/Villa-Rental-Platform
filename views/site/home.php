@@ -7,7 +7,7 @@ declare(strict_types=1);
 /** @var array $filters */
 $siteName = $content['site_name'] ?? 'VillaStay';
 $cover = static function (array $property): string {
-    return !empty($property['cover_image']) ? '/' . ltrim((string)$property['cover_image'], '/') : '';
+    if (empty($property['cover_image'])) return ''; $path = (string)$property['cover_image']; return preg_match('~^https?://~i', $path) ? $path : '/' . ltrim($path, '/');
 };
 ?>
 <!doctype html>
