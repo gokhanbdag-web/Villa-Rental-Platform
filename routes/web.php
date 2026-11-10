@@ -263,6 +263,14 @@ $router->get('/admin/vendors', static function (): void {
     if((string)$pdo->query("SELECT setting_value FROM settings WHERE setting_key='app.mode'")->fetchColumn()!=='multi_vendor')redirect('/admin');
     $vendors=$pdo->query('SELECT v.*,u.username,u.email FROM vendors v JOIN users u ON u.id=v.user_id ORDER BY v.created_at DESC')->fetchAll();require APP_ROOT.'/views/admin/vendors.php';
 });
+
+$router->post('/admin/vendors/commission', static function (): void {
+    Auth::requireRole(['super_admin','admin']);verify_csrf();
+    $raw=trim((string)($_POST['commission_rate']??''));$rate=$raw===''?null:(float)$raw;
+    if($rate!==null&&($rate<0||$rate>50)){http_response_code(422);exit('Komisyon oranı 0 ile 50 arasında olmalıdır.');}
+    $s=Database::connection()->prepare('UPDATE vendors SET commission_rate=? WHERE id=?');$s->execute([$rate,(int)($_POST['id']??0)]);redirect('/admin/vendors');
+});
+
 $router->post('/admin/vendors/approve', static function (): void {
     Auth::requireRole(['super_admin','admin']);verify_csrf();$s=Database::connection()->prepare("UPDATE vendors SET status='approved' WHERE id=?");$s->execute([(int)($_POST['id']??0)]);redirect('/admin/vendors');
 });
