@@ -12,7 +12,7 @@ final class Migrator
     {
         $root ??= dirname(__DIR__, 2);
         $lock = (int)$pdo->query("SELECT GET_LOCK('villa_platform_migrations',15)")->fetchColumn();
-        if ($lock !== 1) throw new \\RuntimeException('Could not acquire migration lock.');
+        if ($lock !== 1) throw new \RuntimeException('Could not acquire migration lock.');
         try {
         $pdo->exec("CREATE TABLE IF NOT EXISTS schema_migrations (
             migration VARCHAR(190) PRIMARY KEY,
