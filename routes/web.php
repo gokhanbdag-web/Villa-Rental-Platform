@@ -220,7 +220,7 @@ $router->post('/favorites/toggle', static function (): void {
     $exists=$pdo->prepare('SELECT 1 FROM favorites WHERE user_id=? AND property_id=?');$exists->execute([(int)$user['id'],$pid]);
     if($exists->fetchColumn()){$del=$pdo->prepare('DELETE FROM favorites WHERE user_id=? AND property_id=?');$del->execute([(int)$user['id'],$pid]);}
     else{$add=$pdo->prepare('INSERT INTO favorites(user_id,property_id,created_at) VALUES(?,?,NOW())');$add->execute([(int)$user['id'],$pid]);}
-    $return=trim((string)($_POST['return_to']??'/favorites'));if(!str_starts_with($return,'/'))$return='/favorites';redirect($return);
+    $return=trim((string)($_POST['return_to']??'/favorites'));$parsed=parse_url($return);if(!str_starts_with($return,'/')||str_starts_with($return,'//')||isset($parsed['host'])||preg_match('/[\\r\\n]/',$return))$return='/favorites';redirect($return);
 });
 
 
