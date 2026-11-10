@@ -10,7 +10,7 @@ use App\Core\Router;
 use App\Core\Translator;
 
 if (!Installer::isInstalled()) {
-    header('Location: /install/');
+    header('Location: ' . app_url('/install/'));
     exit;
 }
 
@@ -38,4 +38,9 @@ try {
 
 $router = new Router();
 require APP_ROOT . '/routes/web.php';
-$router->dispatch($_SERVER['REQUEST_METHOD'] ?? 'GET', parse_url($_SERVER['REQUEST_URI'] ?? '/', PHP_URL_PATH) ?: '/');
+$requestPath = parse_url($_SERVER['REQUEST_URI'] ?? '/', PHP_URL_PATH) ?: '/';
+$basePath = app_base_path();
+if ($basePath !== '' && ($requestPath === $basePath || str_starts_with($requestPath, $basePath . '/'))) {
+    $requestPath = substr($requestPath, strlen($basePath)) ?: '/';
+}
+$router->dispatch($_SERVER['REQUEST_METHOD'] ?? 'GET', $requestPath);
