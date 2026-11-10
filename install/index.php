@@ -27,9 +27,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 </style></head><body><main class="wrap"><div class="panel">
 <h1>Villa Rental Platform</h1><p class="muted">İlk kurulum sihirbazı</p>
 <?php if ($error): ?><div class="alert"><?= e($error) ?></div><?php endif; ?>
-<?php if ($success): ?><div class="alert ok">Kurulum tamamlandı. Güvenlik için /install erişimi kilitlendi. <a href="../">Siteyi aç</a></div>
+<?php if ($success): ?><div class="alert ok">Kurulum tamamlandı. Güvenlik için /install erişimi kilitlendi. <a href="<?= e(app_url('/')) ?>">Siteyi aç</a></div>
 <?php else: ?>
-<form method="post"><?= csrf_field() ?>
+<form method="post" action="<?= e(app_url('/install/')) ?>"><?= csrf_field() ?>
 <section><h2>Veritabanı bağlantısı</h2><div class="grid">
 <div class="field"><label>Sunucu</label><input name="db_host" value="localhost" required></div>
 <div class="field"><label>Port</label><input name="db_port" type="number" value="3306" required></div>
