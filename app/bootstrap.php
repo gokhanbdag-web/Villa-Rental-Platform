@@ -23,8 +23,12 @@ if (app_base_path() !== '') {
     ob_start(static function (string $html): string {
         $base = app_base_path();
         return preg_replace_callback(
-            '/(\b(?:href|src|action|formaction)\s*=\s*)(["\'])\/(?!\/)/i',
-            static fn(array $m): string => $m[1] . $m[2] . $base . '/',
+            '/(\\b(?:href|src|action|formaction)\\s*=\\s*)(["\\'])(\\/(?!\\/)[^"\\']*)/i',
+            static function (array $m) use ($base): string {
+                $path = $m[3];
+                if ($path === $base || str_starts_with($path, $base . '/')) return $m[0];
+                return $m[1] . $m[2] . $base . $path;
+            },
             $html
         ) ?? $html;
     });
