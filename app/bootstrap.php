@@ -19,6 +19,14 @@ spl_autoload_register(static function (string $class): void {
 require APP_ROOT . '/app/Support/helpers.php';
 
 if (session_status() !== PHP_SESSION_ACTIVE) {
+    ini_set('session.use_strict_mode', '1');
     session_name('villa_platform_session');
+    session_set_cookie_params([
+        'lifetime' => 0,
+        'path' => '/',
+        'secure' => !empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off',
+        'httponly' => true,
+        'samesite' => 'Lax',
+    ]);
     session_start();
 }
