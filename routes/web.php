@@ -26,13 +26,19 @@ $router->get('/', static function (): void {
     $city = trim((string)($_GET['city'] ?? ''));
     $guests = max(0,(int)($_GET['guests'] ?? 0));
     $categoryId = max(0,(int)($_GET['category'] ?? 0));
-    $filters = ['city' => $city, 'guests' => $guests, 'category' => $categoryId];
+    $minPrice = max(0,(float)($_GET['min_price'] ?? 0));
+    $maxPrice = max(0,(float)($_GET['max_price'] ?? 0));
+    $sort = in_array($_GET['sort'] ?? '', ['price_asc','price_desc'], true) ? $_GET['sort'] : 'newest';
+    $filters = ['city' => $city, 'guests' => $guests, 'category' => $categoryId, 'min_price'=>$minPrice, 'max_price'=>$maxPrice, 'sort'=>$sort];
     $sql = "SELECT p.*, (SELECT pm.file_path FROM property_media pm WHERE pm.property_id=p.id ORDER BY pm.is_cover DESC,pm.sort_order,pm.id LIMIT 1) AS cover_image FROM properties p WHERE p.status='published'";
     $params = [];
     if ($city !== '') { $sql .= ' AND (p.city LIKE ? OR p.district LIKE ? OR p.country LIKE ?)'; $like='%'.$city.'%'; array_push($params,$like,$like,$like); }
     if ($guests > 0) { $sql .= ' AND p.max_guests >= ?'; $params[]=$guests; }
     if ($categoryId > 0) { $sql .= ' AND p.category_id = ?'; $params[]=$categoryId; }
-    $sql .= ' ORDER BY p.created_at DESC,p.id DESC LIMIT 48';
+    if ($minPrice > 0) { $sql .= ' AND p.base_nightly_price >= ?'; $params[]=$minPrice; }
+    if ($maxPrice > 0) { $sql .= ' AND p.base_nightly_price <= ?'; $params[]=$maxPrice; }
+    $orderBy = $sort === 'price_asc' ? 'p.base_nightly_price ASC' : ($sort === 'price_desc' ? 'p.base_nightly_price DESC' : 'p.created_at DESC,p.id DESC');
+    $sql .= ' ORDER BY ' . $orderBy . ' LIMIT 48';
     $stmt=$pdo->prepare($sql); $stmt->execute($params); $properties=$stmt->fetchAll();
     require APP_ROOT . '/views/site/home.php';
 });
