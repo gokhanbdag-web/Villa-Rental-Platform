@@ -187,7 +187,7 @@ $router->get('/vendor', static function (): void {
 $router->get('/vendor/properties', static function (): void {
     Auth::requireRole(['vendor']);$pdo=Database::connection();$s=$pdo->prepare('SELECT id FROM vendors WHERE user_id=?');$s->execute([(int)Auth::user()['id']]);$vid=(int)$s->fetchColumn();
     $s=$pdo->prepare('SELECT id,title,slug,city,district,max_guests,base_nightly_price,currency,status FROM properties WHERE vendor_id=? ORDER BY id DESC');$s->execute([$vid]);$properties=$s->fetchAll();
-    $newUrl='/vendor/properties/new';$editBase='/vendor/properties';$backUrl='/vendor';require APP_ROOT.'/views/admin/properties.php';
+    $newUrl='/vendor/properties/new';$editBase='/vendor/properties';$deleteAction='/vendor/properties/delete';$backUrl='/vendor';require APP_ROOT.'/views/admin/properties.php';
 });
 $router->get('/vendor/properties/new', static function (): void {
     Auth::requireRole(['vendor']);$property=[];$formAction='/vendor/properties/save';$backUrl='/vendor/properties';require APP_ROOT.'/views/admin/property-form.php';
@@ -238,6 +238,19 @@ $router->get('/admin/properties/{id}', static function (array $params): void {
     $property = $stmt->fetch();
     if (!$property) { http_response_code(404); echo 'Konaklama bulunamadı.'; return; }
     require APP_ROOT . '/views/admin/property-form.php';
+});
+
+
+$router->post('/vendor/properties/delete', static function (): void {
+    Auth::requireRole(['vendor']);verify_csrf();$pdo=Database::connection();
+    $v=$pdo->prepare('SELECT id FROM vendors WHERE user_id=?');$v->execute([(int)Auth::user()['id']]);$vendorId=(int)$v->fetchColumn();$id=(int)($_POST['id']??0);
+    $check=$pdo->prepare('SELECT id FROM properties WHERE id=? AND vendor_id=?');$check->execute([$id,$vendorId]);
+    if(!$check->fetchColumn()){http_response_code(404);exit('İlan bulunamadı.');}
+    delete_property_uploads($pdo,$id);$del=$pdo->prepare('DELETE FROM properties WHERE id=? AND vendor_id=?');$del->execute([$id,$vendorId]);redirect('/vendor/properties');
+});
+$router->post('/admin/properties/delete', static function (): void {
+    Auth::requireRole(['super_admin','admin']);verify_csrf();$pdo=Database::connection();$id=(int)($_POST['id']??0);
+    delete_property_uploads($pdo,$id);$del=$pdo->prepare('DELETE FROM properties WHERE id=?');$del->execute([$id]);redirect('/admin/properties');
 });
 
 $router->post('/admin/properties/save', static function (): void {
