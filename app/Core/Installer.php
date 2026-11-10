@@ -47,7 +47,7 @@ final class Installer
             'user' => trim((string)($input['db_user'] ?? '')),
             'password' => (string)($input['db_password'] ?? ''),
         ];
-        if ($db['host'] === '' || $db['name'] === '' || $db['user'] === '' || $db['port'] < 1 || $db['port'] > 65535) {
+        if ($db['host'] === '' || !preg_match('/^[A-Za-z0-9._:-]+$/', $db['host']) || $db['name'] === '' || $db['user'] === '' || $db['port'] < 1 || $db['port'] > 65535) {
             throw new \InvalidArgumentException('Veritabanı bağlantı alanlarını kontrol edin.');
         }
         if (!preg_match('/^[A-Za-z0-9_]+$/', $db['name'])) throw new \InvalidArgumentException('Veritabanı adı yalnızca harf, rakam ve alt çizgi içerebilir.');
@@ -97,9 +97,11 @@ final class Installer
             if (file_put_contents($root . '/config/config.php', $php, LOCK_EX) === false) {
                 throw new \RuntimeException('Yapılandırma dosyası yazılamadı.');
             }
+            @chmod($root . '/config/config.php', 0640);
             if (file_put_contents($root . '/storage/installed.lock', date(DATE_ATOM), LOCK_EX) === false) {
                 throw new \RuntimeException('Kurulum kilidi oluşturulamadı.');
             }
+            @chmod($root . '/storage/installed.lock', 0640);
         } catch (Throwable $e) {
             if ($pdo->inTransaction()) $pdo->rollBack();
             throw $e;
