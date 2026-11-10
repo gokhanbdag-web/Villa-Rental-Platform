@@ -6,6 +6,40 @@ use App\Core\Database;
 use App\Core\Router;
 use App\Core\Translator;
 
+function villa_resolve_location(PDO $pdo): array {
+    $ids=['country'=>(int)($_POST['location_country_id']??0),'city'=>(int)($_POST['location_city_id']??0),'district'=>(int)($_POST['location_district_id']??0),'neighborhood'=>(int)($_POST['location_neighborhood_id']??0)];
+    $get=static function(int $id,string $type,?int $parent) use($pdo): ?array {
+        if($id<1)return null;$s=$pdo->prepare('SELECT id,parent_id,name FROM locations WHERE id=? AND location_type=? AND is_active=1 LIMIT 1');$s->execute([$id,$type]);$row=$s->fetch();
+        if(!$row||($parent!==null&&(int)$row['parent_id']!==$parent))return null;return $row;
+    };
+    $country=$get($ids['country'],'country',null);$city=$get($ids['city'],'city',$ids['country']);
+    $district=$ids['district']?$get($ids['district'],'district',$ids['city']):null;
+    $neighborhood=$ids['neighborhood']?$get($ids['neighborhood'],'neighborhood',$ids['district']):null;
+    if(!$country||!$city||($ids['district']&&!$district)||($ids['neighborhood']&&!$neighborhood)||($neighborhood&&!$district))throw new InvalidArgumentException('Lütfen ülke ve şehir seçin; alt konum seçimlerini kontrol edin.');
+    return ['location_country_id'=>$ids['country'],'location_city_id'=>$ids['city'],'location_district_id'=>$district?$ids['district']:null,'location_neighborhood_id'=>$neighborhood?$ids['neighborhood']:null,'country'=>$country['name'],'city'=>$city['name'],'district'=>$district['name']??'','neighborhood'=>$neighborhood['name']??''];
+}
+$router->get('/locations/children', static function (): void {
+    header('Content-Type: application/json; charset=utf-8');$parentId=max(0,(int)($_GET['parent_id']??0));
+    $s=Database::connection()->prepare('SELECT id,name FROM locations WHERE parent_id=? AND is_active=1 ORDER BY sort_order,name');$s->execute([$parentId]);echo json_encode($s->fetchAll(),JSON_UNESCAPED_UNICODE|JSON_THROW_ON_ERROR);
+});
+$router->get('/admin/locations', static function (): void {
+    Auth::requireRole(['super_admin','admin']);$pdo=Database::connection();
+    $locations=$pdo->query("SELECT l.*,p.name AS parent_name FROM locations l LEFT JOIN locations p ON p.id=l.parent_id ORDER BY FIELD(l.location_type,'country','city','district','neighborhood'),p.name,l.sort_order,l.name")->fetchAll();
+    $parents=$pdo->query("SELECT c.id,c.location_type,CONCAT(COALESCE(p.name,''),CASE WHEN p.name IS NULL THEN '' ELSE ' / ' END,c.name) AS full_name FROM locations c LEFT JOIN locations p ON p.id=c.parent_id WHERE c.is_active=1 ORDER BY FIELD(c.location_type,'country','city','district'),p.name,c.name")->fetchAll();
+    require APP_ROOT.'/views/admin/locations.php';
+});
+$router->post('/admin/locations/save', static function (): void {
+    Auth::requireRole(['super_admin','admin']);verify_csrf();$pdo=Database::connection();$type=(string)($_POST['location_type']??'');$name=trim((string)($_POST['name']??''));$parent=(int)($_POST['parent_id']??0);
+    $allowed=['country'=>null,'city'=>'country','district'=>'city','neighborhood'=>'district'];
+    if(!array_key_exists($type,$allowed)||$name===''||mb_strlen($name)>190){http_response_code(422);exit('Konum türünü ve adını kontrol edin.');}
+    if($type==='country')$parent=null;else{$s=$pdo->prepare('SELECT id FROM locations WHERE id=? AND location_type=? AND is_active=1');$s->execute([$parent,$allowed[$type]]);if(!$s->fetchColumn()){http_response_code(422);exit('Seçilen üst konum geçersiz.');}}
+    try{$s=$pdo->prepare('INSERT INTO locations(parent_id,location_type,name,sort_order,is_active) VALUES(?,?,?,?,1)');$s->execute([$parent,$type,$name,(int)($_POST['sort_order']??10)]);}catch(PDOException $e){http_response_code(409);exit('Bu üst konum altında aynı isimde kayıt zaten var.');}
+    redirect('/admin/locations');
+});
+$router->post('/admin/locations/toggle', static function (): void {
+    Auth::requireRole(['super_admin','admin']);verify_csrf();$s=Database::connection()->prepare('UPDATE locations SET is_active=1-is_active WHERE id=?');$s->execute([(int)($_POST['id']??0)]);redirect('/admin/locations');
+});
+
 $router->get('/', static function (): void {
     $pdo = Database::connection();
     $user = Auth::user();
@@ -339,6 +373,9 @@ $router->post('/vendor/properties/save', static function (): void {
     $data=[$title,$slug,trim((string)($_POST['summary']??'')),trim((string)($_POST['description']??'')),trim((string)($_POST['country']??'Türkiye')),trim((string)($_POST['city']??'')),trim((string)($_POST['district']??'')),trim((string)($_POST['address']??'')),max(1,(int)($_POST['max_guests']??1)),max(0,(int)($_POST['bedrooms']??0)),max(0,(int)($_POST['beds']??0)),max(0,(float)($_POST['bathrooms']??1)),max(0,(float)($_POST['base_nightly_price']??0)),strtoupper(substr(preg_replace('/[^A-Za-z]/','',(string)($_POST['currency']??'TRY')),0,3))?:'TRY',$status,($_POST['booking_type']??'')==='instant'?'instant':'request',((int)($_POST['category_id']??0)>0?(int)$_POST['category_id']:null)];
     if($id){$owned=$pdo->prepare('SELECT id FROM properties WHERE id=? AND vendor_id=?');$owned->execute([$id,(int)$vendor['id']]);if(!$owned->fetchColumn()){http_response_code(404);exit('İlan bulunamadı.');}$s=$pdo->prepare('UPDATE properties SET title=?,slug=?,summary=?,description=?,country=?,city=?,district=?,address=?,max_guests=?,bedrooms=?,beds=?,bathrooms=?,base_nightly_price=?,currency=?,status=?,booking_type=?,category_id=?,updated_at=NOW() WHERE id=? AND vendor_id=?');$s->execute([...$data,$id,(int)$vendor['id']]);}
     else{$s=$pdo->prepare('INSERT INTO properties(vendor_id,title,slug,summary,description,country,city,district,address,max_guests,bedrooms,beds,bathrooms,base_nightly_price,currency,status,booking_type,category_id,created_at) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,NOW())');$s->execute([(int)$vendor['id'],...$data]);$id=(int)$pdo->lastInsertId();}
+    $location=villa_resolve_location($pdo);
+    $locSave=$pdo->prepare('UPDATE properties SET location_country_id=?,location_city_id=?,location_district_id=?,location_neighborhood_id=?,country=?,city=?,district=?,neighborhood=? WHERE id=? AND vendor_id=?');
+    $locSave->execute([$location['location_country_id'],$location['location_city_id'],$location['location_district_id'],$location['location_neighborhood_id'],$location['country'],$location['city'],$location['district'],$location['neighborhood'],$id,(int)$vendor['id']]);
     store_property_uploads($pdo,$id);sync_property_amenities($pdo,$id);
     redirect('/vendor/properties');
 });
@@ -474,6 +511,9 @@ $router->post('/admin/properties/save', static function (): void {
         $stmt->execute($data);
         $id = (int)$pdo->lastInsertId();
     }
+    $location=villa_resolve_location($pdo);
+    $locSave=$pdo->prepare('UPDATE properties SET location_country_id=?,location_city_id=?,location_district_id=?,location_neighborhood_id=?,country=?,city=?,district=?,neighborhood=? WHERE id=?');
+    $locSave->execute([$location['location_country_id'],$location['location_city_id'],$location['location_district_id'],$location['location_neighborhood_id'],$location['country'],$location['city'],$location['district'],$location['neighborhood'],$id]);
     if ($id > 0) { store_property_uploads($pdo, $id); sync_property_amenities($pdo, $id); }
     redirect('/admin/properties');
 });
