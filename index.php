@@ -52,6 +52,7 @@ if ($isAdminPage) {
         $links = [
             '/admin' => 'Genel Bakış',
             '/admin/properties' => 'Konaklamalar',
+            '/admin/locations' => 'Lokasyonlar',
             '/admin/categories' => 'Kategoriler',
             '/admin/amenities' => 'Villa Özellikleri',
             '/admin/bookings' => 'Rezervasyonlar',
