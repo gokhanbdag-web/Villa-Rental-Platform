@@ -3,6 +3,7 @@
 <label>İlan başlığı<input name="title" required maxlength="220" value="<?= e($property['title']??'') ?>"></label>
 <label>URL kısa adı<input name="slug" maxlength="240" value="<?= e($property['slug']??'') ?>" placeholder="otomatik oluşturulur"></label>
 <label>Kategori<select name="category_id"><option value="0">Kategori seçin</option><?php foreach(($categories ?? []) as $category): ?><option value="<?= (int)$category['id'] ?>" <?= (int)($property['category_id']??0)===(int)$category['id']?'selected':'' ?>><?= e($category['name']) ?></option><?php endforeach; ?></select></label>
+<fieldset class="wide" style="border:1px solid #dfe6e0;border-radius:10px;padding:14px"><legend>Villa özellikleri</legend><div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:8px"><?php foreach(($amenities??[]) as $amenity): ?><label style="font-weight:500"><input type="checkbox" name="amenities[]" value="<?= (int)$amenity['id'] ?>" <?= in_array((int)$amenity['id'],$selectedAmenities??[],true)?'checked':'' ?> style="width:auto;margin-right:6px"><?= e($amenity['name']) ?></label><?php endforeach; ?></div></fieldset>
 <label>Ülke<input name="country" value="<?= e($property['country']??'Türkiye') ?>"></label>
 <label>Şehir<input name="city" value="<?= e($property['city']??'') ?>"></label>
 <label>İlçe / Bölge<input name="district" value="<?= e($property['district']??'') ?>"></label>
