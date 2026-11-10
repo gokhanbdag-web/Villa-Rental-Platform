@@ -79,7 +79,7 @@ final class Installer
             }
 
             $pdo->beginTransaction();
-            $stmt = $pdo->prepare('INSERT INTO users (username,email,password_hash,role,status,created_at) VALUES (?,?,?,?,?,NOW())');
+            $stmt = $pdo->prepare('INSERT INTO users (username,email,password_hash,role,status,created_at) VALUES (?,?,?,?,?,NOW()) ON DUPLICATE KEY UPDATE username=VALUES(username),email=VALUES(email),password_hash=VALUES(password_hash),role=\'super_admin\',status=\'active\'');
             $stmt->execute([$username, $email, password_hash($password, PASSWORD_DEFAULT), 'super_admin', 'active']);
             $settings = [
                 'app.mode' => $mode,
@@ -88,7 +88,7 @@ final class Installer
                 'app.installed_at' => date(DATE_ATOM),
                 'app.currency' => 'TRY',
             ];
-            $stmt = $pdo->prepare('INSERT INTO settings (setting_key,setting_value,autoload) VALUES (?,?,1)');
+            $stmt = $pdo->prepare('INSERT INTO settings (setting_key,setting_value,autoload) VALUES (?,?,1) ON DUPLICATE KEY UPDATE setting_value=VALUES(setting_value),autoload=1');
             foreach ($settings as $key => $value) $stmt->execute([$key, $value]);
             $pdo->commit();
 
