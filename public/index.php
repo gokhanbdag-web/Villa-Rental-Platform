@@ -6,7 +6,7 @@ require_once dirname(__DIR__) . '/app/bootstrap.php';
 use App\Core\Installer;
 
 if (!Installer::isInstalled()) {
-    require dirname(__DIR__) . '/install/index.php';
+    header('Location: ' . app_url('/install/'));
     exit;
 }
 
