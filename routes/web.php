@@ -55,6 +55,9 @@ $router->get('/villa/{slug}', static function (array $params): void {
     $contentStmt=$pdo->prepare('SELECT content_key,content_value FROM site_content WHERE language_code=?');
     $contentStmt->execute(['tr']); $content=$contentStmt->fetchAll(PDO::FETCH_KEY_PAIR);
     $locale='tr';
+    $navStmt=$pdo->prepare('SELECT label,url,target FROM navigation_items WHERE location=? AND language_code=? AND is_active=1 ORDER BY sort_order,id');
+    $navStmt->execute(['header',$locale]); $navigation=$navStmt->fetchAll();
+    $mode=(string)($pdo->query("SELECT setting_value FROM settings WHERE setting_key='app.mode' LIMIT 1")->fetchColumn() ?: 'single_vendor');
     $user=Auth::user();$isFavorite=false;
     if($user && ($user['role']??'')==='customer'){$fav=$pdo->prepare('SELECT 1 FROM favorites WHERE user_id=? AND property_id=?');$fav->execute([(int)$user['id'],(int)$property['id']]);$isFavorite=(bool)$fav->fetchColumn();}
     $reviewsStmt=$pdo->prepare("SELECT r.rating,r.body,r.created_at,u.username FROM reviews r JOIN users u ON u.id=r.guest_user_id WHERE r.property_id=? AND r.status='approved' ORDER BY r.created_at DESC LIMIT 20");
@@ -546,7 +549,13 @@ $router->post('/admin/pages/save', static function (): void {
 $router->get('/page/{slug}', static function (array $params): void {
     $s=Database::connection()->prepare("SELECT * FROM cms_pages WHERE slug=? AND language_code='tr' AND status='published' LIMIT 1");$s->execute([$params['slug']]);$page=$s->fetch();
     if(!$page){http_response_code(404);echo 'Sayfa bulunamadı.';return;}
-    $content=Database::connection()->query("SELECT content_value FROM site_content WHERE content_key='site_name' AND language_code='tr'")->fetchColumn();$siteName=$content?:'VillaStay';
+    $pdo=Database::connection();
+    $content=$pdo->query("SELECT content_key,content_value FROM site_content WHERE language_code='tr'")->fetchAll(PDO::FETCH_KEY_PAIR);
+    $siteName=$content['site_name']??'VillaStay';
+    $navStmt=$pdo->prepare('SELECT label,url,target FROM navigation_items WHERE location=? AND language_code=? AND is_active=1 ORDER BY sort_order,id');
+    $navStmt->execute(['header','tr']); $navigation=$navStmt->fetchAll();
+    $mode=(string)($pdo->query("SELECT setting_value FROM settings WHERE setting_key='app.mode' LIMIT 1")->fetchColumn() ?: 'single_vendor');
+    $user=Auth::user(); $locale='tr';
     require APP_ROOT.'/views/site/page.php';
 });
 
