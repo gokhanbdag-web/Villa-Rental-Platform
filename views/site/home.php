@@ -37,6 +37,9 @@ main{padding:58px 0 80px}.section-top{display:flex;justify-content:space-between
 <form class="search" action="/" method="get">
 <input type="search" name="city" placeholder="<?= e($content['home_search_placeholder'] ?? 'Şehir veya bölge') ?>" value="<?= e($filters['city'] ?? '') ?>">
 <select name="category"><option value="0"><?= e($content['all_categories'] ?? 'Tüm kategoriler') ?></option><?php foreach($categories as $category): ?><option value="<?= (int)$category['id'] ?>" <?= (int)($filters['category']??0)===(int)$category['id']?'selected':'' ?>><?= e($category['name']) ?></option><?php endforeach; ?></select>
+<input type="number" name="min_price" min="0" step="100" placeholder="En düşük fiyat" value="<?= e($filters['min_price']??'') ?>">
+<input type="number" name="max_price" min="0" step="100" placeholder="En yüksek fiyat" value="<?= e($filters['max_price']??'') ?>">
+<select name="sort"><option value="newest">En yeni</option><option value="price_asc" <?= ($filters['sort']??'')==='price_asc'?'selected':'' ?>>Fiyat: düşükten yükseğe</option><option value="price_desc" <?= ($filters['sort']??'')==='price_desc'?'selected':'' ?>>Fiyat: yüksekten düşüğe</option></select>
 <select name="guests"><option value=""><?= e($content['guest_select_label'] ?? 'Misafir sayısı') ?></option><?php for($i=1;$i<=16;$i++): ?><option value="<?= $i ?>" <?= (int)($filters['guests'] ?? 0)===$i?'selected':'' ?>><?= $i ?> <?= e($content['guest_unit'] ?? 'misafir') ?></option><?php endfor; ?></select>
 <button type="submit"><?= e($content['search_button'] ?? 'Villaları keşfet') ?></button>
 </form>
