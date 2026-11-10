@@ -140,6 +140,26 @@ $router->post('/villa/{slug}/reserve', static function (array $params): void {
         $code = 'VR' . date('Ymd') . strtoupper(bin2hex(random_bytes(3)));
         $save = $pdo->prepare("INSERT INTO bookings (booking_code,property_id,guest_user_id,check_in,check_out,guests,subtotal,fees,total,currency,status,created_at) VALUES (?,?,?,?,?,?,?,?,?,?, 'pending',NOW())");
         $save->execute([$code,(int)$property['id'],(int)$user['id'],$inRaw,$outRaw,$guests,$subtotal,0,$subtotal,$current['currency']]);
+        $bookingId = (int)$pdo->lastInsertId();
+        $vendorNet = $subtotal;
+        $platformFee = 0.0;
+        if (!empty($property['vendor_id'])) {
+            $vendorStmt = $pdo->prepare('SELECT user_id,commission_rate FROM vendors WHERE id=?');
+            $vendorStmt->execute([(int)$property['vendor_id']]);
+            $vendorInfo = $vendorStmt->fetch();
+            if ($vendorInfo) {
+                $defaultRate = (float)($pdo->query("SELECT setting_value FROM settings WHERE setting_key='platform.commission_percent'")->fetchColumn() ?: 12);
+                $rate = $vendorInfo['commission_rate'] !== null ? (float)$vendorInfo['commission_rate'] : $defaultRate;
+                $platformFee = round($subtotal * max(0,min(50,$rate)) / 100, 2);
+                $vendorNet = $subtotal - $platformFee;
+                $notifyVendor = $pdo->prepare("INSERT INTO notifications(user_id,notification_type,title,body,created_at) VALUES(?,'booking.requested','Yeni rezervasyon talebi',?,NOW())");
+                $notifyVendor->execute([(int)$vendorInfo['user_id'],'İlanınız için yeni bir rezervasyon talebi alındı: '.$code]);
+            }
+        }
+        $financial = $pdo->prepare("INSERT INTO booking_financials(booking_id,gross_amount,platform_fee,vendor_net_amount,currency,payout_status,created_at) VALUES(?,?,?,?,?,'unpaid',NOW())");
+        $financial->execute([$bookingId,$subtotal,$platformFee,$vendorNet,$current['currency']]);
+        $notifyGuest = $pdo->prepare("INSERT INTO notifications(user_id,notification_type,title,body,created_at) VALUES(?,'booking.created','Rezervasyon talebiniz alındı',?,NOW())");
+        $notifyGuest->execute([(int)$user['id'],'Rezervasyon kodunuz: '.$code]);
         $pdo->commit();
         redirect('/account/bookings');
     } catch (Throwable $e) {
