@@ -5,8 +5,25 @@ function e(mixed $value): string {
     return htmlspecialchars((string) $value, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
 }
 
+function app_base_path(): string {
+    static $base = null;
+    if ($base !== null) return $base;
+    $script = str_replace('\\', '/', (string)($_SERVER['SCRIPT_NAME'] ?? '/index.php'));
+    $dir = rtrim(str_replace('\\', '/', dirname($script)), '/');
+    if (in_array(basename($dir), ['install', 'public'], true)) {
+        $dir = rtrim(str_replace('\\', '/', dirname($dir)), '/');
+    }
+    $base = ($dir === '' || $dir === '.') ? '' : $dir;
+    return $base;
+}
+
+function app_url(string $path = '/'): string {
+    if (preg_match('#^(?:https?:)?//#i', $path)) return $path;
+    return app_base_path() . '/' . ltrim($path, '/');
+}
+
 function redirect(string $path): never {
-    header('Location: ' . $path);
+    header('Location: ' . (str_starts_with($path, '/') ? app_url($path) : $path));
     exit;
 }
 
