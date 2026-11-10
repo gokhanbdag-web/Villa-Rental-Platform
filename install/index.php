@@ -12,11 +12,16 @@ if (Installer::isInstalled()) {
 $error = null;
 $success = false;
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    verify_csrf();
     try {
+        $sentToken = (string)($_POST['_csrf'] ?? '');
+        $sessionToken = (string)($_SESSION['_csrf'] ?? '');
+        if ($sentToken === '' || $sessionToken === '' || !hash_equals($sessionToken, $sentToken)) {
+            throw new \\RuntimeException('Oturum doğrulaması başarısız. Kurulum sayfasını yenileyip tekrar deneyin. Tarayıcı çerezleri kapalıysa etkinleştirin.');
+        }
         Installer::install($_POST);
         $success = true;
     } catch (Throwable $e) {
+        error_log('[Villa Rental Installer] ' . $e::class . ': ' . $e->getMessage());
         $error = $e->getMessage();
     }
 }
