@@ -140,7 +140,7 @@ $router->get('/account/bookings', static function (): void {
 });
 
 $router->get('/login', static function (): void {
-    if (Auth::check()) redirect('/admin');
+    if (Auth::check()) { $user = Auth::user(); redirect(($user['role'] ?? '') === 'customer' ? '/account/bookings' : (($user['role'] ?? '') === 'vendor' ? '/vendor' : '/admin')); }
     require APP_ROOT . '/views/auth/login.php';
 });
 
