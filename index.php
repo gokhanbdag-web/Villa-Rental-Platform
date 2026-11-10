@@ -44,7 +44,7 @@ $basePath = app_base_path();
 if ($basePath !== '' && ($requestPath === $basePath || str_starts_with($requestPath, $basePath . '/'))) {
     $requestPath = substr($requestPath, strlen($basePath)) ?: '/';
 }
-$isAdminPage = str_starts_with($requestPath, '/admin/') && $requestPath !== '/admin/';
+$isAdminPage = $requestPath === '/admin' || str_starts_with($requestPath, '/admin/');
 if ($isAdminPage) {
     ob_start(static function (string $html) use ($requestPath): string {
         $user = Auth::user();
@@ -64,33 +64,78 @@ if ($isAdminPage) {
             '/admin/settings' => 'Ayarlar',
             '/admin/translations' => 'Çeviriler',
         ];
+
+        // Dashboard and sub-pages are reduced to content only; the shell below is the single admin layout.
+        $bodyContent = '';
+        if (preg_match('/<body\b[^>]*>(.*?)<\/body>/is', $html, $bodyMatch)) {
+            $bodyContent = $bodyMatch[1];
+        }
+        if ($requestPath === '/admin' || $requestPath === '/admin/') {
+            if (preg_match('/<main\b[^>]*>(.*?)<\/main>/is', $bodyContent, $mainMatch)) {
+                $bodyContent = $mainMatch[1];
+            }
+        }
+        // Remove page-level headers/navigation left by older standalone admin views.
+        $bodyContent = preg_replace('/<header\b[^>]*>.*?<\/header>/is', '', $bodyContent, 1) ?? $bodyContent;
+
         $nav = '';
         foreach ($links as $url => $label) {
             $active = $requestPath === $url || str_starts_with($requestPath, $url . '/');
-            $nav .= '<a class="vr-admin-link' . ($active ? ' is-active' : '') . '" href="' . $url . '">' .
+            $nav .= '<a class="vr-admin-link' . ($active ? ' is-active' : '') . '" href="' . e(app_url($url)) . '" data-admin-link>' .
                 '<span>' . e($label) . '</span></a>';
         }
 
         $shell = '<style>
-            body{margin:0!important;background:#f7f7f7!important;color:#222;font-family:Inter,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif!important}
-            .vr-admin-top{height:70px;background:#fff;border-bottom:1px solid #eee;display:flex;align-items:center;justify-content:space-between;padding:0 28px;gap:18px;position:sticky;top:0;z-index:1000}
-            .vr-admin-brand{font-size:17px;font-weight:800;color:#20352b;text-decoration:none}
-            .vr-admin-user{font-size:13px;color:#65736a}
-            .vr-admin-layout{display:grid;grid-template-columns:240px minmax(0,1fr);min-height:calc(100vh - 70px)}
-            .vr-admin-sidebar{background:#fff;border-right:1px solid #eee;padding:24px 16px;display:flex;flex-direction:column;gap:4px}
-            .vr-admin-link{display:block;padding:11px 12px;color:#444;text-decoration:none;border-radius:8px;font-size:14px;font-weight:550;transition:background .15s,color .15s}
-            .vr-admin-link:hover{background:#f5f6f5;color:#176b50}
-            .vr-admin-link.is-active{background:#fff0f1;color:#b73545;font-weight:700}
-            .vr-admin-content{min-width:0;padding:30px}
-            .vr-admin-content .wrap{max-width:none!important;margin:0!important;padding:0!important}
-            .vr-admin-content h1{margin-top:0}
-            .vr-admin-content table{max-width:100%}
-            @media(max-width:800px){.vr-admin-layout{grid-template-columns:1fr}.vr-admin-sidebar{flex-direction:row;overflow-x:auto;white-space:nowrap;border-right:0;border-bottom:1px solid #eee;padding:10px;position:sticky;top:70px;z-index:900}.vr-admin-link{flex:0 0 auto}.vr-admin-content{padding:18px}}
-            @media(max-width:480px){.vr-admin-top{height:60px;padding:0 15px}.vr-admin-sidebar{top:60px}.vr-admin-content{padding:14px}}
-        </style><header class="vr-admin-top"><a class="vr-admin-brand" href="/admin">VillaStay · Yönetim</a><span class="vr-admin-user">' . $username . '</span></header><div class="vr-admin-layout"><aside class="vr-admin-sidebar" aria-label="Yönetim menüsü">' . $nav . '</aside><div class="vr-admin-content">';
-        $closing = '</div></div>';
-        return preg_replace_callback('/(<body\b[^>]*>)(.*?)(<\/body>)/is', static function (array $matches) use ($shell, $closing): string {
-            return $matches[1] . $shell . $matches[2] . $closing . $matches[3];
+            html,body{min-height:100%;margin:0!important;background:#f5f6f8!important;color:#202631;font-family:Inter,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif!important}
+            body{overflow-x:hidden}.vr-admin-top{height:68px;box-sizing:border-box;background:#fff;border-bottom:1px solid #e8ebef;display:flex;align-items:center;gap:16px;padding:0 26px;position:sticky;top:0;z-index:1002}
+            .vr-admin-brand{font-size:17px;font-weight:800;letter-spacing:-.3px;color:#20352b;text-decoration:none;white-space:nowrap}
+            .vr-admin-user{margin-left:auto;font-size:13px;color:#657080}.vr-admin-burger{display:none;width:40px;height:40px;border:1px solid #e5e8ed;border-radius:9px;background:#fff;color:#263238;align-items:center;justify-content:center;font-size:22px;cursor:pointer}
+            .vr-admin-layout{display:grid;grid-template-columns:252px minmax(0,1fr);min-height:calc(100vh - 68px)}
+            .vr-admin-sidebar{background:#fff;border-right:1px solid #e8ebef;padding:22px 15px;display:flex;flex-direction:column;gap:5px;box-sizing:border-box}
+            .vr-admin-nav-title{padding:5px 12px 13px;color:#9aa2ad;font-size:10px;font-weight:800;letter-spacing:1.1px;text-transform:uppercase}
+            .vr-admin-link{display:flex;align-items:center;min-height:42px;box-sizing:border-box;padding:10px 13px;color:#566170;text-decoration:none;border-radius:9px;font-size:13px;font-weight:600;transition:background .15s,color .15s}
+            .vr-admin-link:hover{background:#f4f6f8;color:#176b50}.vr-admin-link.is-active{background:#edf5f1;color:#176b50;font-weight:750}
+            .vr-admin-content{min-width:0;padding:30px 32px;box-sizing:border-box}.vr-admin-content .wrap{max-width:none!important;margin:0!important;padding:0!important}
+            .vr-admin-content h1{margin-top:0}.vr-admin-content table{max-width:100%}
+            .vr-admin-overlay{display:none}
+            @media(max-width:900px){.vr-admin-top{height:62px;padding:0 16px}.vr-admin-burger{display:flex}.vr-admin-layout{display:block;min-height:calc(100vh - 62px)}.vr-admin-sidebar{position:fixed;z-index:1004;left:0;top:0;bottom:0;width:278px;max-width:84vw;overflow-y:auto;transform:translateX(-105%);transition:transform .22s ease;box-shadow:12px 0 35px rgba(20,30,40,.12);padding:22px 15px}.vr-admin-layout.menu-open .vr-admin-sidebar{transform:translateX(0)}.vr-admin-layout.menu-open .vr-admin-overlay{display:block;position:fixed;inset:0;background:rgba(15,23,32,.42);z-index:1003}.vr-admin-content{padding:22px 20px}}
+            @media(max-width:520px){.vr-admin-brand{font-size:15px}.vr-admin-user{font-size:12px}.vr-admin-content{padding:16px 13px}}
+        </style><header class="vr-admin-top"><button class="vr-admin-burger" type="button" aria-label="Menüyü aç" aria-expanded="false" id="vrAdminBurger">☰</button><a class="vr-admin-brand" href="' . e(app_url('/admin')) . '" data-admin-link>VillaStay <span style="font-weight:500;color:#87918c">/ Yönetim</span></a><span class="vr-admin-user">' . $username . '</span></header><div class="vr-admin-layout" id="vrAdminLayout"><aside class="vr-admin-sidebar" aria-label="Yönetim menüsü"><div class="vr-admin-nav-title">Yönetim Paneli</div>' . $nav . '</aside><div class="vr-admin-overlay" id="vrAdminOverlay"></div><main class="vr-admin-content" id="vrAdminContent">' . $bodyContent . '</main></div>
+        <script>
+        (function(){
+            if(window.__villaAdminShellReady)return;window.__villaAdminShellReady=true;
+            const layout=document.getElementById("vrAdminLayout"),burger=document.getElementById("vrAdminBurger"),overlay=document.getElementById("vrAdminOverlay"),content=document.getElementById("vrAdminContent");
+            function closeMenu(){layout&&layout.classList.remove("menu-open");burger&&burger.setAttribute("aria-expanded","false")}
+            burger&&burger.addEventListener("click",function(){const open=layout.classList.toggle("menu-open");burger.setAttribute("aria-expanded",open?"true":"false")});
+            overlay&&overlay.addEventListener("click",closeMenu);
+            function activate(url){document.querySelectorAll("[data-admin-link]").forEach(a=>{const u=new URL(a.href,location.href);a.classList.toggle("is-active",u.pathname===url|| (url!=="/admin"&&u.pathname!=="/admin"&&url.startsWith(u.pathname+"/")));});}
+            async function navigate(url,push=true){
+                closeMenu();content.style.opacity=".55";
+                try{
+                    const response=await fetch(url,{headers:{"X-Requested-With":"XMLHttpRequest","Accept":"text/html"}});
+                    if(!response.ok)throw new Error("HTTP "+response.status);
+                    const source=await response.text(),doc=new DOMParser().parseFromString(source,"text/html"),next=doc.querySelector("#vrAdminContent");
+                    if(!next)throw new Error("Sayfa içeriği bulunamadı");
+                    content.innerHTML=next.innerHTML;
+                    if(push)history.pushState({admin:true}, "",url);
+                    activate(new URL(url,location.href).pathname);
+                    if(doc.title)document.title=doc.title;
+                    content.querySelectorAll("script").forEach(old=>{const s=document.createElement("script");Array.from(old.attributes).forEach(a=>s.setAttribute(a.name,a.value));s.textContent=old.textContent;old.replaceWith(s)});
+                    window.scrollTo(0,0);
+                }catch(error){console.error("Admin navigation:",error);window.location.href=url}
+                finally{content.style.opacity="1"}
+            }
+            document.addEventListener("click",function(event){
+                const link=event.target.closest("a[data-admin-link]");if(!link)return;
+                const target=new URL(link.href,location.href);if(target.origin!==location.origin)return;
+                event.preventDefault();navigate(target.href,true);
+            });
+            window.addEventListener("popstate",function(){if(location.pathname.startsWith((document.querySelector(".vr-admin-brand")?.pathname||"/admin").replace(/\/$/,"")))navigate(location.href,false);});
+            activate(location.pathname);
+        })();
+        </script>';
+        return preg_replace_callback('/<body\b[^>]*>.*?<\/body>/is', static function (array $matches) use ($shell): string {
+            return '<body>' . $shell . '</body>';
         }, $html, 1) ?? $html;
     });
 }
