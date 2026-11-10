@@ -16,7 +16,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $sentToken = (string)($_POST['_csrf'] ?? '');
         $sessionToken = (string)($_SESSION['_csrf'] ?? '');
         if ($sentToken === '' || $sessionToken === '' || !hash_equals($sessionToken, $sentToken)) {
-            throw new \\RuntimeException('Oturum doğrulaması başarısız. Kurulum sayfasını yenileyip tekrar deneyin. Tarayıcı çerezleri kapalıysa etkinleştirin.');
+            throw new \RuntimeException('Oturum doğrulaması başarısız. Kurulum sayfasını yenileyip tekrar deneyin. Tarayıcı çerezleri kapalıysa etkinleştirin.');
         }
         Installer::install($_POST);
         $success = true;
