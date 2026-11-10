@@ -244,8 +244,8 @@ $router->post('/villa/{slug}/reserve', static function (array $params): void {
         $lock->execute([(int)$property['id']]);
         $current = $lock->fetch();
         if (!$current) { $pdo->rollBack(); http_response_code(404); exit('Konaklama artık mevcut değil.'); }
-        $conflict = $pdo->prepare("SELECT id FROM bookings WHERE property_id=? AND status IN ('pending','confirmed') AND check_in < ? AND check_out > ? LIMIT 1");
-        $conflict->execute([(int)$property['id'],$outRaw,$inRaw]);
+        $conflict = $pdo->prepare('SELECT id FROM bookings WHERE property_id=? AND status IN (?,?) AND check_in < ? AND check_out > ? LIMIT 1');
+        $conflict->execute([(int)$property['id'],'pending','confirmed',$outRaw,$inRaw]);
         $calendar = $pdo->prepare('SELECT date_from,date_to,status,nightly_price FROM availability WHERE property_id=? AND date_from < ? AND date_to > ?');
         $calendar->execute([(int)$property['id'],$outRaw,$inRaw]);
         $rules = $calendar->fetchAll();
