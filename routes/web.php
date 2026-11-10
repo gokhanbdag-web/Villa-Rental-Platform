@@ -401,7 +401,8 @@ $router->get('/admin/properties/new', static function (): void {
 
 $router->get('/admin/properties/{id}', static function (array $params): void {
     Auth::requireRole(['super_admin', 'admin']);
-    $stmt = Database::connection()->prepare('SELECT * FROM properties WHERE id=? LIMIT 1');
+    $pdo = Database::connection();
+    $stmt = $pdo->prepare('SELECT * FROM properties WHERE id=? LIMIT 1');
     $stmt->execute([(int)($params['id'] ?? 0)]);
     $property = $stmt->fetch();
     if (!$property) { http_response_code(404); echo 'Konaklama bulunamadı.'; return; }
