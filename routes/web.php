@@ -468,6 +468,18 @@ $router->post('/admin/properties/save', static function (): void {
 
 
 
+
+$router->get('/admin/amenities', static function (): void {
+    Auth::requireRole(['super_admin','admin']);$amenities=Database::connection()->query('SELECT * FROM amenities ORDER BY sort_order,name')->fetchAll();require APP_ROOT.'/views/admin/amenities.php';
+});
+$router->post('/admin/amenities/save', static function (): void {
+    Auth::requireRole(['super_admin','admin']);verify_csrf();$name=trim((string)($_POST['name']??''));$icon=trim((string)($_POST['icon']??''));if($name===''){http_response_code(422);exit('Özellik adı zorunludur.');}
+    $s=Database::connection()->prepare('INSERT INTO amenities(name,icon,is_active,sort_order) VALUES(?,?,1,?)');$s->execute([$name,$icon,(int)($_POST['sort_order']??10)]);redirect('/admin/amenities');
+});
+$router->post('/admin/amenities/delete', static function (): void {
+    Auth::requireRole(['super_admin','admin']);verify_csrf();$s=Database::connection()->prepare('DELETE FROM amenities WHERE id=?');$s->execute([(int)($_POST['id']??0)]);redirect('/admin/amenities');
+});
+
 $router->get('/admin/categories', static function (): void {
     Auth::requireRole(['super_admin','admin']);$categories=Database::connection()->query('SELECT * FROM property_categories ORDER BY sort_order,name')->fetchAll();require APP_ROOT.'/views/admin/categories.php';
 });
