@@ -32,7 +32,19 @@ INSERT IGNORE INTO site_content (content_key,language_code,content_value) VALUES
 ('featured_subtitle','tr','Bir sonraki tatiliniz için özenle seçilmiş villalar'),
 ('empty_properties','tr','Aramanıza uygun konaklama yeri bulunamadı.'),
 ('footer_text','tr','Hayalinizdeki tatil için doğru konaklama yerini keşfedin.'),
-('currency_symbol','tr','₺');
+('currency_symbol','tr','₺'),
+('search_button','tr','Villaları keşfet'),
+('guest_select_label','tr','Misafir sayısı'),
+('guest_unit','tr','misafir'),
+('all_categories','tr','Tüm kategoriler'),
+('property_about','tr','Konaklama hakkında'),
+('property_guests','tr','misafir'),
+('property_bedrooms','tr','yatak odası'),
+('property_beds','tr','yatak'),
+('property_bathrooms','tr','banyo'),
+('property_reserve','tr','Rezervasyon talebi gönder'),
+('property_no_images','tr','Bu konaklama için henüz fotoğraf eklenmemiş.'),
+('booking_notice','tr','Bu aşamada ödeme alınmaz. Ev sahibi / yönetim onayı sonrasında ödeme adımı etkinleştirilecektir.');
 
 INSERT IGNORE INTO navigation_items (location,language_code,label,url,target,sort_order,is_active) VALUES
 ('header','tr','Konaklamalar','/','_self',10,1),
