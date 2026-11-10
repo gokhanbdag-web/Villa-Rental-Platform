@@ -169,6 +169,14 @@ $router->post('/villa/{slug}/reserve', static function (array $params): void {
     }
 });
 
+
+$router->get('/account/notifications', static function (): void {
+    $user=Auth::user();if(!$user)redirect('/login');$pdo=Database::connection();
+    $mark=$pdo->prepare('UPDATE notifications SET read_at=NOW() WHERE user_id=? AND read_at IS NULL');$mark->execute([(int)$user['id']]);
+    $s=$pdo->prepare('SELECT * FROM notifications WHERE user_id=? ORDER BY created_at DESC LIMIT 100');$s->execute([(int)$user['id']]);$notifications=$s->fetchAll();
+    require APP_ROOT.'/views/account/notifications.php';
+});
+
 $router->get('/account/bookings', static function (): void {
     $user = Auth::user();
     if (!$user) redirect('/login');
