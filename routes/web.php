@@ -154,7 +154,8 @@ $router->post('/villa/{slug}/reserve', static function (array $params): void {
             $vendorStmt->execute([(int)$property['vendor_id']]);
             $vendorInfo = $vendorStmt->fetch();
             if ($vendorInfo) {
-                $defaultRate = (float)($pdo->query("SELECT setting_value FROM settings WHERE setting_key='platform.commission_percent'")->fetchColumn() ?: 12);
+                $defaultRaw = $pdo->query("SELECT setting_value FROM settings WHERE setting_key='platform.commission_percent'")->fetchColumn();
+                $defaultRate = $defaultRaw === false ? 12.0 : (float)$defaultRaw;
                 $rate = $vendorInfo['commission_rate'] !== null ? (float)$vendorInfo['commission_rate'] : $defaultRate;
                 $platformFee = round($subtotal * max(0,min(50,$rate)) / 100, 2);
                 $vendorNet = $subtotal - $platformFee;
