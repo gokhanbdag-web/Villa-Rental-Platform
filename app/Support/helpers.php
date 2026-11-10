@@ -65,3 +65,14 @@ function store_property_uploads(PDO $pdo, int $propertyId): void {
         $cover = 0;
     }
 }
+
+function delete_property_uploads(PDO $pdo, int $propertyId): void {
+    $stmt = $pdo->prepare('SELECT file_path FROM property_media WHERE property_id=?');
+    $stmt->execute([$propertyId]);
+    foreach ($stmt->fetchAll(PDO::FETCH_COLUMN) as $path) {
+        $path = (string)$path;
+        if (!str_starts_with($path, 'public/uploads/properties/')) continue;
+        $full = APP_ROOT . '/' . $path;
+        if (is_file($full)) @unlink($full);
+    }
+}
