@@ -47,6 +47,10 @@ $router->get('/villa/{slug}', static function (array $params): void {
     $contentStmt=$pdo->prepare('SELECT content_key,content_value FROM site_content WHERE language_code=?');
     $contentStmt->execute(['tr']); $content=$contentStmt->fetchAll(PDO::FETCH_KEY_PAIR);
     $locale='tr';
+    $user=Auth::user();$isFavorite=false;
+    if($user && ($user['role']??'')==='customer'){$fav=$pdo->prepare('SELECT 1 FROM favorites WHERE user_id=? AND property_id=?');$fav->execute([(int)$user['id'],(int)$property['id']]);$isFavorite=(bool)$fav->fetchColumn();}
+    $reviewsStmt=$pdo->prepare("SELECT r.rating,r.body,r.created_at,u.username FROM reviews r JOIN users u ON u.id=r.guest_user_id WHERE r.property_id=? AND r.status='approved' ORDER BY r.created_at DESC LIMIT 20");
+    $reviewsStmt->execute([(int)$property['id']]);$reviews=$reviewsStmt->fetchAll();
     require APP_ROOT . '/views/site/property.php';
 });
 
@@ -169,6 +173,21 @@ $router->post('/villa/{slug}/reserve', static function (array $params): void {
     }
 });
 
+
+
+$router->get('/favorites', static function (): void {
+    $user=Auth::user();if(!$user)redirect('/login');if(($user['role']??'')!=='customer')redirect('/admin');
+    $s=Database::connection()->prepare("SELECT p.*, (SELECT file_path FROM property_media WHERE property_id=p.id ORDER BY is_cover DESC,sort_order,id LIMIT 1) AS cover_image FROM favorites f JOIN properties p ON p.id=f.property_id WHERE f.user_id=? AND p.status='published' ORDER BY f.created_at DESC");
+    $s->execute([(int)$user['id']]);$properties=$s->fetchAll();require APP_ROOT.'/views/account/favorites.php';
+});
+$router->post('/favorites/toggle', static function (): void {
+    $user=Auth::user();if(!$user)redirect('/login');if(($user['role']??'')!=='customer')redirect('/admin');verify_csrf();
+    $pdo=Database::connection();$pid=(int)($_POST['property_id']??0);$check=$pdo->prepare("SELECT id FROM properties WHERE id=? AND status='published'");$check->execute([$pid]);if(!$check->fetchColumn()){http_response_code(404);return;}
+    $exists=$pdo->prepare('SELECT 1 FROM favorites WHERE user_id=? AND property_id=?');$exists->execute([(int)$user['id'],$pid]);
+    if($exists->fetchColumn()){$del=$pdo->prepare('DELETE FROM favorites WHERE user_id=? AND property_id=?');$del->execute([(int)$user['id'],$pid]);}
+    else{$add=$pdo->prepare('INSERT INTO favorites(user_id,property_id,created_at) VALUES(?,?,NOW())');$add->execute([(int)$user['id'],$pid]);}
+    $return=trim((string)($_POST['return_to']??'/favorites'));if(!str_starts_with($return,'/'))$return='/favorites';redirect($return);
+});
 
 $router->get('/account/notifications', static function (): void {
     $user=Auth::user();if(!$user)redirect('/login');$pdo=Database::connection();
