@@ -147,7 +147,7 @@ $router->post('/login', static function (): void {
     verify_csrf();
     $identity = trim((string)($_POST['identity'] ?? ''));
     $password = (string)($_POST['password'] ?? '');
-    if (Auth::attempt($identity, $password)) redirect('/admin');
+    if (Auth::attempt($identity, $password)) { $user = Auth::user(); redirect(($user['role'] ?? '') === 'customer' ? '/account/bookings' : (($user['role'] ?? '') === 'vendor' ? '/vendor' : '/admin')); }
     $_SESSION['login_error'] = 'auth.invalid_credentials';
     redirect('/login');
 });
