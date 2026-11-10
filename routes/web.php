@@ -112,6 +112,20 @@ $router->post('/admin/locations/toggle', static function (): void {
 });
 
 $router->get('/', static function (): void {
+    $pdo=Database::connection();$user=Auth::user();$locale='tr';
+    try{$locale=(string)($pdo->query("SELECT setting_value FROM settings WHERE setting_key='app.locale' LIMIT 1")->fetchColumn() ?: 'tr');}catch(Throwable $e){}
+    $mode=(string)($pdo->query("SELECT setting_value FROM settings WHERE setting_key='app.mode' LIMIT 1")->fetchColumn() ?: 'single_vendor');
+    $contentStmt=$pdo->prepare('SELECT content_key,content_value FROM site_content WHERE language_code=?');$contentStmt->execute([$locale]);$content=$contentStmt->fetchAll(PDO::FETCH_KEY_PAIR);
+    $nav=$pdo->prepare('SELECT label,url,target FROM navigation_items WHERE location=? AND language_code=? AND is_active=1 ORDER BY sort_order,id');$nav->execute(['header',$locale]);$navigation=$nav->fetchAll();$nav->execute(['footer',$locale]);$footerNavigation=$nav->fetchAll();
+    $destinations=$pdo->query("SELECT city,COUNT(*) AS property_count,MIN(id) AS sample_id,(SELECT pm.file_path FROM property_media pm JOIN properties p2 ON p2.id=pm.property_id WHERE p2.city=p.city AND p2.status='published' ORDER BY pm.is_cover DESC,pm.sort_order,pm.id LIMIT 1) AS cover_image FROM properties p WHERE p.status='published' AND p.city<>'' GROUP BY city ORDER BY property_count DESC,city ASC LIMIT 8")->fetchAll();
+    $featuredProperties=$pdo->query("SELECT p.*,(SELECT pm.file_path FROM property_media pm WHERE pm.property_id=p.id ORDER BY pm.is_cover DESC,pm.sort_order,pm.id LIMIT 1) AS cover_image FROM properties p WHERE p.status='published' ORDER BY p.created_at DESC,p.id DESC LIMIT 8")->fetchAll();
+    $latestProperties=$pdo->query("SELECT p.*,(SELECT pm.file_path FROM property_media pm WHERE pm.property_id=p.id ORDER BY pm.is_cover DESC,pm.sort_order,pm.id LIMIT 1) AS cover_image FROM properties p WHERE p.status='published' ORDER BY p.id DESC LIMIT 4")->fetchAll();
+    $categories=$pdo->query('SELECT id,name,slug FROM property_categories WHERE is_active=1 ORDER BY sort_order,name LIMIT 8')->fetchAll();
+    $locationCountries=$pdo->query("SELECT id,name FROM locations WHERE location_type='country' AND is_active=1 ORDER BY sort_order,name")->fetchAll();
+    require APP_ROOT.'/views/site/landing.php';
+});
+
+$router->get('/konaklamalar', static function (): void {
     $pdo = Database::connection();
     $user = Auth::user();
     $locale = 'tr';
@@ -156,9 +170,13 @@ $router->get('/', static function (): void {
     if ($minPrice > 0) { $sql .= ' AND p.base_nightly_price >= ?'; $params[]=$minPrice; }
     if ($maxPrice > 0) { $sql .= ' AND p.base_nightly_price <= ?'; $params[]=$maxPrice; }
     $orderBy = $sort === 'price_asc' ? 'p.base_nightly_price ASC' : ($sort === 'price_desc' ? 'p.base_nightly_price DESC' : 'p.created_at DESC,p.id DESC');
-    $sql .= ' ORDER BY ' . $orderBy . ' LIMIT 48';
+    $countFrom = strpos($sql, ' FROM properties p WHERE ');
+    $countSql = 'SELECT COUNT(*)' . substr($sql, $countFrom);
+    $totalStmt=$pdo->prepare($countSql);$totalStmt->execute($params);$totalProperties=(int)$totalStmt->fetchColumn();
+    $perPage=12;$totalPages=max(1,(int)ceil($totalProperties/$perPage));$currentPage=min($totalPages,max(1,(int)($_GET['page']??1)));
+    $sql .= ' ORDER BY ' . $orderBy . ' LIMIT ' . $perPage . ' OFFSET ' . (($currentPage-1)*$perPage);
     $stmt=$pdo->prepare($sql); $stmt->execute($params); $properties=$stmt->fetchAll();
-    require APP_ROOT . '/views/site/home.php';
+    require APP_ROOT . '/views/site/listing.php';
 });
 
 $router->get('/villa/{slug}', static function (array $params): void {
