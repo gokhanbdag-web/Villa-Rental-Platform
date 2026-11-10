@@ -15,6 +15,10 @@ if (!Installer::isInstalled()) {
 
 $locale = 'tr';
 try {
+    $tzStmt = Database::connection()->prepare('SELECT setting_value FROM settings WHERE setting_key = ? LIMIT 1');
+    $tzStmt->execute(['app.timezone']);
+    $timezone = (string)($tzStmt->fetchColumn() ?: 'Europe/Istanbul');
+    if (in_array($timezone, DateTimeZone::listIdentifiers(), true)) date_default_timezone_set($timezone);
     $stmt = Database::connection()->prepare('SELECT setting_value FROM settings WHERE setting_key = ? LIMIT 1');
     $stmt->execute(['app.locale']);
     $locale = (string)($stmt->fetchColumn() ?: 'tr');
