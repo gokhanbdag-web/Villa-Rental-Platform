@@ -100,9 +100,34 @@ if ($isAdminPage) {
             .vr-admin-nav-title{padding:5px 12px 13px;color:#9aa2ad;font-size:10px;font-weight:800;letter-spacing:1.1px;text-transform:uppercase}
             .vr-admin-link{display:flex;align-items:center;min-height:42px;box-sizing:border-box;padding:10px 13px;color:#566170;text-decoration:none;border-radius:9px;font-size:13px;font-weight:600;transition:background .15s,color .15s}
             .vr-admin-link:hover{background:#f4f6f8;color:#176b50}.vr-admin-link.is-active{background:#edf5f1;color:#176b50;font-weight:750}
-            .vr-admin-content{min-width:0;padding:30px 32px;box-sizing:border-box}.vr-admin-content .wrap{max-width:none!important;margin:0!important;padding:0!important}
-            .vr-admin-content h1{margin-top:0}.vr-admin-content table{max-width:100%}
+            .vr-admin-content{min-width:0;padding:30px 32px;box-sizing:border-box;overflow-x:hidden}.vr-admin-content *{box-sizing:border-box;max-width:100%}.vr-admin-content .wrap{max-width:none!important;margin:0!important;padding:0!important}
+            .vr-admin-content h1{margin-top:0}.vr-admin-content table{width:100%;max-width:100%;border-collapse:collapse}
+            .vr-admin-content img,.vr-admin-content input,.vr-admin-content select,.vr-admin-content textarea{max-width:100%}
+            .vr-admin-content input,.vr-admin-content select,.vr-admin-content textarea{min-width:0}
+            .vr-admin-content button,.vr-admin-content a{overflow-wrap:anywhere}
+            .vr-admin-content form{min-width:0;max-width:100%}
+            .vr-admin-content .panel,.vr-admin-content article,.vr-admin-content section{min-width:0;max-width:100%}
             .vr-admin-overlay{display:none}
+            @media(max-width:680px){
+              .vr-admin-content{padding:15px 12px}
+              .vr-admin-content table,.vr-admin-content table tbody{display:block;width:100%}
+              .vr-admin-content table thead{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
+              .vr-admin-content table tbody tr{display:block;width:100%;margin:0 0 13px;padding:9px 12px;background:#fff;border:1px solid #e7eaf0;border-radius:12px;box-shadow:0 2px 8px rgba(20,30,40,.035)}
+              .vr-admin-content table tbody td{display:grid;grid-template-columns:minmax(88px,34%) minmax(0,1fr);align-items:start;gap:10px;width:100%;padding:9px 2px;border:0;border-bottom:1px solid #f0f1f3;text-align:left;overflow-wrap:anywhere;word-break:break-word}
+              .vr-admin-content table tbody td:last-child{border-bottom:0}
+              .vr-admin-content table tbody td:before{content:attr(data-label);font-size:11px;font-weight:750;color:#89919d;line-height:1.45}
+              .vr-admin-content table tbody td[data-label=""]{grid-template-columns:1fr}
+              .vr-admin-content table tbody td[data-label=""]:before{display:none}
+              .vr-admin-content table tbody td[colspan]{display:block;text-align:center;padding:15px 4px}
+              .vr-admin-content table tbody td[colspan]:before{display:none}
+              .vr-admin-content table tbody td form{display:flex!important;flex-wrap:wrap;align-items:center;gap:7px}
+              .vr-admin-content table tbody td form input,.vr-admin-content table tbody td form select{width:auto;min-width:0;flex:1 1 100px}
+              .vr-admin-content table tbody td form button{flex:0 0 auto}
+              .vr-admin-content input:not([type="checkbox"]):not([type="radio"]),.vr-admin-content select,.vr-admin-content textarea{width:100%;min-width:0}
+              .vr-admin-content button{max-width:100%;white-space:normal}
+              .vr-admin-content .grid{grid-template-columns:minmax(0,1fr)!important}
+              .vr-admin-content [style*="grid-template-columns"]{grid-template-columns:minmax(0,1fr)!important}
+            }
             @media(max-width:900px){.vr-admin-top{height:62px;padding:0 16px}.vr-admin-burger{display:flex}.vr-admin-layout{display:block;min-height:calc(100vh - 62px)}.vr-admin-sidebar{position:fixed;z-index:1004;left:0;top:0;bottom:0;width:278px;max-width:84vw;overflow-y:auto;transform:translateX(-105%);transition:transform .22s ease;box-shadow:12px 0 35px rgba(20,30,40,.12);padding:22px 15px}.vr-admin-layout.menu-open .vr-admin-sidebar{transform:translateX(0)}.vr-admin-layout.menu-open .vr-admin-overlay{display:block;position:fixed;inset:0;background:rgba(15,23,32,.42);z-index:1003}.vr-admin-content{padding:22px 20px}}
             @media(max-width:520px){.vr-admin-brand{font-size:15px}.vr-admin-user{font-size:12px}.vr-admin-content{padding:16px 13px}}
         </style><header class="vr-admin-top"><button class="vr-admin-burger" type="button" aria-label="Menüyü aç" aria-expanded="false" id="vrAdminBurger">☰</button><a class="vr-admin-brand" href="' . e(app_url('/admin')) . '" data-admin-link>VillaStay <span style="font-weight:500;color:#87918c">/ Yönetim</span></a><span class="vr-admin-user">' . $username . '</span></header><div class="vr-admin-layout" id="vrAdminLayout"><aside class="vr-admin-sidebar" aria-label="Yönetim menüsü"><div class="vr-admin-nav-title">Yönetim Paneli</div>' . $nav . '</aside><div class="vr-admin-overlay" id="vrAdminOverlay"></div><main class="vr-admin-content" id="vrAdminContent">' . $bodyContent . '</main></div>
@@ -111,6 +136,20 @@ if ($isAdminPage) {
             if(window.__villaAdminShellReady)return;window.__villaAdminShellReady=true;
             const layout=document.getElementById("vrAdminLayout"),burger=document.getElementById("vrAdminBurger"),overlay=document.getElementById("vrAdminOverlay"),content=document.getElementById("vrAdminContent");
             function closeMenu(){layout&&layout.classList.remove("menu-open");burger&&burger.setAttribute("aria-expanded","false")}
+            function enhanceResponsiveTables(root){
+                (root||content).querySelectorAll("table").forEach(function(table){
+                    const headers=Array.from(table.querySelectorAll("thead th")).map(th=>th.textContent.trim());
+                    if(!headers.length)return;
+                    table.classList.add("vr-responsive-table");
+                    table.querySelectorAll("tbody tr").forEach(function(row){
+                        Array.from(row.cells).forEach(function(cell,index){
+                            if(cell.hasAttribute("colspan"))return;
+                            if(!cell.hasAttribute("data-label"))cell.setAttribute("data-label",headers[index]||"");
+                        });
+                    });
+                });
+            }
+            enhanceResponsiveTables(content);
             burger&&burger.addEventListener("click",function(){const open=layout.classList.toggle("menu-open");burger.setAttribute("aria-expanded",open?"true":"false")});
             overlay&&overlay.addEventListener("click",closeMenu);
             function activate(url){document.querySelectorAll("[data-admin-link]").forEach(a=>{const u=new URL(a.href,location.href);a.classList.toggle("is-active",u.pathname===url|| (url!=="/admin"&&u.pathname!=="/admin"&&url.startsWith(u.pathname+"/")));});}
@@ -122,6 +161,7 @@ if ($isAdminPage) {
                     const source=await response.text(),doc=new DOMParser().parseFromString(source,"text/html"),next=doc.querySelector("#vrAdminContent");
                     if(!next)throw new Error("Sayfa içeriği bulunamadı");
                     content.innerHTML=next.innerHTML;
+                    enhanceResponsiveTables(content);
                     if(push)history.pushState({admin:true}, "",url);
                     activate(new URL(url,location.href).pathname);
                     if(doc.title)document.title=doc.title;
