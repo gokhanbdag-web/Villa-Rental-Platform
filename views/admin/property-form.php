@@ -12,7 +12,7 @@
 <label>Yatak sayısı<input type="number" min="0" max="100" name="beds" value="<?= (int)($property['beds']??1) ?>"></label>
 <label>Banyo sayısı<input type="number" min="0" max="50" step=".5" name="bathrooms" value="<?= e($property['bathrooms']??1) ?>"></label>
 <label>Gecelik fiyat<input type="number" min="0" step=".01" name="base_nightly_price" required value="<?= e($property['base_nightly_price']??0) ?>"></label>
-<label>Para birimi<input name="currency" maxlength="3" value="<?= e($property['currency']??'TRY') ?>"></label>
+<label>Para birimi<input name="currency" maxlength="3" value="<?= e($property['currency']??($defaultCurrency??'TRY')) ?>"></label>
 <label>Durum<select name="status"><option value="draft" <?= ($property['status']??'draft')==='draft'?'selected':'' ?>>Taslak</option><option value="published" <?= ($property['status']??'')==='published'?'selected':'' ?>>Yayında</option><option value="archived" <?= ($property['status']??'')==='archived'?'selected':'' ?>>Arşiv</option></select></label>
 <label>Rezervasyon tipi<select name="booking_type"><option value="request">Onaylı talep</option><option value="instant" <?= ($property['booking_type']??'')==='instant'?'selected':'' ?>>Anında rezervasyon</option></select></label>
 <label class="wide">Kısa açıklama<input name="summary" maxlength="500" value="<?= e($property['summary']??'') ?>"></label>
