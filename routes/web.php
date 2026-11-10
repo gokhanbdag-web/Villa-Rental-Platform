@@ -189,6 +189,28 @@ $router->post('/favorites/toggle', static function (): void {
     $return=trim((string)($_POST['return_to']??'/favorites'));if(!str_starts_with($return,'/'))$return='/favorites';redirect($return);
 });
 
+
+$router->get('/account/reviews/{bookingId}', static function (array $params): void {
+    $user=Auth::user();if(!$user||($user['role']??'')!=='customer')redirect('/login');
+    $s=Database::connection()->prepare("SELECT b.id,p.title FROM bookings b JOIN properties p ON p.id=b.property_id WHERE b.id=? AND b.guest_user_id=? AND b.status='completed'");
+    $s->execute([(int)$params['bookingId'],(int)$user['id']]);$booking=$s->fetch();if(!$booking){http_response_code(404);return;}
+    $exists=Database::connection()->prepare('SELECT id FROM reviews WHERE booking_id=?');$exists->execute([(int)$booking['id']]);if($exists->fetchColumn()){http_response_code(409);exit('Bu rezervasyon için zaten değerlendirme gönderdiniz.');}
+    require APP_ROOT.'/views/account/review-form.php';
+});
+$router->post('/account/reviews', static function (): void {
+    $user=Auth::user();if(!$user||($user['role']??'')!=='customer')redirect('/login');verify_csrf();
+    $bookingId=(int)($_POST['booking_id']??0);$rating=max(1,min(5,(int)($_POST['rating']??5)));$body=trim((string)($_POST['body']??''));
+    $pdo=Database::connection();$s=$pdo->prepare("SELECT property_id FROM bookings WHERE id=? AND guest_user_id=? AND status='completed'");$s->execute([$bookingId,(int)$user['id']]);$propertyId=(int)$s->fetchColumn();if(!$propertyId){http_response_code(403);exit('Yalnızca tamamlanan konaklamalar değerlendirilebilir.');}
+    try{$save=$pdo->prepare("INSERT INTO reviews(booking_id,property_id,guest_user_id,rating,body,status,created_at) VALUES(?,?,?,?,?,'pending',NOW())");$save->execute([$bookingId,$propertyId,(int)$user['id'],$rating,$body]);redirect('/account/bookings');}
+    catch(PDOException $e){http_response_code(409);exit('Bu rezervasyon için değerlendirme zaten mevcut.');}
+});
+$router->get('/admin/reviews', static function (): void {
+    Auth::requireRole(['super_admin','admin']);$reviews=Database::connection()->query('SELECT r.*,p.title,u.username FROM reviews r JOIN properties p ON p.id=r.property_id JOIN users u ON u.id=r.guest_user_id ORDER BY r.created_at DESC LIMIT 250')->fetchAll();require APP_ROOT.'/views/admin/reviews.php';
+});
+$router->post('/admin/reviews/status', static function (): void {
+    Auth::requireRole(['super_admin','admin']);verify_csrf();$status=($_POST['status']??'')==='approved'?'approved':'rejected';$s=Database::connection()->prepare('UPDATE reviews SET status=? WHERE id=?');$s->execute([$status,(int)($_POST['id']??0)]);redirect('/admin/reviews');
+});
+
 $router->get('/account/notifications', static function (): void {
     $user=Auth::user();if(!$user)redirect('/login');$pdo=Database::connection();
     $mark=$pdo->prepare('UPDATE notifications SET read_at=NOW() WHERE user_id=? AND read_at IS NULL');$mark->execute([(int)$user['id']]);
