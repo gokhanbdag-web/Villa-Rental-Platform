@@ -460,6 +460,14 @@ $router->get('/admin/content', static function (): void {
         'featured_title'=>'Öne çıkanlar başlığı',
         'featured_subtitle'=>'Öne çıkanlar açıklaması',
         'empty_properties'=>'Sonuç bulunamadı metni',
+        'search_button'=>'Arama butonu',
+        'guest_select_label'=>'Misafir seçimi etiketi',
+        'guest_unit'=>'Misafir birimi',
+        'all_categories'=>'Tüm kategoriler etiketi',
+        'property_about'=>'Villa detay başlığı',
+        'property_reserve'=>'Rezervasyon butonu',
+        'property_no_images'=>'Görsel yok metni',
+        'booking_notice'=>'Rezervasyon bilgilendirme metni',
         'footer_text'=>'Alt bilgi metni'
     ];
     require APP_ROOT . '/views/admin/content.php';
@@ -468,7 +476,7 @@ $router->get('/admin/content', static function (): void {
 $router->post('/admin/content', static function (): void {
     Auth::requireRole(['super_admin', 'admin']);
     verify_csrf();
-    $allowed = ['site_name','home_eyebrow','home_title','home_subtitle','home_search_placeholder','featured_title','featured_subtitle','empty_properties','footer_text'];
+    $allowed = ['site_name','home_eyebrow','home_title','home_subtitle','home_search_placeholder','featured_title','featured_subtitle','empty_properties','search_button','guest_select_label','guest_unit','all_categories','property_about','property_reserve','property_no_images','booking_notice','footer_text'];
     $stmt = Database::connection()->prepare('INSERT INTO site_content (content_key,language_code,content_value,updated_at) VALUES (?,\'tr\',?,NOW()) ON DUPLICATE KEY UPDATE content_value=VALUES(content_value),updated_at=NOW()');
     foreach ((array)($_POST['content'] ?? []) as $key=>$value) {
         if (in_array($key,$allowed,true)) $stmt->execute([$key,trim((string)$value)]);
