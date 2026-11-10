@@ -11,4 +11,4 @@ unset($_SESSION['login_error']);
 <form method="post" action="/login"><?= csrf_field() ?>
 <label><?= e(\App\Core\Translator::get('auth.identity')) ?></label><input name="identity" autocomplete="username" required>
 <label><?= e(\App\Core\Translator::get('auth.password')) ?></label><input name="password" type="password" autocomplete="current-password" required>
-<button type="submit"><?= e(\App\Core\Translator::get('auth.sign_in')) ?></button></form></main></body></html>
+<button type="submit"><?= e(\App\Core\Translator::get('auth.sign_in')) ?></button></form><p style="margin:18px 0 0;font-size:13px">Hesabınız yok mu? <a href="/register">Misafir hesabı oluşturun</a></p><p><a href="/">Ana sayfaya dön</a></p></main></body></html>
