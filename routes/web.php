@@ -91,6 +91,7 @@ $router->get('/villa/{slug}/reserve', static function (array $params): void {
     $stmt->execute([$params['slug'] ?? '']);
     $property = $stmt->fetch();
     if (!$property) { http_response_code(404); echo 'Konaklama bulunamadı.'; return; }
+    $contentStmt=Database::connection()->prepare('SELECT content_key,content_value FROM site_content WHERE language_code=?');$contentStmt->execute(['tr']);$content=$contentStmt->fetchAll(PDO::FETCH_KEY_PAIR);
     require APP_ROOT . '/views/site/booking.php';
 });
 
