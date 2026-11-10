@@ -90,3 +90,23 @@ function sync_property_amenities(PDO $pdo, int $propertyId): void {
         if ($check->fetchColumn()) $insert->execute([$propertyId,$amenityId]);
     }
 }
+
+function delete_property_media(PDO $pdo, int $propertyId, int $mediaId): void {
+    $find = $pdo->prepare('SELECT file_path,is_cover FROM property_media WHERE id=? AND property_id=?');
+    $find->execute([$mediaId,$propertyId]);
+    $media = $find->fetch(PDO::FETCH_ASSOC);
+    if (!$media) return;
+    $path = (string)$media['file_path'];
+    if (str_starts_with($path, 'uploads/properties/')) {
+        $full = APP_ROOT . '/public/' . $path;
+        if (is_file($full)) @unlink($full);
+    }
+    $delete = $pdo->prepare('DELETE FROM property_media WHERE id=? AND property_id=?');
+    $delete->execute([$mediaId,$propertyId]);
+    if ((int)$media['is_cover'] === 1) {
+        $next = $pdo->prepare('SELECT id FROM property_media WHERE property_id=? ORDER BY sort_order,id LIMIT 1');
+        $next->execute([$propertyId]);
+        $nextId = $next->fetchColumn();
+        if ($nextId) { $set = $pdo->prepare('UPDATE property_media SET is_cover=1 WHERE id=?'); $set->execute([(int)$nextId]); }
+    }
+}
