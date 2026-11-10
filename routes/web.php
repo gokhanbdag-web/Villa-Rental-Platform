@@ -296,6 +296,27 @@ $router->post('/admin/properties/save', static function (): void {
     redirect('/admin/properties');
 });
 
+
+$router->get('/admin/navigation', static function (): void {
+    Auth::requireRole(['super_admin','admin']);
+    $items=Database::connection()->query('SELECT * FROM navigation_items ORDER BY location,sort_order,id')->fetchAll();
+    require APP_ROOT.'/views/admin/navigation.php';
+});
+$router->post('/admin/navigation/save', static function (): void {
+    Auth::requireRole(['super_admin','admin']);verify_csrf();
+    $label=trim((string)($_POST['label']??''));$url=trim((string)($_POST['url']??''));
+    $location=in_array($_POST['location']??'', ['header','footer'],true)?$_POST['location']:'header';
+    $target=($_POST['target']??'')==='_blank'?'_blank':'_self';
+    if($label===''||strlen($label)>120||!preg_match('#^(https?://|/)#i',$url)){http_response_code(422);exit('Menü adı veya bağlantı adresi geçersiz.');}
+    $s=Database::connection()->prepare('INSERT INTO navigation_items(location,language_code,label,url,target,sort_order,is_active) VALUES(?,?,?,?,?,?,1)');
+    $s->execute([$location,'tr',$label,$url,$target,(int)($_POST['sort_order']??10)]);
+    redirect('/admin/navigation');
+});
+$router->post('/admin/navigation/delete', static function (): void {
+    Auth::requireRole(['super_admin','admin']);verify_csrf();
+    $s=Database::connection()->prepare('DELETE FROM navigation_items WHERE id=?');$s->execute([(int)($_POST['id']??0)]);redirect('/admin/navigation');
+});
+
 $router->get('/admin/content', static function (): void {
     Auth::requireRole(['super_admin', 'admin']);
     $pdo = Database::connection();
