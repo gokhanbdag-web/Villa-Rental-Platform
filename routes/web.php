@@ -8,6 +8,7 @@ use App\Core\Translator;
 
 $router->get('/', static function (): void {
     $pdo = Database::connection();
+    $user = Auth::user();
     $locale = 'tr';
     $mode = (string)($pdo->query("SELECT setting_value FROM settings WHERE setting_key='app.mode' LIMIT 1")->fetchColumn() ?: 'single_vendor');
     try {
