@@ -34,3 +34,6 @@ Requirements: PHP 8.2+, MySQL 8+ (or compatible MariaDB), PDO MySQL, Fileinfo, a
 6. Sign in at `/login`.
 
 The installer runs `database/schema.sql` and every `database/migrations/*.sql` file in lexical order. Keep the `config/` and `storage/` directories outside the public document root. Review host-specific Apache/PHP permissions before deployment.
+
+
+<!-- CI syntax validation branch marker -->
