@@ -297,6 +297,12 @@ $router->get('/vendor', static function (): void {
     $s=$pdo->prepare('SELECT COUNT(*) FROM properties WHERE vendor_id=?');$s->execute([(int)$vendor['id']]);$propertyCount=(int)$s->fetchColumn();
     require APP_ROOT.'/views/vendor/dashboard.php';
 });
+
+$router->get('/vendor/bookings', static function (): void {
+    Auth::requireRole(['vendor']);$pdo=Database::connection();$v=$pdo->prepare('SELECT id FROM vendors WHERE user_id=?');$v->execute([(int)Auth::user()['id']]);$vendorId=(int)$v->fetchColumn();
+    $s=$pdo->prepare('SELECT b.*,p.title,u.username AS guest_name,u.email AS guest_email FROM bookings b JOIN properties p ON p.id=b.property_id JOIN users u ON u.id=b.guest_user_id WHERE p.vendor_id=? ORDER BY b.created_at DESC');$s->execute([$vendorId]);$bookings=$s->fetchAll();require APP_ROOT.'/views/vendor/bookings.php';
+});
+
 $router->get('/vendor/properties', static function (): void {
     Auth::requireRole(['vendor']);$pdo=Database::connection();$s=$pdo->prepare('SELECT id FROM vendors WHERE user_id=?');$s->execute([(int)Auth::user()['id']]);$vid=(int)$s->fetchColumn();
     $s=$pdo->prepare('SELECT id,title,slug,city,district,max_guests,base_nightly_price,currency,status FROM properties WHERE vendor_id=? ORDER BY id DESC');$s->execute([$vid]);$properties=$s->fetchAll();
