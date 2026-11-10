@@ -18,6 +18,7 @@ CREATE TABLE IF NOT EXISTS navigation_items (
  sort_order INT NOT NULL DEFAULT 0,
  is_active TINYINT(1) NOT NULL DEFAULT 1,
  INDEX idx_navigation_location (location, language_code, is_active, sort_order),
+ UNIQUE KEY uq_navigation_link (location, language_code, url(191)),
  CONSTRAINT fk_navigation_language FOREIGN KEY (language_code) REFERENCES languages(code) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
@@ -33,7 +34,7 @@ INSERT IGNORE INTO site_content (content_key,language_code,content_value) VALUES
 ('footer_text','tr','Hayalinizdeki tatil için doğru konaklama yerini keşfedin.'),
 ('currency_symbol','tr','₺');
 
-INSERT INTO navigation_items (location,language_code,label,url,target,sort_order,is_active) VALUES
+INSERT IGNORE INTO navigation_items (location,language_code,label,url,target,sort_order,is_active) VALUES
 ('header','tr','Konaklamalar','/','_self',10,1),
 ('header','tr','Giriş Yap','/login','_self',20,1)
-ON DUPLICATE KEY UPDATE label=VALUES(label);
+;
