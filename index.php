@@ -66,20 +66,32 @@ if ($isAdminPage) {
         ];
         $nav = '';
         foreach ($links as $url => $label) {
-            if ($url === '/admin') continue;
-            $active = $requestPath === $url || str_starts_with($requestPath, $url . '/') || str_starts_with($requestPath, $url . '?');
-            $nav .= '<a class="vr-admin-link' . ($active ? ' is-active' : '') . '" href="' . $url . '">' . e($label) . '</a>';
+            $active = $requestPath === $url || str_starts_with($requestPath, $url . '/');
+            $nav .= '<a class="vr-admin-link' . ($active ? ' is-active' : '') . '" href="' . $url . '">' .
+                '<span>' . e($label) . '</span></a>';
         }
+
         $shell = '<style>
-            .vr-admin-header{font-family:Inter,system-ui,sans-serif;background:#fff;border-bottom:1px solid #e8ece9;padding:15px 24px;display:flex;align-items:center;justify-content:space-between;gap:16px;position:sticky;top:0;z-index:1000}
+            body{margin:0!important;background:#f7f7f7!important;color:#222;font-family:Inter,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif!important}
+            .vr-admin-top{height:70px;background:#fff;border-bottom:1px solid #eee;display:flex;align-items:center;justify-content:space-between;padding:0 28px;gap:18px;position:sticky;top:0;z-index:1000}
             .vr-admin-brand{font-size:17px;font-weight:800;color:#20352b;text-decoration:none}
             .vr-admin-user{font-size:13px;color:#65736a}
-            .vr-admin-nav{font-family:Inter,system-ui,sans-serif;background:#fff;border-bottom:1px solid #e8ece9;padding:8px 18px;display:flex;gap:6px;overflow-x:auto;white-space:nowrap;position:sticky;top:54px;z-index:999}
-            .vr-admin-link{display:inline-block;padding:9px 11px;border-radius:8px;text-decoration:none;color:#46544a;font-size:13px;font-weight:650}
-            .vr-admin-link:hover,.vr-admin-link.is-active{background:#eaf3ed;color:#176b50}
-            @media(max-width:600px){.vr-admin-header{padding:12px 15px}.vr-admin-nav{top:48px;padding:7px 9px}}
-        </style><header class="vr-admin-header"><a class="vr-admin-brand" href="/admin">VillaStay · Yönetim</a><span class="vr-admin-user">' . $username . '</span></header><nav class="vr-admin-nav" aria-label="Yönetim menüsü">' . $nav . '</nav>';
-        return preg_replace('/(<body\\b[^>]*>)/i', '$1' . $shell, $html, 1) ?? $html;
+            .vr-admin-layout{display:grid;grid-template-columns:240px minmax(0,1fr);min-height:calc(100vh - 70px)}
+            .vr-admin-sidebar{background:#fff;border-right:1px solid #eee;padding:24px 16px;display:flex;flex-direction:column;gap:4px}
+            .vr-admin-link{display:block;padding:11px 12px;color:#444;text-decoration:none;border-radius:8px;font-size:14px;font-weight:550;transition:background .15s,color .15s}
+            .vr-admin-link:hover{background:#f5f6f5;color:#176b50}
+            .vr-admin-link.is-active{background:#fff0f1;color:#b73545;font-weight:700}
+            .vr-admin-content{min-width:0;padding:30px}
+            .vr-admin-content .wrap{max-width:none!important;margin:0!important;padding:0!important}
+            .vr-admin-content h1{margin-top:0}
+            .vr-admin-content table{max-width:100%}
+            @media(max-width:800px){.vr-admin-layout{grid-template-columns:1fr}.vr-admin-sidebar{flex-direction:row;overflow-x:auto;white-space:nowrap;border-right:0;border-bottom:1px solid #eee;padding:10px;position:sticky;top:70px;z-index:900}.vr-admin-link{flex:0 0 auto}.vr-admin-content{padding:18px}}
+            @media(max-width:480px){.vr-admin-top{height:60px;padding:0 15px}.vr-admin-sidebar{top:60px}.vr-admin-content{padding:14px}}
+        </style><header class="vr-admin-top"><a class="vr-admin-brand" href="/admin">VillaStay · Yönetim</a><span class="vr-admin-user">' . $username . '</span></header><div class="vr-admin-layout"><aside class="vr-admin-sidebar" aria-label="Yönetim menüsü">' . $nav . '</aside><div class="vr-admin-content">';
+        $closing = '</div></div>';
+        return preg_replace_callback('/(<body\b[^>]*>)(.*?)(<\/body>)/is', static function (array $matches) use ($shell, $closing): string {
+            return $matches[1] . $shell . $matches[2] . $closing . $matches[3];
+        }, $html, 1) ?? $html;
     });
 }
 $router->dispatch($_SERVER['REQUEST_METHOD'] ?? 'GET', $requestPath);
