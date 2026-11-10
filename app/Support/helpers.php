@@ -76,3 +76,16 @@ function delete_property_uploads(PDO $pdo, int $propertyId): void {
         if (is_file($full)) @unlink($full);
     }
 }
+
+function sync_property_amenities(PDO $pdo, int $propertyId): void {
+    $ids = array_values(array_unique(array_filter(array_map('intval', (array)($_POST['amenities'] ?? [])), static fn(int $id): bool => $id > 0)));
+    $delete = $pdo->prepare('DELETE FROM property_amenities WHERE property_id=?');
+    $delete->execute([$propertyId]);
+    if (!$ids) return;
+    $check = $pdo->prepare('SELECT id FROM amenities WHERE id=? AND is_active=1');
+    $insert = $pdo->prepare('INSERT IGNORE INTO property_amenities(property_id,amenity_id) VALUES(?,?)');
+    foreach ($ids as $amenityId) {
+        $check->execute([$amenityId]);
+        if ($check->fetchColumn()) $insert->execute([$propertyId,$amenityId]);
+    }
+}
