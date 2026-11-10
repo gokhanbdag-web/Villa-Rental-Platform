@@ -116,12 +116,26 @@ $router->post('/villa/{slug}/reserve', static function (array $params): void {
         $current = $lock->fetch();
         $conflict = $pdo->prepare("SELECT id FROM bookings WHERE property_id=? AND status IN ('pending','confirmed') AND check_in < ? AND check_out > ? LIMIT 1");
         $conflict->execute([(int)$property['id'],$outRaw,$inRaw]);
-        $blocked = $pdo->prepare("SELECT id FROM availability WHERE property_id=? AND status <> 'available' AND date_from < ? AND date_to > ? LIMIT 1");
-        $blocked->execute([(int)$property['id'],$outRaw,$inRaw]);
-        if (!$current || $conflict->fetchColumn() || $blocked->fetchColumn()) {
+        $calendar = $pdo->prepare('SELECT date_from,date_to,status,nightly_price FROM availability WHERE property_id=? AND date_from < ? AND date_to > ?');
+        $calendar->execute([(int)$property['id'],$outRaw,$inRaw]);
+        $rules = $calendar->fetchAll();
+        $unavailable = false;
+        $subtotal = 0.0;
+        for ($night = $checkIn; $night < $checkOut; $night = $night->modify('+1 day')) {
+            $day = $night->format('Y-m-d');
+            $nightPrice = (float)$current['base_nightly_price'];
+            foreach ($rules as $rule) {
+                if ($day >= $rule['date_from'] && $day < $rule['date_to']) {
+                    if ($rule['status'] !== 'available') { $unavailable = true; break; }
+                    if ($rule['nightly_price'] !== null) $nightPrice = (float)$rule['nightly_price'];
+                }
+            }
+            if ($unavailable) break;
+            $subtotal += $nightPrice;
+        }
+        if (!$current || $conflict->fetchColumn() || $unavailable) {
             $pdo->rollBack(); http_response_code(409); exit('Seçtiğiniz tarihler şu anda müsait değil. Lütfen başka tarih seçin.');
         }
-        $subtotal = (float)$current['base_nightly_price'] * $nights;
         $code = 'VR' . date('Ymd') . strtoupper(bin2hex(random_bytes(3)));
         $save = $pdo->prepare("INSERT INTO bookings (booking_code,property_id,guest_user_id,check_in,check_out,guests,subtotal,fees,total,currency,status,created_at) VALUES (?,?,?,?,?,?,?,?,?,?, 'pending',NOW())");
         $save->execute([$code,(int)$property['id'],(int)$user['id'],$inRaw,$outRaw,$guests,$subtotal,0,$subtotal,$current['currency']]);
