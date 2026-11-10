@@ -317,6 +317,35 @@ $router->post('/admin/navigation/delete', static function (): void {
     $s=Database::connection()->prepare('DELETE FROM navigation_items WHERE id=?');$s->execute([(int)($_POST['id']??0)]);redirect('/admin/navigation');
 });
 
+
+$router->get('/admin/pages', static function (): void {
+    Auth::requireRole(['super_admin','admin']);
+    $pages=Database::connection()->query("SELECT id,title,slug,status FROM cms_pages WHERE language_code='tr' ORDER BY id DESC")->fetchAll();
+    require APP_ROOT.'/views/admin/pages.php';
+});
+$router->get('/admin/pages/new', static function (): void {
+    Auth::requireRole(['super_admin','admin']);$page=[];require APP_ROOT.'/views/admin/page-form.php';
+});
+$router->get('/admin/pages/{id}', static function (array $params): void {
+    Auth::requireRole(['super_admin','admin']);$s=Database::connection()->prepare("SELECT * FROM cms_pages WHERE id=? AND language_code='tr'");$s->execute([(int)$params['id']]);$page=$s->fetch();
+    if(!$page){http_response_code(404);return;}require APP_ROOT.'/views/admin/page-form.php';
+});
+$router->post('/admin/pages/save', static function (): void {
+    Auth::requireRole(['super_admin','admin']);verify_csrf();$pdo=Database::connection();
+    $id=(int)($_POST['id']??0);$title=trim((string)($_POST['title']??''));$slug=strtolower(trim((string)($_POST['slug']??'')));
+    $slug=trim(preg_replace('/[^a-z0-9-]+/','-',$slug),'-');$content=trim((string)($_POST['content']??''));$status=($_POST['status']??'')==='published'?'published':'draft';
+    if($title===''||$slug===''||$content===''){http_response_code(422);exit('Başlık, URL ve içerik zorunludur.');}
+    if($id){$s=$pdo->prepare("UPDATE cms_pages SET title=?,slug=?,content=?,status=? WHERE id=? AND language_code='tr'");$s->execute([$title,$slug,$content,$status,$id]);}
+    else{$s=$pdo->prepare("INSERT INTO cms_pages(language_code,title,slug,content,status) VALUES('tr',?,?,?,?)");$s->execute([$title,$slug,$content,$status]);}
+    redirect('/admin/pages');
+});
+$router->get('/page/{slug}', static function (array $params): void {
+    $s=Database::connection()->prepare("SELECT * FROM cms_pages WHERE slug=? AND language_code='tr' AND status='published' LIMIT 1");$s->execute([$params['slug']]);$page=$s->fetch();
+    if(!$page){http_response_code(404);echo 'Sayfa bulunamadı.';return;}
+    $content=Database::connection()->query("SELECT content_value FROM site_content WHERE content_key='site_name' AND language_code='tr'")->fetchColumn();$siteName=$content?:'VillaStay';
+    require APP_ROOT.'/views/site/page.php';
+});
+
 $router->get('/admin/content', static function (): void {
     Auth::requireRole(['super_admin', 'admin']);
     $pdo = Database::connection();
