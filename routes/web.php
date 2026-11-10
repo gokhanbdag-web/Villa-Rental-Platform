@@ -28,6 +28,77 @@ $router->get('/admin/locations', static function (): void {
     $parents=$pdo->query("SELECT c.id,c.location_type,CONCAT(COALESCE(p.name,''),CASE WHEN p.name IS NULL THEN '' ELSE ' / ' END,c.name) AS full_name FROM locations c LEFT JOIN locations p ON p.id=c.parent_id WHERE c.is_active=1 ORDER BY FIELD(c.location_type,'country','city','district'),p.name,c.name")->fetchAll();
     require APP_ROOT.'/views/admin/locations.php';
 });
+
+$router->get('/admin/locations/template', static function (): void {
+    Auth::requireRole(['super_admin','admin']);
+    header('Content-Type: text/csv; charset=utf-8');
+    header('Content-Disposition: attachment; filename="lokasyon-sablonu.csv"');
+    echo "\xEF\xBB\xBF";
+    $out=fopen('php://output','wb');
+    fputcsv($out,['country','city','district','neighborhood'],';');
+    fputcsv($out,['Türkiye','Antalya','Kaş','Kalkan'],';');
+    fputcsv($out,['Türkiye','Muğla','Fethiye','Ölüdeniz'],';');
+    fclose($out);
+    exit;
+});
+$router->post('/admin/locations/import', static function (): void {
+    Auth::requireRole(['super_admin','admin']);verify_csrf();
+    $file=$_FILES['locations_csv']??null;
+    if(!is_array($file)||($file['error']??UPLOAD_ERR_NO_FILE)!==UPLOAD_ERR_OK){http_response_code(422);exit('CSV dosyası yüklenemedi. Dosyayı seçip tekrar deneyin.');}
+    if(($file['size']??0)<1||$file['size']>5*1024*1024){http_response_code(422);exit('CSV dosyası boş veya 5 MB sınırından büyük.');}
+    $handle=fopen((string)$file['tmp_name'],'rb');
+    if(!$handle){http_response_code(422);exit('CSV dosyası okunamadı.');}
+    $first=(string)fgets($handle);rewind($handle);
+    $counts=['inserted'=>0,'existing'=>0,'errors'=>0,'rows'=>0];$errorRows=[];
+    $delimiter=';';
+    $candidates=[';',',',"\t"];
+    $best=-1;
+    foreach($candidates as $candidate){$n=count(str_getcsv($first,$candidate,'"','\\'));if($n>$best){$best=$n;$delimiter=$candidate;}}
+    $header=fgetcsv($handle,0,$delimiter,'"','\\');
+    if(!is_array($header)){fclose($handle);http_response_code(422);exit('CSV başlık satırı okunamadı.');}
+    $header[0]=preg_replace('/^\xEF\xBB\xBF/','',(string)$header[0]);
+    $aliases=['country'=>['country','ulke','ülke'],'city'=>['city','sehir','şehir','il'],'district'=>['district','ilce','ilçe'],'neighborhood'=>['neighborhood','semt','mahalle','semt_mahalle']];
+    $columns=[];
+    foreach($header as $index=>$name){$key=mb_strtolower(trim((string)$name));foreach($aliases as $field=>$names){if(in_array($key,$names,true))$columns[$field]=$index;}}
+    if(!isset($columns['country'])){fclose($handle);http_response_code(422);exit('CSV başlığında country (ülke) sütunu bulunamadı. Şablonu indirip kullanabilirsiniz.');}
+    $pdo=Database::connection();
+    $find=$pdo->prepare('SELECT id FROM locations WHERE parent_id <=> ? AND location_type=? AND name=? LIMIT 1');
+    $insert=$pdo->prepare('INSERT INTO locations(parent_id,location_type,name,sort_order,is_active) VALUES(?,?,?,10,1)');
+    $resolve=static function(string $name,string $type,?int $parent) use($find,$insert,&$counts): int {
+        $name=trim($name);if($name==='')return 0;
+        $find->execute([$parent,$type,$name]);$id=(int)($find->fetchColumn()?:0);
+        if($id){$counts['existing']++;return $id;}
+        $insert->execute([$parent,$type,$name]);$counts['inserted']++;return (int)Database::connection()->lastInsertId();
+    };
+    $line=1;
+    while(($row=fgetcsv($handle,0,$delimiter,'"','\\'))!==false){
+        $line++;if($row===[null]||$row===[])continue;
+        $values=[];foreach(['country','city','district','neighborhood'] as $field){$idx=$columns[$field]??null;$values[$field]=$idx!==null?trim((string)($row[$idx]??'')):'';}
+        if($values['country']===''&&$values['city']===''&&$values['district']===''&&$values['neighborhood']==='')continue;
+        $counts['rows']++;
+        try{
+            if($values['country']==='')throw new InvalidArgumentException('Ülke alanı boş.');
+            if($values['district']!==''&&$values['city']==='')throw new InvalidArgumentException('İlçe için şehir bilgisi zorunlu.');
+            if($values['neighborhood']!==''&&$values['district']==='')throw new InvalidArgumentException('Semt/mahalle için ilçe bilgisi zorunlu.');
+            if(mb_strlen($values['country'])>190||mb_strlen($values['city'])>190||mb_strlen($values['district'])>190||mb_strlen($values['neighborhood'])>190)throw new InvalidArgumentException('Konum adı 190 karakteri aşamaz.');
+            $pdo->beginTransaction();
+            $countryId=$resolve($values['country'],'country',null);
+            if($values['city']!==''){$cityId=$resolve($values['city'],'city',$countryId);
+                if($values['district']!==''){$districtId=$resolve($values['district'],'district',$cityId);
+                    if($values['neighborhood']!=='')$resolve($values['neighborhood'],'neighborhood',$districtId);
+                }
+            }
+            $pdo->commit();
+        }catch(Throwable $e){if($pdo->inTransaction())$pdo->rollBack();$counts['errors']++;if(count($errorRows)<100)$errorRows[]=['line'=>$line,'message'=>$e->getMessage()];}
+        if($counts['rows']>=20000){$counts['errors']++;$errorRows[]=['line'=>$line,'message'=>'20.000 satır sınırına ulaşıldı.'];break;}
+    }
+    fclose($handle);
+    $locations=$pdo->query("SELECT l.*,p.name AS parent_name FROM locations l LEFT JOIN locations p ON p.id=l.parent_id ORDER BY FIELD(l.location_type,'country','city','district','neighborhood'),p.name,l.sort_order,l.name")->fetchAll();
+    $parents=$pdo->query("SELECT c.id,c.location_type,CONCAT(COALESCE(p.name,''),CASE WHEN p.name IS NULL THEN '' ELSE ' / ' END,c.name) AS full_name FROM locations c LEFT JOIN locations p ON p.id=c.parent_id WHERE c.is_active=1 ORDER BY FIELD(c.location_type,'country','city','district'),p.name,c.name")->fetchAll();
+    $importReport=['counts'=>$counts,'errors'=>$errorRows];
+    require APP_ROOT.'/views/admin/locations.php';
+});
+
 $router->post('/admin/locations/save', static function (): void {
     Auth::requireRole(['super_admin','admin']);verify_csrf();$pdo=Database::connection();$type=(string)($_POST['location_type']??'');$name=trim((string)($_POST['name']??''));$parent=(int)($_POST['parent_id']??0);
     $allowed=['country'=>null,'city'=>'country','district'=>'city','neighborhood'=>'district'];
