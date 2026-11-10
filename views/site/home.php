@@ -29,7 +29,7 @@ main{padding:58px 0 80px}.section-top{display:flex;justify-content:space-between
 </head>
 <body>
 <header><div class="wrap head"><a class="brand" href="/"><?= e($siteName) ?></a><nav>
-<?php foreach ($navigation as $item): ?><a href="<?= e($item['url']) ?>" target="<?= e($item['target']) ?>"><?= e($item['label']) ?></a><?php endforeach; ?><?php if (($mode ?? 'single_vendor') === 'multi_vendor'): ?><a href="/vendor/register">Ev sahibi olun</a><?php endif; ?>
+<?php foreach ($navigation as $item): ?><a href="<?= e($item['url']) ?>" target="<?= e($item['target']) ?>" <?= $item['target']==='_blank'?'rel="noopener noreferrer"':'' ?>><?= e($item['label']) ?></a><?php endforeach; ?><?php if (($mode ?? 'single_vendor') === 'multi_vendor'): ?><a href="/vendor/register">Ev sahibi olun</a><?php endif; ?>
 </nav></div></header>
 <section class="hero"><div class="wrap">
 <div class="eyebrow"><?= e($content['home_eyebrow'] ?? '') ?></div>
@@ -50,5 +50,5 @@ main{padding:58px 0 80px}.section-top{display:flex;justify-content:space-between
 <div class="price"><strong><?= e(number_format((float)$property['base_nightly_price'],0,',','.')) ?> <?= e($property['currency']) ?></strong> / gece</div></a>
 <?php endforeach; ?></div><?php endif; ?>
 </main>
-<footer><div class="wrap"><strong><?= e($siteName) ?></strong><p><?= e($content['footer_text'] ?? '') ?></p><nav><?php foreach(($footerNavigation ?? []) as $item): ?><a href="<?= e($item['url']) ?>" target="<?= e($item['target']) ?>"><?= e($item['label']) ?></a><?php endforeach; ?></nav></div></footer>
+<footer><div class="wrap"><strong><?= e($siteName) ?></strong><p><?= e($content['footer_text'] ?? '') ?></p><nav><?php foreach(($footerNavigation ?? []) as $item): ?><a href="<?= e($item['url']) ?>" target="<?= e($item['target']) ?>" <?= $item['target']==='_blank'?'rel="noopener noreferrer"':'' ?>><?= e($item['label']) ?></a><?php endforeach; ?></nav></div></footer>
 </body></html>
