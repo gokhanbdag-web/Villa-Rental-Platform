@@ -18,12 +18,24 @@ spl_autoload_register(static function (string $class): void {
 
 require APP_ROOT . '/app/Support/helpers.php';
 
+// Rewrite root-relative HTML links so the same build works at / or /any/subfolder/.
+if (app_base_path() !== '') {
+    ob_start(static function (string $html): string {
+        $base = app_base_path();
+        return preg_replace_callback(
+            '/(\b(?:href|src|action|formaction)\s*=\s*)(["\'])\/(?!\/)/i',
+            static fn(array $m): string => $m[1] . $m[2] . $base . '/',
+            $html
+        ) ?? $html;
+    });
+}
+
 if (session_status() !== PHP_SESSION_ACTIVE) {
     ini_set('session.use_strict_mode', '1');
     session_name('villa_platform_session');
     session_set_cookie_params([
         'lifetime' => 0,
-        'path' => '/',
+        'path' => app_base_path() . '/',
         'secure' => !empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off',
         'httponly' => true,
         'samesite' => 'Lax',
