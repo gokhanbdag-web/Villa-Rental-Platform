@@ -3,6 +3,7 @@ declare(strict_types=1);
 
 require_once __DIR__ . '/app/bootstrap.php';
 
+use App\Core\Auth;
 use App\Core\Database;
 use App\Core\Installer;
 use App\Core\Migrator;
@@ -46,7 +47,7 @@ if ($basePath !== '' && ($requestPath === $basePath || str_starts_with($requestP
 $isAdminPage = str_starts_with($requestPath, '/admin/') && $requestPath !== '/admin/';
 if ($isAdminPage) {
     ob_start(static function (string $html) use ($requestPath): string {
-        $user = \\App\\Core\\Auth::user();
+        $user = Auth::user();
         $username = e((string)($user['username'] ?? 'Yönetici'));
         $links = [
             '/admin' => 'Genel Bakış',
