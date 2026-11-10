@@ -57,16 +57,24 @@ $router->get('/', static function (): void {
     $footerStmt = $pdo->prepare('SELECT label,url,target FROM navigation_items WHERE location=? AND language_code=? AND is_active=1 ORDER BY sort_order,id');
     $footerStmt->execute(['footer',$locale]); $footerNavigation = $footerStmt->fetchAll();
     $categories = $pdo->query('SELECT id,name,slug FROM property_categories WHERE is_active=1 ORDER BY sort_order,name')->fetchAll();
+    $locationCountries=$pdo->query("SELECT id,name FROM locations WHERE location_type='country' AND is_active=1 ORDER BY sort_order,name")->fetchAll();
+    $locationChildren=static function(int $parent) use($pdo): array {if(!$parent)return [];$s=$pdo->prepare('SELECT id,name FROM locations WHERE parent_id=? AND is_active=1 ORDER BY sort_order,name');$s->execute([$parent]);return $s->fetchAll();};
+    $locationCountryId=max(0,(int)($_GET['country_id']??0));$locationCityId=max(0,(int)($_GET['city_id']??0));$locationDistrictId=max(0,(int)($_GET['district_id']??0));$locationNeighborhoodId=max(0,(int)($_GET['neighborhood_id']??0));
+    $locationCities=$locationChildren($locationCountryId);$locationDistricts=$locationChildren($locationCityId);$locationNeighborhoods=$locationChildren($locationDistrictId);
     $city = trim((string)($_GET['city'] ?? ''));
     $guests = max(0,(int)($_GET['guests'] ?? 0));
     $categoryId = max(0,(int)($_GET['category'] ?? 0));
     $minPrice = max(0,(float)($_GET['min_price'] ?? 0));
     $maxPrice = max(0,(float)($_GET['max_price'] ?? 0));
     $sort = in_array($_GET['sort'] ?? '', ['price_asc','price_desc'], true) ? $_GET['sort'] : 'newest';
-    $filters = ['city' => $city, 'guests' => $guests, 'category' => $categoryId, 'min_price'=>$minPrice, 'max_price'=>$maxPrice, 'sort'=>$sort];
+    $filters = ['city' => $city, 'guests' => $guests, 'category' => $categoryId, 'min_price'=>$minPrice, 'max_price'=>$maxPrice, 'sort'=>$sort,'country_id'=>$locationCountryId,'city_id'=>$locationCityId,'district_id'=>$locationDistrictId,'neighborhood_id'=>$locationNeighborhoodId];
     $sql = "SELECT p.*, (SELECT pm.file_path FROM property_media pm WHERE pm.property_id=p.id ORDER BY pm.is_cover DESC,pm.sort_order,pm.id LIMIT 1) AS cover_image FROM properties p WHERE p.status='published'";
     $params = [];
     if ($city !== '') { $sql .= ' AND (p.city LIKE ? OR p.district LIKE ? OR p.country LIKE ?)'; $like='%'.$city.'%'; array_push($params,$like,$like,$like); }
+    if($locationCountryId>0){$sql.=' AND p.location_country_id=?';$params[]=$locationCountryId;}
+    if($locationCityId>0){$sql.=' AND p.location_city_id=?';$params[]=$locationCityId;}
+    if($locationDistrictId>0){$sql.=' AND p.location_district_id=?';$params[]=$locationDistrictId;}
+    if($locationNeighborhoodId>0){$sql.=' AND p.location_neighborhood_id=?';$params[]=$locationNeighborhoodId;}
     if ($guests > 0) { $sql .= ' AND p.max_guests >= ?'; $params[]=$guests; }
     if ($categoryId > 0) { $sql .= ' AND p.category_id = ?'; $params[]=$categoryId; }
     if ($minPrice > 0) { $sql .= ' AND p.base_nightly_price >= ?'; $params[]=$minPrice; }
