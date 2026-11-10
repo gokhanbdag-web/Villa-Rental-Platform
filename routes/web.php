@@ -44,6 +44,100 @@ $router->get('/villa/{slug}', static function (array $params): void {
     require APP_ROOT . '/views/site/property.php';
 });
 
+
+$router->get('/register', static function (): void {
+    if (Auth::check()) redirect('/account/bookings');
+    $error = null;
+    require APP_ROOT . '/views/auth/register.php';
+});
+
+$router->post('/register', static function (): void {
+    verify_csrf();
+    $username = trim((string)($_POST['username'] ?? ''));
+    $email = filter_var(trim((string)($_POST['email'] ?? '')), FILTER_VALIDATE_EMAIL);
+    $password = (string)($_POST['password'] ?? '');
+    if (strlen($username) < 3 || !$email || strlen($password) < 10 || !hash_equals($password,(string)($_POST['password_confirm'] ?? ''))) {
+        $error = 'Bilgileri kontrol edin. Şifre en az 10 karakter olmalı ve tekrar alanıyla eşleşmelidir.';
+        require APP_ROOT . '/views/auth/register.php';
+        return;
+    }
+    try {
+        $stmt = Database::connection()->prepare("INSERT INTO users (username,email,password_hash,role,status,created_at) VALUES (?,?,?,'customer','active',NOW())");
+        $stmt->execute([$username,$email,password_hash($password,PASSWORD_DEFAULT)]);
+        Auth::attempt($email,$password);
+        redirect('/account/bookings');
+    } catch (PDOException $e) {
+        $error = $e->getCode() === '23000' ? 'Bu kullanıcı adı veya e-posta zaten kayıtlı.' : 'Hesap oluşturulurken bir hata oluştu.';
+        require APP_ROOT . '/views/auth/register.php';
+    }
+});
+
+$router->get('/villa/{slug}/reserve', static function (array $params): void {
+    $user = Auth::user();
+    if (!$user) redirect('/register');
+    if (($user['role'] ?? '') !== 'customer') redirect('/login');
+    $stmt = Database::connection()->prepare("SELECT * FROM properties WHERE slug=? AND status='published' LIMIT 1");
+    $stmt->execute([$params['slug'] ?? '']);
+    $property = $stmt->fetch();
+    if (!$property) { http_response_code(404); echo 'Konaklama bulunamadı.'; return; }
+    require APP_ROOT . '/views/site/booking.php';
+});
+
+$router->post('/villa/{slug}/reserve', static function (array $params): void {
+    $user = Auth::user();
+    if (!$user) redirect('/register');
+    if (($user['role'] ?? '') !== 'customer') redirect('/login');
+    verify_csrf();
+    $pdo = Database::connection();
+    $stmt = $pdo->prepare("SELECT * FROM properties WHERE slug=? AND status='published' LIMIT 1");
+    $stmt->execute([$params['slug'] ?? '']);
+    $property = $stmt->fetch();
+    if (!$property) { http_response_code(404); exit('Konaklama bulunamadı.'); }
+    $inRaw = (string)($_POST['check_in'] ?? '');
+    $outRaw = (string)($_POST['check_out'] ?? '');
+    $checkIn = \DateTimeImmutable::createFromFormat('!Y-m-d',$inRaw);
+    $checkOut = \DateTimeImmutable::createFromFormat('!Y-m-d',$outRaw);
+    $today = new \DateTimeImmutable('today');
+    $guests = (int)($_POST['guests'] ?? 0);
+    if (!$checkIn || !$checkOut || $checkIn->format('Y-m-d') !== $inRaw || $checkOut->format('Y-m-d') !== $outRaw || $checkIn < $today || $checkOut <= $checkIn || $guests < 1 || $guests > (int)$property['max_guests']) {
+        http_response_code(422); exit('Tarihleri ve misafir sayısını kontrol edin.');
+    }
+    $nights = (int)$checkIn->diff($checkOut)->days;
+    try {
+        $pdo->beginTransaction();
+        $lock = $pdo->prepare('SELECT id,base_nightly_price,currency FROM properties WHERE id=? FOR UPDATE');
+        $lock->execute([(int)$property['id']]);
+        $current = $lock->fetch();
+        $conflict = $pdo->prepare("SELECT id FROM bookings WHERE property_id=? AND status IN ('pending','confirmed') AND check_in < ? AND check_out > ? LIMIT 1");
+        $conflict->execute([(int)$property['id'],$outRaw,$inRaw]);
+        $blocked = $pdo->prepare("SELECT id FROM availability WHERE property_id=? AND status <> 'available' AND date_from < ? AND date_to > ? LIMIT 1");
+        $blocked->execute([(int)$property['id'],$outRaw,$inRaw]);
+        if (!$current || $conflict->fetchColumn() || $blocked->fetchColumn()) {
+            $pdo->rollBack(); http_response_code(409); exit('Seçtiğiniz tarihler şu anda müsait değil. Lütfen başka tarih seçin.');
+        }
+        $subtotal = (float)$current['base_nightly_price'] * $nights;
+        $code = 'VR' . date('Ymd') . strtoupper(bin2hex(random_bytes(3)));
+        $save = $pdo->prepare("INSERT INTO bookings (booking_code,property_id,guest_user_id,check_in,check_out,guests,subtotal,fees,total,currency,status,created_at) VALUES (?,?,?,?,?,?,?,?,?,?, 'pending',NOW())");
+        $save->execute([$code,(int)$property['id'],(int)$user['id'],$inRaw,$outRaw,$guests,$subtotal,0,$subtotal,$current['currency']]);
+        $pdo->commit();
+        redirect('/account/bookings');
+    } catch (Throwable $e) {
+        if ($pdo->inTransaction()) $pdo->rollBack();
+        error_log('Booking request failed: '.$e->getMessage());
+        http_response_code(500); exit('Rezervasyon talebi kaydedilemedi. Lütfen tekrar deneyin.');
+    }
+});
+
+$router->get('/account/bookings', static function (): void {
+    $user = Auth::user();
+    if (!$user) redirect('/login');
+    if (($user['role'] ?? '') !== 'customer') redirect('/admin');
+    $stmt = Database::connection()->prepare('SELECT b.*,p.title,p.city FROM bookings b JOIN properties p ON p.id=b.property_id WHERE b.guest_user_id=? ORDER BY b.created_at DESC');
+    $stmt->execute([(int)$user['id']]);
+    $bookings = $stmt->fetchAll();
+    require APP_ROOT . '/views/account/bookings.php';
+});
+
 $router->get('/login', static function (): void {
     if (Auth::check()) redirect('/admin');
     require APP_ROOT . '/views/auth/login.php';
