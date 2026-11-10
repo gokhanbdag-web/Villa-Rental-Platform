@@ -312,12 +312,12 @@ $router->get('/vendor/properties', static function (): void {
     $newUrl='/vendor/properties/new';$editBase='/vendor/properties';$deleteAction='/vendor/properties/delete';$backUrl='/vendor';require APP_ROOT.'/views/admin/properties.php';
 });
 $router->get('/vendor/properties/new', static function (): void {
-    Auth::requireRole(['vendor']);$property=[];$categories=Database::connection()->query('SELECT id,name FROM property_categories WHERE is_active=1 ORDER BY sort_order,name')->fetchAll();$formAction='/vendor/properties/save';$backUrl='/vendor/properties';require APP_ROOT.'/views/admin/property-form.php';
+    Auth::requireRole(['vendor']);$property=[];$categories=Database::connection()->query('SELECT id,name FROM property_categories WHERE is_active=1 ORDER BY sort_order,name')->fetchAll();$defaultCurrency=(string)(Database::connection()->query("SELECT setting_value FROM settings WHERE setting_key='app.currency'")->fetchColumn()?:'TRY');$formAction='/vendor/properties/save';$backUrl='/vendor/properties';require APP_ROOT.'/views/admin/property-form.php';
 });
 $router->get('/vendor/properties/{id}', static function (array $params): void {
     Auth::requireRole(['vendor']);$pdo=Database::connection();$s=$pdo->prepare('SELECT id FROM vendors WHERE user_id=?');$s->execute([(int)Auth::user()['id']]);$vid=(int)$s->fetchColumn();
     $s=$pdo->prepare('SELECT * FROM properties WHERE id=? AND vendor_id=?');$s->execute([(int)$params['id'],$vid]);$property=$s->fetch();
-    if(!$property){http_response_code(404);return;}$categories=$pdo->query('SELECT id,name FROM property_categories WHERE is_active=1 ORDER BY sort_order,name')->fetchAll();$formAction='/vendor/properties/save';$backUrl='/vendor/properties';require APP_ROOT.'/views/admin/property-form.php';
+    if(!$property){http_response_code(404);return;}$categories=$pdo->query('SELECT id,name FROM property_categories WHERE is_active=1 ORDER BY sort_order,name')->fetchAll();$defaultCurrency=(string)($pdo->query("SELECT setting_value FROM settings WHERE setting_key='app.currency'")->fetchColumn()?:'TRY');$formAction='/vendor/properties/save';$backUrl='/vendor/properties';require APP_ROOT.'/views/admin/property-form.php';
 });
 $router->post('/vendor/properties/save', static function (): void {
     Auth::requireRole(['vendor']);verify_csrf();$pdo=Database::connection();
@@ -388,7 +388,7 @@ $router->get('/admin/properties', static function (): void {
 
 $router->get('/admin/properties/new', static function (): void {
     Auth::requireRole(['super_admin', 'admin']);
-    $property = []; $categories = Database::connection()->query('SELECT id,name FROM property_categories WHERE is_active=1 ORDER BY sort_order,name')->fetchAll();
+    $property = []; $categories = Database::connection()->query('SELECT id,name FROM property_categories WHERE is_active=1 ORDER BY sort_order,name')->fetchAll(); $defaultCurrency=(string)(Database::connection()->query("SELECT setting_value FROM settings WHERE setting_key='app.currency'")->fetchColumn() ?: 'TRY');
     require APP_ROOT . '/views/admin/property-form.php';
 });
 
@@ -398,7 +398,7 @@ $router->get('/admin/properties/{id}', static function (array $params): void {
     $stmt->execute([(int)($params['id'] ?? 0)]);
     $property = $stmt->fetch();
     if (!$property) { http_response_code(404); echo 'Konaklama bulunamadı.'; return; }
-    $categories = Database::connection()->query('SELECT id,name FROM property_categories WHERE is_active=1 ORDER BY sort_order,name')->fetchAll();
+    $categories = Database::connection()->query('SELECT id,name FROM property_categories WHERE is_active=1 ORDER BY sort_order,name')->fetchAll(); $defaultCurrency=(string)(Database::connection()->query("SELECT setting_value FROM settings WHERE setting_key='app.currency'")->fetchColumn() ?: 'TRY');
     require APP_ROOT . '/views/admin/property-form.php';
 });
 
