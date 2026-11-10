@@ -93,7 +93,7 @@ final class Installer
             $pdo->commit();
 
             $config = ['database' => $db, 'app' => ['timezone' => 'Europe/Istanbul']];
-            $php = "<?php\\ndeclare(strict_types=1);\\nreturn " . var_export($config, true) . ";\\n";
+            $php = "<?php\ndeclare(strict_types=1);\nreturn " . var_export($config, true) . ";\n";
             if (file_put_contents($root . '/config/config.php', $php, LOCK_EX) === false) {
                 throw new \RuntimeException('Yapılandırma dosyası yazılamadı.');
             }
