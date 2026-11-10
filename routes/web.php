@@ -137,6 +137,11 @@ $router->get('/', static function (): void {
     $categoryId = max(0,(int)($_GET['category'] ?? 0));
     $minPrice = max(0,(float)($_GET['min_price'] ?? 0));
     $maxPrice = max(0,(float)($_GET['max_price'] ?? 0));
+    $priceCeiling = (int)$pdo->query("SELECT COALESCE(MAX(base_nightly_price),100000) FROM properties WHERE status='published'")->fetchColumn();
+    $priceCeiling = max(1000,(int)(ceil($priceCeiling / 1000) * 1000));
+    $minPrice = min($minPrice,$priceCeiling);
+    $maxPrice = $maxPrice > 0 ? min($maxPrice,$priceCeiling) : $priceCeiling;
+    if ($minPrice >= $maxPrice) { $minPrice = 0; $maxPrice = $priceCeiling; }
     $sort = in_array($_GET['sort'] ?? '', ['price_asc','price_desc'], true) ? $_GET['sort'] : 'newest';
     $filters = ['city' => $city, 'guests' => $guests, 'category' => $categoryId, 'min_price'=>$minPrice, 'max_price'=>$maxPrice, 'sort'=>$sort,'country_id'=>$locationCountryId,'city_id'=>$locationCityId,'district_id'=>$locationDistrictId,'neighborhood_id'=>$locationNeighborhoodId];
     $sql = "SELECT p.*, (SELECT pm.file_path FROM property_media pm WHERE pm.property_id=p.id ORDER BY pm.is_cover DESC,pm.sort_order,pm.id LIMIT 1) AS cover_image FROM properties p WHERE p.status='published'";
