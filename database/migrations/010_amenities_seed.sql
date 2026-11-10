@@ -1,0 +1,16 @@
+INSERT IGNORE INTO amenities(name,icon,is_active,sort_order) VALUES
+('Özel yüzme havuzu','waves',1,10),
+('Deniz manzarası','sun',1,20),
+('Wi-Fi','wifi',1,30),
+('Klima','snowflake',1,40),
+('Ücretsiz otopark','car',1,50),
+('Jakuzi','bath',1,60),
+('Tam donanımlı mutfak','chef-hat',1,70),
+('Şömine','flame',1,80),
+('Bahçe','trees',1,90),
+('Evcil hayvan kabul edilir','paw-print',1,100),
+('Barbekü alanı','grill',1,110),
+('Çocuk havuzu','waves',1,120),
+('Denize yakın','umbrella',1,130),
+('Çamaşır makinesi','washing-machine',1,140),
+('Akıllı TV','tv',1,150);
