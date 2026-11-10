@@ -43,7 +43,23 @@ final class Auth
 
     public static function user(): ?array
     {
-        return isset($_SESSION['user']) && is_array($_SESSION['user']) ? $_SESSION['user'] : null;
+        static $validated = false;
+        if (!isset($_SESSION['user']) || !is_array($_SESSION['user'])) return null;
+        if (!$validated) {
+            $stmt = Database::connection()->prepare('SELECT username,email,role,status FROM users WHERE id=? LIMIT 1');
+            $stmt->execute([(int)($_SESSION['user']['id'] ?? 0)]);
+            $current = $stmt->fetch();
+            if (!$current || $current['status'] !== 'active') {
+                unset($_SESSION['user']);
+                session_regenerate_id(true);
+                return null;
+            }
+            $_SESSION['user']['username'] = $current['username'];
+            $_SESSION['user']['email'] = $current['email'];
+            $_SESSION['user']['role'] = $current['role'];
+            $validated = true;
+        }
+        return $_SESSION['user'];
     }
 
     public static function check(): bool
