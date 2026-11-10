@@ -507,10 +507,10 @@ $router->get('/admin/pages/{id}', static function (array $params): void {
 $router->post('/admin/pages/save', static function (): void {
     Auth::requireRole(['super_admin','admin']);verify_csrf();$pdo=Database::connection();
     $id=(int)($_POST['id']??0);$title=trim((string)($_POST['title']??''));$slug=strtolower(trim((string)($_POST['slug']??'')));
-    $slug=trim(preg_replace('/[^a-z0-9-]+/','-',$slug),'-');$content=trim((string)($_POST['content']??''));$status=($_POST['status']??'')==='published'?'published':'draft';
+    $slug=trim(preg_replace('/[^a-z0-9-]+/','-',$slug),'-');$content=trim((string)($_POST['content']??''));$metaTitle=trim((string)($_POST['meta_title']??''));$metaDescription=trim((string)($_POST['meta_description']??''));$status=($_POST['status']??'')==='published'?'published':'draft';
     if($title===''||$slug===''||$content===''){http_response_code(422);exit('Başlık, URL ve içerik zorunludur.');}
-    if($id){$s=$pdo->prepare("UPDATE cms_pages SET title=?,slug=?,content=?,status=? WHERE id=? AND language_code='tr'");$s->execute([$title,$slug,$content,$status,$id]);}
-    else{$s=$pdo->prepare("INSERT INTO cms_pages(language_code,title,slug,content,status) VALUES('tr',?,?,?,?)");$s->execute([$title,$slug,$content,$status]);}
+    if($id){$s=$pdo->prepare("UPDATE cms_pages SET title=?,slug=?,content=?,status=?,meta_title=?,meta_description=? WHERE id=? AND language_code='tr'");$s->execute([$title,$slug,$content,$status,$metaTitle,$metaDescription,$id]);}
+    else{$s=$pdo->prepare("INSERT INTO cms_pages(language_code,title,slug,content,status,meta_title,meta_description) VALUES('tr',?,?,?,?,?,?)");$s->execute([$title,$slug,$content,$status,$metaTitle,$metaDescription]);}
     redirect('/admin/pages');
 });
 $router->get('/page/{slug}', static function (array $params): void {
