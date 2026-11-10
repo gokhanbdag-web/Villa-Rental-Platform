@@ -6,7 +6,7 @@
 <title><?= e($page['meta_title'] ?: $page['title']) ?></title>
 <meta name="description" content="<?= e($page['meta_description']??'') ?>">
 <style>
-:root{--green:#176b50;--ink:#26332b;--line:#e8ece9}
+:root{--green:#167c80;--ink:#20332c;--line:#e8eeea}
 *{box-sizing:border-box}
 body{font-family:Inter,system-ui,-apple-system,"Segoe UI",sans-serif;color:var(--ink);margin:0;background:#fff}
 .wrap{max-width:850px;margin:50px auto;padding:0 20px}
@@ -38,6 +38,7 @@ body.menu-open{overflow:hidden}
 <a class="site-brand" href="/"><?= e($siteName ?? 'VillaStay') ?></a>
 <button class="mobile-menu-toggle" type="button" aria-label="Menüyü aç" aria-controls="siteNavigation" aria-expanded="false">☰</button>
 <nav class="site-nav" id="siteNavigation">
+<a href="/konaklamalar">Konaklamalar</a><a href="/destinasyonlar">Destinasyonlar</a>
 <?php foreach (($navigation ?? []) as $item): ?><a href="<?= e($item['url']) ?>" target="<?= e($item['target']) ?>" <?= $item['target']==='_blank'?'rel="noopener noreferrer"':'' ?>><?= e($item['label']) ?></a><?php endforeach; ?>
 <?php if (($mode ?? 'single_vendor') === 'multi_vendor'): ?><a href="/vendor/register">Ev sahibi olun</a><?php endif; ?>
 <?php if (($user['role'] ?? '') === 'customer'): ?><a href="/favorites">Favorilerim</a><a href="/account/bookings">Hesabım</a><?php endif; ?>
