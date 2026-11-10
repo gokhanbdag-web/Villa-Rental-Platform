@@ -27,10 +27,10 @@ Native PHP 8.2+ and MySQL villa rental platform. No PHP framework is used. The f
 Requirements: PHP 8.2+, MySQL 8+ (or compatible MariaDB), PDO MySQL, Fileinfo, and Apache with `mod_rewrite`.
 
 1. Upload the repository files to the hosting account.
-2. Point the web root to the repository root for this development version.
+2. Prefer setting the web root to the repository's `public/` directory. A `public/index.php` entrypoint routes requests to the application outside the public directory. If your host cannot use that layout, the repository root can be used temporarily with the supplied root `.htaccess`.
 3. Ensure PHP can write to `config/`, `storage/`, and `public/uploads/`.
 4. Visit the domain. The application redirects to `/install/` while not installed.
 5. Enter the database credentials, initial administrator account, and platform mode.
 6. Sign in at `/login`.
 
-The installer runs `database/schema.sql` and every `database/migrations/*.sql` file in lexical order. Keep the `config/` and `storage/` directories inaccessible from the web; the supplied `.htaccess` blocks direct access. For production, move to a dedicated public document root and review host-specific Apache/PHP permissions before deployment.
+The installer runs `database/schema.sql` and every `database/migrations/*.sql` file in lexical order. Keep the `config/` and `storage/` directories outside the public document root. Review host-specific Apache/PHP permissions before deployment.
