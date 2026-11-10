@@ -3,12 +3,24 @@ declare(strict_types=1);
 
 require __DIR__ . '/app/bootstrap.php';
 
+use App\Core\Database;
 use App\Core\Installer;
 use App\Core\Router;
+use App\Core\Translator;
 
 if (!Installer::isInstalled()) {
-    header('Location: install/');
+    header('Location: /install/');
     exit;
+}
+
+$locale = 'tr';
+try {
+    $stmt = Database::connection()->prepare('SELECT setting_value FROM settings WHERE setting_key = ? LIMIT 1');
+    $stmt->execute(['app.locale']);
+    $locale = (string)($stmt->fetchColumn() ?: 'tr');
+    Translator::setLocale($locale);
+} catch (Throwable $e) {
+    error_log('Locale initialization failed: ' . $e->getMessage());
 }
 
 $router = new Router();
