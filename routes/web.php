@@ -470,6 +470,7 @@ $router->post('/admin/bookings/status', static function (): void {
 $router->get('/admin', static function (): void {
     Auth::requireRole(['super_admin', 'admin']);
     $pdo = Database::connection();
+    $mode = (string)($pdo->query("SELECT setting_value FROM settings WHERE setting_key='app.mode'")->fetchColumn() ?: 'single_vendor');
     $metrics = [
         'properties' => (int)$pdo->query('SELECT COUNT(*) FROM properties')->fetchColumn(),
         'bookings' => (int)$pdo->query('SELECT COUNT(*) FROM bookings')->fetchColumn(),
