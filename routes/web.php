@@ -312,6 +312,33 @@ $router->post('/admin/content', static function (): void {
     redirect('/admin/content');
 });
 
+
+$router->get('/admin/bookings', static function (): void {
+    Auth::requireRole(['super_admin','admin']);
+    $sql="SELECT b.*,p.title,u.username AS guest_name,u.email AS guest_email FROM bookings b JOIN properties p ON p.id=b.property_id JOIN users u ON u.id=b.guest_user_id ORDER BY b.created_at DESC LIMIT 250";
+    $bookings=Database::connection()->query($sql)->fetchAll();
+    require APP_ROOT.'/views/admin/bookings.php';
+});
+$router->post('/admin/bookings/status', static function (): void {
+    Auth::requireRole(['super_admin','admin']);verify_csrf();
+    $pdo=Database::connection();$id=(int)($_POST['id']??0);$status=(string)($_POST['status']??'');
+    if(!in_array($status,['pending','confirmed','cancelled','completed'],true)){http_response_code(422);exit('Rezervasyon durumu geçersiz.');}
+    try{
+        $pdo->beginTransaction();
+        $s=$pdo->prepare('SELECT property_id,check_in,check_out,status FROM bookings WHERE id=? FOR UPDATE');$s->execute([$id]);$booking=$s->fetch();
+        if(!$booking){$pdo->rollBack();http_response_code(404);exit('Rezervasyon bulunamadı.');}
+        if($status==='confirmed'){
+            $conflict=$pdo->prepare("SELECT id FROM bookings WHERE property_id=? AND id<>? AND status='confirmed' AND check_in < ? AND check_out > ? LIMIT 1");
+            $conflict->execute([(int)$booking['property_id'],$id,$booking['check_out'],$booking['check_in']]);
+            if($conflict->fetchColumn()){$pdo->rollBack();http_response_code(409);exit('Bu tarihlerde onaylanmış başka bir rezervasyon var.');}
+        }
+        $update=$pdo->prepare('UPDATE bookings SET status=? WHERE id=?');$update->execute([$status,$id]);
+        $log=$pdo->prepare('INSERT INTO audit_logs(user_id,action,entity_type,entity_id,ip_address,details,created_at) VALUES(?,?,?,?,?,?,NOW())');
+        $log->execute([(int)Auth::user()['id'],'booking.status_changed','booking',$id,$_SERVER['REMOTE_ADDR']??null,json_encode(['from'=>$booking['status'],'to'=>$status],JSON_UNESCAPED_UNICODE)]);
+        $pdo->commit();redirect('/admin/bookings');
+    }catch(Throwable $e){if($pdo->inTransaction())$pdo->rollBack();error_log('Booking status update failed: '.$e->getMessage());http_response_code(500);exit('Rezervasyon güncellenemedi.');}
+});
+
 $router->get('/admin', static function (): void {
     Auth::requireRole(['super_admin', 'admin']);
     $pdo = Database::connection();
