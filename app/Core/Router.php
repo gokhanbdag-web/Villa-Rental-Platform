@@ -11,9 +11,21 @@ final class Router
     public function dispatch(string $method, string $path): void
     {
         $path = $this->normalize($path);
-        $handler = $this->routes[strtoupper($method)][$path] ?? null;
-        if (!$handler) { http_response_code(404); echo 'Sayfa bulunamadı.'; return; }
-        $handler();
+        foreach ($this->routes[strtoupper($method)] ?? [] as $pattern => $handler) {
+            $names = [];
+            $regex = preg_replace_callback('/\{([a-zA-Z_][a-zA-Z0-9_]*)\}/', static function (array $match) use (&$names): string {
+                $names[] = $match[1];
+                return '([^/]+)';
+            }, $pattern);
+            if (!preg_match('#^' . $regex . '$#', $path, $matches)) continue;
+            array_shift($matches);
+            $params = [];
+            foreach ($names as $index => $name) $params[$name] = rawurldecode($matches[$index] ?? '');
+            $handler($params);
+            return;
+        }
+        http_response_code(404);
+        echo 'Sayfa bulunamadı.';
     }
     private function normalize(string $path): string
     {
