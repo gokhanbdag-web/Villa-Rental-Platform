@@ -45,9 +45,10 @@ function store_property_uploads(PDO $pdo, int $propertyId): void {
     $allowed = ['image/jpeg'=>'jpg','image/png'=>'png','image/webp'=>'webp'];
     $finfo = new finfo(FILEINFO_MIME_TYPE);
     $count = min(count($_FILES['images']['name']), 10);
-    $existing = $pdo->prepare('SELECT COUNT(*) FROM property_media WHERE property_id=?');
+    $existing = $pdo->prepare("SELECT COUNT(*) FROM property_media WHERE property_id=? AND file_path NOT LIKE 'demo/villas/%'");
     $existing->execute([$propertyId]);
     $cover = (int)$existing->fetchColumn() === 0 ? 1 : 0;
+    if ($cover === 1) { $resetCover = $pdo->prepare('UPDATE property_media SET is_cover=0 WHERE property_id=?'); $resetCover->execute([$propertyId]); }
     $insert = $pdo->prepare('INSERT INTO property_media (property_id,file_path,alt_text,is_cover,sort_order) VALUES (?,?,?,?,?)');
     for ($i=0; $i<$count; $i++) {
         $error = (int)($_FILES['images']['error'][$i] ?? UPLOAD_ERR_NO_FILE);
