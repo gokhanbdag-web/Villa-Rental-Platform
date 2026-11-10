@@ -52,7 +52,7 @@ main{padding:58px 0 80px}.section-top{display:flex;justify-content:space-between
 <?php if (!$properties): ?><div class="empty"><?= e($content['empty_properties'] ?? '') ?></div><?php else: ?>
 <div class="grid"><?php foreach($properties as $property): ?>
 <a class="property" href="/villa/<?= e($property['slug']) ?>"><div class="photo"><?php if($cover($property)): ?><img src="<?= e($cover($property)) ?>" alt="<?= e($property['title']) ?>" loading="lazy"><?php else: ?><div class="photo-empty">Görsel yakında eklenecek</div><?php endif; ?></div>
-<h3><?= e($property['title']) ?></h3><div class="meta"><?= e(trim(($property['district'] ? $property['district'].', ' : '').($property['city'] ?? '').($property['country'] ? ', '.$property['country'] : ''))) ?> · <?= (int)$property['max_guests'] ?> misafir</div>
+<h3><?= e($property['title']) ?></h3><div class="meta"><?= e(trim(($property['neighborhood'] ? $property['neighborhood'].', ' : '').($property['district'] ? $property['district'].', ' : '').($property['city'] ?? '').($property['country'] ? ', '.$property['country'] : ''))) ?> · <?= (int)$property['max_guests'] ?> misafir</div>
 <div class="price"><strong><?= e(number_format((float)$property['base_nightly_price'],0,',','.')) ?> <?= e($property['currency']) ?></strong> / gece</div></a>
 <?php endforeach; ?></div><?php endif; ?>
 </main>
