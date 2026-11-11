@@ -132,6 +132,42 @@ final class ThemeManager
             if (stripos($html, '</head>') !== false) $html = preg_replace('/<\/head>/i', $tag . '</head>', $html, 1) ?? $html;
             $html = preg_replace('/<body\b/i', '<body data-villa-theme="' . e($slug) . '"', $html, 1) ?? $html;
         }
+        // Inject after the theme stylesheet so every theme obeys the phone layout rule.
+        $mobileLayout = '<style id="villa-mobile-single-column-global">
+        @media(max-width:760px){
+          body[data-villa-theme] .cards,body[data-villa-theme] .grid,
+          body[data-villa-theme] .destination-grid,body[data-villa-theme] .pb-grid,
+          body[data-villa-theme] .pb-widget-items,body[data-villa-theme] .pb-property-grid,
+          body[data-villa-theme] .pb-destination-grid,body[data-villa-theme] .pb-category-grid,
+          body[data-villa-theme] .pb-host-grid,body[data-villa-theme] .pb-blog-grid,
+          body[data-villa-theme] .pb-pricing-grid,body[data-villa-theme] .pb-seasonal-grid,
+          body[data-villa-theme] .pb-gallery,body[data-villa-theme] .pb-gallery-grid,
+          body[data-villa-theme] .gallery-grid{
+            display:grid!important;grid-template-columns:minmax(0,1fr)!important;
+            grid-auto-flow:row!important;grid-auto-rows:auto!important;
+            width:100%!important;min-width:0!important;
+          }
+          body[data-villa-theme] .cards>*,body[data-villa-theme] .grid>*,
+          body[data-villa-theme] .destination-grid>*,body[data-villa-theme] .pb-grid>*,
+          body[data-villa-theme] .pb-widget-items>*,body[data-villa-theme] .pb-property-grid>*,
+          body[data-villa-theme] .pb-destination-grid>*,body[data-villa-theme] .pb-category-grid>*,
+          body[data-villa-theme] .pb-host-grid>*,body[data-villa-theme] .pb-blog-grid>*,
+          body[data-villa-theme] .pb-pricing-grid>*,body[data-villa-theme] .pb-seasonal-grid>*,
+          body[data-villa-theme] .pb-gallery>*,body[data-villa-theme] .pb-gallery-grid>*,
+          body[data-villa-theme] .gallery-grid>*{
+            grid-column:1/-1!important;grid-row:auto!important;width:100%!important;
+            max-width:100%!important;min-width:0!important;
+          }
+          body[data-villa-theme] .pb-search-form,body[data-villa-theme] .search-enhanced{
+            grid-template-columns:minmax(0,1fr)!important;
+          }
+          body[data-villa-theme] .pb-widget-properties .pb-card,
+          body[data-villa-theme] .pb-widget-destinations .pb-card{
+            grid-template-columns:minmax(0,1fr)!important;
+          }
+        }</style>';
+        $html = preg_replace('/<\\/body>/i', $mobileLayout . '</body>', $html, 1) ?? $html;
+
         $preview = (string)($_SESSION['villa_theme_preview'] ?? '');
         if ($preview !== '' && Auth::check() && in_array(Auth::user()['role'] ?? '', ['admin','super_admin'], true)) {
             $banner = '<div style="position:fixed;z-index:99999;left:12px;right:12px;bottom:12px;display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px 16px;border-radius:12px;background:#182b24;color:#fff;font:13px/1.4 system-ui;box-shadow:0 8px 30px #0003"><span>Şu anda <strong>' . e(self::installed()[$preview]['name'] ?? $preview) . '</strong> temasını önizliyorsunuz. Bu görünüm ziyaretçilere açık değildir.</span><a href="' . e(app_url('/admin/themes/preview/clear')) . '" style="color:#fff;font-weight:800;text-decoration:underline;white-space:nowrap">Önizlemeyi kapat</a></div>';
