@@ -86,6 +86,7 @@ if ($isAdminPage) {
             ],
             'Sistem' => [
                 '/admin/settings' => 'Ayarlar',
+                '/admin/themes' => 'Tema Yönetimi',
                 '/admin/translations' => 'Çeviriler',
             ],
         ];
@@ -125,6 +126,7 @@ if ($isAdminPage) {
             '/admin/navigation' => '☷',
             '/admin/content' => '✎',
             '/admin/settings' => '⚙',
+            '/admin/themes' => '◈',
             '/admin/translations' => '文',
             '/admin/vendors' => '♧',
         ];
