@@ -50,3 +50,16 @@ body[data-villa-theme="mediterranean"] footer{background:#52634b;color:#fffaf0}
  body[data-villa-theme="mediterranean"] .hero-card{min-height:620px}
  body[data-villa-theme="mediterranean"] .search-enhanced{grid-template-columns:1fr 1fr}
 }
+
+
+/* Shared listing/detail polish across the three page templates. */
+body[data-villa-theme] .grid .photo{height:220px;overflow:hidden;margin-bottom:12px}
+body[data-villa-theme] .grid .photo img{width:100%;height:100%;object-fit:cover;display:block}
+body[data-villa-theme] .grid .stay{overflow:hidden}
+body[data-villa-theme] .results-head{display:flex;align-items:center;justify-content:space-between;gap:15px;flex-wrap:wrap}
+body[data-villa-theme] .pagination a{display:inline-flex;align-items:center;justify-content:center;min-width:38px;height:38px;margin:3px;border:1px solid currentColor;border-radius:4px}
+body[data-villa-theme] .gallery{overflow:hidden}
+body[data-villa-theme] .gallery img{object-fit:cover}
+body[data-villa-theme] .booking{padding:22px}
+body[data-villa-theme] .theme-header .nav a{white-space:nowrap}
+@media(max-width:760px){body[data-villa-theme] .grid .photo{height:205px}body[data-villa-theme] .booking{padding:17px}}
