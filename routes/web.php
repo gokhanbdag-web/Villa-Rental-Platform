@@ -10,7 +10,7 @@ function villa_navigation_tree(PDO $pdo, string $location, string $locale): arra
     $stmt=$pdo->prepare('SELECT id,parent_id,label,url,target FROM navigation_items WHERE location=? AND language_code=? AND is_active=1 ORDER BY sort_order,id');
     $stmt->execute([$location,$locale]);$rows=$stmt->fetchAll(PDO::FETCH_ASSOC);$byId=[];$roots=[];
     foreach($rows as $row){$row['children']=[];$byId[(int)$row['id']]=$row;}
-    foreach(array_keys($byId) as $id){$parent=(int)($byId[$id]['parent_id']??0);if($parent>0&&isset($byId[$parent])&&$parent!==$id){$byId[$parent]['children'][]=&$byId[$id];}else{$roots[]=&$byId[$id];}}
+    foreach(array_keys($byId) as $id){$parent=(int)($byId[$id]['parent_id']??0);if($parent>0){if(isset($byId[$parent])&&$parent!==$id){$byId[$parent]['children'][]=&$byId[$id];}elseif($parent===$id){$roots[]=&$byId[$id];}}else{$roots[]=&$byId[$id];}}
     return $roots;
 }
 
@@ -527,7 +527,7 @@ $router->get('/login', static function (): void {
 
 $router->post('/login/ajax', static function (): void {
     header('Content-Type: application/json; charset=utf-8');header('Cache-Control: no-store');
-    try{verify_csrf();}catch(Throwable $e){http_response_code(419);echo json_encode(['ok'=>false,'message'=>'Oturum doğrulaması başarısız. Sayfayı yenileyip tekrar deneyin.']);return;}
+    if(!hash_equals(csrf_token(),(string)($_POST['_csrf']??''))){http_response_code(419);echo json_encode(['ok'=>false,'message'=>'Oturum doğrulaması başarısız. Sayfayı yenileyip tekrar deneyin.']);return;}
     $identity=trim((string)($_POST['identity']??''));$password=(string)($_POST['password']??'');
     if($identity===''||$password===''||!Auth::attempt($identity,$password)){http_response_code(401);echo json_encode(['ok'=>false,'message'=>'E-posta/kullanıcı adı veya şifre hatalı.']);return;}
     $user=Auth::user();$role=(string)($user['role']??'customer');
