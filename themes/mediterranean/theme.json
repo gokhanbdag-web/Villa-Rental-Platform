@@ -1,9 +1,9 @@
 {
   "slug": "mediterranean",
   "name": "Akdeniz",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "author": "VillaStay",
-  "description": "Sıcak kum tonları, doğal dokular ve ferah tatil atmosferi.",
+  "description": "Buz mavisi, açık gökyüzü tonları ve modern kıyı minimalizmi.",
   "builtin": true,
   "templates": {
     "landing.php": "templates/landing.php",
