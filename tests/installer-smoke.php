@@ -5,6 +5,7 @@ require_once dirname(__DIR__) . '/app/bootstrap.php';
 
 use App\Core\Installer;
 use App\Core\Migrator;
+use App\Core\PageBuilder;
 
 function assertSmoke(bool $condition, string $message): void
 {
@@ -52,6 +53,32 @@ try {
         assertSmoke((int)$check->fetchColumn() === 1, 'Missing required table: ' . $table);
     }
 
+    $registry = PageBuilder::widgets();
+    assertSmoke(isset($registry['image_text'], $registry['features']), 'Expected visual editor widgets are missing.');
+    $builderPayload = [
+        'widgets' => [
+            ['id' => 'image-text-smoke', 'type' => 'image_text', 'style' => $registry['image_text']['default_style'], 'settings' => [
+                'media_width' => 67, 'content_gap' => 48, 'media_radius' => 22, 'media_ratio' => '16:9',
+                'content_position' => 'left', 'button_alignment' => 'center',
+            ]],
+            ['id' => 'features-smoke', 'type' => 'features', 'style' => $registry['features']['default_style'], 'settings' => [
+                'columns' => 2, 'item_gap' => 26, 'item_radius' => 18, 'item_padding' => 28,
+                'item_icon_size' => 32, 'item_alignment' => 'center',
+            ]],
+        ],
+    ];
+    $preview = PageBuilder::sanitizePreview('mediterranean', $builderPayload);
+    $imageSettings = $preview['widgets'][0]['settings'];
+    $featureSettings = $preview['widgets'][1]['settings'];
+    assertSmoke(($imageSettings['media_width'] ?? null) === 67 && ($imageSettings['content_gap'] ?? null) === 48 && ($imageSettings['content_position'] ?? '') === 'left', 'Image-text inspector settings were not validated correctly.');
+    assertSmoke(($featureSettings['item_gap'] ?? null) === 26 && ($featureSettings['item_padding'] ?? null) === 28 && ($featureSettings['item_alignment'] ?? '') === 'center', 'Item-card inspector settings were not validated correctly.');
+
+    $adminId = (int)$pdo->query("SELECT id FROM users WHERE email='smoke@example.test'")->fetchColumn();
+    PageBuilder::save('mediterranean', 'home', $preview, 'draft', $adminId);
+    $savedLayout = PageBuilder::load('mediterranean', 'home');
+    assertSmoke(($savedLayout['widgets'][0]['settings']['media_width'] ?? null) === 67, 'Image-text layout settings did not persist.');
+    assertSmoke(($savedLayout['widgets'][1]['settings']['item_alignment'] ?? '') === 'center', 'Item-card layout settings did not persist.');
+
     $themeCount = count(glob($root . '/themes/*/theme.json') ?: []);
     assertSmoke($themeCount === 4, 'Expected four built-in themes.');
 
@@ -60,7 +87,7 @@ try {
     $migrationCountAfter = (int)$pdo->query('SELECT COUNT(*) FROM schema_migrations')->fetchColumn();
     assertSmoke($migrationCountAfter === $migrationCount, 'Second migration pass changed the migration ledger.');
 
-    echo "Installer smoke test passed: admin, platform mode, {$villaCount} demo villas, {$migrationCount} migrations, required tables, four themes, and repeat migration.\n";
+    echo "Installer and builder smoke tests passed: admin, platform mode, {$villaCount} demo villas, {$migrationCount} migrations, required tables, four themes, image-text and item-card settings preview/save/load, and repeat migration.\n";
 } finally {
     if (is_file($configFile)) unlink($configFile);
     if (is_file($lockFile)) unlink($lockFile);
