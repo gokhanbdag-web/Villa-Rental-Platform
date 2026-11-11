@@ -85,6 +85,7 @@ $router->get('/admin/builder', static function (): void {
     if($builderMode!=='multi_vendor')unset($widgetRegistry['hosts']);
     $builderCountries=$pdo->query("SELECT id,name FROM locations WHERE location_type='country' AND is_active=1 ORDER BY sort_order,name")->fetchAll(PDO::FETCH_ASSOC);
     $builderCities=$pdo->query("SELECT l.id,CONCAT(p.name,' / ',l.name) AS name FROM locations l JOIN locations p ON p.id=l.parent_id WHERE l.location_type='city' AND l.is_active=1 AND p.is_active=1 ORDER BY p.name,l.name")->fetchAll(PDO::FETCH_ASSOC);
+    $builderCategories=$pdo->query("SELECT id,name FROM property_categories WHERE is_active=1 ORDER BY sort_order,name")->fetchAll(PDO::FETCH_ASSOC);
     require APP_ROOT.'/views/admin/builder.php';
 });
 $router->post('/admin/builder/preview', static function (): void {
