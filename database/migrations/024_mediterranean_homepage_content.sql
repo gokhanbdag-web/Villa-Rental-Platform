@@ -1,4 +1,7 @@
 -- Mediterranean homepage content blocks and editable Turkish copy.
+UPDATE homepage_sections SET sort_order=4 WHERE section_key='destinations';
+UPDATE homepage_sections SET sort_order=6 WHERE section_key='featured';
+UPDATE homepage_sections SET sort_order=11 WHERE section_key='hosts';
 INSERT IGNORE INTO homepage_sections(section_key,title,subtitle,image_url,is_active,sort_order) VALUES
 ('trust','Güvenle tatil yapın','Rezervasyon boyunca yanınızdayız','',1,2),
 ('latest','Son eklenen villalar','Yeni eklenen tatil seçeneklerini keşfedin','',1,3),
