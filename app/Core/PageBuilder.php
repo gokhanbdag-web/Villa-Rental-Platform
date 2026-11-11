@@ -115,7 +115,7 @@ final class PageBuilder
             }
             $clean[]=['id'=>$id,'type'=>$type,'style'=>$style,'settings'=>$safe];
         }
-        return ['widgets'=>$clean,'status'=>'draft','version'=>0,'updated_at'=>null];
+        return ['widgets'=>$clean,'status'=>'published','version'=>0,'updated_at'=>null];
     }
 
     public static function save(string $theme, string $page, array $payload, string $status, int $userId): void
