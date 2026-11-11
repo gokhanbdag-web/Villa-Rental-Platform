@@ -5,5 +5,9 @@
   "author": "VillaStay",
   "description": "Minimal çizgiler, adaçayı yeşili ve sakin butik otel estetiği.",
   "builtin": true,
-  "templates": {}
+  "templates": {
+    "landing.php": "templates/landing.php",
+    "listing.php": "templates/listing.php",
+    "property.php": "templates/property.php"
+  }
 }
