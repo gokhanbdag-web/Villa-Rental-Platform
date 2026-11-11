@@ -15,39 +15,58 @@ function app_base_path(): string {
         return rtrim($path, '/');
     };
 
-    // Prefer the URL-visible script directory whenever the server provides it.
-    // On some cPanel/FastCGI setups DOCUMENT_ROOT and realpath() refer to
-    // different physical roots (symlinks or a public/ document root), which
-    // can otherwise incorrectly turn a /villaed installation into /.
-    $scriptName = $normalize((string)($_SERVER['SCRIPT_NAME'] ?? ''));
-    $scriptDir = $scriptName !== '' ? $normalize(dirname($scriptName)) : '';
-    if ($scriptDir !== '' && $scriptDir !== '/' && $scriptDir !== '.') {
-        $base = $scriptDir;
-        if (in_array(basename($base), ['install', 'public'], true)) {
-            $base = $normalize(dirname($base));
-        }
-        return ($base === '' || $base === '/' || $base === '.') ? '' : $base;
-    }
+    // The application directory is stable; SCRIPT_NAME is not. Under some
+    // Apache/FastCGI rewrite setups it contains the requested route
+    // (/villaed/admin/properties), not the executing index.php path.
+    $appRoot = realpath(defined('APP_ROOT') ? APP_ROOT : dirname(__DIR__, 2));
+    $documentRoot = realpath((string)($_SERVER['DOCUMENT_ROOT'] ?? ''));
+    if ($appRoot !== false && $documentRoot !== false) {
+        $root = $normalize($appRoot);
+        $doc = $normalize($documentRoot);
 
-    // Fallback for rewrite configurations where SCRIPT_NAME is only /index.php.
-    $scriptFile = (string)($_SERVER['SCRIPT_FILENAME'] ?? '');
-    $documentRoot = (string)($_SERVER['DOCUMENT_ROOT'] ?? '');
-    if ($scriptFile !== '' && $documentRoot !== '') {
-        $realFile = realpath($scriptFile);
-        $realRoot = realpath($documentRoot);
-        if ($realFile !== false && $realRoot !== false) {
-            $filePath = $normalize($realFile);
-            $rootPath = $normalize($realRoot);
-            if (str_starts_with($filePath, $rootPath . '/')) {
-                $relative = ltrim(substr($filePath, strlen($rootPath)), '/');
+        // Standard deployment: project root is a subdirectory of document root.
+        if (str_starts_with($root, $doc . '/')) {
+            $relative = trim(substr($root, strlen($doc)), '/');
+            $base = $relative === '' ? '' : '/' . $relative;
+            return $base;
+        }
+
+        // Public-directory document root: the URL-visible script path is
+        // authoritative only when it actually names an index.php entrypoint.
+        if (str_starts_with($doc, $root . '/')) {
+            $script = $normalize((string)($_SERVER['SCRIPT_NAME'] ?? ''));
+            if (strtolower(basename($script)) === 'index.php') {
+                $dir = $normalize(dirname($script));
+                if (in_array(basename($dir), ['public', 'install'], true)) $dir = $normalize(dirname($dir));
+                $base = ($dir === '' || $dir === '/' || $dir === '.') ? '' : $dir;
+                return $base;
+            }
+            // The public folder itself is not part of the public URL.
+            $base = '';
+            return $base;
+        }
+
+        // Aliased/symlinked document roots: compare the physical front controller.
+        $scriptFile = realpath((string)($_SERVER['SCRIPT_FILENAME'] ?? ''));
+        if ($scriptFile !== false) {
+            $scriptPath = $normalize($scriptFile);
+            if (str_starts_with($scriptPath, $doc . '/')) {
+                $relative = ltrim(substr($scriptPath, strlen($doc)), '/');
                 $dir = $normalize(dirname('/' . $relative));
-                if (in_array(basename($dir), ['install', 'public'], true)) {
-                    $dir = $normalize(dirname($dir));
-                }
+                if (in_array(basename($dir), ['public', 'install'], true)) $dir = $normalize(dirname($dir));
                 $base = ($dir === '' || $dir === '/' || $dir === '.') ? '' : $dir;
                 return $base;
             }
         }
+    }
+
+    // Last-resort fallback: only trust SCRIPT_NAME if it names a PHP entry file.
+    $script = $normalize((string)($_SERVER['SCRIPT_NAME'] ?? ''));
+    if (preg_match('#/(?:index|install)\.php$#i', $script)) {
+        $dir = $normalize(dirname($script));
+        if (in_array(basename($dir), ['public', 'install'], true)) $dir = $normalize(dirname($dir));
+        $base = ($dir === '' || $dir === '/' || $dir === '.') ? '' : $dir;
+        return $base;
     }
 
     $base = '';
