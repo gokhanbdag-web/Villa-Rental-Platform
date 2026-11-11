@@ -1,4 +1,5 @@
 <?php
+if(!isset($villaHasAuthLink))$villaHasAuthLink=false;
 $renderVillaNav = function(array $entries) use (&$renderVillaNav, &$villaHasAuthLink, $user, $navAllowAuth): void {
     foreach ($entries as $entry) {
         $url=(string)($entry['url']??'/');$label=(string)($entry['label']??'');$target=(string)($entry['target']??'_self');
@@ -15,7 +16,6 @@ $renderVillaNav = function(array $entries) use (&$renderVillaNav, &$villaHasAuth
         echo '</div>';
     }
 };
-if(!isset($villaHasAuthLink))$villaHasAuthLink=false;
 $renderVillaNav($navItems??$navigation??[]);
 if((!isset($navAllowAuth)||$navAllowAuth)&&!$villaHasAuthLink){
     $role=(string)($user['role']??'');$logged=!empty($user);
