@@ -345,6 +345,23 @@ $router->post('/register', static function (): void {
     }
 });
 
+$router->get('/villa/{slug}/calendar', static function (array $params): void {
+    header('Content-Type: application/json; charset=utf-8');
+    header('Cache-Control: no-store');
+    $pdo=Database::connection();
+    $s=$pdo->prepare("SELECT id FROM properties WHERE slug=? AND status='published' LIMIT 1");
+    $s->execute([$params['slug']??'']);$propertyId=(int)$s->fetchColumn();
+    if(!$propertyId){http_response_code(404);echo json_encode(['ok'=>false,'message'=>'Konaklama bulunamadı.']);return;}
+    $month=(string)($_GET['month']??date('Y-m'));
+    if(!preg_match('/^\d{4}-(0[1-9]|1[0-2])$/',$month)){http_response_code(422);echo json_encode(['ok'=>false,'message'=>'Ay bilgisi geçersiz.']);return;}
+    $start=$month.'-01';$from=(new DateTimeImmutable($start))->modify('first day of this month')->format('Y-m-d');$to=(new DateTimeImmutable($from))->modify('first day of next month')->format('Y-m-d');
+    $b=$pdo->prepare("SELECT check_in,check_out,status FROM bookings WHERE property_id=? AND status IN ('pending','confirmed') AND check_in < ? AND check_out > ? ORDER BY check_in");
+    $b->execute([$propertyId,$to,$from]);
+    $a=$pdo->prepare("SELECT date_from,date_to,status FROM availability WHERE property_id=? AND date_from < ? AND date_to > ? ORDER BY date_from");
+    $a->execute([$propertyId,$to,$from]);
+    echo json_encode(['ok'=>true,'month'=>$month,'today'=>date('Y-m-d'),'bookings'=>$b->fetchAll(PDO::FETCH_ASSOC),'rules'=>$a->fetchAll(PDO::FETCH_ASSOC)],JSON_UNESCAPED_UNICODE|JSON_THROW_ON_ERROR);
+});
+
 $router->get('/villa/{slug}/availability', static function (array $params): void {
     header('Content-Type: application/json; charset=utf-8');
     header('Cache-Control: no-store');
@@ -647,6 +664,35 @@ $router->get('/vendor', static function (): void {
 $router->get('/vendor/bookings', static function (): void {
     Auth::requireRole(['vendor']);$pdo=Database::connection();$v=$pdo->prepare('SELECT id FROM vendors WHERE user_id=?');$v->execute([(int)Auth::user()['id']]);$vendorId=(int)$v->fetchColumn();
     $s=$pdo->prepare('SELECT b.*,p.title,u.username AS guest_name,u.email AS guest_email FROM bookings b JOIN properties p ON p.id=b.property_id JOIN users u ON u.id=b.guest_user_id WHERE p.vendor_id=? ORDER BY b.created_at DESC');$s->execute([$vendorId]);$bookings=$s->fetchAll();require APP_ROOT.'/views/vendor/bookings.php';
+});
+
+$router->post('/vendor/bookings/status', static function (): void {
+    Auth::requireRole(['vendor']);verify_csrf();$pdo=Database::connection();
+    $vendor=$pdo->prepare('SELECT id FROM vendors WHERE user_id=?');$vendor->execute([(int)Auth::user()['id']]);$vendorId=(int)$vendor->fetchColumn();
+    if(!$vendorId){http_response_code(403);return;}
+    $id=(int)($_POST['id']??0);$status=(string)($_POST['status']??'');
+    if(!in_array($status,['confirmed','cancelled','completed'],true)){http_response_code(422);exit('Rezervasyon durumu geçersiz.');}
+    try{
+        $pdo->beginTransaction();
+        $s=$pdo->prepare('SELECT b.property_id,b.guest_user_id,b.check_in,b.check_out,b.status FROM bookings b JOIN properties p ON p.id=b.property_id WHERE b.id=? AND p.vendor_id=? FOR UPDATE');
+        $s->execute([$id,$vendorId]);$booking=$s->fetch();
+        if(!$booking){$pdo->rollBack();http_response_code(404);exit('Rezervasyon bulunamadı.');}
+        if($status==='confirmed'){
+            $conflict=$pdo->prepare("SELECT id FROM bookings WHERE property_id=? AND id<>? AND status IN ('pending','confirmed') AND check_in < ? AND check_out > ? LIMIT 1");
+            $conflict->execute([(int)$booking['property_id'],$id,$booking['check_out'],$booking['check_in']]);
+            if($conflict->fetchColumn()){$pdo->rollBack();http_response_code(409);exit('Bu tarihlerde başka bir rezervasyon talebi veya onaylı rezervasyon var.');}
+            $blocked=$pdo->prepare("SELECT id FROM availability WHERE property_id=? AND status<>'available' AND date_from < ? AND date_to > ? LIMIT 1");
+            $blocked->execute([(int)$booking['property_id'],$booking['check_out'],$booking['check_in']]);
+            if($blocked->fetchColumn()){$pdo->rollBack();http_response_code(409);exit('Bu rezervasyon tarihleri takvimde kapatılmış.');}
+        }
+        $u=$pdo->prepare('UPDATE bookings SET status=? WHERE id=?');$u->execute([$status,$id]);
+        $titles=['confirmed'=>'Rezervasyonunuz onaylandı','cancelled'=>'Rezervasyonunuz iptal edildi','completed'=>'Konaklamanız tamamlandı'];
+        $n=$pdo->prepare('INSERT INTO notifications(user_id,notification_type,title,body,created_at) VALUES(?,?,?,?,NOW())');
+        $n->execute([(int)$booking['guest_user_id'],'booking.status_changed',$titles[$status],'Rezervasyon durumunuz güncellendi.']);
+        $log=$pdo->prepare('INSERT INTO audit_logs(user_id,action,entity_type,entity_id,ip_address,details,created_at) VALUES(?,?,?,?,?,?,NOW())');
+        $log->execute([(int)Auth::user()['id'],'booking.status_changed','booking',$id,$_SERVER['REMOTE_ADDR']??null,json_encode(['from'=>$booking['status'],'to'=>$status],JSON_UNESCAPED_UNICODE)]);
+        $pdo->commit();redirect('/vendor/bookings');
+    }catch(Throwable $e){if($pdo->inTransaction())$pdo->rollBack();error_log('Vendor booking status update failed: '.$e->getMessage());http_response_code(500);exit('Rezervasyon güncellenemedi.');}
 });
 
 $router->get('/vendor/properties', static function (): void {
@@ -1125,8 +1171,12 @@ $router->post('/admin/content', static function (): void {
 
 $router->get('/admin/bookings', static function (): void {
     Auth::requireRole(['super_admin','admin']);
-    $sql="SELECT b.*,p.title,u.username AS guest_name,u.email AS guest_email FROM bookings b JOIN properties p ON p.id=b.property_id JOIN users u ON u.id=b.guest_user_id ORDER BY b.created_at DESC LIMIT 250";
-    $bookings=Database::connection()->query($sql)->fetchAll();
+    $pdo=Database::connection();$status=(string)($_GET['status']??'');
+    $allowed=['pending','confirmed','cancelled','completed'];
+    $sql="SELECT b.*,p.title,u.username AS guest_name,u.email AS guest_email FROM bookings b JOIN properties p ON p.id=b.property_id JOIN users u ON u.id=b.guest_user_id";
+    if(in_array($status,$allowed,true)){$sql.=' WHERE b.status=?';$s=$pdo->prepare($sql.' ORDER BY b.created_at DESC LIMIT 250');$s->execute([$status]);$bookings=$s->fetchAll();}
+    else{$bookings=$pdo->query($sql.' ORDER BY b.created_at DESC LIMIT 250')->fetchAll();}
+    $bookingFilter=in_array($status,$allowed,true)?$status:'';
     require APP_ROOT.'/views/admin/bookings.php';
 });
 $router->post('/admin/bookings/status', static function (): void {
