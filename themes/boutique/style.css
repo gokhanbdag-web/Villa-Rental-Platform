@@ -253,3 +253,71 @@ body[data-villa-theme] .pagination a{border-radius:10px!important;border-color:#
  body[data-villa-theme] .stay-photo,body[data-villa-theme] .grid .photo{height:230px!important}
  body[data-villa-theme] .booking{border-radius:18px!important}
 }
+
+
+/* Boutique contrast repair: keep foregrounds readable on the new pale surfaces. */
+body[data-villa-theme="boutique"] .theme-menu-toggle,
+body[data-villa-theme="boutique"] .theme-menu-toggle span,
+body[data-villa-theme="boutique"] .nav-submenu-toggle,
+body[data-villa-theme="boutique"] .search-icon,
+body[data-villa-theme="boutique"] .guest-chevron,
+body[data-villa-theme="boutique"] .calendar-nav button,
+body[data-villa-theme="boutique"] .property-favorite-button,
+body[data-villa-theme="boutique"] .card-gallery-arrow,
+body[data-villa-theme="boutique"] .card-favorite{
+ color:#29434a!important;
+}
+body[data-villa-theme="boutique"] .theme-menu-toggle,
+body[data-villa-theme="boutique"] .calendar-nav button,
+body[data-villa-theme="boutique"] .property-favorite-button{
+ background:#ffffff!important;
+ border:1px solid #cbdedc!important;
+}
+body[data-villa-theme="boutique"] .search-label,
+body[data-villa-theme="boutique"] .search-label *,
+body[data-villa-theme="boutique"] .field label,
+body[data-villa-theme="boutique"] .filter-panel label,
+body[data-villa-theme="boutique"] .availability-heading,
+body[data-villa-theme="boutique"] .calendar-legend,
+body[data-villa-theme="boutique"] .guest-row,
+body[data-villa-theme="boutique"] .guest-trigger,
+body[data-villa-theme="boutique"] .date-display{
+ color:#36535a!important;
+}
+body[data-villa-theme="boutique"] .search-field .search-icon{color:#548b91!important}
+body[data-villa-theme="boutique"] .guest-popover,
+body[data-villa-theme="boutique"] .location-suggestions{
+ background:#ffffff!important;
+ color:#29434a!important;
+ border:1px solid #d8e9e8!important;
+}
+body[data-villa-theme="boutique"] .guest-popover button,
+body[data-villa-theme="boutique"] .guest-done button{
+ color:#29434a!important;
+}
+body[data-villa-theme="boutique"] .guest-done button,
+body[data-villa-theme="boutique"] .search-submit,
+body[data-villa-theme="boutique"] .submit,
+body[data-villa-theme="boutique"] .booking button,
+body[data-villa-theme="boutique"] .booking a,
+body[data-villa-theme="boutique"] .btn{
+ background:#548b91!important;
+ color:#ffffff!important;
+}
+body[data-villa-theme="boutique"] .hero-copy .eyebrow{color:#e7f4f2!important}
+body[data-villa-theme="boutique"] .hero-copy h1,
+body[data-villa-theme="boutique"] .hero-copy>p{
+ color:#ffffff!important;
+ text-shadow:0 2px 16px rgba(12,31,35,.42);
+}
+body[data-villa-theme="boutique"] .card-favorite{background:#ffffff!important;color:#29434a!important}
+body[data-villa-theme="boutique"] .card-favorite.is-active{color:#dc5360!important}
+body[data-villa-theme="boutique"] .theme-header .nav-submenu-toggle{background:transparent!important}
+body[data-villa-theme="boutique"] input,
+body[data-villa-theme="boutique"] select,
+body[data-villa-theme="boutique"] textarea{
+ color:#29434a!important;
+ background-color:#ffffff;
+}
+body[data-villa-theme="boutique"] input::placeholder,
+body[data-villa-theme="boutique"] textarea::placeholder{color:#718b91!important;opacity:1}
