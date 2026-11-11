@@ -11,11 +11,11 @@
 </head>
 <body>
 <main class="wrap">
-<p><a class="back" href="/villa/<?= e($property['slug']) ?>">← İlana dön</a></p>
+<p><a class="back" href="<?= e(app_url('/villa/' . rawurlencode((string)$property['slug']))) ?>">← İlana dön</a></p>
 <h1 class="heading">Rezervasyon talebi</h1>
 <p class="lead">Konaklama tarihlerinizi seçin; müsaitlik ve toplam tutar anında kontrol edilsin.</p>
 <div class="booking-grid">
-<form id="bookingForm" method="post" action="/villa/<?= e($property['slug']) ?>/reserve" data-availability-url="/villa/<?= e($property['slug']) ?>/availability">
+<form id="bookingForm" method="post" action="<?= e(app_url('/villa/' . rawurlencode((string)$property['slug']) . '/reserve')) ?>" data-availability-url="<?= e(app_url('/villa/' . rawurlencode((string)$property['slug']) . '/availability')) ?>">
 <div class="panel">
 <?= csrf_field() ?>
 <div class="field"><label for="bookingCheckIn">Giriş tarihi</label><input type="date" id="bookingCheckIn" name="check_in" min="<?= e(date('Y-m-d')) ?>" value="<?= e($checkInDate??'') ?>" required></div>
@@ -40,7 +40,7 @@
 </div>
 <?php require APP_ROOT . '/views/site/partials/logout-button.php'; ?>
 </main>
-<footer><div class="footer-inner"><div><strong><?= e($siteName??'VillaStay') ?></strong><p><?= e($content['footer_text']??'') ?></p></div><nav><?php foreach(($footerNavigation??[]) as $item): ?><a href="<?= e($item['url']) ?>"><?= e($item['label']) ?></a><?php endforeach; ?><a href="/konaklamalar">Konaklamalar</a><a href="/destinasyonlar">Destinasyonlar</a></nav></div></footer>
+<footer><div class="footer-inner"><div><strong><?= e($siteName??'VillaStay') ?></strong><p><?= e($content['footer_text']??'') ?></p></div><nav><?php foreach(($footerNavigation??[]) as $item): ?><a href="<?= e($item['url']) ?>"><?= e($item['label']) ?></a><?php endforeach; ?><a href="<?= e(app_url('/konaklamalar')) ?>">Konaklamalar</a><a href="<?= e(app_url('/destinasyonlar')) ?>">Destinasyonlar</a></nav></div></footer>
 <script>
 (function(){
 var form=document.getElementById('bookingForm'),checkIn=document.getElementById('bookingCheckIn'),checkOut=document.getElementById('bookingCheckOut'),guests=document.getElementById('bookingGuests'),message=document.getElementById('availabilityMessage'),lines=document.getElementById('priceLines'),submit=document.getElementById('bookingSubmit'),timer=null,requestId=0,unavailable=false;
