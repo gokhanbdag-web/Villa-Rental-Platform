@@ -153,3 +153,28 @@ body[data-villa-theme] .premium-stay-card .stay-content{display:block;flex:1;pad
 body[data-villa-theme] .premium-stay-card .stay-content h3{margin-top:0}
 body[data-villa-theme] .premium-stay-card .card-gallery-data{display:none}
 @media(max-width:760px){body[data-villa-theme] .premium-stay-card .card-gallery-arrow{opacity:1;width:31px;height:31px}body[data-villa-theme] .premium-stay-card .card-favorite{width:36px;height:36px}body[data-villa-theme] .premium-stay-card .stay-content{padding-left:12px;padding-right:12px}}
+
+
+/* Phone layout: full-width accommodation and destination cards. */
+@media (max-width:600px){
+ body[data-villa-theme="modern"] .cards,
+ body[data-villa-theme="modern"] .grid,
+ body[data-villa-theme="modern"] .destination-grid,
+ body.villa-destinations-modern .grid{
+  grid-template-columns:minmax(0,1fr)!important;
+  grid-auto-rows:auto!important;
+  grid-auto-flow:row!important;
+  gap:16px!important;
+ }
+ body[data-villa-theme="modern"] .cards>*,
+ body[data-villa-theme="modern"] .grid>*,
+ body[data-villa-theme="modern"] .destination-grid>*,
+ body.villa-destinations-modern .grid>.card{
+  grid-column:1/-1!important;
+  grid-row:auto!important;
+  width:100%;
+  min-width:0;
+  margin:0!important;
+ }
+ body.villa-destinations-modern .grid>.card{height:220px!important}
+}
