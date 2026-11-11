@@ -2,7 +2,7 @@
 <section class="villa-login-modal" id="villaLoginModal" role="dialog" aria-modal="true" aria-labelledby="villaLoginTitle" hidden>
 <div class="villa-login-card"><button type="button" class="villa-login-close" id="villaLoginClose" aria-label="Kapat">×</button>
 <h2 id="villaLoginTitle">Tekrar hoş geldiniz</h2><p>Hesabınıza giriş yapın.</p>
-<form id="villaAjaxLogin" data-endpoint="<?= e(app_url('/login/ajax')) ?>">
+<form id="villaAjaxLogin" method="post" action="<?= e(app_url('/login')) ?>" data-endpoint="<?= e(app_url('/login/ajax')) ?>">
 <input type="hidden" name="_csrf" value="<?= e(csrf_token()) ?>">
 <label for="villaLoginIdentity">E-posta veya kullanıcı adı</label><input id="villaLoginIdentity" name="identity" autocomplete="username" required>
 <label for="villaLoginPassword">Şifre</label><input id="villaLoginPassword" name="password" type="password" autocomplete="current-password" required>
