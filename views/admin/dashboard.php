@@ -1,5 +1,22 @@
 <?php
 declare(strict_types=1);
+// Keep the dashboard compatible with older route/controller copies on shared hosting.
+$metrics = array_merge([
+    'properties' => 0,
+    'published_properties' => 0,
+    'bookings' => 0,
+    'users' => 0,
+    'pending' => 0,
+    'confirmed' => 0,
+    'categories' => 0,
+    'locations' => 0,
+    'pending_reviews' => 0,
+], isset($metrics) && is_array($metrics) ? $metrics : []);
+foreach ($metrics as $key => $value) {
+    $metrics[$key] = is_numeric($value) ? (float)$value : 0;
+}
+$recentBookings = isset($recentBookings) && is_array($recentBookings) ? $recentBookings : [];
+$mode = isset($mode) ? (string)$mode : 'single_vendor';
 $user = \App\Core\Auth::user();
 $adminUrl = static fn(string $path): string => app_url($path);
 $statusLabels = ['pending'=>'Bekliyor','confirmed'=>'Onaylandı','cancelled'=>'İptal edildi','completed'=>'Tamamlandı','rejected'=>'Reddedildi'];
