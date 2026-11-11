@@ -68,8 +68,14 @@ $router->get('/admin/builder', static function (): void {
     $themes=ThemeManager::installed();
     $themeSlug=(string)($_GET['theme']??ThemeManager::activeSlug());
     if(!isset($themes[$themeSlug]))$themeSlug=ThemeManager::activeSlug();
+    $pdo=Database::connection();
+    $pageNames=['home'=>'Ana sayfa'];
+    foreach($pdo->query("SELECT slug,title FROM cms_pages WHERE language_code='tr' ORDER BY title")->fetchAll(PDO::FETCH_ASSOC) as $cmsPage){
+        $slug=(string)$cmsPage['slug'];
+        if(preg_match('/^[a-z0-9-]{1,40}$/',$slug))$pageNames[$slug]=(string)$cmsPage['title'];
+    }
     $pageKey=(string)($_GET['page']??'home');
-    if($pageKey!=='home')$pageKey='home';
+    if(!isset($pageNames[$pageKey]))$pageKey='home';
     $layout=PageBuilder::load($themeSlug,$pageKey);
     $widgetRegistry=PageBuilder::widgets();
     require APP_ROOT.'/views/admin/builder.php';
@@ -77,7 +83,10 @@ $router->get('/admin/builder', static function (): void {
 $router->post('/admin/builder/preview', static function (): void {
     Auth::requireRole(['super_admin','admin']);verify_csrf();
     $theme=(string)($_POST['theme']??'');$page=(string)($_POST['page']??'home');
-    if($page!=='home'){http_response_code(422);exit('Bu sayfa türü henüz önizlemeye bağlanmadı.');}
+    if($page!=='home'){
+        $check=Database::connection()->prepare("SELECT id FROM cms_pages WHERE slug=? AND language_code='tr' LIMIT 1");$check->execute([$page]);
+        if(!$check->fetchColumn()){http_response_code(422);exit('Önizleme sayfası bulunamadı.');}
+    }
     $raw=(string)($_POST['layout_json']??'');
     if(strlen($raw)>500000){http_response_code(413);exit('Sayfa düzeni çok büyük.');}
     try{
@@ -85,6 +94,7 @@ $router->post('/admin/builder/preview', static function (): void {
         if(!is_array($payload))throw new InvalidArgumentException('Sayfa düzeni okunamadı.');
         $_SESSION['villa_builder_preview_layout']=PageBuilder::sanitizePreview($theme,$payload);
         $_SESSION['villa_builder_preview_theme']=$theme;
+        $_SESSION['villa_builder_preview_page']=$page;
         ThemeManager::preview($theme);
         header('Content-Type: text/plain; charset=utf-8');echo 'OK';
     }catch(Throwable $e){http_response_code(422);exit('Önizleme hazırlanamadı: '.e($e->getMessage()));}
@@ -93,7 +103,10 @@ $router->post('/admin/builder/save', static function (): void {
     Auth::requireRole(['super_admin','admin']);verify_csrf();
     $theme=(string)($_POST['theme']??'');
     $page=(string)($_POST['page']??'home');
-    if($page!=='home'){http_response_code(422);exit('Bu sayfa türü henüz görsel editöre bağlanmadı.');}
+    if($page!=='home'){
+        $check=Database::connection()->prepare("SELECT id FROM cms_pages WHERE slug=? AND language_code='tr' LIMIT 1");$check->execute([$page]);
+        if(!$check->fetchColumn()){http_response_code(422);exit('Düzenlenecek içerik sayfası bulunamadı.');}
+    }
     $status=(string)($_POST['status']??'draft');
     $raw=(string)($_POST['layout_json']??'');
     if(strlen($raw)>500000){http_response_code(413);exit('Sayfa düzeni çok büyük.');}
@@ -1102,6 +1115,16 @@ $router->get('/page/{slug}', static function (array $params): void {
     $footerNavigation=villa_navigation_tree($pdo,'footer','tr');
     $mode=(string)($pdo->query("SELECT setting_value FROM settings WHERE setting_key='app.mode' LIMIT 1")->fetchColumn() ?: 'single_vendor');
     $user=Auth::user(); $locale='tr';
+    $pageBuilderLayout=PageBuilder::load(ThemeManager::activeSlug($pdo),(string)$params['slug']);
+    if(($_GET['builder_preview']??'')==='1' && Auth::check() && in_array($user['role']??'', ['admin','super_admin'], true)){
+        $previewTheme=(string)($_SESSION['villa_builder_preview_theme']??'');
+        $previewPage=(string)($_SESSION['villa_builder_preview_page']??'home');
+        if($previewTheme!=='' && $previewTheme===ThemeManager::activeSlug($pdo) && $previewPage===(string)$params['slug'] && is_array($_SESSION['villa_builder_preview_layout']??null)){
+            $pageBuilderLayout=$_SESSION['villa_builder_preview_layout'];
+            $pageBuilderLayout['status']='published';
+        }
+    }
+    $destinations=[];$featuredProperties=[];$latestProperties=[];$categories=[];$stylePhotos=[];
     ThemeManager::render('page.php', get_defined_vars());
 });
 
