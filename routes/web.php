@@ -455,6 +455,7 @@ $router->get('/villa/{slug}/availability', static function (array $params): void
         http_response_code($status);
         echo json_encode(['ok'=>false,'message'=>$message], JSON_UNESCAPED_UNICODE|JSON_THROW_ON_ERROR);
     };
+    try {
     $pdo = Database::connection();
     $propertyStmt = $pdo->prepare("SELECT id,base_nightly_price,weekend_nightly_price,cleaning_fee,currency,max_guests FROM properties WHERE slug=? AND status='published' LIMIT 1");
     $propertyStmt->execute([$params['slug'] ?? '']);
@@ -496,6 +497,10 @@ $router->get('/villa/{slug}/availability', static function (array $params): void
         'total'=>round($subtotal+$fees,2),'currency'=>(string)$property['currency'],
         'message'=>'Seçtiğiniz tarihler müsait görünüyor. Son kontrol rezervasyon gönderilirken tekrar yapılır.'
     ], JSON_UNESCAPED_UNICODE|JSON_THROW_ON_ERROR);
+    } catch (Throwable $e) {
+        error_log('Villa availability check failed: '.$e->getMessage());
+        $fail(500, 'Müsaitlik kontrolü sırasında sunucu hatası oluştu. Lütfen daha sonra tekrar deneyin.');
+    }
 });
 
 $router->get('/villa/{slug}/reserve', static function (array $params): void {
