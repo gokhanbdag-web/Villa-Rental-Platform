@@ -74,6 +74,21 @@ $router->get('/admin/builder', static function (): void {
     $widgetRegistry=PageBuilder::widgets();
     require APP_ROOT.'/views/admin/builder.php';
 });
+$router->post('/admin/builder/preview', static function (): void {
+    Auth::requireRole(['super_admin','admin']);verify_csrf();
+    $theme=(string)($_POST['theme']??'');$page=(string)($_POST['page']??'home');
+    if($page!=='home'){http_response_code(422);exit('Bu sayfa türü henüz önizlemeye bağlanmadı.');}
+    $raw=(string)($_POST['layout_json']??'');
+    if(strlen($raw)>500000){http_response_code(413);exit('Sayfa düzeni çok büyük.');}
+    try{
+        $payload=json_decode($raw,true,64,JSON_THROW_ON_ERROR);
+        if(!is_array($payload))throw new InvalidArgumentException('Sayfa düzeni okunamadı.');
+        $_SESSION['villa_builder_preview_layout']=PageBuilder::sanitizePreview($theme,$payload);
+        $_SESSION['villa_builder_preview_theme']=$theme;
+        ThemeManager::preview($theme);
+        header('Content-Type: text/plain; charset=utf-8');echo 'OK';
+    }catch(Throwable $e){http_response_code(422);exit('Önizleme hazırlanamadı: '.e($e->getMessage()));}
+});
 $router->post('/admin/builder/save', static function (): void {
     Auth::requireRole(['super_admin','admin']);verify_csrf();
     $theme=(string)($_POST['theme']??'');
@@ -234,6 +249,12 @@ $router->get('/', static function (): void {
     $homeSections=[];foreach($pdo->query('SELECT * FROM homepage_sections ORDER BY sort_order,id')->fetchAll() as $section){$homeSections[$section['section_key']]=$section;}
     $locationCountries=$pdo->query("SELECT id,name FROM locations WHERE location_type='country' AND is_active=1 ORDER BY sort_order,name")->fetchAll();
     $pageBuilderLayout=PageBuilder::load(ThemeManager::activeSlug($pdo),'home');
+    if(($_GET['builder_preview']??'')==='1' && Auth::check() && in_array($user['role']??'', ['admin','super_admin'], true)){
+        $previewTheme=(string)($_SESSION['villa_builder_preview_theme']??'');
+        if($previewTheme!=='' && $previewTheme===ThemeManager::activeSlug($pdo) && is_array($_SESSION['villa_builder_preview_layout']??null)){
+            $pageBuilderLayout=$_SESSION['villa_builder_preview_layout'];
+        }
+    }
     ThemeManager::render('landing.php', get_defined_vars());
 });
 
