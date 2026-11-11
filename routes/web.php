@@ -661,12 +661,26 @@ $router->get('/favorites', static function (): void {
     $s->execute([(int)$user['id']]);$properties=$s->fetchAll();villa_render_account_view('favorites.php', get_defined_vars());
 });
 $router->post('/favorites/toggle', static function (): void {
-    $user=Auth::user();if(!$user)redirect('/login');if(($user['role']??'')!=='customer')redirect('/admin');verify_csrf();
-    $pdo=Database::connection();$pid=(int)($_POST['property_id']??0);$check=$pdo->prepare("SELECT id FROM properties WHERE id=? AND status='published'");$check->execute([$pid]);if(!$check->fetchColumn()){http_response_code(404);return;}
+    $isAjax=str_contains((string)($_SERVER['HTTP_ACCEPT']??''),'application/json') || (string)($_SERVER['HTTP_X_REQUESTED_WITH']??'')==='XMLHttpRequest';
+    $user=Auth::user();
+    if(!$user || ($user['role']??'')!=='customer'){
+        if($isAjax){http_response_code(401);header('Content-Type: application/json; charset=utf-8');echo json_encode(['ok'=>false,'message'=>'Favorilerinizi yönetmek için müşteri hesabınızla giriş yapın.'],JSON_UNESCAPED_UNICODE);return;}
+        if(!$user)redirect('/login');redirect('/admin');
+    }
+    verify_csrf();
+    $pdo=Database::connection();$pid=(int)($_POST['property_id']??0);
+    $check=$pdo->prepare("SELECT id FROM properties WHERE id=? AND status='published'");$check->execute([$pid]);
+    if(!$check->fetchColumn()){
+        if($isAjax){http_response_code(404);header('Content-Type: application/json; charset=utf-8');echo json_encode(['ok'=>false,'message'=>'Konaklama artık yayında değil.'],JSON_UNESCAPED_UNICODE);return;}
+        http_response_code(404);return;
+    }
     $exists=$pdo->prepare('SELECT 1 FROM favorites WHERE user_id=? AND property_id=?');$exists->execute([(int)$user['id'],$pid]);
-    if($exists->fetchColumn()){$del=$pdo->prepare('DELETE FROM favorites WHERE user_id=? AND property_id=?');$del->execute([(int)$user['id'],$pid]);}
-    else{$add=$pdo->prepare('INSERT INTO favorites(user_id,property_id,created_at) VALUES(?,?,NOW())');$add->execute([(int)$user['id'],$pid]);}
-    $return=trim((string)($_POST['return_to']??'/favorites'));$parsed=parse_url($return);if(!str_starts_with($return,'/')||str_starts_with($return,'//')||isset($parsed['host'])||preg_match('/[\\r\\n]/',$return))$return='/favorites';redirect($return);
+    if($exists->fetchColumn()){$del=$pdo->prepare('DELETE FROM favorites WHERE user_id=? AND property_id=?');$del->execute([(int)$user['id'],$pid]);$active=false;}
+    else{$add=$pdo->prepare('INSERT INTO favorites(user_id,property_id,created_at) VALUES(?,?,NOW())');$add->execute([(int)$user['id'],$pid]);$active=true;}
+    if($isAjax){header('Content-Type: application/json; charset=utf-8');header('Cache-Control: no-store');echo json_encode(['ok'=>true,'active'=>$active,'message'=>$active?'Favorilerinize eklendi.':'Favorilerinizden çıkarıldı.'],JSON_UNESCAPED_UNICODE|JSON_THROW_ON_ERROR);return;}
+    $return=trim((string)($_POST['return_to']??'/favorites'));$parsed=parse_url($return);
+    if(!str_starts_with($return,'/')||str_starts_with($return,'//')||isset($parsed['host'])||preg_match('/[\\r\\n]/',$return))$return='/favorites';
+    redirect($return);
 });
 
 
