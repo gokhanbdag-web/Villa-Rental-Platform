@@ -1299,6 +1299,7 @@ $router->post('/admin/themes/settings', static function (): void {
             'surface'=>$_POST['surface']??'',
             'text'=>$_POST['text']??'',
             'accent'=>$_POST['accent']??'',
+            'button_color'=>$_POST['button_color']??($_POST['primary']??''),
             'radius'=>$_POST['radius']??18
         ]);
         $_SESSION['villa_theme_message']='Tema görünüm ayarları kaydedildi.';
