@@ -56,7 +56,12 @@ function app_base_path(): string {
 
 function app_url(string $path = '/'): string {
     if (preg_match('#^(?:https?:)?//#i', $path)) return $path;
-    return app_base_path() . '/' . ltrim($path, '/');
+    $base = app_base_path();
+    $path = '/' . ltrim($path, '/');
+    // Keep URLs idempotent when a saved CMS/menu URL already includes
+    // this installation's subfolder prefix.
+    if ($base !== '' && ($path === $base || str_starts_with($path, $base . '/'))) return $path;
+    return $base . $path;
 }
 
 function redirect(string $path): never {
