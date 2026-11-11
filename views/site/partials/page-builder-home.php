@@ -272,3 +272,30 @@ $entries=array_values(array_filter(array_map('trim',preg_split('/\\r\\n|\\r|\\n/
 ?><?php $itemGap=max(4,min(40,(int)($s['item_gap']??18)));$itemRadius=max(0,min(32,(int)($s['item_radius']??14)));$itemPadding=max(8,min(40,(int)($s['item_padding']??20)));$itemIconSize=max(14,min(40,(int)($s['item_icon_size']??20)));$itemAlignment=in_array(($s['item_alignment']??'left'),['left','center'],true)?$s['item_alignment']:'left'; ?><div class="pb-widget-items pb-items-<?= e($pbSlug($style)) ?> pb-grid pb-item-align-<?= e($itemAlignment) ?>" style="--pb-columns:<?= $columns ?>;--pb-item-gap:<?= $itemGap ?>px;--pb-item-radius:<?= $itemRadius ?>px;--pb-item-padding:<?= $itemPadding ?>px;--pb-item-icon-size:<?= $itemIconSize ?>px"><?php foreach(array_slice($entries,0,16) as $entry): $parts=explode('|',$entry,2); ?><article class="pb-item-card"><?php if($type==='faq'): ?><details><summary><?= e(trim($parts[0])) ?></summary><p><?= e(trim($parts[1]??'')) ?></p></details><?php elseif($type==='stats'): ?><strong class="pb-item-value"><?= e(trim($parts[1]??$parts[0])) ?></strong><span><?= e(trim($parts[1]??$parts[0])!==''?trim($parts[0]):'') ?></span><?php elseif($type==='steps'): ?><span class="pb-item-number"><?= (int)array_search($entry,$entries,true)+1 ?></span><h3><?= e(trim($parts[0])) ?></h3><p><?= e(trim($parts[1]??'')) ?></p><?php elseif($type==='testimonials'||$type==='quote'): ?><blockquote><?= e(trim($parts[0])) ?></blockquote><small><?= e(trim($parts[1]??'')) ?></small><?php else: ?><span class="pb-item-icon"><?= $type==='amenities'?'✦':($type==='trust'?'✓':($type==='nearby'?'⌖':'•')) ?></span><h3><?= e(trim($parts[0])) ?></h3><?php if(isset($parts[1])): ?><p><?= e(trim($parts[1])) ?></p><?php endif; ?><?php endif; ?></article><?php endforeach; ?></div>
 <?php elseif(in_array($type,['cta','banner','hosts','promo','booking_cta'],true)): ?><div class="pb-banner"><?php if($image): ?><img src="<?= e($image) ?>" alt="" style="width:150px;max-height:120px;object-fit:cover;border-radius:10px"><?php endif; ?><div><h2><?= e($title) ?></h2><p class="pb-lead"><?= e($subtitle?:$description) ?></p></div><?php if($buttonText&&$buttonUrl): ?><a class="pb-button" href="<?= e($buttonUrl) ?>"><?= e($buttonText) ?></a><?php endif; ?></div><?php else: ?><div class="<?= $align==='center'?'pb-text-center':'' ?>"><?php if($eyebrow): ?><span class="pb-eyebrow"><?= e($eyebrow) ?></span><?php endif; ?><h2><?= e($title) ?></h2><?php if($subtitle): ?><p class="pb-lead"><?= e($subtitle) ?></p><?php endif; ?><?php if($description): ?><p class="pb-lead"><?= e($description) ?></p><?php endif; ?><?php if($buttonText&&$buttonUrl): ?><a class="pb-button" href="<?= e($buttonUrl) ?>"><?= e($buttonText) ?></a><?php endif; ?></div><?php endif; ?></div></section>
 <?php endif; endforeach; ?>
+
+<style id="villa-mobile-single-column">
+@media (max-width: 760px) {
+ body[data-villa-theme] .cards, body[data-villa-theme] .grid,
+ body[data-villa-theme] .destination-grid, body[data-villa-theme] .pb-grid,
+ body[data-villa-theme] .pb-widget-items, body[data-villa-theme] .pb-seasonal-grid,
+ body[data-villa-theme] .pb-gallery, body[data-villa-theme] .pb-pricing-grid,
+ body[data-villa-theme] .pb-blog-grid, body[data-villa-theme] .pb-category-grid,
+ body[data-villa-theme] .pb-property-grid, body[data-villa-theme] .pb-destination-grid,
+ body[data-villa-theme] .pb-host-grid, body[data-villa-theme] .pb-widget-social .pb-social-links {
+  display:grid!important;grid-template-columns:minmax(0,1fr)!important;
+  grid-auto-flow:row!important;grid-auto-rows:auto!important;width:100%;min-width:0;
+ }
+ body[data-villa-theme] .pb-grid>*, body[data-villa-theme] .pb-widget-items>*,
+ body[data-villa-theme] .pb-seasonal-grid>*, body[data-villa-theme] .pb-gallery>*,
+ body[data-villa-theme] .pb-blog-grid>*, body[data-villa-theme] .pb-pricing-grid>*,
+ body[data-villa-theme] .pb-category-grid>*, body[data-villa-theme] .pb-property-grid>*,
+ body[data-villa-theme] .pb-destination-grid>*, body[data-villa-theme] .pb-host-grid>* {
+  grid-column:1/-1!important;grid-row:auto!important;width:100%!important;min-width:0!important;max-width:100%;
+ }
+ body[data-villa-theme] .pb-seasonal-yatay-bant{display:grid!important;overflow:visible!important}
+ body[data-villa-theme] .pb-seasonal-yatay-bant .pb-seasonal-card{flex:none!important;width:100%!important}
+ body[data-villa-theme] .pb-style-yatay-kart .pb-card,
+ body[data-villa-theme] .pb-widget-destinations .pb-destination-grid .pb-card,
+ body[data-villa-theme] .pb-widget-properties .pb-property-grid .pb-card{grid-template-columns:minmax(0,1fr)!important}
+}
+</style>
