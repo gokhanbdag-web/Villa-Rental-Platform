@@ -1,7 +1,8 @@
 <?php
 declare(strict_types=1);
 $themeNames=[];foreach($themes as $slug=>$theme)$themeNames[$slug]=$theme['name'];
-$pageNames=['home'=>'Ana sayfa'];
+// Page names are loaded from the CMS by the admin route.
+$pageNames=$pageNames??['home'=>'Ana sayfa'];
 $registryJson=json_encode($widgetRegistry,JSON_UNESCAPED_UNICODE|JSON_UNESCAPED_SLASHES|JSON_HEX_TAG|JSON_HEX_APOS|JSON_HEX_AMP|JSON_HEX_QUOT);
 $initialJson=json_encode($layout['widgets']??[],JSON_UNESCAPED_UNICODE|JSON_UNESCAPED_SLASHES|JSON_HEX_TAG|JSON_HEX_APOS|JSON_HEX_AMP|JSON_HEX_QUOT);
 ?>
@@ -39,7 +40,7 @@ function updatePreview(){
  const data=new URLSearchParams();data.set('_csrf',$('pbForm').querySelector('[name="_csrf"]').value);data.set('theme',$('pbTheme').value);data.set('page',$('pbPage').value);data.set('layout_json',JSON.stringify({widgets}));
  fetch('<?= e(app_url('/admin/builder/preview')) ?>',{method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/x-www-form-urlencoded; charset=UTF-8','X-Requested-With':'XMLHttpRequest'},body:data.toString()})
  .then(r=>{if(!r.ok)throw new Error('HTTP '+r.status);return r.text()})
- .then(()=>{if(seq!==previewSequence)return;$('pbPreviewFrame').src='<?= e(app_url('/')) ?>?builder_preview=1&v='+Date.now();$('pbPreviewStatus').textContent='Canlı önizleme güncel';})
+ .then(()=>{if(seq!==previewSequence)return;const previewBase=$('pbPage').value==='home'?'<?= e(app_url('/')) ?>':'<?= e(app_url('/page/')) ?>'+encodeURIComponent($('pbPage').value);$('pbPreviewFrame').src=previewBase+'?builder_preview=1&v='+Date.now();$('pbPreviewStatus').textContent='Canlı önizleme güncel';})
  .catch(()=>{if(seq===previewSequence)$('pbPreviewStatus').textContent='Önizleme alınamadı · Oturumunuzu kontrol edin';});
 }
 
