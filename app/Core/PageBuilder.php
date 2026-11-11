@@ -111,7 +111,7 @@ final class PageBuilder
                 if(isset($choices[$key])){$candidate=(string)$value;$safe[$key]=in_array($candidate,$choices[$key],true)?$candidate:$choices[$key][0];continue;}
                 $value=trim((string)$value);
                 if(in_array($key,['image_url','mobile_image_url','button_url'],true)&&$value!==''&&!preg_match('~^(https?://|/)~i',$value))$value='';
-                $safe[$key]=mb_substr($value,0,($key==='description'||$key==='subtitle')?1200:500);
+                $safe[$key]=mb_substr($value,0,($key==='items_text'?8000:(($key==='description'||$key==='subtitle')?1200:500)));
             }
             $clean[]=['id'=>$id,'type'=>$type,'style'=>$style,'settings'=>$safe];
         }
@@ -147,7 +147,7 @@ final class PageBuilder
                 if(isset($choices[$key])){$candidate=(string)$value;$safe[$key]=in_array($candidate,$choices[$key],true)?$candidate:$choices[$key][0];continue;}
                 $value=trim((string)$value);
                 if(in_array($key,['image_url','mobile_image_url','button_url'],true) && $value!=='' && !preg_match('~^(https?://|/)~i',$value))$value='';
-                $safe[$key]=mb_substr($value,0,($key==='description'||$key==='subtitle')?1200:500);
+                $safe[$key]=mb_substr($value,0,($key==='items_text'?8000:(($key==='description'||$key==='subtitle')?1200:500)));
             }
             $clean[]=['id'=>$id,'type'=>$type,'style'=>$style,'settings'=>$safe];
         }
