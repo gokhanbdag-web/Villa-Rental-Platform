@@ -86,3 +86,12 @@ body[data-villa-theme] .theme-header .nav-dropdown .nav-entry-top>a{display:flex
  body[data-villa-theme] .theme-header .nav-dropdown{position:static;display:none;min-width:0;width:100%;padding:5px 8px;margin:3px 0 8px;box-shadow:none;border:0;border-left:2px solid currentColor;opacity:1;visibility:visible;transform:none;transition:none;background:transparent}
  body[data-villa-theme] .theme-header .nav-entry.has-children.is-open>.nav-dropdown{display:block}
 }
+
+
+/* Mobile drawer stacking fix: keep the header/nav above its backdrop. */
+@media(max-width:760px){
+ body[data-villa-theme="modern"] .theme-header{position:relative!important;z-index:10010!important}
+ body[data-villa-theme="modern"] .theme-header .nav{z-index:10020!important;pointer-events:auto!important}
+ body[data-villa-theme="modern"] .theme-menu-toggle{position:relative;z-index:10030!important;pointer-events:auto!important}
+ body[data-villa-theme="modern"] .drawer-overlay{z-index:10000!important;pointer-events:auto}
+}
