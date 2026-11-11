@@ -5,5 +5,9 @@
   "author": "VillaStay",
   "description": "Lacivert, şampanya altın ve editoryal lüks konaklama sunumu.",
   "builtin": true,
-  "templates": {}
+  "templates": {
+    "landing.php": "templates/landing.php",
+    "listing.php": "templates/listing.php",
+    "property.php": "templates/property.php"
+  }
 }
