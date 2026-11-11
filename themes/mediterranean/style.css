@@ -90,3 +90,19 @@ body[data-villa-theme] .theme-header .nav-dropdown .nav-entry-top>a{display:flex
  body[data-villa-theme="mediterranean"] .theme-menu-toggle{position:relative;z-index:10030!important;pointer-events:auto!important}
  body[data-villa-theme="mediterranean"] .drawer-overlay{z-index:10000!important;pointer-events:auto}
 }
+
+
+/* Contrast correction: Mediterranean hero must remain readable even without a custom hero image. */
+body[data-villa-theme="mediterranean"] .hero-card{
+ background-image:linear-gradient(105deg,rgba(25,39,28,.82) 0%,rgba(35,48,34,.62) 52%,rgba(35,48,34,.18) 100%),url('https://images.unsplash.com/photo-1613490493576-7fde63acd811?auto=format&fit=crop&w=2000&q=88')!important;
+ background-size:cover!important;background-position:center 54%!important;
+}
+body[data-villa-theme="mediterranean"] .hero-copy,
+body[data-villa-theme="mediterranean"] .hero-copy h1,
+body[data-villa-theme="mediterranean"] .hero-copy p,
+body[data-villa-theme="mediterranean"] .hero-copy .eyebrow{color:#fffdf6!important;text-shadow:0 2px 14px rgba(0,0,0,.38)}
+body[data-villa-theme="mediterranean"] .hero-copy p{color:#fffdf6!important}
+body[data-villa-theme="mediterranean"] .hero-copy .eyebrow{color:#f3dfb4!important}
+@media(max-width:760px){
+ body[data-villa-theme="mediterranean"] .hero-card{background-position:58% center!important}
+}
