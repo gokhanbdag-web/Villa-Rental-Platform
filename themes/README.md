@@ -13,6 +13,9 @@ templates/
   landing.php
   listing.php
   property.php
+  destinations.php
+  booking.php
+  page.php
 assets/
   logo.svg
   hero.webp
@@ -30,14 +33,17 @@ assets/
   "templates": {
     "landing.php": "templates/landing.php",
     "listing.php": "templates/listing.php",
-    "property.php": "templates/property.php"
+    "property.php": "templates/property.php",
+    "destinations.php": "templates/destinations.php",
+    "booking.php": "templates/booking.php",
+    "page.php": "templates/page.php"
   }
 }
 ```
 
 - `slug` küçük harf, rakam, tire ve alt çizgi içermeli; benzersiz olmalıdır.
 - `style.css` zorunludur. Diğer statik dosyalar `assets/` içine konur.
-- `landing.php`, `listing.php` ve `property.php` için ayrı şablonlar ekleyebilirsiniz. Şablonlar mevcut sayfa görünümünü tamamen değiştirebilir; ortak uygulama verisini ve işlemlerini korumalıdır. Bir sayfa için şablon pakette yoksa sistem mevcut `views/site/` şablonunu kullanır.
+- `landing.php`, `listing.php`, `property.php`, `destinations.php`, `booking.php` ve `page.php` için ayrı şablonlar ekleyebilirsiniz. Şablonlar mevcut sayfa görünümünü tamamen değiştirebilir; ortak uygulama verisini ve işlemlerini korumalıdır. Bir sayfa için şablon pakette yoksa sistem mevcut `views/site/` şablonunu kullanır.
 - Tema şablonları HTML iskeletini, başlığı, navigasyonu, arama formu yerleşimini, kartları ve mobil menüyü kendi tasarımına göre oluşturabilir. Giriş/çıkış bağlantıları ve alt menüler için ortak `views/site/partials/navigation-items.php` parçasını kullanmanız önerilir.
 - Tema şablonları mevcut sayfa değişkenlerini kullanır: örneğin `$content`, `$navigation`, `$properties`, `$property`, `$user`, `$locale`. Yeni veri sorgularını tema dosyalarına değil uygulama rotalarına/ortak iş mantığına ekleyin.
 - Statik dosyalar `/theme-assets/{slug}/{filename}` adresinden sunulur. Dosyaları `assets/` altında tutun ve CSS/şablonlarda bu yolu kullanın.
