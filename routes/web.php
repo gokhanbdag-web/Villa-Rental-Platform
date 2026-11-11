@@ -662,8 +662,16 @@ $router->get('/vendor', static function (): void {
 });
 
 $router->get('/vendor/bookings', static function (): void {
-    Auth::requireRole(['vendor']);$pdo=Database::connection();$v=$pdo->prepare('SELECT id FROM vendors WHERE user_id=?');$v->execute([(int)Auth::user()['id']]);$vendorId=(int)$v->fetchColumn();
-    $s=$pdo->prepare('SELECT b.*,p.title,u.username AS guest_name,u.email AS guest_email FROM bookings b JOIN properties p ON p.id=b.property_id JOIN users u ON u.id=b.guest_user_id WHERE p.vendor_id=? ORDER BY b.created_at DESC');$s->execute([$vendorId]);$bookings=$s->fetchAll();require APP_ROOT.'/views/vendor/bookings.php';
+    Auth::requireRole(['vendor']);$pdo=Database::connection();
+    if((string)$pdo->query("SELECT setting_value FROM settings WHERE setting_key='app.mode'")->fetchColumn()!=='multi_vendor'){http_response_code(404);return;}
+    $v=$pdo->prepare('SELECT id FROM vendors WHERE user_id=?');$v->execute([(int)Auth::user()['id']]);$vendorId=(int)$v->fetchColumn();
+    if(!$vendorId){http_response_code(403);return;}
+    $status=(string)($_GET['status']??'');$allowed=['pending','confirmed','cancelled','completed'];
+    $sql='SELECT b.*,p.title,u.username AS guest_name,u.email AS guest_email FROM bookings b JOIN properties p ON p.id=b.property_id JOIN users u ON u.id=b.guest_user_id WHERE p.vendor_id=?';
+    if(in_array($status,$allowed,true)){$sql.=' AND b.status=?';$s=$pdo->prepare($sql.' ORDER BY b.created_at DESC LIMIT 250');$s->execute([$vendorId,$status]);$bookings=$s->fetchAll();}
+    else{$s=$pdo->prepare($sql.' ORDER BY b.created_at DESC LIMIT 250');$s->execute([$vendorId]);$bookings=$s->fetchAll();}
+    $bookingFilter=in_array($status,$allowed,true)?$status:'';
+    require APP_ROOT.'/views/vendor/bookings.php';
 });
 
 $router->post('/vendor/bookings/status', static function (): void {
