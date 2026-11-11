@@ -21,7 +21,9 @@ $cityOptions=$childOptions($selectedCountry);$districtOptions=$childOptions($sel
 <label>Yatak odası<input type="number" min="0" max="100" name="bedrooms" value="<?= (int)($property['bedrooms']??1) ?>"></label>
 <label>Yatak sayısı<input type="number" min="0" max="100" name="beds" value="<?= (int)($property['beds']??1) ?>"></label>
 <label>Banyo sayısı<input type="number" min="0" max="50" step=".5" name="bathrooms" value="<?= e($property['bathrooms']??1) ?>"></label>
-<label>Gecelik fiyat<input type="number" min="0" step=".01" name="base_nightly_price" required value="<?= e($property['base_nightly_price']??0) ?>"></label>
+<label>Hafta içi gecelik fiyat<input type="number" min="0" step=".01" name="base_nightly_price" required value="<?= e($property['base_nightly_price']??0) ?>"></label>
+<label>Hafta sonu gecelik fiyat<input type="number" min="0" step=".01" name="weekend_nightly_price" value="<?= e($property['weekend_nightly_price']??0) ?>" placeholder="0: hafta içi fiyatını kullan"></label>
+<label>Temizlik ücreti (konaklama başına)<input type="number" min="0" step=".01" name="cleaning_fee" value="<?= e($property['cleaning_fee']??0) ?>"></label>
 <label>Para birimi<input name="currency" maxlength="3" value="<?= e($property['currency']??($defaultCurrency??'TRY')) ?>"></label>
 <label>Durum<select name="status"><option value="draft" <?= ($property['status']??'draft')==='draft'?'selected':'' ?>>Taslak</option><option value="published" <?= ($property['status']??'')==='published'?'selected':'' ?>>Yayında</option><option value="archived" <?= ($property['status']??'')==='archived'?'selected':'' ?>>Arşiv</option></select></label>
 <label>Rezervasyon tipi<select name="booking_type"><option value="request">Onaylı talep</option><option value="instant" <?= ($property['booking_type']??'')==='instant'?'selected':'' ?>>Anında rezervasyon</option></select></label>
