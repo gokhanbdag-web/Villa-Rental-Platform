@@ -15,9 +15,21 @@ function app_base_path(): string {
         return rtrim($path, '/');
     };
 
-    // SCRIPT_NAME may expose only /index.php on rewritten shared-hosting requests.
-    // Resolve the real front-controller directory relative to DOCUMENT_ROOT first.
-    $dir = '';
+    // Prefer the URL-visible script directory whenever the server provides it.
+    // On some cPanel/FastCGI setups DOCUMENT_ROOT and realpath() refer to
+    // different physical roots (symlinks or a public/ document root), which
+    // can otherwise incorrectly turn a /villaed installation into /.
+    $scriptName = $normalize((string)($_SERVER['SCRIPT_NAME'] ?? ''));
+    $scriptDir = $scriptName !== '' ? $normalize(dirname($scriptName)) : '';
+    if ($scriptDir !== '' && $scriptDir !== '/' && $scriptDir !== '.') {
+        $base = $scriptDir;
+        if (in_array(basename($base), ['install', 'public'], true)) {
+            $base = $normalize(dirname($base));
+        }
+        return ($base === '' || $base === '/' || $base === '.') ? '' : $base;
+    }
+
+    // Fallback for rewrite configurations where SCRIPT_NAME is only /index.php.
     $scriptFile = (string)($_SERVER['SCRIPT_FILENAME'] ?? '');
     $documentRoot = (string)($_SERVER['DOCUMENT_ROOT'] ?? '');
     if ($scriptFile !== '' && $documentRoot !== '') {
@@ -29,16 +41,16 @@ function app_base_path(): string {
             if (str_starts_with($filePath, $rootPath . '/')) {
                 $relative = ltrim(substr($filePath, strlen($rootPath)), '/');
                 $dir = $normalize(dirname('/' . $relative));
+                if (in_array(basename($dir), ['install', 'public'], true)) {
+                    $dir = $normalize(dirname($dir));
+                }
+                $base = ($dir === '' || $dir === '/' || $dir === '.') ? '' : $dir;
+                return $base;
             }
         }
     }
 
-    if ($dir === '' || $dir === '/' || $dir === '.') {
-        $script = $normalize((string)($_SERVER['SCRIPT_NAME'] ?? '/index.php'));
-        $dir = $normalize(dirname($script));
-    }
-    if (in_array(basename($dir), ['install', 'public'], true)) $dir = $normalize(dirname($dir));
-    $base = ($dir === '' || $dir === '/' || $dir === '.') ? '' : $dir;
+    $base = '';
     return $base;
 }
 
