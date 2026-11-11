@@ -345,6 +345,56 @@ $router->post('/register', static function (): void {
     }
 });
 
+$router->get('/villa/{slug}/availability', static function (array $params): void {
+    header('Content-Type: application/json; charset=utf-8');
+    header('Cache-Control: no-store');
+    $fail = static function (int $status, string $message): void {
+        http_response_code($status);
+        echo json_encode(['ok'=>false,'message'=>$message], JSON_UNESCAPED_UNICODE|JSON_THROW_ON_ERROR);
+    };
+    $pdo = Database::connection();
+    $propertyStmt = $pdo->prepare("SELECT id,base_nightly_price,weekend_nightly_price,cleaning_fee,currency,max_guests FROM properties WHERE slug=? AND status='published' LIMIT 1");
+    $propertyStmt->execute([$params['slug'] ?? '']);
+    $property = $propertyStmt->fetch();
+    if (!$property) { $fail(404, 'Konaklama bulunamadı.'); return; }
+    $inRaw = trim((string)($_GET['check_in'] ?? ''));
+    $outRaw = trim((string)($_GET['check_out'] ?? ''));
+    $guests = (int)($_GET['guests'] ?? 1);
+    $checkIn = \DateTimeImmutable::createFromFormat('!Y-m-d', $inRaw);
+    $checkOut = \DateTimeImmutable::createFromFormat('!Y-m-d', $outRaw);
+    if (!$checkIn || !$checkOut || $checkIn->format('Y-m-d') !== $inRaw || $checkOut->format('Y-m-d') !== $outRaw || $checkIn < new \DateTimeImmutable('today') || $checkOut <= $checkIn) {
+        $fail(422, 'Lütfen geçerli giriş ve çıkış tarihleri seçin.'); return;
+    }
+    $nights = (int)$checkIn->diff($checkOut)->days;
+    if ($nights > 365) { $fail(422, 'Tek rezervasyonda en fazla 365 gece seçilebilir.'); return; }
+    if ($guests < 1 || $guests > (int)$property['max_guests']) { $fail(422, 'Misafir sayısı konaklama kapasitesini aşamaz.'); return; }
+    $conflict = $pdo->prepare("SELECT id FROM bookings WHERE property_id=? AND status IN ('pending','confirmed') AND check_in < ? AND check_out > ? LIMIT 1");
+    $conflict->execute([(int)$property['id'], $outRaw, $inRaw]);
+    if ($conflict->fetchColumn()) { $fail(409, 'Bu tarihlerde başka bir rezervasyon talebi veya onaylı rezervasyon bulunuyor.'); return; }
+    $rulesStmt = $pdo->prepare('SELECT date_from,date_to,status,nightly_price FROM availability WHERE property_id=? AND date_from < ? AND date_to > ?');
+    $rulesStmt->execute([(int)$property['id'], $outRaw, $inRaw]);
+    $rules = $rulesStmt->fetchAll();
+    $subtotal = 0.0;
+    for ($night = $checkIn; $night < $checkOut; $night = $night->modify('+1 day')) {
+        $day = $night->format('Y-m-d');
+        $rate = (float)$property['base_nightly_price'];
+        if ((int)$night->format('N') >= 6 && (float)($property['weekend_nightly_price'] ?? 0) > 0) $rate = (float)$property['weekend_nightly_price'];
+        foreach ($rules as $rule) {
+            if ($day >= $rule['date_from'] && $day < $rule['date_to']) {
+                if ($rule['status'] !== 'available') { $fail(409, 'Seçtiğiniz tarih aralığında kapalı veya müsait olmayan günler var.'); return; }
+                if ($rule['nightly_price'] !== null) $rate = (float)$rule['nightly_price'];
+            }
+        }
+        $subtotal += $rate;
+    }
+    $fees = (float)($property['cleaning_fee'] ?? 0);
+    echo json_encode([
+        'ok'=>true,'nights'=>$nights,'subtotal'=>round($subtotal,2),'fees'=>round($fees,2),
+        'total'=>round($subtotal+$fees,2),'currency'=>(string)$property['currency'],
+        'message'=>'Seçtiğiniz tarihler müsait görünüyor. Son kontrol rezervasyon gönderilirken tekrar yapılır.'
+    ], JSON_UNESCAPED_UNICODE|JSON_THROW_ON_ERROR);
+});
+
 $router->get('/villa/{slug}/reserve', static function (array $params): void {
     $user = Auth::user();
     if (!$user) redirect('/register');
