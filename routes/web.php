@@ -346,7 +346,7 @@ $router->get('/villa/{slug}/reserve', static function (array $params): void {
     $pdo=Database::connection();
     $contentStmt=$pdo->prepare('SELECT content_key,content_value FROM site_content WHERE language_code=?');$contentStmt->execute(['tr']);$content=$contentStmt->fetchAll(PDO::FETCH_KEY_PAIR);
     $siteName=$content['site_name']??'VillaStay';
-    $footerStmt=$pdo->prepare('SELECT label,url,target FROM navigation_items WHERE location=? AND language_code=? AND is_active=1 ORDER BY sort_order,id');$footerStmt->execute(['footer','tr']);$footerNavigation=$footerStmt->fetchAll();
+    $footerNavigation=villa_navigation_tree($pdo,'footer','tr');
     $pricePreview=null;
     if($checkInDate!==''&&$checkOutDate!==''){
         $nightRules=$pdo->prepare('SELECT date_from,date_to,status,nightly_price FROM availability WHERE property_id=? AND date_from < ? AND date_to > ?');$nightRules->execute([(int)$property['id'],$checkOutDate,$checkInDate]);$previewRules=$nightRules->fetchAll();
@@ -846,7 +846,7 @@ $router->post('/admin/navigation/save', static function (): void {
     $location=in_array($_POST['location']??'', ['header','footer'],true)?$_POST['location']:'header';
     $target=($_POST['target']??'')==='_blank'?'_blank':'_self';
     $sort=max(0,min(9999,(int)($_POST['sort_order']??10)));$active=isset($_POST['is_active'])?1:0;$parentId=max(0,(int)($_POST['parent_id']??0));
-    if($parentId>0){$p=$pdo->prepare('SELECT id,parent_id,location FROM navigation_items WHERE id=? LIMIT 1');$p->execute([$parentId]);$parent=$p->fetch();if(!$parent||(int)$parent['id']===$id||(string)$parent['location']!==$location||(int)($parent['parent_id']??0)>0){http_response_code(422);exit('Alt menü yalnızca aynı konumdaki bir ana menüye bağlanabilir.');}}
+    if($parentId>0){$p=$pdo->prepare('SELECT id,parent_id,location FROM navigation_items WHERE id=? LIMIT 1');$p->execute([$parentId]);$parent=$p->fetch();if(!$parent||(int)$parent['id']===$id||(string)$parent['location']!==$location||(int)($parent['parent_id']??0)>0){http_response_code(422);exit('Alt menü yalnızca aynı konumdaki bir ana menüye bağlanabilir.');}$hasChildren=$pdo->prepare('SELECT 1 FROM navigation_items WHERE parent_id=? LIMIT 1');$hasChildren->execute([$id]);if($id>0&&$hasChildren->fetchColumn()){http_response_code(422);exit('Alt menüsü bulunan bir öğeyi başka bir öğenin altına taşıyamazsınız. Önce alt öğelerini taşıyın.');}}
     $validUrl=$url!==''&&!preg_match('/[\\r\\n\\x00-\\x1F]/',$url)&&!str_starts_with($url,'//')&&(str_starts_with($url,'/')||preg_match('#^https?://#i',$url));
     if($label===''||mb_strlen($label)>120||!$validUrl){http_response_code(422);exit('Menü adı veya bağlantı adresi geçersiz.');}
     if($id>0){
@@ -880,7 +880,7 @@ $router->post('/admin/navigation/toggle', static function (): void {
 });
 $router->post('/admin/navigation/delete', static function (): void {
     Auth::requireRole(['super_admin','admin']);verify_csrf();
-    $s=Database::connection()->prepare('DELETE FROM navigation_items WHERE id=?');$s->execute([(int)($_POST['id']??0)]);redirect('/admin/navigation');
+    $pdo=Database::connection();$id=(int)($_POST['id']??0);$pdo->beginTransaction();$promote=$pdo->prepare('UPDATE navigation_items SET parent_id=NULL WHERE parent_id=?');$promote->execute([$id]);$s=$pdo->prepare('DELETE FROM navigation_items WHERE id=?');$s->execute([$id]);$pdo->commit();redirect('/admin/navigation');
 });
 
 
