@@ -44,9 +44,27 @@ $basePath = app_base_path();
 if ($basePath !== '' && ($requestPath === $basePath || str_starts_with($requestPath, $basePath . '/'))) {
     $requestPath = substr($requestPath, strlen($basePath)) ?: '/';
 }
+$platformMode = 'single_vendor';
+try {
+    $modeStmt = Database::connection()->prepare('SELECT setting_value FROM settings WHERE setting_key = ? LIMIT 1');
+    $modeStmt->execute(['app.mode']);
+    $platformMode = (string)($modeStmt->fetchColumn() ?: 'single_vendor');
+} catch (Throwable $e) {
+    error_log('Platform mode lookup failed: ' . $e->getMessage());
+}
+
+// Vendor-only endpoints must not be reachable in single-vendor installations,
+// even if an old vendor account or a bookmarked URL exists.
+if ($platformMode !== 'multi_vendor' &&
+    ($requestPath === '/vendor' || str_starts_with($requestPath, '/vendor/') ||
+     $requestPath === '/admin/vendors' || str_starts_with($requestPath, '/admin/vendors/'))) {
+    http_response_code(404);
+    exit('Bu özellik mevcut platform modelinde etkin değil.');
+}
+
 $isAdminPage = $requestPath === '/admin' || str_starts_with($requestPath, '/admin/');
 if ($isAdminPage) {
-    ob_start(static function (string $html) use ($requestPath): string {
+    ob_start(static function (string $html) use ($requestPath, $platformMode): string {
         $user = Auth::user();
         $username = e((string)($user['username'] ?? 'Yönetici'));
         $links = [
@@ -57,7 +75,6 @@ if ($isAdminPage) {
             '/admin/amenities' => 'Villa Özellikleri',
             '/admin/bookings' => 'Rezervasyonlar',
             '/admin/users' => 'Kullanıcılar',
-            '/admin/vendors' => 'Ev Sahipleri',
             '/admin/reviews' => 'Yorumlar',
             '/admin/pages' => 'İçerik Sayfaları',
             '/admin/navigation' => 'Menü Yönetimi',
@@ -65,6 +82,9 @@ if ($isAdminPage) {
             '/admin/settings' => 'Ayarlar',
             '/admin/translations' => 'Çeviriler',
         ];
+        if ($platformMode === 'multi_vendor') {
+            $links['/admin/vendors'] = 'Ev Sahipleri';
+        }
 
         // Dashboard and sub-pages are reduced to content only; the shell below is the single admin layout.
         $bodyContent = '';
