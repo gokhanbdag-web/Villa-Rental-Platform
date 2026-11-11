@@ -8,12 +8,37 @@ function e(mixed $value): string {
 function app_base_path(): string {
     static $base = null;
     if ($base !== null) return $base;
-    $script = str_replace('\\', '/', (string)($_SERVER['SCRIPT_NAME'] ?? '/index.php'));
-    $dir = rtrim(str_replace('\\', '/', dirname($script)), '/');
-    if (in_array(basename($dir), ['install', 'public'], true)) {
-        $dir = rtrim(str_replace('\\', '/', dirname($dir)), '/');
+
+    $normalize = static function (string $path): string {
+        $path = str_replace(chr(92), '/', $path);
+        $path = preg_replace('#/+#', '/', $path) ?? $path;
+        return rtrim($path, '/');
+    };
+
+    // SCRIPT_NAME may expose only /index.php on rewritten shared-hosting requests.
+    // Resolve the real front-controller directory relative to DOCUMENT_ROOT first.
+    $dir = '';
+    $scriptFile = (string)($_SERVER['SCRIPT_FILENAME'] ?? '');
+    $documentRoot = (string)($_SERVER['DOCUMENT_ROOT'] ?? '');
+    if ($scriptFile !== '' && $documentRoot !== '') {
+        $realFile = realpath($scriptFile);
+        $realRoot = realpath($documentRoot);
+        if ($realFile !== false && $realRoot !== false) {
+            $filePath = $normalize($realFile);
+            $rootPath = $normalize($realRoot);
+            if (str_starts_with($filePath, $rootPath . '/')) {
+                $relative = ltrim(substr($filePath, strlen($rootPath)), '/');
+                $dir = $normalize(dirname('/' . $relative));
+            }
+        }
     }
-    $base = ($dir === '' || $dir === '.') ? '' : $dir;
+
+    if ($dir === '' || $dir === '/' || $dir === '.') {
+        $script = $normalize((string)($_SERVER['SCRIPT_NAME'] ?? '/index.php'));
+        $dir = $normalize(dirname($script));
+    }
+    if (in_array(basename($dir), ['install', 'public'], true)) $dir = $normalize(dirname($dir));
+    $base = ($dir === '' || $dir === '/' || $dir === '.') ? '' : $dir;
     return $base;
 }
 
