@@ -1033,9 +1033,17 @@ $router->get('/admin', static function (): void {
     $mode = (string)($pdo->query("SELECT setting_value FROM settings WHERE setting_key='app.mode'")->fetchColumn() ?: 'single_vendor');
     $metrics = [
         'properties' => (int)$pdo->query('SELECT COUNT(*) FROM properties')->fetchColumn(),
+        'published_properties' => (int)$pdo->query("SELECT COUNT(*) FROM properties WHERE status='published'")->fetchColumn(),
         'bookings' => (int)$pdo->query('SELECT COUNT(*) FROM bookings')->fetchColumn(),
         'users' => (int)$pdo->query('SELECT COUNT(*) FROM users')->fetchColumn(),
-        'pending' => (int)$pdo->query("SELECT COUNT(*) FROM bookings WHERE status = 'pending'")->fetchColumn(),
+        'pending' => (int)$pdo->query("SELECT COUNT(*) FROM bookings WHERE status='pending'")->fetchColumn(),
+        'confirmed' => (int)$pdo->query("SELECT COUNT(*) FROM bookings WHERE status='confirmed'")->fetchColumn(),
+        'categories' => (int)$pdo->query('SELECT COUNT(*) FROM property_categories')->fetchColumn(),
+        'locations' => (int)$pdo->query('SELECT COUNT(*) FROM locations')->fetchColumn(),
+        'pending_reviews' => (int)$pdo->query("SELECT COUNT(*) FROM reviews WHERE status='pending'")->fetchColumn(),
     ];
+    $recentBookings = $pdo->query("SELECT b.booking_code,b.check_in,b.check_out,b.total,b.currency,b.status,b.created_at,p.title AS property_title,u.username AS guest_name
+        FROM bookings b JOIN properties p ON p.id=b.property_id JOIN users u ON u.id=b.guest_user_id
+        ORDER BY b.created_at DESC LIMIT 6")->fetchAll();
     require APP_ROOT . '/views/admin/dashboard.php';
 });
