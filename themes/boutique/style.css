@@ -4,3 +4,56 @@ body[data-villa-theme="boutique"]{background:#fcfbf7;color:#35463b;font-family:s
 /* Layout signature: calm centered hero, restrained width and airy two-column presentation. */
 body[data-villa-theme="boutique"] .hero{padding:58px 0 74px;background:#e8eee7}body[data-villa-theme="boutique"] .hero .wrap{width:min(1120px,calc(100% - 42px))}body[data-villa-theme="boutique"] .hero-card{min-height:520px;justify-content:center;background-position:center;border:1px solid #d2ddd2}body[data-villa-theme="boutique"] .hero-copy{max-width:900px;margin:auto;padding:58px 5%;text-align:center;color:#fff}body[data-villa-theme="boutique"] .hero-copy>p{margin-left:auto;margin-right:auto}body[data-villa-theme="boutique"] .search-enhanced{grid-template-columns:repeat(2,minmax(0,1fr));max-width:760px;margin:34px auto 0}body[data-villa-theme="boutique"] .search-enhanced .search-submit{grid-column:1/-1;min-height:52px}body[data-villa-theme="boutique"] .section{padding:72px 0}body[data-villa-theme="boutique"] .section>.wrap{max-width:1120px}body[data-villa-theme="boutique"] .section-head{align-items:center}body[data-villa-theme="boutique"] .cards{grid-template-columns:repeat(2,minmax(0,1fr));gap:26px}body[data-villa-theme="boutique"] .stay{padding-bottom:18px;border-bottom:1px solid #dce4dc}body[data-villa-theme="boutique"] .stay-photo{height:245px}
 @media(max-width:680px){body[data-villa-theme="boutique"] .cards{grid-template-columns:1fr}body[data-villa-theme="boutique"] .hero-copy{padding:42px 20px}body[data-villa-theme="boutique"] .search-enhanced{grid-template-columns:1fr}}
+
+
+/* Boutique hotel presentation: light sage masthead, quiet navigation and editorial split layout. */
+body[data-villa-theme="boutique"] .theme-header{position:relative;z-index:50;background:#fcfbf7;border-bottom:1px solid #e2e8e0}
+body[data-villa-theme="boutique"] .theme-header-inner{width:min(1180px,calc(100% - 48px));min-height:94px;margin:auto;display:grid;grid-template-columns:220px 1fr;align-items:center;gap:25px}
+body[data-villa-theme="boutique"] .theme-brand{display:flex;flex-direction:column;text-decoration:none;color:#526d5b;gap:3px}
+body[data-villa-theme="boutique"] .theme-brand-name{font:500 29px/1 Georgia,serif;letter-spacing:-1px}
+body[data-villa-theme="boutique"] .theme-brand small{font:600 8px/1.5 system-ui;letter-spacing:1.4px;color:#879889}
+body[data-villa-theme="boutique"] .theme-header .nav{display:flex;align-items:center;justify-content:flex-end;gap:24px}
+body[data-villa-theme="boutique"] .theme-header .nav a{color:#53665a;text-decoration:none;font:600 12px/1.4 system-ui;padding:12px 0;border-bottom:1px solid transparent}
+body[data-villa-theme="boutique"] .theme-header .nav a:hover{border-color:#718778}
+body[data-villa-theme="boutique"] .theme-menu-toggle{display:none}
+body[data-villa-theme="boutique"] .hero{background:#e8eee7;padding:60px 0 74px}
+body[data-villa-theme="boutique"] .hero .wrap{width:min(1120px,calc(100% - 42px))}
+body[data-villa-theme="boutique"] .hero-card{min-height:520px;justify-content:center;border:1px solid #d2ddd2;border-radius:0}
+body[data-villa-theme="boutique"] .hero-copy{max-width:900px;margin:auto;text-align:center;padding:58px 5%}
+body[data-villa-theme="boutique"] .hero h1{font:400 clamp(38px,5.3vw,65px)/1.08 Georgia,serif;letter-spacing:-.7px}
+body[data-villa-theme="boutique"] .hero-copy>p{margin-left:auto;margin-right:auto}
+body[data-villa-theme="boutique"] .search-enhanced{grid-template-columns:repeat(2,minmax(0,1fr));max-width:760px;margin:34px auto 0;border-radius:0;box-shadow:none}
+body[data-villa-theme="boutique"] .search-submit{grid-column:1/-1;min-height:52px;border-radius:0;background:#718778}
+body[data-villa-theme="boutique"] .section{padding:76px 0}
+body[data-villa-theme="boutique"] .section>.wrap{max-width:1120px}
+body[data-villa-theme="boutique"] .section-head{align-items:center}
+body[data-villa-theme="boutique"] .section-head h2{font:400 clamp(30px,4vw,44px)/1.12 Georgia,serif;color:#718778}
+body[data-villa-theme="boutique"] .cards{grid-template-columns:repeat(2,minmax(0,1fr));gap:28px}
+body[data-villa-theme="boutique"] .stay{padding-bottom:20px;border-bottom:1px solid #dce4dc;border-radius:0;background:transparent;box-shadow:none}
+body[data-villa-theme="boutique"] .stay-photo{height:250px;border-radius:0}
+body[data-villa-theme="boutique"] .intro{background:#e8eee7;padding:55px 0}
+body[data-villa-theme="boutique"] .intro h1{font:400 clamp(32px,4vw,48px)/1.12 Georgia,serif}
+body[data-villa-theme="boutique"] .filter-panel{border-radius:0;box-shadow:none;border:1px solid #d6dfd6}
+body[data-villa-theme="boutique"] .results{padding-top:38px}
+body[data-villa-theme="boutique"] .grid{gap:28px}
+body[data-villa-theme="boutique"] .grid .stay{padding-bottom:20px}
+body[data-villa-theme="boutique"] .title h1{font:400 clamp(30px,4vw,45px)/1.12 Georgia,serif}
+body[data-villa-theme="boutique"] .gallery{border-radius:0}
+body[data-villa-theme="boutique"] .booking{border-radius:0;box-shadow:none;border:1px solid #d6dfd6}
+body[data-villa-theme="boutique"] .description,body[data-villa-theme="boutique"] .guest-reviews{border-top:1px solid #d6dfd6;padding-top:30px}
+body[data-villa-theme="boutique"] footer{background:#e8eee7;color:#35463b}
+@media(max-width:680px){
+ body[data-villa-theme="boutique"] .theme-header-inner{min-height:76px;display:flex;width:calc(100% - 30px)}
+ body[data-villa-theme="boutique"] .theme-menu-toggle{display:flex;margin-left:auto;width:44px;height:44px;align-items:center;justify-content:center;border:1px solid #cbd8cc;background:#e8eee7;color:#526d5b;border-radius:0;font-size:23px}
+ body[data-villa-theme="boutique"] .theme-menu-toggle .menu-close-mark{display:none}
+ body[data-villa-theme="boutique"] .theme-menu-toggle[aria-expanded="true"] .menu-open-mark{display:none}
+ body[data-villa-theme="boutique"] .theme-menu-toggle[aria-expanded="true"] .menu-close-mark{display:inline}
+ body[data-villa-theme="boutique"] .theme-header .nav{position:fixed;z-index:60;top:76px;left:0;right:0;background:#fcfbf7;padding:14px 22px 25px;display:flex;flex-direction:column;align-items:stretch;gap:0;box-shadow:0 18px 28px #273b2b20;transform:translateY(-130%);opacity:0;transition:.3s}
+ body[data-villa-theme="boutique"] .theme-header .nav.is-open{transform:translateY(0);opacity:1}
+ body[data-villa-theme="boutique"] .theme-header .nav a{padding:15px 4px;border-bottom:1px solid #e2e8e0}
+ body[data-villa-theme="boutique"] .drawer-overlay{position:fixed;inset:76px 0 0;z-index:45;background:#1c2a2055;opacity:0;visibility:hidden;transition:.25s}
+ body[data-villa-theme="boutique"] .drawer-overlay.is-open{opacity:1;visibility:visible}
+ body[data-villa-theme="boutique"] .hero-card{min-height:590px}
+ body[data-villa-theme="boutique"] .cards{grid-template-columns:1fr}
+ body[data-villa-theme="boutique"] .search-enhanced{grid-template-columns:1fr}
+}
