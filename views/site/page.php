@@ -43,11 +43,8 @@ body.menu-open{overflow:hidden}
 <header class="site-header"><div class="wrap site-head">
 <a class="site-brand" href="/"><?= e($siteName ?? 'VillaStay') ?></a>
 <button class="mobile-menu-toggle" type="button" aria-label="Menüyü aç" aria-controls="siteNavigation" aria-expanded="false">☰</button>
-<nav class="site-nav" id="siteNavigation">
-
-<?php foreach (($navigation ?? []) as $item): ?><a href="<?= e($item['url']) ?>" target="<?= e($item['target']) ?>" <?= $item['target']==='_blank'?'rel="noopener noreferrer"':'' ?>><?= e($item['label']) ?></a><?php endforeach; ?>
-</nav></div></header>
+<nav class="site-nav" id="siteNavigation"><?php $navItems=$navigation??[];$navAllowAuth=true;require APP_ROOT.'/views/site/partials/navigation-items.php'; ?></nav></div></header>
 <div class="drawer-overlay" id="siteMenuOverlay" aria-hidden="true"></div>
-<main class="wrap"><h1><?= e($page['title']) ?></h1><article><?= nl2br(e($page['content'])) ?></article></main><footer class="site-footer"><div class="footer-inner"><div class="footer-copy"><strong><?= e($siteName) ?></strong><p><?= e($content['footer_text']??'') ?></p></div><nav class="footer-links"><?php foreach(($footerNavigation??[]) as $item): ?><a href="<?= e($item['url']) ?>" target="<?= e($item['target']??'_self') ?>"><?= e($item['label']) ?></a><?php endforeach; ?></nav></div></footer>
+<main class="wrap"><h1><?= e($page['title']) ?></h1><article><?= nl2br(e($page['content'])) ?></article></main><footer class="site-footer"><div class="footer-inner"><div class="footer-copy"><strong><?= e($siteName) ?></strong><p><?= e($content['footer_text']??'') ?></p></div><nav class="footer-links"><?php $navItems=$footerNavigation??[];$navAllowAuth=false;require APP_ROOT.'/views/site/partials/navigation-items.php'; ?></nav></div></footer>
 <script>(function(){var button=document.querySelector(".mobile-menu-toggle"),menu=document.getElementById("siteNavigation"),overlay=document.getElementById("siteMenuOverlay");if(!button||!menu||!overlay)return;function close(){menu.classList.remove("is-open");overlay.classList.remove("is-open");document.body.classList.remove("menu-open");button.setAttribute("aria-expanded","false");button.setAttribute("aria-label","Menüyü aç");button.textContent="☰"}function open(){menu.classList.add("is-open");overlay.classList.add("is-open");document.body.classList.add("menu-open");button.setAttribute("aria-expanded","true");button.setAttribute("aria-label","Menüyü kapat");button.textContent="×"}button.addEventListener("click",function(){menu.classList.contains("is-open")?close():open()});overlay.addEventListener("click",close);menu.addEventListener("click",function(e){if(e.target.closest("a"))close()});document.addEventListener("keydown",function(e){if(e.key==="Escape")close()});window.addEventListener("resize",function(){if(window.innerWidth>700)close()})})();</script>
-</body></html>
+<?php require APP_ROOT.'/views/site/partials/login-modal.php'; ?></body></html>
