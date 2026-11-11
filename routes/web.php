@@ -305,6 +305,13 @@ $router->get('/villa/{slug}/reserve', static function (array $params): void {
     $contentStmt=$pdo->prepare('SELECT content_key,content_value FROM site_content WHERE language_code=?');$contentStmt->execute(['tr']);$content=$contentStmt->fetchAll(PDO::FETCH_KEY_PAIR);
     $siteName=$content['site_name']??'VillaStay';
     $footerStmt=$pdo->prepare('SELECT label,url,target FROM navigation_items WHERE location=? AND language_code=? AND is_active=1 ORDER BY sort_order,id');$footerStmt->execute(['footer','tr']);$footerNavigation=$footerStmt->fetchAll();
+    $pricePreview=null;
+    if($checkInDate!==''&&$checkOutDate!==''){
+        $nightRules=$pdo->prepare('SELECT date_from,date_to,status,nightly_price FROM availability WHERE property_id=? AND date_from < ? AND date_to > ?');$nightRules->execute([(int)$property['id'],$checkOutDate,$checkInDate]);$previewRules=$nightRules->fetchAll();
+        $previewSubtotal=0.0;$previewNights=0;$previewUnavailable=false;
+        for($night=$checkInValue;$night<$checkOutValue;$night=$night->modify('+1 day')){$day=$night->format('Y-m-d');$rate=(float)$property['base_nightly_price'];if((int)$night->format('N')>=6&&(float)($property['weekend_nightly_price']??0)>0)$rate=(float)$property['weekend_nightly_price'];foreach($previewRules as $rule){if($day>=$rule['date_from']&&$day<$rule['date_to']){if($rule['status']!=='available'){$previewUnavailable=true;break;}if($rule['nightly_price']!==null)$rate=(float)$rule['nightly_price'];}}if($previewUnavailable)break;$previewSubtotal+=$rate;$previewNights++;}
+        if(!$previewUnavailable){$pricePreview=['nights'=>$previewNights,'subtotal'=>$previewSubtotal,'fees'=>(float)($property['cleaning_fee']??0),'total'=>$previewSubtotal+(float)($property['cleaning_fee']??0)];}
+    }
     require APP_ROOT . '/views/site/booking.php';
 });
 
