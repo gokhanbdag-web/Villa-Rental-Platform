@@ -85,6 +85,7 @@ $router->post('/admin/locations/import', static function (): void {
     $pdo=Database::connection();
     $find=$pdo->prepare('SELECT id FROM locations WHERE parent_id <=> ? AND location_type=? AND name=? LIMIT 1');
     $insert=$pdo->prepare('INSERT INTO locations(parent_id,location_type,name,sort_order,is_active) VALUES(?,?,?,10,1)');
+    $rowInserted=0;$rowExisting=0;
     $resolve=static function(string $name,string $type,?int $parent) use($find,$insert,&$rowInserted,&$rowExisting): int {
         $name=trim($name);if($name==='')return 0;
         $find->execute([$parent,$type,$name]);$id=(int)($find->fetchColumn()?:0);
