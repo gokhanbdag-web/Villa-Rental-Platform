@@ -43,6 +43,22 @@ $router->get('/locations/children', static function (): void {
     header('Content-Type: application/json; charset=utf-8');$parentId=max(0,(int)($_GET['parent_id']??0));
     $s=Database::connection()->prepare('SELECT id,name FROM locations WHERE parent_id=? AND is_active=1 ORDER BY sort_order,name');$s->execute([$parentId]);echo json_encode($s->fetchAll(),JSON_UNESCAPED_UNICODE|JSON_THROW_ON_ERROR);
 });
+$router->get('/locations/search', static function (): void {
+    header('Content-Type: application/json; charset=utf-8');
+    $q=trim((string)($_GET['q']??''));
+    if(mb_strlen($q)<2){echo '[]';return;}
+    $like='%'.$q.'%';
+    $sql="SELECT l.id,l.location_type,l.name,
+        TRIM(BOTH ' / ' FROM CONCAT_WS(' / ',g.name,p.name,l.name)) AS label
+        FROM locations l
+        LEFT JOIN locations p ON p.id=l.parent_id
+        LEFT JOIN locations g ON g.id=p.parent_id
+        WHERE l.is_active=1 AND (l.name LIKE ? OR p.name LIKE ? OR g.name LIKE ?)
+        ORDER BY FIELD(l.location_type,'city','district','neighborhood','country'),l.sort_order,l.name
+        LIMIT 15";
+    $s=Database::connection()->prepare($sql);$s->execute([$like,$like,$like]);
+    echo json_encode($s->fetchAll(),JSON_UNESCAPED_UNICODE|JSON_THROW_ON_ERROR);
+});
 $router->get('/admin/locations', static function (): void {
     Auth::requireRole(['super_admin','admin']);$pdo=Database::connection();
     $locations=$pdo->query("SELECT l.*,p.name AS parent_name FROM locations l LEFT JOIN locations p ON p.id=l.parent_id ORDER BY FIELD(l.location_type,'country','city','district','neighborhood'),p.name,l.sort_order,l.name")->fetchAll();
@@ -141,7 +157,7 @@ $router->get('/', static function (): void {
     $mode=(string)($pdo->query("SELECT setting_value FROM settings WHERE setting_key='app.mode' LIMIT 1")->fetchColumn() ?: 'single_vendor');
     $contentStmt=$pdo->prepare('SELECT content_key,content_value FROM site_content WHERE language_code=?');$contentStmt->execute([$locale]);$content=$contentStmt->fetchAll(PDO::FETCH_KEY_PAIR);
     $nav=$pdo->prepare('SELECT label,url,target FROM navigation_items WHERE location=? AND language_code=? AND is_active=1 ORDER BY sort_order,id');$nav->execute(['header',$locale]);$navigation=$nav->fetchAll();$nav->execute(['footer',$locale]);$footerNavigation=$nav->fetchAll();
-    $destinations=$pdo->query("SELECT city,COUNT(*) AS property_count,MIN(id) AS sample_id,(SELECT pm.file_path FROM property_media pm JOIN properties p2 ON p2.id=pm.property_id WHERE p2.city=p.city AND p2.status='published' ORDER BY pm.is_cover DESC,pm.sort_order,pm.id LIMIT 1) AS cover_image FROM properties p WHERE p.status='published' AND p.city<>'' GROUP BY city ORDER BY property_count DESC,city ASC LIMIT 8")->fetchAll();
+    $destinations=$pdo->query("SELECT l.id AS location_id,l.name AS city,COUNT(DISTINCT p.id) AS property_count,MIN(p.id) AS sample_id,(SELECT pm.file_path FROM property_media pm JOIN properties p2 ON p2.id=pm.property_id WHERE p2.status='published' AND (p2.location_city_id=l.id OR (p2.location_city_id IS NULL AND p2.city=l.name)) ORDER BY pm.is_cover DESC,pm.sort_order,pm.id LIMIT 1) AS cover_image FROM locations l JOIN locations c ON c.id=l.parent_id AND c.location_type='country' AND c.is_active=1 LEFT JOIN properties p ON p.status='published' AND (p.location_city_id=l.id OR (p.location_city_id IS NULL AND p.city=l.name)) WHERE l.location_type='city' AND l.is_active=1 GROUP BY l.id,l.name,l.sort_order ORDER BY property_count DESC,l.sort_order,l.name LIMIT 8")->fetchAll();
     $featuredProperties=$pdo->query("SELECT p.*,(SELECT pm.file_path FROM property_media pm WHERE pm.property_id=p.id ORDER BY pm.is_cover DESC,pm.sort_order,pm.id LIMIT 1) AS cover_image,(SELECT COUNT(*) FROM bookings b WHERE b.property_id=p.id AND b.status NOT IN ('cancelled','rejected')) AS booking_count FROM properties p WHERE p.status='published' ORDER BY booking_count DESC,p.created_at DESC,p.id DESC LIMIT 8")->fetchAll();
     $latestProperties=$pdo->query("SELECT p.*,(SELECT pm.file_path FROM property_media pm WHERE pm.property_id=p.id ORDER BY pm.is_cover DESC,pm.sort_order,pm.id LIMIT 1) AS cover_image FROM properties p WHERE p.status='published' ORDER BY p.id DESC LIMIT 4")->fetchAll();
     $categories=$pdo->query('SELECT id,name,slug FROM property_categories WHERE is_active=1 ORDER BY sort_order,name LIMIT 8')->fetchAll();
@@ -170,8 +186,17 @@ $router->get('/konaklamalar', static function (): void {
     $locationCountries=$pdo->query("SELECT id,name FROM locations WHERE location_type='country' AND is_active=1 ORDER BY sort_order,name")->fetchAll();
     $locationChildren=static function(int $parent) use($pdo): array {if(!$parent)return [];$s=$pdo->prepare('SELECT id,name FROM locations WHERE parent_id=? AND is_active=1 ORDER BY sort_order,name');$s->execute([$parent]);return $s->fetchAll();};
     $locationCountryId=max(0,(int)($_GET['country_id']??0));$locationCityId=max(0,(int)($_GET['city_id']??0));$locationDistrictId=max(0,(int)($_GET['district_id']??0));$locationNeighborhoodId=max(0,(int)($_GET['neighborhood_id']??0));
+    $selectedLocationId=max(0,(int)($_GET['location_id']??0));
+    if($selectedLocationId>0){
+        $selectedStmt=$pdo->prepare('SELECT location_type FROM locations WHERE id=? AND is_active=1 LIMIT 1');
+        $selectedStmt->execute([$selectedLocationId]);$selectedType=(string)($selectedStmt->fetchColumn()?:'');
+        if($selectedType==='country')$locationCountryId=$selectedLocationId;
+        elseif($selectedType==='city')$locationCityId=$selectedLocationId;
+        elseif($selectedType==='district')$locationDistrictId=$selectedLocationId;
+        elseif($selectedType==='neighborhood')$locationNeighborhoodId=$selectedLocationId;
+    }
     $locationCities=$locationChildren($locationCountryId);$locationDistricts=$locationChildren($locationCityId);$locationNeighborhoods=$locationChildren($locationDistrictId);
-    $city = trim((string)($_GET['city'] ?? ''));
+    $city = $selectedLocationId>0 ? '' : trim((string)($_GET['city'] ?? ''));
     $guests = max(0,(int)($_GET['guests'] ?? 0));
     $categoryId = max(0,(int)($_GET['category'] ?? 0));
     $minPrice = max(0,(float)($_GET['min_price'] ?? 0));
