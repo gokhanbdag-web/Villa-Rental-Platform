@@ -967,9 +967,25 @@ $router->get('/theme-assets/{slug}/{file}', static function (array $params): voi
 
 $router->get('/admin/themes', static function (): void {
     Auth::requireRole(['super_admin','admin']);
-    $themes=ThemeManager::installed();$activeTheme=ThemeManager::activeSlug();
+    $themes=ThemeManager::installed();$activeTheme=ThemeManager::activeSlug();$themeSettings=[];foreach($themes as $themeSlug=>$themeData){$themeSettings[$themeSlug]=ThemeManager::customSettings($themeSlug);}
     $themeMessage=(string)($_SESSION['villa_theme_message']??'');unset($_SESSION['villa_theme_message']);
     require APP_ROOT.'/views/admin/themes.php';
+});
+$router->post('/admin/themes/settings', static function (): void {
+    Auth::requireRole(['super_admin','admin']);verify_csrf();
+    try {
+        $slug=(string)($_POST['slug']??'');
+        ThemeManager::saveCustomSettings($slug, [
+            'primary'=>$_POST['primary']??'',
+            'background'=>$_POST['background']??'',
+            'surface'=>$_POST['surface']??'',
+            'text'=>$_POST['text']??'',
+            'accent'=>$_POST['accent']??'',
+            'radius'=>$_POST['radius']??18
+        ]);
+        $_SESSION['villa_theme_message']='Tema görünüm ayarları kaydedildi.';
+    } catch(Throwable $e) { $_SESSION['villa_theme_message']=$e->getMessage(); }
+    redirect('/admin/themes');
 });
 $router->post('/admin/themes/activate', static function (): void {
     Auth::requireRole(['super_admin','admin']);verify_csrf();
