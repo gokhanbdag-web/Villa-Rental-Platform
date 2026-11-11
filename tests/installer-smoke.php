@@ -54,7 +54,7 @@ try {
     }
 
     $registry = PageBuilder::widgets();
-    assertSmoke(isset($registry['image_text'], $registry['features']), 'Expected visual editor widgets are missing.');
+    assertSmoke(isset($registry['image_text'], $registry['features']) && count($registry) >= 47, 'Expected all built-in visual editor widgets to be registered.');
     $builderPayload = [
         'widgets' => [
             ['id' => 'image-text-smoke', 'type' => 'image_text', 'style' => $registry['image_text']['default_style'], 'settings' => [
@@ -65,19 +65,27 @@ try {
                 'columns' => 2, 'item_gap' => 26, 'item_radius' => 18, 'item_padding' => 28,
                 'item_icon_size' => 32, 'item_alignment' => 'center',
             ]],
+            ['id' => 'hero-sanitizer-smoke', 'type' => 'hero', 'style' => $registry['hero']['default_style'], 'settings' => [
+                'show_search' => 'false', 'hero_height' => 1200, 'button_url' => 'javascript:alert(1)',
+                'untrusted_setting' => 'must-not-persist',
+            ]],
         ],
     ];
     $preview = PageBuilder::sanitizePreview('mediterranean', $builderPayload);
     $imageSettings = $preview['widgets'][0]['settings'];
     $featureSettings = $preview['widgets'][1]['settings'];
+    $heroSettings = $preview['widgets'][2]['settings'];
     assertSmoke(($imageSettings['media_width'] ?? null) === 67 && ($imageSettings['content_gap'] ?? null) === 48 && ($imageSettings['content_position'] ?? '') === 'left', 'Image-text inspector settings were not validated correctly.');
     assertSmoke(($featureSettings['item_gap'] ?? null) === 26 && ($featureSettings['item_padding'] ?? null) === 28 && ($featureSettings['item_alignment'] ?? '') === 'center', 'Item-card inspector settings were not validated correctly.');
+    assertSmoke(($heroSettings['show_search'] ?? true) === false && ($heroSettings['hero_height'] ?? 0) === 900, 'Widget boolean and numeric settings were not normalized consistently.');
+    assertSmoke(($heroSettings['button_url'] ?? null) === '' && !array_key_exists('untrusted_setting', $heroSettings), 'Widget setting allowlist did not reject an unsafe URL or unknown field.');
 
     $adminId = (int)$pdo->query("SELECT id FROM users WHERE email='smoke@example.test'")->fetchColumn();
     PageBuilder::save('mediterranean', 'home', $preview, 'draft', $adminId);
     $savedLayout = PageBuilder::load('mediterranean', 'home');
     assertSmoke(($savedLayout['widgets'][0]['settings']['media_width'] ?? null) === 67, 'Image-text layout settings did not persist.');
     assertSmoke(($savedLayout['widgets'][1]['settings']['item_alignment'] ?? '') === 'center', 'Item-card layout settings did not persist.');
+    assertSmoke(($savedLayout['widgets'][2]['settings']['show_search'] ?? true) === false, 'Normalized widget settings did not persist consistently.');
 
     $themeCount = count(glob($root . '/themes/*/theme.json') ?: []);
     assertSmoke($themeCount === 4, 'Expected four built-in themes.');
@@ -87,7 +95,7 @@ try {
     $migrationCountAfter = (int)$pdo->query('SELECT COUNT(*) FROM schema_migrations')->fetchColumn();
     assertSmoke($migrationCountAfter === $migrationCount, 'Second migration pass changed the migration ledger.');
 
-    echo "Installer and builder smoke tests passed: admin, platform mode, {$villaCount} demo villas, {$migrationCount} migrations, required tables, four themes, image-text and item-card settings preview/save/load, and repeat migration.\n";
+    echo "Installer and builder smoke tests passed: admin, platform mode, {$villaCount} demo villas, {$migrationCount} migrations, required tables, four themes, all 47+ widget registrations, image-text/item-card settings, shared widget sanitizer security and preview/save/load, and repeat migration.\n";
 } finally {
     if (is_file($configFile)) unlink($configFile);
     if (is_file($lockFile)) unlink($lockFile);
