@@ -43,6 +43,7 @@ final class Migrator
         // Self-heal the navigation schema if a previous deployment skipped
         // this migration or recorded it without applying the column.
         selfHealNavigationHierarchy($pdo);
+        $pdo->prepare('INSERT IGNORE INTO schema_migrations(migration, applied_at) VALUES(?, NOW())')->execute(['018_navigation_hierarchy.sql']);
         } finally {
             $pdo->query("SELECT RELEASE_LOCK('villa_platform_migrations')")->fetchColumn();
         }
