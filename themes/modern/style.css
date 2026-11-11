@@ -178,3 +178,14 @@ body[data-villa-theme] .premium-stay-card .card-gallery-data{display:none}
  }
  body.villa-destinations-modern .grid>.card{height:220px!important}
 }
+
+
+/* High-contrast desktop dropdown links on white submenu surfaces. */
+@media(min-width:761px){
+ body[data-villa-theme="prestige"] .theme-header .nav .nav-dropdown .nav-entry-top>a,
+ body.villa-destinations-prestige .theme-header .nav .nav-dropdown .nav-entry-top>a{color:#263247!important;font-weight:700;text-transform:none;letter-spacing:.1px}
+ body[data-villa-theme="prestige"] .theme-header .nav .nav-dropdown .nav-entry-top>a:hover,
+ body.villa-destinations-prestige .theme-header .nav .nav-dropdown .nav-entry-top>a:hover{color:#8a672e!important;background:#f5f0e6}
+ body[data-villa-theme="modern"] .theme-header .nav .nav-dropdown .nav-entry-top>a{color:#263241!important;font-weight:700;text-transform:none;letter-spacing:0}
+ body[data-villa-theme="modern"] .theme-header .nav .nav-dropdown .nav-entry-top>a:hover{color:#111923!important;background:#edf1f5}
+}
