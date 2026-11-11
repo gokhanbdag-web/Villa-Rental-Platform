@@ -4,3 +4,52 @@ body[data-villa-theme="prestige"]{background:#f7f4ed;color:#18263a;font-family:G
 /* Layout signature: centered grand entrance, spacious editorial sections and gold accents. */
 body[data-villa-theme="prestige"] .hero{padding:58px 0 76px}body[data-villa-theme="prestige"] .hero .wrap{width:min(1360px,calc(100% - 40px))}body[data-villa-theme="prestige"] .hero-card{min-height:650px;justify-content:center;text-align:center;background-position:center 48%;border:1px solid #bda36e;box-shadow:0 24px 65px #101d3126}body[data-villa-theme="prestige"] .hero-copy{width:100%;max-width:980px;margin:auto;padding:70px 6%}body[data-villa-theme="prestige"] .hero-copy>p{margin-left:auto;margin-right:auto}body[data-villa-theme="prestige"] .search-enhanced{grid-template-columns:repeat(2,minmax(0,1fr));max-width:760px;margin:34px auto 0;padding:14px}body[data-villa-theme="prestige"] .search-enhanced .search-submit{grid-column:1/-1;min-height:54px}body[data-villa-theme="prestige"] .section{padding:82px 0}body[data-villa-theme="prestige"] .section-head{text-align:center;justify-content:center}body[data-villa-theme="prestige"] .section-head>div{margin:auto}body[data-villa-theme="prestige"] .section-head .more{display:none}body[data-villa-theme="prestige"] .cards{gap:24px}body[data-villa-theme="prestige"] .stay{padding:12px 12px 22px;border:1px solid #d9cba9}body[data-villa-theme="prestige"] .stay-photo{height:220px}
 @media(max-width:760px){body[data-villa-theme="prestige"] .hero-card{min-height:690px}body[data-villa-theme="prestige"] .search-enhanced{grid-template-columns:1fr}body[data-villa-theme="prestige"] .hero-copy{padding:42px 20px}}
+
+
+/* Luxury presentation: formal centered wordmark, gold navigation and full-screen mobile menu. */
+body[data-villa-theme="prestige"] .theme-header{position:relative;z-index:50;background:#101d31;color:#f8f2e5;border-bottom:1px solid #8e7445}
+body[data-villa-theme="prestige"] .theme-header-inner{width:min(1320px,calc(100% - 40px));min-height:116px;margin:auto;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;position:relative;padding:17px 0 15px}
+body[data-villa-theme="prestige"] .theme-brand{display:flex;flex-direction:column;align-items:center;text-decoration:none;color:#e2c58a;gap:3px}
+body[data-villa-theme="prestige"] .theme-brand-name{font:400 27px/1 Georgia,serif;letter-spacing:4px}
+body[data-villa-theme="prestige"] .theme-brand small{font:600 8px/1.5 system-ui;letter-spacing:2.2px;text-transform:uppercase;color:#c2b18b}
+body[data-villa-theme="prestige"] .theme-header .nav{display:flex;align-items:center;justify-content:center;gap:30px}
+body[data-villa-theme="prestige"] .theme-header .nav a{color:#f4ead4;text-decoration:none;text-transform:uppercase;letter-spacing:1.4px;font:600 10px/1.4 system-ui;padding:8px 0;border-bottom:1px solid transparent}
+body[data-villa-theme="prestige"] .theme-header .nav a:hover{color:#e2c58a;border-color:#b18c4c}
+body[data-villa-theme="prestige"] .theme-menu-toggle{display:none}
+body[data-villa-theme="prestige"] .hero{padding:58px 0 76px;background:#101d31}
+body[data-villa-theme="prestige"] .hero-card{min-height:660px;justify-content:center;text-align:center;border:1px solid #bda36e;border-radius:0}
+body[data-villa-theme="prestige"] .hero-copy{max-width:980px;margin:auto}
+body[data-villa-theme="prestige"] .hero h1{font:400 clamp(42px,6vw,76px)/1.05 Georgia,serif;letter-spacing:.1px}
+body[data-villa-theme="prestige"] .search-enhanced{grid-template-columns:repeat(2,minmax(0,1fr));max-width:780px;margin:34px auto 0;padding:15px;border-radius:2px}
+body[data-villa-theme="prestige"] .search-submit{grid-column:1/-1;min-height:54px;background:#b18c4c;border-radius:2px;color:#101d31}
+body[data-villa-theme="prestige"] .section{padding:82px 0}
+body[data-villa-theme="prestige"] .section-head{text-align:center;justify-content:center}
+body[data-villa-theme="prestige"] .section-head>div{margin:auto}
+body[data-villa-theme="prestige"] .section-head h2{font:400 clamp(30px,4vw,46px)/1.1 Georgia,serif;letter-spacing:0;color:#9a783e}
+body[data-villa-theme="prestige"] .cards{gap:24px}
+body[data-villa-theme="prestige"] .stay{padding:12px 12px 22px;border:1px solid #d9cba9;border-radius:0;background:#fffdf8;box-shadow:none}
+body[data-villa-theme="prestige"] .stay-photo{height:225px;border-radius:0}
+body[data-villa-theme="prestige"] .intro{background:#101d31;color:#f8f2e5;padding:58px 0}
+body[data-villa-theme="prestige"] .intro h1{font:400 clamp(34px,5vw,55px)/1.1 Georgia,serif}
+body[data-villa-theme="prestige"] .filter-panel{border:1px solid #bda36e;border-radius:0}
+body[data-villa-theme="prestige"] .grid{gap:24px}
+body[data-villa-theme="prestige"] .grid .stay{padding:12px 12px 22px}
+body[data-villa-theme="prestige"] .title h1{font:400 clamp(30px,4vw,48px)/1.1 Georgia,serif}
+body[data-villa-theme="prestige"] .gallery{border-radius:0;border:1px solid #c9b47e}
+body[data-villa-theme="prestige"] .booking{border:1px solid #c9b47e;border-radius:0;box-shadow:0 14px 40px #101d3115}
+body[data-villa-theme="prestige"] .description,body[data-villa-theme="prestige"] .guest-reviews{border-top:1px solid #c9b47e;padding-top:30px}
+body[data-villa-theme="prestige"] footer{background:#101d31;color:#f8f2e5}
+@media(max-width:760px){
+ body[data-villa-theme="prestige"] .theme-header-inner{min-height:82px;flex-direction:row;justify-content:center;width:calc(100% - 28px)}
+ body[data-villa-theme="prestige"] .theme-brand-name{font-size:22px}
+ body[data-villa-theme="prestige"] .theme-menu-toggle{display:flex;position:absolute;right:0;top:19px;width:43px;height:43px;align-items:center;justify-content:center;border:1px solid #8e7445;background:transparent;color:#e2c58a;border-radius:0;font-size:22px}
+ body[data-villa-theme="prestige"] .theme-menu-toggle .menu-close-mark{display:none}
+ body[data-villa-theme="prestige"] .theme-menu-toggle[aria-expanded="true"] .menu-open-mark{display:none}
+ body[data-villa-theme="prestige"] .theme-menu-toggle[aria-expanded="true"] .menu-close-mark{display:inline}
+ body[data-villa-theme="prestige"] .theme-header .nav{position:fixed;z-index:60;inset:0;background:#101d31;padding:105px 28px 40px;display:flex;flex-direction:column;align-items:center;justify-content:flex-start;gap:4px;transform:scale(.97);opacity:0;visibility:hidden;transition:.28s}
+ body[data-villa-theme="prestige"] .theme-header .nav.is-open{transform:scale(1);opacity:1;visibility:visible}
+ body[data-villa-theme="prestige"] .theme-header .nav a{font:400 18px Georgia,serif;letter-spacing:1px;padding:18px 8px;border-bottom:1px solid #594c34;width:min(100%,360px);text-align:center}
+ body[data-villa-theme="prestige"] .drawer-overlay{display:none}
+ body[data-villa-theme="prestige"] .hero-card{min-height:690px}
+ body[data-villa-theme="prestige"] .search-enhanced{grid-template-columns:1fr}
+}
