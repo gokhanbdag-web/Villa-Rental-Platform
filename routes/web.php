@@ -1369,7 +1369,8 @@ $router->post('/admin/bookings/manual', static function (): void {
     $guestName=trim((string)($_POST['guest_name']??''));$guestEmail=trim((string)($_POST['guest_email']??''));$guestPhone=trim((string)($_POST['guest_phone']??''));
     $inRaw=trim((string)($_POST['check_in']??''));$outRaw=trim((string)($_POST['check_out']??''));$guests=(int)($_POST['guests']??1);
     $checkIn=DateTimeImmutable::createFromFormat('!Y-m-d',$inRaw);$checkOut=DateTimeImmutable::createFromFormat('!Y-m-d',$outRaw);
-    if($propertyId<1||$guestName===''||!$checkIn||!$checkOut||$checkIn->format('Y-m-d')!==$inRaw||$checkOut->format('Y-m-d')!==$outRaw||$checkIn<new DateTimeImmutable('today')||$checkOut<=$checkIn||($guestEmail!==''&&!filter_var($guestEmail,FILTER_VALIDATE_EMAIL))){http_response_code(422);exit('Misafir ve tarih bilgilerini kontrol edin.');}
+    $totalInput=trim((string)($_POST['total_amount']??''));
+    if($propertyId<1||$guestName===''||strlen($guestName)>760||strlen($guestEmail)>760||strlen($guestPhone)>160||!$checkIn||!$checkOut||$checkIn->format('Y-m-d')!==$inRaw||$checkOut->format('Y-m-d')!==$outRaw||$checkIn<new DateTimeImmutable('today')||$checkOut<=$checkIn||(int)$checkIn->diff($checkOut)->days>365||($guestEmail!==''&&!filter_var($guestEmail,FILTER_VALIDATE_EMAIL))||($totalInput!==''&&(!is_numeric($totalInput)||(float)$totalInput<0||!is_finite((float)$totalInput)))){http_response_code(422);exit('Misafir, tutar ve tarih bilgilerini kontrol edin.');}
     try{
         $pdo->beginTransaction();
         $lock=$pdo->prepare("SELECT id,base_nightly_price,weekend_nightly_price,cleaning_fee,currency,max_guests FROM properties WHERE id=? AND status<>'archived' FOR UPDATE");
@@ -1387,7 +1388,7 @@ $router->post('/admin/bookings/manual', static function (): void {
             $subtotal+=$rate;
         }
         $fees=(float)$property['cleaning_fee'];$calculated=round($subtotal+$fees,2);
-        $entered=trim((string)($_POST['total_amount']??''));$total=$entered===''?$calculated:(float)$entered;
+        $entered=$totalInput;$total=$entered===''?$calculated:(float)$entered;
         if($total<0||!is_finite($total)){$pdo->rollBack();http_response_code(422);exit('Toplam tutar geçersiz.');}
         $code='VRM'.date('ymd').strtoupper(bin2hex(random_bytes(3)));
         $save=$pdo->prepare("INSERT INTO bookings (booking_code,property_id,guest_user_id,guest_name,guest_email,guest_phone,booking_source,check_in,check_out,guests,subtotal,fees,total,currency,status,created_at) VALUES(?,?,NULL,?,?,?,?,?,?,?,?,?,?,?,'confirmed',NOW())");
