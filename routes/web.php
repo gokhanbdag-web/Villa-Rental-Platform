@@ -1366,7 +1366,7 @@ $router->get('/admin/bookings', static function (): void {
 $router->post('/admin/bookings/manual', static function (): void {
     Auth::requireRole(['super_admin','admin']);verify_csrf();
     $pdo=Database::connection();$propertyId=(int)($_POST['property_id']??0);
-    $guestName=trim((string)($_POST['guest_name']??''));$guestEmail=trim((string)($_POST['guest_email']??''));$guestPhone=trim((string)($_POST['guest_phone']??''));
+    $guestName=trim((string)($_POST['guest_name']??''));$guestEmail=trim((string)($_POST['guest_email']??''));$guestPhone=trim((string)($_POST['guest_phone']??''));$source=(string)($_POST['booking_source']??'other');if(!in_array($source,['phone','whatsapp','agency','walk_in','other'],true))$source='other';
     $inRaw=trim((string)($_POST['check_in']??''));$outRaw=trim((string)($_POST['check_out']??''));$guests=(int)($_POST['guests']??1);
     $checkIn=DateTimeImmutable::createFromFormat('!Y-m-d',$inRaw);$checkOut=DateTimeImmutable::createFromFormat('!Y-m-d',$outRaw);
     $totalInput=trim((string)($_POST['total_amount']??''));
@@ -1392,7 +1392,7 @@ $router->post('/admin/bookings/manual', static function (): void {
         if($total<0||!is_finite($total)){$pdo->rollBack();http_response_code(422);exit('Toplam tutar geçersiz.');}
         $code='VRM'.date('ymd').strtoupper(bin2hex(random_bytes(3)));
         $save=$pdo->prepare("INSERT INTO bookings (booking_code,property_id,guest_user_id,guest_name,guest_email,guest_phone,booking_source,check_in,check_out,guests,subtotal,fees,total,currency,status,created_at) VALUES(?,?,NULL,?,?,?,?,?,?,?,?,?,?,?,'confirmed',NOW())");
-        $save->execute([$code,$propertyId,$guestName,$guestEmail?:null,$guestPhone?:null,'offline',$inRaw,$outRaw,$guests,$subtotal,$fees,$total,$property['currency']]);
+        $save->execute([$code,$propertyId,$guestName,$guestEmail?:null,$guestPhone?:null,$source,$inRaw,$outRaw,$guests,$subtotal,$fees,$total,$property['currency']]);
         $bookingId=(int)$pdo->lastInsertId();
         $financial=$pdo->prepare("INSERT INTO booking_financials(booking_id,gross_amount,platform_fee,vendor_net_amount,currency,payout_status,created_at) VALUES(?,?,0,?,?, 'unpaid',NOW())");
         $financial->execute([$bookingId,$total,$total,$property['currency']]);
