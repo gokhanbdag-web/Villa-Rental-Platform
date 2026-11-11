@@ -1,9 +1,9 @@
 {
   "slug": "boutique",
   "name": "Boutique",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "author": "VillaStay",
-  "description": "Minimal çizgiler, adaçayı yeşili ve sakin butik otel estetiği.",
+  "description": "Soğuk mint, buzlu turkuaz ve yumuşak modern butik estetiği.",
   "builtin": true,
   "templates": {
     "landing.php": "templates/landing.php",
