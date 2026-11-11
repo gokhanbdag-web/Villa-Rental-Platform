@@ -1348,11 +1348,47 @@ $router->get('/admin/bookings', static function (): void {
     Auth::requireRole(['super_admin','admin']);
     $pdo=Database::connection();$status=(string)($_GET['status']??'');
     $allowed=['pending','confirmed','cancelled','completed'];
-    $sql="SELECT b.*,p.title,u.username AS guest_name,u.email AS guest_email FROM bookings b JOIN properties p ON p.id=b.property_id JOIN users u ON u.id=b.guest_user_id";
+    $sql="SELECT b.*,p.title,COALESCE(NULLIF(b.guest_name,''),u.username,'Misafir') AS guest_name,COALESCE(NULLIF(b.guest_email,''),u.email,'') AS guest_email,COALESCE(b.guest_phone,'') AS guest_phone FROM bookings b JOIN properties p ON p.id=b.property_id LEFT JOIN users u ON u.id=b.guest_user_id";
     if(in_array($status,$allowed,true)){$sql.=' WHERE b.status=?';$s=$pdo->prepare($sql.' ORDER BY b.created_at DESC LIMIT 250');$s->execute([$status]);$bookings=$s->fetchAll();}
     else{$bookings=$pdo->query($sql.' ORDER BY b.created_at DESC LIMIT 250')->fetchAll();}
+    $bookingProperties=$pdo->query("SELECT id,title,max_guests FROM properties WHERE status<>'archived' ORDER BY title")->fetchAll();
     $bookingFilter=in_array($status,$allowed,true)?$status:'';
     require APP_ROOT.'/views/admin/bookings.php';
+});
+$router->post('/admin/bookings/manual', static function (): void {
+    Auth::requireRole(['super_admin','admin']);verify_csrf();
+    $pdo=Database::connection();$propertyId=(int)($_POST['property_id']??0);
+    $guestName=trim((string)($_POST['guest_name']??''));$guestEmail=trim((string)($_POST['guest_email']??''));$guestPhone=trim((string)($_POST['guest_phone']??''));
+    $inRaw=trim((string)($_POST['check_in']??''));$outRaw=trim((string)($_POST['check_out']??''));$guests=(int)($_POST['guests']??1);
+    $checkIn=DateTimeImmutable::createFromFormat('!Y-m-d',$inRaw);$checkOut=DateTimeImmutable::createFromFormat('!Y-m-d',$outRaw);
+    if($propertyId<1||$guestName===''||!$checkIn||!$checkOut||$checkIn->format('Y-m-d')!==$inRaw||$checkOut->format('Y-m-d')!==$outRaw||$checkIn<new DateTimeImmutable('today')||$checkOut<=$checkIn||($guestEmail!==''&&!filter_var($guestEmail,FILTER_VALIDATE_EMAIL))){http_response_code(422);exit('Misafir ve tarih bilgilerini kontrol edin.');}
+    try{
+        $pdo->beginTransaction();
+        $lock=$pdo->prepare("SELECT id,base_nightly_price,weekend_nightly_price,cleaning_fee,currency,max_guests FROM properties WHERE id=? AND status<>'archived' FOR UPDATE");
+        $lock->execute([$propertyId]);$property=$lock->fetch();
+        if(!$property||$guests<1||$guests>(int)$property['max_guests']){$pdo->rollBack();http_response_code(422);exit('Konaklama veya misafir kapasitesi geçersiz.');}
+        $conflict=$pdo->prepare("SELECT id FROM bookings WHERE property_id=? AND status IN ('pending','confirmed') AND check_in < ? AND check_out > ? LIMIT 1");
+        $conflict->execute([$propertyId,$outRaw,$inRaw]);
+        if($conflict->fetchColumn()){$pdo->rollBack();http_response_code(409);exit('Bu tarihlerde başka bir rezervasyon bulunuyor.');}
+        $calendar=$pdo->prepare("SELECT date_from,date_to,status,nightly_price FROM availability WHERE property_id=? AND date_from < ? AND date_to > ?");
+        $calendar->execute([$propertyId,$outRaw,$inRaw]);$rules=$calendar->fetchAll();$subtotal=0.0;
+        for($night=$checkIn;$night<$checkOut;$night=$night->modify('+1 day')){
+            $day=$night->format('Y-m-d');$rate=(float)$property['base_nightly_price'];
+            if((int)$night->format('N')>=6&&(float)$property['weekend_nightly_price']>0)$rate=(float)$property['weekend_nightly_price'];
+            foreach($rules as $rule){if($day>=$rule['date_from']&&$day<$rule['date_to']){if($rule['status']!=='available'){$pdo->rollBack();http_response_code(409);exit('Seçilen tarihlerden biri takvimde kapalı.');}if($rule['nightly_price']!==null)$rate=(float)$rule['nightly_price'];}}
+            $subtotal+=$rate;
+        }
+        $fees=(float)$property['cleaning_fee'];$calculated=round($subtotal+$fees,2);
+        $entered=trim((string)($_POST['total_amount']??''));$total=$entered===''?$calculated:(float)$entered;
+        if($total<0||!is_finite($total)){$pdo->rollBack();http_response_code(422);exit('Toplam tutar geçersiz.');}
+        $code='VRM'.date('ymd').strtoupper(bin2hex(random_bytes(3)));
+        $save=$pdo->prepare("INSERT INTO bookings (booking_code,property_id,guest_user_id,guest_name,guest_email,guest_phone,booking_source,check_in,check_out,guests,subtotal,fees,total,currency,status,created_at) VALUES(?,?,NULL,?,?,?,?,?,?,?,?,?,?,?,'confirmed',NOW())");
+        $save->execute([$code,$propertyId,$guestName,$guestEmail?:null,$guestPhone?:null,'offline',$inRaw,$outRaw,$guests,$subtotal,$fees,$total,$property['currency']]);
+        $bookingId=(int)$pdo->lastInsertId();
+        $financial=$pdo->prepare("INSERT INTO booking_financials(booking_id,gross_amount,platform_fee,vendor_net_amount,currency,payout_status,created_at) VALUES(?,?,0,?,?, 'unpaid',NOW())");
+        $financial->execute([$bookingId,$total,$total,$property['currency']]);
+        $pdo->commit();redirect('/admin/bookings');
+    }catch(Throwable $e){if($pdo->inTransaction())$pdo->rollBack();error_log('Manual booking creation failed: '.$e->getMessage());http_response_code(500);exit('Manuel rezervasyon kaydedilemedi.');}
 });
 $router->post('/admin/bookings/status', static function (): void {
     Auth::requireRole(['super_admin','admin']);verify_csrf();
@@ -1372,8 +1408,10 @@ $router->post('/admin/bookings/status', static function (): void {
         }
         $update=$pdo->prepare('UPDATE bookings SET status=? WHERE id=?');$update->execute([$status,$id]);
         $statusTitle = ['pending'=>'Rezervasyon talebiniz beklemede','confirmed'=>'Rezervasyonunuz onaylandı','cancelled'=>'Rezervasyonunuz iptal edildi','completed'=>'Konaklamanız tamamlandı'][$status];
-        $notice=$pdo->prepare('INSERT INTO notifications(user_id,notification_type,title,body,created_at) VALUES(?,?,?,?,NOW())');
-        $notice->execute([(int)$booking['guest_user_id'],'booking.status_changed',$statusTitle,'Rezervasyon durumunuz güncellendi. Rezervasyon kodunuzu hesabınızdan görüntüleyebilirsiniz.']);
+        if(!empty($booking['guest_user_id'])){
+            $notice=$pdo->prepare('INSERT INTO notifications(user_id,notification_type,title,body,created_at) VALUES(?,?,?,?,NOW())');
+            $notice->execute([(int)$booking['guest_user_id'],'booking.status_changed',$statusTitle,'Rezervasyon durumunuz güncellendi. Rezervasyon kodunuzu hesabınızdan görüntüleyebilirsiniz.']);
+        }
         $log=$pdo->prepare('INSERT INTO audit_logs(user_id,action,entity_type,entity_id,ip_address,details,created_at) VALUES(?,?,?,?,?,?,NOW())');
         $log->execute([(int)Auth::user()['id'],'booking.status_changed','booking',$id,$_SERVER['REMOTE_ADDR']??null,json_encode(['from'=>$booking['status'],'to'=>$status],JSON_UNESCAPED_UNICODE)]);
         $pdo->commit();redirect('/admin/bookings');
@@ -1395,8 +1433,8 @@ $router->get('/admin', static function (): void {
         'locations' => (int)$pdo->query('SELECT COUNT(*) FROM locations')->fetchColumn(),
         'pending_reviews' => (int)$pdo->query("SELECT COUNT(*) FROM reviews WHERE status='pending'")->fetchColumn(),
     ];
-    $recentBookings = $pdo->query("SELECT b.booking_code,b.check_in,b.check_out,b.total,b.currency,b.status,b.created_at,p.title AS property_title,u.username AS guest_name
-        FROM bookings b JOIN properties p ON p.id=b.property_id JOIN users u ON u.id=b.guest_user_id
+    $recentBookings = $pdo->query("SELECT b.booking_code,b.check_in,b.check_out,b.total,b.currency,b.status,b.created_at,p.title AS property_title,COALESCE(NULLIF(b.guest_name,''),u.username,'Misafir') AS guest_name
+        FROM bookings b JOIN properties p ON p.id=b.property_id LEFT JOIN users u ON u.id=b.guest_user_id
         ORDER BY b.created_at DESC LIMIT 6")->fetchAll();
     require APP_ROOT . '/views/admin/dashboard.php';
 });
