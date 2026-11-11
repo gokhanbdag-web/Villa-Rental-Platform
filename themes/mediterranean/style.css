@@ -4,3 +4,49 @@ body[data-villa-theme="mediterranean"]{background:#fbf8f0;color:#344039}body[dat
 /* Layout signature: wide coastal hero, roomy sections and soft editorial cards. */
 body[data-villa-theme="mediterranean"] .hero{padding:48px 0 72px}body[data-villa-theme="mediterranean"] .hero .wrap{width:min(1380px,calc(100% - 32px))}body[data-villa-theme="mediterranean"] .hero-card{min-height:560px;background-position:center 54%;box-shadow:0 22px 55px #7b73552b}body[data-villa-theme="mediterranean"] .hero-copy{max-width:850px;padding:64px 7%}body[data-villa-theme="mediterranean"] .search-enhanced{grid-template-columns:minmax(220px,1.6fr) repeat(3,minmax(130px,1fr));align-items:stretch}body[data-villa-theme="mediterranean"] .section{padding-top:70px;padding-bottom:70px}body[data-villa-theme="mediterranean"] .cards{gap:22px}body[data-villa-theme="mediterranean"] .stay{padding:9px 9px 18px;box-shadow:0 8px 24px #71654a12}body[data-villa-theme="mediterranean"] .stay-photo{height:190px}
 @media(max-width:760px){body[data-villa-theme="mediterranean"] .hero-card{min-height:620px}body[data-villa-theme="mediterranean"] .search-enhanced{grid-template-columns:1fr 1fr}body[data-villa-theme="mediterranean"] .hero-copy{padding:38px 24px}}
+
+
+/* Complete coastal presentation: airy masthead, soft panels and warm cards. */
+body[data-villa-theme="mediterranean"] .theme-header{position:relative;z-index:50;background:#fffaf0;border-bottom:1px solid #e7ddc9;box-shadow:0 5px 22px #645b4510}
+body[data-villa-theme="mediterranean"] .theme-header-inner{width:min(1320px,calc(100% - 44px));min-height:88px;margin:auto;display:flex;align-items:center;justify-content:space-between;gap:28px}
+body[data-villa-theme="mediterranean"] .theme-brand{display:flex;flex-direction:column;text-decoration:none;gap:1px;color:#526847;min-width:190px}
+body[data-villa-theme="mediterranean"] .theme-brand-name{font:600 28px/1 Georgia,serif;letter-spacing:-.8px}
+body[data-villa-theme="mediterranean"] .theme-brand small{font:700 9px/1.5 system-ui;letter-spacing:1.7px;text-transform:uppercase;color:#9a8d70}
+body[data-villa-theme="mediterranean"] .theme-header .nav{display:flex;align-items:center;justify-content:flex-end;gap:8px;flex-wrap:wrap}
+body[data-villa-theme="mediterranean"] .theme-header .nav a{display:inline-flex;align-items:center;padding:11px 14px;border-radius:999px;color:#4d5d4c;text-decoration:none;font-size:13px;font-weight:700;transition:background .2s,color .2s}
+body[data-villa-theme="mediterranean"] .theme-header .nav a:hover{background:#e9efdf;color:#506b42}
+body[data-villa-theme="mediterranean"] .theme-menu-toggle{display:none}
+body[data-villa-theme="mediterranean"] .hero{background:#f4eee1;padding:42px 0 72px}
+body[data-villa-theme="mediterranean"] .hero-card{min-height:570px;border-radius:34px}
+body[data-villa-theme="mediterranean"] .search-enhanced{border-radius:22px;box-shadow:0 18px 50px #534b3526}
+body[data-villa-theme="mediterranean"] .search-field{border-right:1px solid #ece6d9}
+body[data-villa-theme="mediterranean"] .search-submit{border-radius:15px;background:#71845d}
+body[data-villa-theme="mediterranean"] .section-head h2{font:500 clamp(28px,4vw,42px)/1.1 Georgia,serif;color:#526847}
+body[data-villa-theme="mediterranean"] .cards{gap:22px}
+body[data-villa-theme="mediterranean"] .stay{padding:9px 9px 18px;border:1px solid #eee6d8;border-radius:22px;background:#fffdf8;box-shadow:0 8px 24px #71654a12}
+body[data-villa-theme="mediterranean"] .stay-photo{height:205px;border-radius:16px;overflow:hidden}
+body[data-villa-theme="mediterranean"] .intro{background:#f4eee1;padding:48px 0}
+body[data-villa-theme="mediterranean"] .filter-panel{border:1px solid #e7ddc9;border-radius:22px;box-shadow:0 12px 35px #645b4510}
+body[data-villa-theme="mediterranean"] .results{padding-top:32px}
+body[data-villa-theme="mediterranean"] .grid{gap:22px}
+body[data-villa-theme="mediterranean"] .grid .stay{padding:10px 10px 18px}
+body[data-villa-theme="mediterranean"] .crumb{color:#8c866f}
+body[data-villa-theme="mediterranean"] .title h1{font:500 clamp(28px,4vw,42px)/1.15 Georgia,serif;color:#526847}
+body[data-villa-theme="mediterranean"] .gallery{border-radius:24px;overflow:hidden}
+body[data-villa-theme="mediterranean"] .booking{border-radius:22px;box-shadow:0 12px 35px #645b4514}
+body[data-villa-theme="mediterranean"] .description,body[data-villa-theme="mediterranean"] .guest-reviews{border-top:1px solid #e7ddc9;padding-top:28px}
+body[data-villa-theme="mediterranean"] footer{background:#52634b;color:#fffaf0}
+@media(max-width:760px){
+ body[data-villa-theme="mediterranean"] .theme-header-inner{min-height:74px;width:calc(100% - 30px)}
+ body[data-villa-theme="mediterranean"] .theme-menu-toggle{display:flex;align-items:center;justify-content:center;margin-left:auto;width:44px;height:44px;border:0;border-radius:50%;background:#e9efdf;color:#526847;font-size:24px}
+ body[data-villa-theme="mediterranean"] .theme-menu-toggle .menu-close-mark{display:none}
+ body[data-villa-theme="mediterranean"] .theme-menu-toggle[aria-expanded="true"] .menu-open-mark{display:none}
+ body[data-villa-theme="mediterranean"] .theme-menu-toggle[aria-expanded="true"] .menu-close-mark{display:inline}
+ body[data-villa-theme="mediterranean"] .theme-header .nav{position:fixed;z-index:60;top:0;right:0;bottom:0;width:min(84vw,360px);padding:90px 22px 30px;background:#fffaf0;box-shadow:-15px 0 45px #0002;display:flex;flex-direction:column;align-items:stretch;justify-content:flex-start;gap:7px;transform:translateX(110%);transition:transform .32s ease}
+ body[data-villa-theme="mediterranean"] .theme-header .nav.is-open{transform:translateX(0)}
+ body[data-villa-theme="mediterranean"] .theme-header .nav a{justify-content:flex-start;border-radius:12px;padding:15px;background:#f4eee1}
+ body[data-villa-theme="mediterranean"] .drawer-overlay{position:fixed;inset:0;z-index:55;background:#1c2a2080;opacity:0;visibility:hidden;transition:.25s}
+ body[data-villa-theme="mediterranean"] .drawer-overlay.is-open{opacity:1;visibility:visible}
+ body[data-villa-theme="mediterranean"] .hero-card{min-height:620px}
+ body[data-villa-theme="mediterranean"] .search-enhanced{grid-template-columns:1fr 1fr}
+}
