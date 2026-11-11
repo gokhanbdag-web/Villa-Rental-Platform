@@ -206,7 +206,8 @@ $router->get('/destinasyonlar', static function (): void {
     try{$locale=(string)($pdo->query("SELECT setting_value FROM settings WHERE setting_key='app.locale' LIMIT 1")->fetchColumn() ?: 'tr');}catch(Throwable $e){}
     $contentStmt=$pdo->prepare('SELECT content_key,content_value FROM site_content WHERE language_code=?');$contentStmt->execute([$locale]);$content=$contentStmt->fetchAll(PDO::FETCH_KEY_PAIR);
     $nav=$pdo->prepare('SELECT label,url,target FROM navigation_items WHERE location=? AND language_code=? AND is_active=1 ORDER BY sort_order,id');$nav->execute(['header',$locale]);$navigation=$nav->fetchAll();$nav->execute(['footer',$locale]);$footerNavigation=$nav->fetchAll();
-    $destinations=$pdo->query("SELECT city,COUNT(*) AS property_count,(SELECT pm.file_path FROM property_media pm JOIN properties p2 ON p2.id=pm.property_id WHERE p2.city=p.city AND p2.status='published' ORDER BY pm.is_cover DESC,pm.sort_order,pm.id LIMIT 1) AS cover_image FROM properties p WHERE p.status='published' AND p.city<>'' GROUP BY city ORDER BY property_count DESC,city ASC")->fetchAll();
+    $destinationsSql = 'SELECT city, COUNT(*) AS property_count, (SELECT pm.file_path FROM property_media pm JOIN properties p2 ON p2.id=pm.property_id WHERE p2.city = p.city AND p2.status = \'published\' ORDER BY pm.is_cover DESC, pm.sort_order, pm.id LIMIT 1) AS cover_image FROM properties p WHERE p.status = \'published\' AND p.city <> \'\' GROUP BY city ORDER BY property_count DESC, city ASC';
+    $destinations = $pdo->query($destinationsSql)->fetchAll();
     require APP_ROOT.'/views/site/destinations.php';
 });
 
