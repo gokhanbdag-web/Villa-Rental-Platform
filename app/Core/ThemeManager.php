@@ -61,6 +61,36 @@ final class ThemeManager
 
     public static function clearPreview(): void { unset($_SESSION['villa_theme_preview']); }
 
+    public static function customSettings(string $slug): array
+    {
+        if (!isset(self::installed()[$slug])) return [];
+        try {
+            $stmt = Database::connection()->prepare('SELECT setting_value FROM settings WHERE setting_key=? LIMIT 1');
+            $stmt->execute(['theme.custom.' . $slug]);
+            $value = json_decode((string)($stmt->fetchColumn() ?: '{}'), true);
+            return is_array($value) ? $value : [];
+        } catch (\Throwable $e) {
+            error_log('Theme settings read failed: ' . $e->getMessage());
+            return [];
+        }
+    }
+
+    public static function saveCustomSettings(string $slug, array $settings): void
+    {
+        if (!isset(self::installed()[$slug])) throw new RuntimeException('Tema paketi bulunamadı.');
+        $clean = [];
+        foreach (['primary', 'background', 'surface', 'text', 'accent'] as $key) {
+            $value = (string)($settings[$key] ?? '');
+            if (!preg_match('/^#[0-9a-fA-F]{6}$/', $value)) throw new RuntimeException('Renk değerlerinden biri geçersiz.');
+            $clean[$key] = strtolower($value);
+        }
+        $radius = filter_var($settings['radius'] ?? 18, FILTER_VALIDATE_INT);
+        if ($radius === false || $radius < 0 || $radius > 32) throw new RuntimeException('Kart köşe yuvarlaklığı 0 ile 32 arasında olmalıdır.');
+        $clean['radius'] = $radius;
+        $stmt = Database::connection()->prepare('INSERT INTO settings(setting_key,setting_value,autoload) VALUES(?,?,1) ON DUPLICATE KEY UPDATE setting_value=VALUES(setting_value),autoload=1');
+        $stmt->execute(['theme.custom.' . $slug, json_encode($clean, JSON_UNESCAPED_UNICODE | JSON_THROW_ON_ERROR)]);
+    }
+
     public static function render(string $view, array $variables): void
     {
         $slug = self::activeSlug();
@@ -86,6 +116,17 @@ final class ThemeManager
         $css = $themeDir . '/style.css';
         if (is_file($css)) {
             $tag = '<link rel="stylesheet" href="' . e(app_url('/theme-assets/' . rawurlencode($slug) . '/style.css')) . '?v=' . rawurlencode((string)filemtime($css)) . '">';
+            $custom = self::customSettings($slug);
+            if ($custom !== []) {
+                $primary = e((string)($custom['primary'] ?? '#176b50'));
+                $background = e((string)($custom['background'] ?? '#f7f8f5'));
+                $surface = e((string)($custom['surface'] ?? '#ffffff'));
+                $text = e((string)($custom['text'] ?? '#26352e'));
+                $accent = e((string)($custom['accent'] ?? '#c5a56b'));
+                $radius = max(0, min(32, (int)($custom['radius'] ?? 18)));
+                $scope = 'body[data-villa-theme="' . e($slug) . '"]';
+                $tag .= '<style id="villa-theme-custom">' . $scope . '{--villa-theme-primary:' . $primary . ';--villa-theme-background:' . $background . ';--villa-theme-surface:' . $surface . ';--villa-theme-text:' . $text . ';--villa-theme-accent:' . $accent . ';--villa-theme-radius:' . $radius . 'px;background:var(--villa-theme-background);color:var(--villa-theme-text)}' . $scope . ' .theme-header{' . 'background:var(--villa-theme-surface)}' . $scope . ' .theme-header .nav a:hover,' . $scope . ' .search-submit{background:var(--villa-theme-primary);color:#fff}' . $scope . ' .theme-brand,' . $scope . ' .section h2{color:var(--villa-theme-primary)}' . $scope . ' .stay,' . $scope . ' .hero-card,' . $scope . ' .search{border-radius:var(--villa-theme-radius)}' . $scope . ' .site-footer{background:var(--villa-theme-primary)}</style>';
+            }
             if (stripos($html, '</head>') !== false) $html = preg_replace('/<\/head>/i', $tag . '</head>', $html, 1) ?? $html;
             $html = preg_replace('/<body\b/i', '<body data-villa-theme="' . e($slug) . '"', $html, 1) ?? $html;
         }
