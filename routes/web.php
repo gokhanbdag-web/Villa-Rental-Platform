@@ -85,18 +85,20 @@ $router->post('/admin/locations/import', static function (): void {
     $pdo=Database::connection();
     $find=$pdo->prepare('SELECT id FROM locations WHERE parent_id <=> ? AND location_type=? AND name=? LIMIT 1');
     $insert=$pdo->prepare('INSERT INTO locations(parent_id,location_type,name,sort_order,is_active) VALUES(?,?,?,10,1)');
-    $resolve=static function(string $name,string $type,?int $parent) use($find,$insert,&$counts): int {
+    $resolve=static function(string $name,string $type,?int $parent) use($find,$insert,&$rowInserted,&$rowExisting): int {
         $name=trim($name);if($name==='')return 0;
         $find->execute([$parent,$type,$name]);$id=(int)($find->fetchColumn()?:0);
-        if($id){$counts['existing']++;return $id;}
-        $insert->execute([$parent,$type,$name]);$counts['inserted']++;return (int)Database::connection()->lastInsertId();
+        if($id){$rowExisting++;return $id;}
+        $insert->execute([$parent,$type,$name]);$rowInserted++;return (int)Database::connection()->lastInsertId();
     };
     $line=1;
     while(($row=fgetcsv($handle,0,$delimiter,'"','\\'))!==false){
         $line++;if($row===[null]||$row===[])continue;
         $values=[];foreach(['country','city','district','neighborhood'] as $field){$idx=$columns[$field]??null;$values[$field]=$idx!==null?trim((string)($row[$idx]??'')):'';}
         if($values['country']===''&&$values['city']===''&&$values['district']===''&&$values['neighborhood']==='')continue;
+        if($counts['rows']>=20000){$counts['errors']++;$errorRows[]=['line'=>$line,'message'=>'20.000 satır sınırına ulaşıldı.'];break;}
         $counts['rows']++;
+        $rowInserted=0;$rowExisting=0;
         try{
             if($values['country']==='')throw new InvalidArgumentException('Ülke alanı boş.');
             if($values['district']!==''&&$values['city']==='')throw new InvalidArgumentException('İlçe için şehir bilgisi zorunlu.');
@@ -110,8 +112,8 @@ $router->post('/admin/locations/import', static function (): void {
                 }
             }
             $pdo->commit();
+            $counts['inserted']+=$rowInserted;$counts['existing']+=$rowExisting;
         }catch(Throwable $e){if($pdo->inTransaction())$pdo->rollBack();$counts['errors']++;if(count($errorRows)<100)$errorRows[]=['line'=>$line,'message'=>$e->getMessage()];}
-        if($counts['rows']>=20000){$counts['errors']++;$errorRows[]=['line'=>$line,'message'=>'20.000 satır sınırına ulaşıldı.'];break;}
     }
     fclose($handle);
     $locations=$pdo->query("SELECT l.*,p.name AS parent_name FROM locations l LEFT JOIN locations p ON p.id=l.parent_id ORDER BY FIELD(l.location_type,'country','city','district','neighborhood'),p.name,l.sort_order,l.name")->fetchAll();
