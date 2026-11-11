@@ -23,3 +23,9 @@ if((!isset($navAllowAuth)||$navAllowAuth)&&!$villaHasAuthLink){
     $authLabel=$logged?(in_array($role,['admin','super_admin'],true)?'Yönetim Paneli':($role==='vendor'?'Ev Sahibi Paneli':'Hesabım')):'Giriş Yap';
     echo '<div class="nav-entry"><div class="nav-entry-top"><a data-auth-link="1" '.(!$logged?'data-login-trigger="1"':'').' href="'.e($logged?app_url($authUrl):'#login').'">'.e($authLabel).'</a></div></div>';
 }
+
+<?php
+if (!empty($navAllowAuth) && !empty($user)):
+?>
+<div class="nav-entry nav-logout-entry"><form method="post" action="<?= e(app_url('/logout')) ?>" class="villa-logout-form"><input type="hidden" name="_csrf" value="<?= e(csrf_token()) ?>"><button type="submit" class="villa-logout-button">Çıkış Yap</button></form></div>
+<?php endif; ?>
