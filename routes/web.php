@@ -180,8 +180,8 @@ $router->get('/', static function (): void {
     $contentStmt=$pdo->prepare('SELECT content_key,content_value FROM site_content WHERE language_code=?');$contentStmt->execute([$locale]);$content=$contentStmt->fetchAll(PDO::FETCH_KEY_PAIR);
     $navigation=villa_navigation_tree($pdo,'header',$locale);$footerNavigation=villa_navigation_tree($pdo,'footer',$locale);
     $destinations=$pdo->query("SELECT l.id AS location_id,l.name AS city,COUNT(DISTINCT p.id) AS property_count,(SELECT pm.file_path FROM property_media pm JOIN properties p2 ON p2.id=pm.property_id WHERE p2.status='published' AND p2.location_city_id=l.id ORDER BY pm.is_cover DESC,pm.sort_order,pm.id LIMIT 1) AS cover_image FROM locations l JOIN locations c ON c.id=l.parent_id AND c.location_type='country' AND c.is_active=1 JOIN properties p ON p.status='published' AND p.location_city_id=l.id WHERE l.location_type='city' AND l.is_active=1 GROUP BY l.id,l.name,l.sort_order ORDER BY property_count DESC,l.sort_order,l.name LIMIT 8")->fetchAll();
-    $featuredProperties=$pdo->query("SELECT p.*,(SELECT pm.file_path FROM property_media pm WHERE pm.property_id=p.id ORDER BY pm.is_cover DESC,pm.sort_order,pm.id LIMIT 1) AS cover_image,(SELECT COUNT(*) FROM bookings b WHERE b.property_id=p.id AND b.status NOT IN ('cancelled','rejected')) AS booking_count FROM properties p WHERE p.status='published' ORDER BY booking_count DESC,p.created_at DESC,p.id DESC LIMIT 8")->fetchAll();
-    $latestProperties=$pdo->query("SELECT p.*,(SELECT pm.file_path FROM property_media pm WHERE pm.property_id=p.id ORDER BY pm.is_cover DESC,pm.sort_order,pm.id LIMIT 1) AS cover_image FROM properties p WHERE p.status='published' ORDER BY p.id DESC LIMIT 4")->fetchAll();
+    $featuredProperties=$pdo->query("SELECT p.*,(SELECT pm.file_path FROM property_media pm WHERE pm.property_id=p.id ORDER BY pm.is_cover DESC,pm.sort_order,pm.id LIMIT 1) AS cover_image,(SELECT COUNT(*) FROM bookings b WHERE b.property_id=p.id AND b.status NOT IN ('cancelled','rejected')) AS booking_count,(SELECT AVG(r.rating) FROM reviews r WHERE r.property_id=p.id AND r.status='approved') AS rating_average,(SELECT COUNT(*) FROM reviews r WHERE r.property_id=p.id AND r.status='approved') AS rating_count FROM properties p WHERE p.status='published' ORDER BY booking_count DESC,p.created_at DESC,p.id DESC LIMIT 8")->fetchAll();
+    $latestProperties=$pdo->query("SELECT p.*,(SELECT pm.file_path FROM property_media pm WHERE pm.property_id=p.id ORDER BY pm.is_cover DESC,pm.sort_order,pm.id LIMIT 1) AS cover_image,(SELECT AVG(r.rating) FROM reviews r WHERE r.property_id=p.id AND r.status='approved') AS rating_average,(SELECT COUNT(*) FROM reviews r WHERE r.property_id=p.id AND r.status='approved') AS rating_count FROM properties p WHERE p.status='published' ORDER BY p.id DESC LIMIT 4")->fetchAll();
     $categories=$pdo->query('SELECT id,name,slug FROM property_categories WHERE is_active=1 ORDER BY sort_order,name LIMIT 8')->fetchAll();
     $homeSections=[];foreach($pdo->query('SELECT * FROM homepage_sections ORDER BY sort_order,id')->fetchAll() as $section){$homeSections[$section['section_key']]=$section;}
     $locationCountries=$pdo->query("SELECT id,name FROM locations WHERE location_type='country' AND is_active=1 ORDER BY sort_order,name")->fetchAll();
@@ -240,7 +240,7 @@ $router->get('/konaklamalar', static function (): void {
     if (!$dateRangeValid) { $checkInDate = ''; $checkOutDate = ''; }
     $sort = in_array($_GET['sort'] ?? '', ['price_asc','price_desc'], true) ? $_GET['sort'] : 'newest';
     $filters = ['city' => $city, 'guests' => $guests, 'category' => $categoryId, 'min_price'=>$minPrice, 'max_price'=>$maxPrice, 'sort'=>$sort,'country_id'=>$locationCountryId,'city_id'=>$locationCityId,'district_id'=>$locationDistrictId,'neighborhood_id'=>$locationNeighborhoodId,'check_in'=>$checkInDate,'check_out'=>$checkOutDate];
-    $sql = "SELECT p.*, (SELECT pm.file_path FROM property_media pm WHERE pm.property_id=p.id ORDER BY pm.is_cover DESC,pm.sort_order,pm.id LIMIT 1) AS cover_image FROM properties p WHERE p.status='published'";
+    $sql = "SELECT p.*, (SELECT pm.file_path FROM property_media pm WHERE pm.property_id=p.id ORDER BY pm.is_cover DESC,pm.sort_order,pm.id LIMIT 1) AS cover_image,(SELECT AVG(r.rating) FROM reviews r WHERE r.property_id=p.id AND r.status='approved') AS rating_average,(SELECT COUNT(*) FROM reviews r WHERE r.property_id=p.id AND r.status='approved') AS rating_count FROM properties p WHERE p.status='published'";
     $params = [];
     if ($city !== '') { $sql .= ' AND (p.city LIKE ? OR p.district LIKE ? OR p.country LIKE ?)'; $like='%'.$city.'%'; array_push($params,$like,$like,$like); }
     if($locationCountryId>0){$sql.=' AND p.location_country_id=?';$params[]=$locationCountryId;}
@@ -299,6 +299,8 @@ $router->get('/villa/{slug}', static function (array $params): void {
     $mode=(string)($pdo->query("SELECT setting_value FROM settings WHERE setting_key='app.mode' LIMIT 1")->fetchColumn() ?: 'single_vendor');
     $user=Auth::user();$isFavorite=false;
     if($user && ($user['role']??'')==='customer'){$fav=$pdo->prepare('SELECT 1 FROM favorites WHERE user_id=? AND property_id=?');$fav->execute([(int)$user['id'],(int)$property['id']]);$isFavorite=(bool)$fav->fetchColumn();}
+    $ratingStmt=$pdo->prepare("SELECT AVG(rating) AS rating_average,COUNT(*) AS rating_count FROM reviews WHERE property_id=? AND status='approved'");
+    $ratingStmt->execute([(int)$property['id']]);$ratingSummary=$ratingStmt->fetch() ?: ['rating_average'=>null,'rating_count'=>0];
     $reviewsStmt=$pdo->prepare("SELECT r.rating,r.body,r.created_at,u.username FROM reviews r JOIN users u ON u.id=r.guest_user_id WHERE r.property_id=? AND r.status='approved' ORDER BY r.created_at DESC LIMIT 20");
     $reviewsStmt->execute([(int)$property['id']]);$reviews=$reviewsStmt->fetchAll();
     require APP_ROOT . '/views/site/property.php';
@@ -495,7 +497,9 @@ $router->get('/account/reviews/{bookingId}', static function (array $params): vo
 });
 $router->post('/account/reviews', static function (): void {
     $user=Auth::user();if(!$user||($user['role']??'')!=='customer')redirect('/login');verify_csrf();
-    $bookingId=(int)($_POST['booking_id']??0);$rating=max(1,min(5,(int)($_POST['rating']??5)));$body=trim((string)($_POST['body']??''));
+    $bookingId=(int)($_POST['booking_id']??0);$rating=filter_var($_POST['rating']??null,FILTER_VALIDATE_INT);$body=trim((string)($_POST['body']??''));
+    if($rating===false||$rating===null||$rating<1||$rating>10){http_response_code(422);exit('Puan 1 ile 10 arasında olmalıdır.');}
+    if(mb_strlen($body)>3000){http_response_code(422);exit('Değerlendirme metni en fazla 3000 karakter olabilir.');}
     $pdo=Database::connection();$s=$pdo->prepare("SELECT property_id FROM bookings WHERE id=? AND guest_user_id=? AND status='completed'");$s->execute([$bookingId,(int)$user['id']]);$propertyId=(int)$s->fetchColumn();if(!$propertyId){http_response_code(403);exit('Yalnızca tamamlanan konaklamalar değerlendirilebilir.');}
     try{$save=$pdo->prepare("INSERT INTO reviews(booking_id,property_id,guest_user_id,rating,body,status,created_at) VALUES(?,?,?,?,?,'pending',NOW())");$save->execute([$bookingId,$propertyId,(int)$user['id'],$rating,$body]);redirect('/account/bookings');}
     catch(PDOException $e){http_response_code(409);exit('Bu rezervasyon için değerlendirme zaten mevcut.');}
@@ -518,7 +522,7 @@ $router->get('/account/bookings', static function (): void {
     $user = Auth::user();
     if (!$user) redirect('/login');
     if (($user['role'] ?? '') !== 'customer') redirect('/admin');
-    $stmt = Database::connection()->prepare('SELECT b.*,p.title,p.city FROM bookings b JOIN properties p ON p.id=b.property_id WHERE b.guest_user_id=? ORDER BY b.created_at DESC');
+    $stmt = Database::connection()->prepare('SELECT b.*,p.title,p.city,EXISTS(SELECT 1 FROM reviews r WHERE r.booking_id=b.id) AS has_review FROM bookings b JOIN properties p ON p.id=b.property_id WHERE b.guest_user_id=? ORDER BY b.created_at DESC');
     $stmt->execute([(int)$user['id']]);
     $bookings = $stmt->fetchAll();
     require APP_ROOT . '/views/account/bookings.php';
