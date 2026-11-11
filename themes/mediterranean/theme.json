@@ -5,5 +5,9 @@
   "author": "VillaStay",
   "description": "Sıcak kum tonları, doğal dokular ve ferah tatil atmosferi.",
   "builtin": true,
-  "templates": {}
+  "templates": {
+    "landing.php": "templates/landing.php",
+    "listing.php": "templates/listing.php",
+    "property.php": "templates/property.php"
+  }
 }
