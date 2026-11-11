@@ -2,7 +2,7 @@
 declare(strict_types=1);
 $accountTheme = 'mediterranean';
 try { $accountTheme = \App\Core\ThemeManager::activeSlug(); }
-catch (\\Throwable $e) { error_log('Account theme lookup failed: ' . $e->getMessage()); }
+catch (\Throwable $e) { error_log('Account theme lookup failed: ' . $e->getMessage()); }
 $styles = [
 'mediterranean' => 'body{background:#f5f5ed;color:#304235}.wrap,.card,.panel,.item{border-radius:22px}.card,.panel,.item{border:1px solid #e5e9dc;box-shadow:0 14px 38px #263b2910}h1{font:500 clamp(30px,4vw,46px) Georgia,serif;color:#294936}button{background:#456d50!important;border-radius:999px!important}',
 'modern' => 'body{background:#111715;color:#eef2ed}.card,.panel,.item{background:#1a211e!important;color:#eef2ed;border:1px solid #354139;border-radius:3px;box-shadow:none}.muted{color:#a7b2aa!important}h1{font-size:clamp(30px,5vw,48px);letter-spacing:-1.8px;text-transform:uppercase}a{color:#d9ef7b}input,textarea{background:#101613;color:#f2f5ef;border-color:#48544b}button{background:#d9ef7b!important;color:#151b16!important;border-radius:2px!important}',
