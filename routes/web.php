@@ -45,18 +45,23 @@ $router->get('/locations/children', static function (): void {
 });
 $router->get('/locations/search', static function (): void {
     header('Content-Type: application/json; charset=utf-8');
+    header('Cache-Control: no-store');
     $q=trim((string)($_GET['q']??''));
-    if(mb_strlen($q)<2){echo '[]';return;}
-    $like='%'.$q.'%';
+    if($q===''||mb_strlen($q)<1){echo '[]';return;}
+    $like=$q.'%';
     $sql="SELECT l.id,l.location_type,l.name,
         TRIM(BOTH ' / ' FROM CONCAT_WS(' / ',g.name,p.name,l.name)) AS label
         FROM locations l
         LEFT JOIN locations p ON p.id=l.parent_id
         LEFT JOIN locations g ON g.id=p.parent_id
-        WHERE l.is_active=1 AND (l.name LIKE ? OR p.name LIKE ? OR g.name LIKE ?)
-        ORDER BY FIELD(l.location_type,'city','district','neighborhood','country'),l.sort_order,l.name
-        LIMIT 15";
-    $s=Database::connection()->prepare($sql);$s->execute([$like,$like,$like]);
+        WHERE l.is_active=1
+          AND (p.id IS NULL OR p.is_active=1)
+          AND (g.id IS NULL OR g.is_active=1)
+          AND l.name LIKE ?
+        ORDER BY FIELD(l.location_type,'city','district','neighborhood','country'),
+                 l.name ASC,p.name ASC,g.name ASC,l.id ASC
+        LIMIT 30";
+    $s=Database::connection()->prepare($sql);$s->execute([$like]);
     echo json_encode($s->fetchAll(),JSON_UNESCAPED_UNICODE|JSON_THROW_ON_ERROR);
 });
 $router->get('/admin/locations', static function (): void {
