@@ -1,0 +1,9 @@
+{
+  "slug": "boutique",
+  "name": "Boutique",
+  "version": "1.0.0",
+  "author": "VillaStay",
+  "description": "Minimal çizgiler, adaçayı yeşili ve sakin butik otel estetiği.",
+  "builtin": true,
+  "templates": {}
+}
