@@ -104,12 +104,31 @@ if ($isAdminPage) {
         // Remove page-level headers/navigation left by older standalone admin views.
         $bodyContent = preg_replace('/<header\b[^>]*>.*?<\/header>/is', '', $bodyContent, 1) ?? $bodyContent;
 
+        // A single icon map keeps the navigation identical on every admin screen.
+        $icons = [
+            '/admin' => '▦',
+            '/admin/properties' => '⌂',
+            '/admin/locations' => '⌖',
+            '/admin/categories' => '▤',
+            '/admin/amenities' => '✧',
+            '/admin/bookings' => '▣',
+            '/admin/users' => '♙',
+            '/admin/reviews' => '☆',
+            '/admin/pages' => '▧',
+            '/admin/navigation' => '☷',
+            '/admin/content' => '✎',
+            '/admin/settings' => '⚙',
+            '/admin/translations' => '文',
+            '/admin/vendors' => '♧',
+        ];
         $nav = '';
         foreach ($links as $url => $label) {
             $active = $requestPath === $url || str_starts_with($requestPath, $url . '/');
+            $icon = $icons[$url] ?? '•';
             $nav .= '<a class="vr-admin-link' . ($active ? ' is-active' : '') . '" href="' . e(app_url($url)) . '" data-admin-link>' .
-                '<span>' . e($label) . '</span></a>';
+                '<span class="vr-admin-icon" aria-hidden="true">' . e($icon) . '</span><span class="vr-admin-link-label">' . e($label) . '</span></a>';
         }
+        $adminRootUrl = json_encode(app_url('/admin'), JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_AMP | JSON_HEX_QUOT);
 
         $shell = '<style>
             html,body{min-height:100%;margin:0!important;background:#f5f6f8!important;color:#202631;font-family:Inter,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif!important}
@@ -119,7 +138,7 @@ if ($isAdminPage) {
             .vr-admin-layout{display:grid;grid-template-columns:252px minmax(0,1fr);min-height:calc(100vh - 68px)}
             .vr-admin-sidebar{background:#fff;border-right:1px solid #e8ebef;padding:22px 15px;display:flex;flex-direction:column;gap:5px;box-sizing:border-box}
             .vr-admin-nav-title{padding:5px 12px 13px;color:#9aa2ad;font-size:10px;font-weight:800;letter-spacing:1.1px;text-transform:uppercase}
-            .vr-admin-link{display:flex;align-items:center;min-height:42px;box-sizing:border-box;padding:10px 13px;color:#566170;text-decoration:none;border-radius:9px;font-size:13px;font-weight:600;transition:background .15s,color .15s}
+            .vr-admin-link{display:flex;align-items:center;gap:11px;min-height:42px;box-sizing:border-box;padding:10px 13px;color:#566170;text-decoration:none;border-radius:9px;font-size:13px;font-weight:600;transition:background .15s,color .15s}.vr-admin-icon{flex:0 0 20px;width:20px;height:20px;display:inline-flex;align-items:center;justify-content:center;font-size:17px;line-height:1;color:#829188}.vr-admin-link.is-active .vr-admin-icon{color:#176b50}.vr-admin-link-label{min-width:0}
             .vr-admin-link:hover{background:#f4f6f8;color:#176b50}.vr-admin-link.is-active{background:#edf5f1;color:#176b50;font-weight:750}
             .vr-admin-content{min-width:0;padding:30px 32px;box-sizing:border-box;overflow-x:hidden}.vr-admin-content *{box-sizing:border-box;max-width:100%}.vr-admin-content .wrap{max-width:none!important;margin:0!important;padding:0!important}
             .vr-admin-content h1{margin-top:0}.vr-admin-content table{width:100%;max-width:100%;border-collapse:collapse}
@@ -155,7 +174,7 @@ if ($isAdminPage) {
         <script>
         (function(){
             if(window.__villaAdminShellReady)return;window.__villaAdminShellReady=true;
-            const layout=document.getElementById("vrAdminLayout"),burger=document.getElementById("vrAdminBurger"),overlay=document.getElementById("vrAdminOverlay"),content=document.getElementById("vrAdminContent");
+            const layout=document.getElementById("vrAdminLayout"),burger=document.getElementById("vrAdminBurger"),overlay=document.getElementById("vrAdminOverlay"),content=document.getElementById("vrAdminContent"),adminRootPath=new URL(${adminRootUrl},location.href).pathname.replace(/\\/$/,"");
             function closeMenu(){layout&&layout.classList.remove("menu-open");burger&&burger.setAttribute("aria-expanded","false")}
             function enhanceResponsiveTables(root){
                 (root||content).querySelectorAll("table").forEach(function(table){
@@ -191,9 +210,15 @@ if ($isAdminPage) {
                 }catch(error){console.error("Admin navigation:",error);window.location.href=url}
                 finally{content.style.opacity="1"}
             }
+            // Intercept every internal admin link, including dashboard quick actions,
+            // rather than only sidebar links. This prevents mixed full reload / AJAX states.
             document.addEventListener("click",function(event){
-                const link=event.target.closest("a[data-admin-link]");if(!link)return;
-                const target=new URL(link.href,location.href);if(target.origin!==location.origin)return;
+                const link=event.target.closest("a[href]");if(!link)return;
+                if(event.defaultPrevented||event.button!==0||event.metaKey||event.ctrlKey||event.shiftKey||event.altKey)return;
+                if(link.target&&link.target!=="_self")return;
+                const target=new URL(link.href,location.href);
+                if(target.origin!==location.origin)return;
+                if(!(target.pathname===adminRootPath||target.pathname.startsWith(adminRootPath+"/")))return;
                 event.preventDefault();navigate(target.href,true);
             });
             window.addEventListener("popstate",function(){if(location.pathname.startsWith((document.querySelector(".vr-admin-brand")?.pathname||"/admin").replace(/\/$/,"")))navigate(location.href,false);});
