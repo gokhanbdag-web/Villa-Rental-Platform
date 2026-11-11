@@ -40,8 +40,31 @@ final class Migrator
                 throw new \RuntimeException('Migration failed: ' . $name . ' - ' . $e->getMessage(), 0, $e);
             }
         }
+        }
+
+        // Self-heal the navigation schema if a previous deployment skipped
+        // this migration or recorded it without applying the column.
+        selfHealNavigationHierarchy($pdo);
         } finally {
             $pdo->query("SELECT RELEASE_LOCK('villa_platform_migrations')")->fetchColumn();
         }
     }
+    private static function selfHealNavigationHierarchy(PDO $pdo): void
+    {
+        $table = $pdo->query("SELECT COUNT(*) FROM information_schema.TABLES WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'navigation_items'");
+        if ((int)$table->fetchColumn() === 0) {
+            return;
+        }
+
+        $column = $pdo->query("SELECT COUNT(*) FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'navigation_items' AND COLUMN_NAME = 'parent_id'");
+        if ((int)$column->fetchColumn() === 0) {
+            $pdo->exec("ALTER TABLE navigation_items ADD COLUMN parent_id BIGINT UNSIGNED NULL AFTER id");
+        }
+
+        $index = $pdo->query("SELECT COUNT(*) FROM information_schema.STATISTICS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'navigation_items' AND INDEX_NAME = 'idx_navigation_parent_location'");
+        if ((int)$index->fetchColumn() === 0) {
+            $pdo->exec("ALTER TABLE navigation_items ADD INDEX idx_navigation_parent_location (parent_id, location, sort_order)");
+        }
+    }
+
 }
