@@ -1373,7 +1373,44 @@ $router->get('/admin/content', static function (): void {
         'property_reserve'=>'Rezervasyon butonu',
         'property_no_images'=>'Görsel yok metni',
         'booking_notice'=>'Rezervasyon bilgilendirme metni',
-        'footer_text'=>'Alt bilgi metni'
+        'footer_text'=>'Alt bilgi metni',
+        'home_latest_title'=>'Son eklenen villalar başlığı',
+        'home_latest_subtitle'=>'Son eklenen villalar açıklaması',
+        'home_trust_1_title'=>'Güven avantajı 1 başlığı',
+        'home_trust_1_text'=>'Güven avantajı 1 açıklaması',
+        'home_trust_2_title'=>'Güven avantajı 2 başlığı',
+        'home_trust_2_text'=>'Güven avantajı 2 açıklaması',
+        'home_trust_3_title'=>'Güven avantajı 3 başlığı',
+        'home_trust_3_text'=>'Güven avantajı 3 açıklaması',
+        'home_trust_4_title'=>'Güven avantajı 4 başlığı',
+        'home_trust_4_text'=>'Güven avantajı 4 açıklaması',
+        'home_concepts_title'=>'Tatil konseptleri başlığı',
+        'home_concepts_subtitle'=>'Tatil konseptleri açıklaması',
+        'home_collections_title'=>'Villa koleksiyonları başlığı',
+        'home_collections_subtitle'=>'Villa koleksiyonları açıklaması',
+        'home_regions_title'=>'Bölgeler başlığı',
+        'home_regions_subtitle'=>'Bölgeler açıklaması',
+        'home_reviews_title'=>'Misafir yorumları başlığı',
+        'home_reviews_subtitle'=>'Misafir yorumları açıklaması',
+        'home_faq_title'=>'Sıkça sorulan sorular başlığı',
+        'home_faq_subtitle'=>'Sıkça sorulan sorular açıklaması',
+        'home_faq_1_question'=>'SSS 1 soru',
+        'home_faq_1_answer'=>'SSS 1 yanıt',
+        'home_faq_2_question'=>'SSS 2 soru',
+        'home_faq_2_answer'=>'SSS 2 yanıt',
+        'home_faq_3_question'=>'SSS 3 soru',
+        'home_faq_3_answer'=>'SSS 3 yanıt',
+        'home_faq_4_question'=>'SSS 4 soru',
+        'home_faq_4_answer'=>'SSS 4 yanıt',
+        'home_faq_5_question'=>'SSS 5 soru',
+        'home_faq_5_answer'=>'SSS 5 yanıt',
+        'home_support_title'=>'Canlı destek başlığı',
+        'home_support_subtitle'=>'Canlı destek açıklaması',
+        'home_support_phone'=>'Canlı destek telefon numarası',
+        'home_support_whatsapp'=>'Canlı destek WhatsApp numarası',
+        'home_host_title'=>'Villa sahipleri tanıtım başlığı',
+        'home_host_subtitle'=>'Villa sahipleri tanıtım açıklaması',
+        'home_host_cta'=>'Villa sahipleri buton metni'
     ];
     require APP_ROOT . '/views/admin/content.php';
 });
@@ -1381,7 +1418,7 @@ $router->get('/admin/content', static function (): void {
 $router->post('/admin/content', static function (): void {
     Auth::requireRole(['super_admin', 'admin']);
     verify_csrf();
-    $allowed = ['site_name','home_eyebrow','home_title','home_subtitle','home_search_placeholder','featured_title','featured_subtitle','empty_properties','search_button','guest_select_label','guest_unit','all_categories','property_about','property_reserve','property_no_images','booking_notice','footer_text'];
+    $allowed = ['site_name','home_eyebrow','home_title','home_subtitle','home_search_placeholder','featured_title','featured_subtitle','empty_properties','search_button','guest_select_label','guest_unit','all_categories','property_about','property_reserve','property_no_images','booking_notice','footer_text','home_latest_title','home_latest_subtitle','home_trust_1_title','home_trust_1_text','home_trust_2_title','home_trust_2_text','home_trust_3_title','home_trust_3_text','home_trust_4_title','home_trust_4_text','home_concepts_title','home_concepts_subtitle','home_collections_title','home_collections_subtitle','home_regions_title','home_regions_subtitle','home_reviews_title','home_reviews_subtitle','home_faq_title','home_faq_subtitle','home_faq_1_question','home_faq_1_answer','home_faq_2_question','home_faq_2_answer','home_faq_3_question','home_faq_3_answer','home_faq_4_question','home_faq_4_answer','home_faq_5_question','home_faq_5_answer','home_support_title','home_support_subtitle','home_support_phone','home_support_whatsapp','home_host_title','home_host_subtitle','home_host_cta'];
     $stmt = Database::connection()->prepare('INSERT INTO site_content (content_key,language_code,content_value,updated_at) VALUES (?,\'tr\',?,NOW()) ON DUPLICATE KEY UPDATE content_value=VALUES(content_value),updated_at=NOW()');
     foreach ((array)($_POST['content'] ?? []) as $key=>$value) {
         if (in_array($key,$allowed,true)) $stmt->execute([$key,trim((string)$value)]);
