@@ -37,9 +37,10 @@ assets/
 
 - `slug` küçük harf, rakam, tire ve alt çizgi içermeli; benzersiz olmalıdır.
 - `style.css` zorunludur. Diğer statik dosyalar `assets/` içine konur.
-- Şablonlar isteğe bağlıdır. Bir sayfa için şablon pakette yoksa sistem mevcut `views/site/` şablonunu kullanır.
+- `landing.php`, `listing.php` ve `property.php` için ayrı şablonlar ekleyebilirsiniz. Şablonlar mevcut sayfa görünümünü tamamen değiştirebilir; ortak uygulama verisini ve işlemlerini korumalıdır. Bir sayfa için şablon pakette yoksa sistem mevcut `views/site/` şablonunu kullanır.
+- Tema şablonları HTML iskeletini, başlığı, navigasyonu, arama formu yerleşimini, kartları ve mobil menüyü kendi tasarımına göre oluşturabilir. Giriş/çıkış bağlantıları ve alt menüler için ortak `views/site/partials/navigation-items.php` parçasını kullanmanız önerilir.
 - Tema şablonları mevcut sayfa değişkenlerini kullanır: örneğin `$content`, `$navigation`, `$properties`, `$property`, `$user`, `$locale`. Yeni veri sorgularını tema dosyalarına değil uygulama rotalarına/ortak iş mantığına ekleyin.
-- Statik dosyalar `/theme-assets/{slug}/{filename}` adresinden sunulur.
+- Statik dosyalar `/theme-assets/{slug}/{filename}` adresinden sunulur. Dosyaları `assets/` altında tutun ve CSS/şablonlarda bu yolu kullanın.
 - Tema ZIP dosyası en fazla 12 MB ve 150 dosya olabilir. Desteklenen dosyalar: `theme.json`, `style.css`, `templates/*.php` ve `assets/` altındaki CSS/JS/görsel/font dosyaları.
 - Yönetim paneli ZIP yükleme özelliği için sunucuda PHP `ZipArchive` eklentisi etkin olmalıdır. Etkin değilse hosting sağlayıcısından açılmasını isteyin.
 
