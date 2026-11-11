@@ -25,6 +25,14 @@ $header = '<header class="theme-header theme-header--coastal"><div class="theme-
 
 $html = preg_replace('~<header\\b[^>]*>.*?</header>(?:\\s*<div class="drawer-overlay" id="menuOverlay"></div>)?~s', $header, $html, 1) ?? $html;
 $html = preg_replace('~<body\\b~i', '<body class="villa-home-mediterranean"', $html, 1) ?? $html;
+$topPhone=trim((string)($content['home_support_phone']??''));
+$topPhoneDigits=preg_replace('/\\D+/','',$topPhone);
+if($topPhoneDigits!==''){
+    $topbar='<div class="med-topbar"><div class="wrap"><a href="tel:'.e($topPhoneDigits).'">☎ '.e($topPhone).'</a>';
+    if(($user['role']??'')==='customer')$topbar.='<a href="'.e(app_url('/favorites')).'">♡ Favorilerim</a>';
+    $topbar.='</div></div>';
+    $html=preg_replace('~<header\\b~i',$topbar.'<header',$html,1)??$html;
+}
 $homeCss = <<<'CSS'
 body.villa-home-mediterranean{background:#f8f8f1;color:#304235}body.villa-home-mediterranean .site-header{background:#fbfcf7;border-color:#e4e9dc}body.villa-home-mediterranean .hero{padding:24px 0 54px;background:#eef2e7}body.villa-home-mediterranean .hero-card{min-height:530px;border-radius:30px;background-position:center 55%;box-shadow:0 22px 55px #344c3518}body.villa-home-mediterranean .hero-copy{max-width:850px}body.villa-home-mediterranean .hero h1{font:500 clamp(42px,6vw,72px)/1.02 Georgia,serif;letter-spacing:-2px}body.villa-home-mediterranean .section{padding:66px 0}body.villa-home-mediterranean .section-head h2{font:500 clamp(29px,3.4vw,40px) Georgia,serif;color:#294936}body.villa-home-mediterranean .destination-grid{grid-template-columns:repeat(4,minmax(0,1fr));gap:20px}body.villa-home-mediterranean .destination{height:250px;border-radius:22px}body.villa-home-mediterranean .cards{grid-template-columns:repeat(3,minmax(0,1fr));gap:25px}body.villa-home-mediterranean .stay-photo{height:250px;border-radius:22px}body.villa-home-mediterranean .stay h3{font:500 20px Georgia,serif}body.villa-home-mediterranean .home-accommodations{background:#f8f8f1!important}body.villa-home-mediterranean .gallery-strip{grid-template-columns:1.5fr 1fr 1fr;grid-template-rows:210px 210px;gap:15px}body.villa-home-mediterranean .gallery-strip img{border-radius:22px}body.villa-home-mediterranean .host-banner{border-radius:30px}@media(max-width:700px){body.villa-home-mediterranean .hero-card{min-height:560px;border-radius:20px}body.villa-home-mediterranean .cards{grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}body.villa-home-mediterranean .stay-photo{height:155px}body.villa-home-mediterranean .destination{height:165px}body.villa-home-mediterranean .section{padding:38px 0}}
 CSS;
@@ -125,12 +133,15 @@ if($regionTitle!==''||$regionSubtitle!==''||$regionEyebrow!==''){
         return $m[1].e($regionEyebrow).$m[2].e($regionTitle!==''?$regionTitle:'Bölgeleri keşfedin').$m[3].e($regionSubtitle).$m[4];
     },$html,1)??$html;
 }
+$html=preg_replace('~<section class="section" style="[^"]*"><div class="wrap"><div class="section-head"><div><span class="pill">TATİL TARZINI SEÇ</span>.*?</section>~s','',$html,1)??$html;
+$html=preg_replace('~<section class="section" style="[^"]*"><div class="wrap"><div class="section-head"><div><span class="pill">TATİL İLHAMIN</span>.*?</section>~s','',$html,1)??$html;
 
 $menuIconCss = '.theme-menu-toggle .menu-open-mark{display:inline!important}.theme-menu-toggle .menu-close-mark,.theme-menu-toggle .menu-close-mark[hidden]{display:none!important}.theme-menu-toggle[aria-expanded="true"] .menu-open-mark{display:none!important}.theme-menu-toggle[aria-expanded="true"] .menu-close-mark{display:inline!important}.theme-menu-toggle[aria-expanded="true"] .menu-close-mark[hidden]{display:inline!important}';
 
 $homeCss .= <<<'CSS'
 /* Mediterranean editorial homepage */
 body.villa-home-mediterranean{background:#f8f8f1;color:#304235;font-family:Georgia,"Times New Roman",serif}
+.med-topbar{background:#304b37;color:#edf2e8;font:12px Arial,sans-serif}.med-topbar>.wrap{display:flex;justify-content:flex-end;align-items:center;gap:22px;min-height:34px}.med-topbar a{color:#edf2e8}.med-topbar a:hover{color:#d6c29a}
 body.villa-home-mediterranean .site-header{background:#fbfcf7;border-color:#e4e9dc}
 body.villa-home-mediterranean .brand,body.villa-home-mediterranean .nav a:hover{color:#315a43}
 body.villa-home-mediterranean .hero{background:#eef2e7;padding:22px 0 44px}
