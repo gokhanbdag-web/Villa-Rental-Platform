@@ -61,6 +61,37 @@ $router->post('/admin/homepage', static function (): void {
     redirect('/admin/homepage');
 });
 
+
+$router->get('/admin/builder', static function (): void {
+    Auth::requireRole(['super_admin','admin']);
+    $themes=ThemeManager::installed();
+    $themeSlug=(string)($_GET['theme']??ThemeManager::activeSlug());
+    if(!isset($themes[$themeSlug]))$themeSlug=ThemeManager::activeSlug();
+    $pageKey=(string)($_GET['page']??'home');
+    if(!in_array($pageKey,['home','destinations','listing','property','content'],true))$pageKey='home';
+    $layout=PageBuilder::load($themeSlug,$pageKey);
+    $widgetRegistry=PageBuilder::widgets();
+    require APP_ROOT.'/views/admin/builder.php';
+});
+$router->post('/admin/builder/save', static function (): void {
+    Auth::requireRole(['super_admin','admin']);verify_csrf();
+    $theme=(string)($_POST['theme']??'');
+    $page=(string)($_POST['page']??'home');
+    $status=(string)($_POST['status']??'draft');
+    $raw=(string)($_POST['layout_json']??'');
+    if(strlen($raw)>500000){http_response_code(413);exit('Sayfa düzeni çok büyük.');}
+    try{
+        $payload=json_decode($raw,true,64,JSON_THROW_ON_ERROR);
+        if(!is_array($payload))throw new InvalidArgumentException('Sayfa düzeni okunamadı.');
+        $user=Auth::user();
+        PageBuilder::save($theme,$page,$payload,$status,(int)($user['id']??0));
+    }catch(Throwable $e){
+        http_response_code(422);
+        exit('Sayfa düzeni kaydedilemedi: '.e($e->getMessage()));
+    }
+    redirect('/admin/builder?theme='.rawurlencode($theme).'&page='.rawurlencode($page));
+});
+
 $router->get('/locations/children', static function (): void {
     header('Content-Type: application/json; charset=utf-8');$parentId=max(0,(int)($_GET['parent_id']??0));
     $s=Database::connection()->prepare('SELECT id,name FROM locations WHERE parent_id=? AND is_active=1 ORDER BY sort_order,name');$s->execute([$parentId]);echo json_encode($s->fetchAll(),JSON_UNESCAPED_UNICODE|JSON_THROW_ON_ERROR);
