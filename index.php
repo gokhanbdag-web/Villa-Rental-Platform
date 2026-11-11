@@ -132,7 +132,7 @@ if ($isAdminPage) {
         foreach ($groups as $groupLabel => $groupLinks) {
             $nav .= '<div class="vr-admin-nav-title">' . e($groupLabel) . '</div>';
             foreach ($groupLinks as $url => $label) {
-                $active = $requestPath === $url || str_starts_with($requestPath, $url . '/');
+                $active = ($url === '/admin') ? ($requestPath === '/admin' || $requestPath === '/admin/') : ($requestPath === $url || str_starts_with($requestPath, $url . '/'));
                 $icon = $icons[$url] ?? '•';
                 $nav .= '<a class="vr-admin-link' . ($active ? ' is-active' : '') . '" href="' . e(app_url($url)) . '" data-admin-link>' .
                     '<span class="vr-admin-icon" aria-hidden="true">' . e($icon) . '</span><span class="vr-admin-link-label">' . e($label) . '</span></a>';
@@ -227,7 +227,7 @@ if ($isAdminPage) {
                     activate(new URL(url,location.href).pathname);
                     if(doc.title)document.title=doc.title;
                     content.querySelectorAll("script").forEach(old=>{const script=document.createElement("script");Array.from(old.attributes).forEach(a=>script.setAttribute(a.name,a.value));script.textContent=old.textContent;old.replaceWith(script)});
-                    window.scrollTo({top:0,behavior:"instant"});
+                    window.scrollTo(0,0);
                 }catch(error){
                     console.error("Admin AJAX navigation failed:",error);
                     let notice=content.querySelector(".vr-admin-navigation-error");
