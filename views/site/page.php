@@ -40,8 +40,6 @@ body.menu-open{overflow:hidden}
 <nav class="site-nav" id="siteNavigation">
 
 <?php foreach (($navigation ?? []) as $item): ?><a href="<?= e($item['url']) ?>" target="<?= e($item['target']) ?>" <?= $item['target']==='_blank'?'rel="noopener noreferrer"':'' ?>><?= e($item['label']) ?></a><?php endforeach; ?>
-<?php if (($mode ?? 'single_vendor') === 'multi_vendor'): ?><a href="/vendor/register">Ev sahibi olun</a><?php endif; ?>
-<?php if (($user['role'] ?? '') === 'customer'): ?><a href="/favorites">Favorilerim</a><a href="/account/bookings">Hesabım</a><?php endif; ?>
 </nav></div></header>
 <div class="drawer-overlay" id="siteMenuOverlay" aria-hidden="true"></div>
 <main class="wrap"><h1><?= e($page['title']) ?></h1><article><?= nl2br(e($page['content'])) ?></article></main><footer class="site-footer"><div class="footer-inner"><div class="footer-copy"><strong><?= e($siteName) ?></strong><p><?= e($content['footer_text']??'') ?></p></div><nav class="footer-links"><?php foreach(($footerNavigation??[]) as $item): ?><a href="<?= e($item['url']) ?>" target="<?= e($item['target']??'_self') ?>"><?= e($item['label']) ?></a><?php endforeach; ?></nav></div></footer>
