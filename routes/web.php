@@ -691,10 +691,21 @@ $router->get('/account/bookings', static function (): void {
     $user = Auth::user();
     if (!$user) redirect('/login');
     if (($user['role'] ?? '') !== 'customer') redirect('/admin');
-    $stmt = Database::connection()->prepare('SELECT b.*,p.title,p.city,EXISTS(SELECT 1 FROM reviews r WHERE r.booking_id=b.id) AS has_review FROM bookings b JOIN properties p ON p.id=b.property_id WHERE b.guest_user_id=? ORDER BY b.created_at DESC');
+    $pdo = Database::connection();
+    $stmt = $pdo->prepare('SELECT b.*,p.title,p.city,EXISTS(SELECT 1 FROM reviews r WHERE r.booking_id=b.id) AS has_review FROM bookings b JOIN properties p ON p.id=b.property_id WHERE b.guest_user_id=? ORDER BY b.created_at DESC');
     $stmt->execute([(int)$user['id']]);
     $bookings = $stmt->fetchAll();
-    require APP_ROOT . '/views/account/bookings.php';
+
+    // Account pages use the same configured site navigation and active theme as public pages.
+    $locale = 'tr';
+    $navigation = villa_navigation_tree($pdo, 'header', $locale);
+    $footerNavigation = villa_navigation_tree($pdo, 'footer', $locale);
+    $contentStmt = $pdo->prepare('SELECT content_key,content_value FROM site_content WHERE language_code=?');
+    $contentStmt->execute([$locale]);
+    $content = $contentStmt->fetchAll(PDO::FETCH_KEY_PAIR);
+    $siteName = (string)($content['site_name'] ?? 'VillaStay');
+    $accountView = 'bookings.php';
+    ThemeManager::render('account.php', get_defined_vars());
 });
 
 $router->get('/login', static function (): void {
