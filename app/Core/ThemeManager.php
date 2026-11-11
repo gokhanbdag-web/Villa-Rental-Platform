@@ -133,6 +133,7 @@ final class ThemeManager
                 $scope . ' .nav a:hover,' . $scope . ' .nav a[aria-current=page]{background:var(--villa-theme-button)!important;color:#fff!important}' .
                 $scope . ' .price-range-track span,' . $scope . ' .price-range-fill{background:var(--villa-theme-button)!important}' .
                 $scope . ' input[type=range]{accent-color:var(--villa-theme-button)}' .
+                $scope . ' input[type=range]::-webkit-slider-thumb,' . $scope . ' input[type=range]::-moz-range-thumb{background:var(--villa-theme-button)!important;border-color:#fff!important}' .
                 $scope . ' button:hover,' . $scope . ' input[type=submit]:hover,' . $scope . ' .btn:hover{filter:brightness(.92)}' .
                 $scope . ' .card-favorite.is-active{color:#fff!important}' .
                 '</style>';
