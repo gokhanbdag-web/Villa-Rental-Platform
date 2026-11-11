@@ -6,6 +6,14 @@ use App\Core\Database;
 use App\Core\Router;
 use App\Core\Translator;
 
+function villa_navigation_tree(PDO $pdo, string $location, string $locale): array {
+    $stmt=$pdo->prepare('SELECT id,parent_id,label,url,target FROM navigation_items WHERE location=? AND language_code=? AND is_active=1 ORDER BY sort_order,id');
+    $stmt->execute([$location,$locale]);$rows=$stmt->fetchAll(PDO::FETCH_ASSOC);$byId=[];$roots=[];
+    foreach($rows as $row){$row['children']=[];$byId[(int)$row['id']]=$row;}
+    foreach(array_keys($byId) as $id){$parent=(int)($byId[$id]['parent_id']??0);if($parent>0&&isset($byId[$parent])&&$parent!==$id){$byId[$parent]['children'][]=&$byId[$id];}else{$roots[]=&$byId[$id];}}
+    return $roots;
+}
+
 function villa_resolve_location(PDO $pdo): array {
     $ids=['country'=>(int)($_POST['location_country_id']??0),'city'=>(int)($_POST['location_city_id']??0),'district'=>(int)($_POST['location_district_id']??0),'neighborhood'=>(int)($_POST['location_neighborhood_id']??0)];
     $get=static function(int $id,string $type,?int $parent) use($pdo): ?array {
@@ -166,7 +174,7 @@ $router->get('/', static function (): void {
     try{$locale=(string)($pdo->query("SELECT setting_value FROM settings WHERE setting_key='app.locale' LIMIT 1")->fetchColumn() ?: 'tr');}catch(Throwable $e){}
     $mode=(string)($pdo->query("SELECT setting_value FROM settings WHERE setting_key='app.mode' LIMIT 1")->fetchColumn() ?: 'single_vendor');
     $contentStmt=$pdo->prepare('SELECT content_key,content_value FROM site_content WHERE language_code=?');$contentStmt->execute([$locale]);$content=$contentStmt->fetchAll(PDO::FETCH_KEY_PAIR);
-    $nav=$pdo->prepare('SELECT label,url,target FROM navigation_items WHERE location=? AND language_code=? AND is_active=1 ORDER BY sort_order,id');$nav->execute(['header',$locale]);$navigation=$nav->fetchAll();$nav->execute(['footer',$locale]);$footerNavigation=$nav->fetchAll();
+    $navigation=villa_navigation_tree($pdo,'header',$locale);$footerNavigation=villa_navigation_tree($pdo,'footer',$locale);
     $destinations=$pdo->query("SELECT l.id AS location_id,l.name AS city,COUNT(DISTINCT p.id) AS property_count,(SELECT pm.file_path FROM property_media pm JOIN properties p2 ON p2.id=pm.property_id WHERE p2.status='published' AND p2.location_city_id=l.id ORDER BY pm.is_cover DESC,pm.sort_order,pm.id LIMIT 1) AS cover_image FROM locations l JOIN locations c ON c.id=l.parent_id AND c.location_type='country' AND c.is_active=1 JOIN properties p ON p.status='published' AND p.location_city_id=l.id WHERE l.location_type='city' AND l.is_active=1 GROUP BY l.id,l.name,l.sort_order ORDER BY property_count DESC,l.sort_order,l.name LIMIT 8")->fetchAll();
     $featuredProperties=$pdo->query("SELECT p.*,(SELECT pm.file_path FROM property_media pm WHERE pm.property_id=p.id ORDER BY pm.is_cover DESC,pm.sort_order,pm.id LIMIT 1) AS cover_image,(SELECT COUNT(*) FROM bookings b WHERE b.property_id=p.id AND b.status NOT IN ('cancelled','rejected')) AS booking_count FROM properties p WHERE p.status='published' ORDER BY booking_count DESC,p.created_at DESC,p.id DESC LIMIT 8")->fetchAll();
     $latestProperties=$pdo->query("SELECT p.*,(SELECT pm.file_path FROM property_media pm WHERE pm.property_id=p.id ORDER BY pm.is_cover DESC,pm.sort_order,pm.id LIMIT 1) AS cover_image FROM properties p WHERE p.status='published' ORDER BY p.id DESC LIMIT 4")->fetchAll();
@@ -187,11 +195,8 @@ $router->get('/konaklamalar', static function (): void {
     $contentStmt = $pdo->prepare('SELECT content_key,content_value FROM site_content WHERE language_code=?');
     $contentStmt->execute([$locale]);
     $content = $contentStmt->fetchAll(PDO::FETCH_KEY_PAIR);
-    $navStmt = $pdo->prepare('SELECT label,url,target FROM navigation_items WHERE location=? AND language_code=? AND is_active=1 ORDER BY sort_order,id');
-    $navStmt->execute(['header',$locale]);
-    $navigation = $navStmt->fetchAll();
-    $footerStmt = $pdo->prepare('SELECT label,url,target FROM navigation_items WHERE location=? AND language_code=? AND is_active=1 ORDER BY sort_order,id');
-    $footerStmt->execute(['footer',$locale]); $footerNavigation = $footerStmt->fetchAll();
+    $navigation = villa_navigation_tree($pdo,'header',$locale);
+    $footerNavigation = villa_navigation_tree($pdo,'footer',$locale);
     $categories = $pdo->query('SELECT id,name,slug FROM property_categories WHERE is_active=1 ORDER BY sort_order,name')->fetchAll();
     $locationCountries=$pdo->query("SELECT id,name FROM locations WHERE location_type='country' AND is_active=1 ORDER BY sort_order,name")->fetchAll();
     $locationChildren=static function(int $parent) use($pdo): array {if(!$parent)return [];$s=$pdo->prepare('SELECT id,name FROM locations WHERE parent_id=? AND is_active=1 ORDER BY sort_order,name');$s->execute([$parent]);return $s->fetchAll();};
@@ -285,9 +290,8 @@ $router->get('/villa/{slug}', static function (array $params): void {
     $contentStmt=$pdo->prepare('SELECT content_key,content_value FROM site_content WHERE language_code=?');
     $contentStmt->execute(['tr']); $content=$contentStmt->fetchAll(PDO::FETCH_KEY_PAIR);
     $locale='tr';
-    $navStmt=$pdo->prepare('SELECT label,url,target FROM navigation_items WHERE location=? AND language_code=? AND is_active=1 ORDER BY sort_order,id');
-    $navStmt->execute(['header',$locale]); $navigation=$navStmt->fetchAll();
-    $navStmt->execute(['footer',$locale]); $footerNavigation=$navStmt->fetchAll();
+    $navigation=villa_navigation_tree($pdo,'header',$locale);
+    $footerNavigation=villa_navigation_tree($pdo,'footer',$locale);
     $mode=(string)($pdo->query("SELECT setting_value FROM settings WHERE setting_key='app.mode' LIMIT 1")->fetchColumn() ?: 'single_vendor');
     $user=Auth::user();$isFavorite=false;
     if($user && ($user['role']??'')==='customer'){$fav=$pdo->prepare('SELECT 1 FROM favorites WHERE user_id=? AND property_id=?');$fav->execute([(int)$user['id'],(int)$property['id']]);$isFavorite=(bool)$fav->fetchColumn();}
@@ -521,6 +525,15 @@ $router->get('/login', static function (): void {
     require APP_ROOT . '/views/auth/login.php';
 });
 
+$router->post('/login/ajax', static function (): void {
+    header('Content-Type: application/json; charset=utf-8');header('Cache-Control: no-store');
+    try{verify_csrf();}catch(Throwable $e){http_response_code(419);echo json_encode(['ok'=>false,'message'=>'Oturum doğrulaması başarısız. Sayfayı yenileyip tekrar deneyin.']);return;}
+    $identity=trim((string)($_POST['identity']??''));$password=(string)($_POST['password']??'');
+    if($identity===''||$password===''||!Auth::attempt($identity,$password)){http_response_code(401);echo json_encode(['ok'=>false,'message'=>'E-posta/kullanıcı adı veya şifre hatalı.']);return;}
+    $user=Auth::user();$role=(string)($user['role']??'customer');
+    $destination=$role==='customer'?'/account/bookings':($role==='vendor'?'/vendor':'/admin');
+    echo json_encode(['ok'=>true,'user'=>['username'=>(string)($user['username']??''),'role'=>$role,'label'=>in_array($role,['admin','super_admin'],true)?'Yönetim Paneli':($role==='vendor'?'Ev Sahibi Paneli':'Hesabım'),'url'=>$destination]],JSON_UNESCAPED_UNICODE|JSON_THROW_ON_ERROR);
+});
 $router->post('/login', static function (): void {
     verify_csrf();
     $identity = trim((string)($_POST['identity'] ?? ''));
@@ -811,7 +824,7 @@ $router->post('/admin/categories/delete', static function (): void {
 $router->get('/admin/navigation', static function (): void {
     Auth::requireRole(['super_admin','admin']);
     $pdo=Database::connection();
-    $items=$pdo->query('SELECT * FROM navigation_items ORDER BY location,sort_order,id')->fetchAll();
+    $items=$pdo->query('SELECT * FROM navigation_items ORDER BY location,COALESCE(parent_id,0),sort_order,id')->fetchAll();
     $mode=(string)($pdo->query("SELECT setting_value FROM settings WHERE setting_key='app.mode' LIMIT 1")->fetchColumn() ?: 'single_vendor');
     $systemPages=[
         ['label'=>'Ana Sayfa','url'=>'/'],
@@ -832,17 +845,33 @@ $router->post('/admin/navigation/save', static function (): void {
     $id=(int)($_POST['id']??0);$label=trim((string)($_POST['label']??''));$url=trim((string)($_POST['url']??''));
     $location=in_array($_POST['location']??'', ['header','footer'],true)?$_POST['location']:'header';
     $target=($_POST['target']??'')==='_blank'?'_blank':'_self';
-    $sort=max(0,min(9999,(int)($_POST['sort_order']??10)));$active=isset($_POST['is_active'])?1:0;
+    $sort=max(0,min(9999,(int)($_POST['sort_order']??10)));$active=isset($_POST['is_active'])?1:0;$parentId=max(0,(int)($_POST['parent_id']??0));
+    if($parentId>0){$p=$pdo->prepare('SELECT id,parent_id,location FROM navigation_items WHERE id=? LIMIT 1');$p->execute([$parentId]);$parent=$p->fetch();if(!$parent||(int)$parent['id']===$id||(string)$parent['location']!==$location||(int)($parent['parent_id']??0)>0){http_response_code(422);exit('Alt menü yalnızca aynı konumdaki bir ana menüye bağlanabilir.');}}
     $validUrl=$url!==''&&!preg_match('/[\\r\\n\\x00-\\x1F]/',$url)&&!str_starts_with($url,'//')&&(str_starts_with($url,'/')||preg_match('#^https?://#i',$url));
     if($label===''||mb_strlen($label)>120||!$validUrl){http_response_code(422);exit('Menü adı veya bağlantı adresi geçersiz.');}
     if($id>0){
-        $s=$pdo->prepare('UPDATE navigation_items SET location=?,label=?,url=?,target=?,sort_order=?,is_active=? WHERE id=?');
-        $s->execute([$location,$label,$url,$target,$sort,$active,$id]);
+        $s=$pdo->prepare('UPDATE navigation_items SET location=?,parent_id=?,label=?,url=?,target=?,sort_order=?,is_active=? WHERE id=?');
+        $s->execute([$location,$parentId?:null,$label,$url,$target,$sort,$active,$id]);
     }else{
-        $s=$pdo->prepare('INSERT INTO navigation_items(location,language_code,label,url,target,sort_order,is_active) VALUES(?,?,?,?,?,?,?)');
-        $s->execute([$location,'tr',$label,$url,$target,$sort,$active]);
+        $s=$pdo->prepare('INSERT INTO navigation_items(location,parent_id,language_code,label,url,target,sort_order,is_active) VALUES(?,?,?,?,?,?,?,?)');
+        $s->execute([$location,$parentId?:null,'tr',$label,$url,$target,$sort,$active]);
     }
     redirect('/admin/navigation');
+});
+$router->post('/admin/navigation/reorder', static function (): void {
+    Auth::requireRole(['super_admin','admin']);verify_csrf();header('Content-Type: application/json; charset=utf-8');
+    $payload=json_decode((string)($_POST['tree']??''),true);
+    if(!is_array($payload)){http_response_code(422);echo json_encode(['ok'=>false,'message'=>'Sıralama verisi geçersiz.']);return;}
+    $pdo=Database::connection();$all=$pdo->query('SELECT id,location,parent_id FROM navigation_items')->fetchAll(PDO::FETCH_ASSOC);$known=[];foreach($all as $row)$known[(int)$row['id']]=$row;
+    $seen=[];$updates=[];
+    foreach(['header','footer'] as $location){
+        $group=$payload[$location]??[];if(!is_array($group))continue;$order=0;
+        foreach($group as $node){if(!is_array($node))continue;$id=(int)($node['id']??0);if(!isset($known[$id])||$known[$id]['location']!==$location||isset($seen[$id]))continue;$seen[$id]=true;$updates[]=[$order++,$id,null];
+            $childOrder=0;foreach((array)($node['children']??[]) as $childId){$childId=(int)$childId;if(!isset($known[$childId])||$known[$childId]['location']!==$location||isset($seen[$childId])||$childId===$id)continue;$seen[$childId]=true;$updates[]=[$childOrder++,$childId,$id];}
+        }
+    }
+    try{$pdo->beginTransaction();$up=$pdo->prepare('UPDATE navigation_items SET sort_order=?,parent_id=? WHERE id=?');foreach($updates as [$sort,$id,$parent])$up->execute([$sort,$parent,$id]);$pdo->commit();echo json_encode(['ok'=>true]);}
+    catch(Throwable $e){if($pdo->inTransaction())$pdo->rollBack();http_response_code(500);echo json_encode(['ok'=>false,'message'=>'Sıralama kaydedilemedi.']);}
 });
 $router->post('/admin/navigation/toggle', static function (): void {
     Auth::requireRole(['super_admin','admin']);verify_csrf();
@@ -882,9 +911,8 @@ $router->get('/page/{slug}', static function (array $params): void {
     $pdo=Database::connection();
     $content=$pdo->query("SELECT content_key,content_value FROM site_content WHERE language_code='tr'")->fetchAll(PDO::FETCH_KEY_PAIR);
     $siteName=$content['site_name']??'VillaStay';
-    $navStmt=$pdo->prepare('SELECT label,url,target FROM navigation_items WHERE location=? AND language_code=? AND is_active=1 ORDER BY sort_order,id');
-    $navStmt->execute(['header','tr']); $navigation=$navStmt->fetchAll();
-    $navStmt->execute(['footer','tr']); $footerNavigation=$navStmt->fetchAll();
+    $navigation=villa_navigation_tree($pdo,'header','tr');
+    $footerNavigation=villa_navigation_tree($pdo,'footer','tr');
     $mode=(string)($pdo->query("SELECT setting_value FROM settings WHERE setting_key='app.mode' LIMIT 1")->fetchColumn() ?: 'single_vendor');
     $user=Auth::user(); $locale='tr';
     require APP_ROOT.'/views/site/page.php';
