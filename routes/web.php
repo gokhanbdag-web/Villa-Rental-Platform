@@ -330,7 +330,7 @@ $router->post('/villa/{slug}/reserve', static function (array $params): void {
     $nights = (int)$checkIn->diff($checkOut)->days;
     try {
         $pdo->beginTransaction();
-        $lock = $pdo->prepare('SELECT id,base_nightly_price,currency FROM properties WHERE id=? FOR UPDATE');
+        $lock = $pdo->prepare('SELECT id,base_nightly_price,weekend_nightly_price,cleaning_fee,currency FROM properties WHERE id=? FOR UPDATE');
         $lock->execute([(int)$property['id']]);
         $current = $lock->fetch();
         if (!$current) { $pdo->rollBack(); http_response_code(404); exit('Konaklama artık mevcut değil.'); }
@@ -344,6 +344,7 @@ $router->post('/villa/{slug}/reserve', static function (array $params): void {
         for ($night = $checkIn; $night < $checkOut; $night = $night->modify('+1 day')) {
             $day = $night->format('Y-m-d');
             $nightPrice = (float)$current['base_nightly_price'];
+            if ((int)$night->format('N') >= 6 && (float)($current['weekend_nightly_price'] ?? 0) > 0) $nightPrice = (float)$current['weekend_nightly_price'];
             foreach ($rules as $rule) {
                 if ($day >= $rule['date_from'] && $day < $rule['date_to']) {
                     if ($rule['status'] !== 'available') { $unavailable = true; break; }
@@ -357,10 +358,12 @@ $router->post('/villa/{slug}/reserve', static function (array $params): void {
             $pdo->rollBack(); http_response_code(409); exit('Seçtiğiniz tarihler şu anda müsait değil. Lütfen başka tarih seçin.');
         }
         $code = 'VR' . date('Ymd') . strtoupper(bin2hex(random_bytes(3)));
+        $fees = (float)($current['cleaning_fee'] ?? 0);
+        $total = $subtotal + $fees;
         $save = $pdo->prepare("INSERT INTO bookings (booking_code,property_id,guest_user_id,check_in,check_out,guests,subtotal,fees,total,currency,status,created_at) VALUES (?,?,?,?,?,?,?,?,?,?, 'pending',NOW())");
-        $save->execute([$code,(int)$property['id'],(int)$user['id'],$inRaw,$outRaw,$guests,$subtotal,0,$subtotal,$current['currency']]);
+        $save->execute([$code,(int)$property['id'],(int)$user['id'],$inRaw,$outRaw,$guests,$subtotal,$fees,$total,$current['currency']]);
         $bookingId = (int)$pdo->lastInsertId();
-        $vendorNet = $subtotal;
+        $vendorNet = $total;
         $platformFee = 0.0;
         if (!empty($property['vendor_id'])) {
             $vendorStmt = $pdo->prepare('SELECT user_id,commission_rate FROM vendors WHERE id=?');
@@ -370,14 +373,14 @@ $router->post('/villa/{slug}/reserve', static function (array $params): void {
                 $defaultRaw = $pdo->query("SELECT setting_value FROM settings WHERE setting_key='platform.commission_percent'")->fetchColumn();
                 $defaultRate = $defaultRaw === false ? 12.0 : (float)$defaultRaw;
                 $rate = $vendorInfo['commission_rate'] !== null ? (float)$vendorInfo['commission_rate'] : $defaultRate;
-                $platformFee = round($subtotal * max(0,min(50,$rate)) / 100, 2);
-                $vendorNet = $subtotal - $platformFee;
+                $platformFee = round($total * max(0,min(50,$rate)) / 100, 2);
+                $vendorNet = $total - $platformFee;
                 $notifyVendor = $pdo->prepare("INSERT INTO notifications(user_id,notification_type,title,body,created_at) VALUES(?,'booking.requested','Yeni rezervasyon talebi',?,NOW())");
                 $notifyVendor->execute([(int)$vendorInfo['user_id'],'İlanınız için yeni bir rezervasyon talebi alındı: '.$code]);
             }
         }
         $financial = $pdo->prepare("INSERT INTO booking_financials(booking_id,gross_amount,platform_fee,vendor_net_amount,currency,payout_status,created_at) VALUES(?,?,?,?,?,'unpaid',NOW())");
-        $financial->execute([$bookingId,$subtotal,$platformFee,$vendorNet,$current['currency']]);
+        $financial->execute([$bookingId,$total,$platformFee,$vendorNet,$current['currency']]);
         $notifyGuest = $pdo->prepare("INSERT INTO notifications(user_id,notification_type,title,body,created_at) VALUES(?,'booking.created','Rezervasyon talebiniz alındı',?,NOW())");
         $notifyGuest->execute([(int)$user['id'],'Rezervasyon kodunuz: '.$code]);
         $pdo->commit();
@@ -539,9 +542,9 @@ $router->post('/vendor/properties/save', static function (): void {
     $slug=trim((string)($_POST['slug']??''));if($slug===''){$a=iconv('UTF-8','ASCII//TRANSLIT//IGNORE',$title);$slug=strtolower(trim(preg_replace('/[^a-zA-Z0-9]+/','-',$a!==false?$a:$title),'-'));}
     $slug=trim(strtolower(preg_replace('/[^a-z0-9-]+/','-',$slug)),'-');if($slug==='')$slug='villa-'.bin2hex(random_bytes(4));
     $id=(int)($_POST['id']??0);$status=$vendor['status']==='approved'&&($_POST['status']??'')==='published'?'published':'draft';
-    $data=[$title,$slug,trim((string)($_POST['summary']??'')),trim((string)($_POST['description']??'')),trim((string)($_POST['country']??'Türkiye')),trim((string)($_POST['city']??'')),trim((string)($_POST['district']??'')),trim((string)($_POST['address']??'')),max(1,(int)($_POST['max_guests']??1)),max(0,(int)($_POST['bedrooms']??0)),max(0,(int)($_POST['beds']??0)),max(0,(float)($_POST['bathrooms']??1)),max(0,(float)($_POST['base_nightly_price']??0)),strtoupper(substr(preg_replace('/[^A-Za-z]/','',(string)($_POST['currency']??'TRY')),0,3))?:'TRY',$status,($_POST['booking_type']??'')==='instant'?'instant':'request',((int)($_POST['category_id']??0)>0?(int)$_POST['category_id']:null)];
-    if($id){$owned=$pdo->prepare('SELECT id FROM properties WHERE id=? AND vendor_id=?');$owned->execute([$id,(int)$vendor['id']]);if(!$owned->fetchColumn()){http_response_code(404);exit('İlan bulunamadı.');}$s=$pdo->prepare('UPDATE properties SET title=?,slug=?,summary=?,description=?,country=?,city=?,district=?,address=?,max_guests=?,bedrooms=?,beds=?,bathrooms=?,base_nightly_price=?,currency=?,status=?,booking_type=?,category_id=?,updated_at=NOW() WHERE id=? AND vendor_id=?');$s->execute([...$data,$id,(int)$vendor['id']]);}
-    else{$s=$pdo->prepare('INSERT INTO properties(vendor_id,title,slug,summary,description,country,city,district,address,max_guests,bedrooms,beds,bathrooms,base_nightly_price,currency,status,booking_type,category_id,created_at) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,NOW())');$s->execute([(int)$vendor['id'],...$data]);$id=(int)$pdo->lastInsertId();}
+    $data=[$title,$slug,trim((string)($_POST['summary']??'')),trim((string)($_POST['description']??'')),trim((string)($_POST['country']??'Türkiye')),trim((string)($_POST['city']??'')),trim((string)($_POST['district']??'')),trim((string)($_POST['address']??'')),max(1,(int)($_POST['max_guests']??1)),max(0,(int)($_POST['bedrooms']??0)),max(0,(int)($_POST['beds']??0)),max(0,(float)($_POST['bathrooms']??1)),max(0,(float)($_POST['base_nightly_price']??0)),max(0,(float)($_POST['weekend_nightly_price']??0)),max(0,(float)($_POST['cleaning_fee']??0)),strtoupper(substr(preg_replace('/[^A-Za-z]/','',(string)($_POST['currency']??'TRY')),0,3))?:'TRY',$status,($_POST['booking_type']??'')==='instant'?'instant':'request',((int)($_POST['category_id']??0)>0?(int)$_POST['category_id']:null)];
+    if($id){$owned=$pdo->prepare('SELECT id FROM properties WHERE id=? AND vendor_id=?');$owned->execute([$id,(int)$vendor['id']]);if(!$owned->fetchColumn()){http_response_code(404);exit('İlan bulunamadı.');}$s=$pdo->prepare('UPDATE properties SET title=?,slug=?,summary=?,description=?,country=?,city=?,district=?,address=?,max_guests=?,bedrooms=?,beds=?,bathrooms=?,base_nightly_price=?,weekend_nightly_price=?,cleaning_fee=?,currency=?,status=?,booking_type=?,category_id=?,updated_at=NOW() WHERE id=? AND vendor_id=?');$s->execute([...$data,$id,(int)$vendor['id']]);}
+    else{$s=$pdo->prepare('INSERT INTO properties(vendor_id,title,slug,summary,description,country,city,district,address,max_guests,bedrooms,beds,bathrooms,base_nightly_price,weekend_nightly_price,cleaning_fee,currency,status,booking_type,category_id,created_at) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,NOW())');$s->execute([(int)$vendor['id'],...$data]);$id=(int)$pdo->lastInsertId();}
     $location=villa_resolve_location($pdo);
     $locSave=$pdo->prepare('UPDATE properties SET location_country_id=?,location_city_id=?,location_district_id=?,location_neighborhood_id=?,country=?,city=?,district=?,neighborhood=? WHERE id=? AND vendor_id=?');
     $locSave->execute([$location['location_country_id'],$location['location_city_id'],$location['location_district_id'],$location['location_neighborhood_id'],$location['country'],$location['city'],$location['district'],$location['neighborhood'],$id,(int)$vendor['id']]);
@@ -709,21 +712,21 @@ $router->post('/admin/properties/save', static function (): void {
         trim((string)($_POST['country'] ?? '')), trim((string)($_POST['city'] ?? '')), trim((string)($_POST['district'] ?? '')),
         trim((string)($_POST['address'] ?? '')), max(1,min(100,(int)($_POST['max_guests'] ?? 1))),
         max(0,min(100,(int)($_POST['bedrooms'] ?? 0))), max(0,min(100,(int)($_POST['beds'] ?? 0))),
-        max(0,(float)($_POST['bathrooms'] ?? 1)), max(0,(float)($_POST['base_nightly_price'] ?? 0)),
+        max(0,(float)($_POST['bathrooms'] ?? 1)), max(0,(float)($_POST['base_nightly_price'] ?? 0)), max(0,(float)($_POST['weekend_nightly_price'] ?? 0)), max(0,(float)($_POST['cleaning_fee'] ?? 0)),
         strtoupper(substr(preg_replace('/[^A-Za-z]/','',(string)($_POST['currency'] ?? 'TRY')),0,3)),
         $status, $bookingType, ((int)($_POST['category_id'] ?? 0) > 0 ? (int)$_POST['category_id'] : null)
     ];
-    if ($data[13] === '') $data[13] = 'TRY';
+    if ($data[15] === '') $data[15] = 'TRY';
     $check = $pdo->prepare('SELECT id FROM properties WHERE slug=? AND id<>? LIMIT 1');
     $check->execute([$slug,$id]);
     if ($check->fetchColumn()) $slug .= '-' . bin2hex(random_bytes(3));
     $data[1] = $slug;
     if ($id > 0) {
         $data[] = $id;
-        $stmt = $pdo->prepare('UPDATE properties SET title=?,slug=?,summary=?,description=?,country=?,city=?,district=?,address=?,max_guests=?,bedrooms=?,beds=?,bathrooms=?,base_nightly_price=?,currency=?,status=?,booking_type=?,category_id=?,updated_at=NOW() WHERE id=?');
+        $stmt = $pdo->prepare('UPDATE properties SET title=?,slug=?,summary=?,description=?,country=?,city=?,district=?,address=?,max_guests=?,bedrooms=?,beds=?,bathrooms=?,base_nightly_price=?,weekend_nightly_price=?,cleaning_fee=?,currency=?,status=?,booking_type=?,category_id=?,updated_at=NOW() WHERE id=?');
         $stmt->execute($data);
     } else {
-        $stmt = $pdo->prepare('INSERT INTO properties (title,slug,summary,description,country,city,district,address,max_guests,bedrooms,beds,bathrooms,base_nightly_price,currency,status,booking_type,category_id,created_at) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,NOW())');
+        $stmt = $pdo->prepare('INSERT INTO properties (title,slug,summary,description,country,city,district,address,max_guests,bedrooms,beds,bathrooms,base_nightly_price,weekend_nightly_price,cleaning_fee,currency,status,booking_type,category_id,created_at) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,NOW())');
         $stmt->execute($data);
         $id = (int)$pdo->lastInsertId();
     }
