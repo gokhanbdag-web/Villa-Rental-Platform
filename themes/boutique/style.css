@@ -70,3 +70,21 @@ body[data-villa-theme] .gallery img{object-fit:cover}
 body[data-villa-theme] .booking{padding:22px}
 body[data-villa-theme] .theme-header .nav a{white-space:nowrap}
 @media(max-width:760px){body[data-villa-theme] .grid .photo{height:205px}body[data-villa-theme] .booking{padding:17px}}
+
+
+/* Theme navigation: accessible nested links with smooth dropdown motion. */
+body[data-villa-theme] .theme-header .nav-entry{position:relative;display:flex;align-items:center;gap:3px}
+body[data-villa-theme] .theme-header .nav-entry-top{display:flex;align-items:center;gap:2px}
+body[data-villa-theme] .theme-header .nav-entry-top>a{display:inline-flex;align-items:center}
+body[data-villa-theme] .theme-header .nav-submenu-toggle{border:0;background:transparent;color:inherit;cursor:pointer;padding:7px;font:inherit}
+body[data-villa-theme] .theme-header .nav-dropdown{position:absolute;top:100%;left:0;min-width:210px;padding:9px;background:var(--theme-menu-surface,#fff);border:1px solid #00000012;box-shadow:0 15px 34px #17251d20;opacity:0;visibility:hidden;transform:translateY(8px);transition:opacity .2s,transform .2s,visibility .2s;z-index:80}
+body[data-villa-theme] .theme-header .nav-entry.has-children:hover>.nav-dropdown,body[data-villa-theme] .theme-header .nav-entry.has-children:focus-within>.nav-dropdown,body[data-villa-theme] .theme-header .nav-entry.has-children.is-open>.nav-dropdown{opacity:1;visibility:visible;transform:translateY(0)}
+body[data-villa-theme] .theme-header .nav-dropdown .nav-entry{display:block}
+body[data-villa-theme] .theme-header .nav-dropdown .nav-entry-top>a{display:flex;width:100%;padding:10px 12px;border:0;white-space:normal}
+@media(max-width:760px){
+ body[data-villa-theme] .theme-header .nav-entry{display:block;width:100%}
+ body[data-villa-theme] .theme-header .nav-entry-top{width:100%;justify-content:space-between}
+ body[data-villa-theme] .theme-header .nav-entry-top>a{flex:1}
+ body[data-villa-theme] .theme-header .nav-dropdown{position:static;display:none;min-width:0;width:100%;padding:5px 8px;margin:3px 0 8px;box-shadow:none;border:0;border-left:2px solid currentColor;opacity:1;visibility:visible;transform:none;transition:none;background:transparent}
+ body[data-villa-theme] .theme-header .nav-entry.has-children.is-open>.nav-dropdown{display:block}
+}
