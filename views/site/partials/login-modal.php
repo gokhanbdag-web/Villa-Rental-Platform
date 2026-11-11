@@ -10,6 +10,13 @@
 <button type="submit" class="villa-login-submit" id="villaLoginSubmit">Giriş Yap</button>
 </form><div class="villa-login-foot">Hesabınız yok mu? <a href="<?= e(app_url('/register')) ?>">Misafir hesabı oluşturun</a></div>
 </div></section>
+<style>
+.villa-logout-form{display:inline-flex;align-items:center;margin:0}
+.villa-logout-button{display:inline-flex;align-items:center;justify-content:center;padding:10px 14px;border:1px solid #f0d9d6;border-radius:10px;background:#fff8f7;color:#a43e35;font:inherit;font-size:13px;font-weight:750;cursor:pointer;transition:background .18s ease,border-color .18s ease}
+.villa-logout-button:hover{background:#fff0ee;border-color:#e9c2bd}
+.nav-logout-entry{display:flex;align-items:center}
+@media(max-width:600px){.villa-logout-form{width:100%}.villa-logout-button{width:100%;justify-content:flex-start;padding:14px 4px;border:0;border-bottom:1px solid var(--line,#e8eeea);border-radius:0;background:transparent;color:inherit;text-align:left}}
+</style>
 <script>
 (function(){
 var modal=document.getElementById('villaLoginModal'),overlay=document.getElementById('villaLoginOverlay'),form=document.getElementById('villaAjaxLogin'),closeBtn=document.getElementById('villaLoginClose'),error=document.getElementById('villaLoginError'),submit=document.getElementById('villaLoginSubmit');
