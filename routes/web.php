@@ -20,6 +20,8 @@ function villa_navigation_tree(PDO $pdo, string $location, string $locale): arra
     unset($root);return $roots;
 }
 
+function villa_safe_return_url(string $url): string { $path=parse_url($url,PHP_URL_PATH)?:'/'; if(!str_starts_with($path,'/')||str_starts_with($path,'//'))return '/'; $query=parse_url($url,PHP_URL_QUERY); return $path.($query!==null?'?'.$query:''); }
+
 function villa_resolve_location(PDO $pdo): array {
     $ids=['country'=>(int)($_POST['location_country_id']??0),'city'=>(int)($_POST['location_city_id']??0),'district'=>(int)($_POST['location_district_id']??0),'neighborhood'=>(int)($_POST['location_neighborhood_id']??0)];
     $get=static function(int $id,string $type,?int $parent) use($pdo): ?array {
@@ -259,6 +261,7 @@ $router->get('/', static function (): void {
 
     $latestProperties=$pdo->query("SELECT p.*,(SELECT pm.file_path FROM property_media pm WHERE pm.property_id=p.id ORDER BY pm.is_cover DESC,pm.sort_order,pm.id LIMIT 1) AS cover_image,(SELECT AVG(r.rating) FROM reviews r WHERE r.property_id=p.id AND r.status='approved') AS rating_average,(SELECT COUNT(*) FROM reviews r WHERE r.property_id=p.id AND r.status='approved') AS rating_count FROM properties p WHERE p.status='published' ORDER BY p.id DESC LIMIT 4")->fetchAll();
     $categories=$pdo->query('SELECT id,name,slug FROM property_categories WHERE is_active=1 ORDER BY sort_order,name LIMIT 8')->fetchAll();
+    $blogPosts=$pdo->query("SELECT id,title,slug,excerpt,featured_image,published_at FROM blog_posts WHERE status='published' AND (published_at IS NULL OR published_at<=NOW()) ORDER BY COALESCE(published_at,created_at) DESC,id DESC LIMIT 12")->fetchAll(PDO::FETCH_ASSOC);
     $homeSections=[];foreach($pdo->query('SELECT * FROM homepage_sections ORDER BY sort_order,id')->fetchAll() as $section){$homeSections[$section['section_key']]=$section;}
     $locationCountries=$pdo->query("SELECT id,name FROM locations WHERE location_type='country' AND is_active=1 ORDER BY sort_order,name")->fetchAll();
     $pageBuilderLayout=PageBuilder::load(ThemeManager::activeSlug($pdo),'home');
@@ -1125,11 +1128,82 @@ $router->get('/page/{slug}', static function (array $params): void {
         }
     }
     $destinations=[];$featuredProperties=[];$latestProperties=[];$categories=[];$stylePhotos=[];
+    $blogPosts=$pdo->query("SELECT id,title,slug,excerpt,featured_image,published_at FROM blog_posts WHERE status='published' AND (published_at IS NULL OR published_at<=NOW()) ORDER BY COALESCE(published_at,created_at) DESC,id DESC LIMIT 12")->fetchAll(PDO::FETCH_ASSOC);
     ThemeManager::render('page.php', get_defined_vars());
 });
 
 
 
+
+
+$router->post('/newsletter/subscribe', static function (): void {
+    verify_csrf();$pdo=Database::connection();
+    if(trim((string)($_POST['website']??''))!==''){redirect('/?newsletter=success');}
+    $email=mb_strtolower(trim((string)($_POST['email']??'')));
+    if(!filter_var($email,FILTER_VALIDATE_EMAIL)||mb_strlen($email)>190||empty($_POST['consent'])){redirect(villa_safe_return_url((string)($_POST['return_to']??'/')).'?newsletter=invalid');}
+    $source=mb_substr((string)($_POST['source']??'site'),0,190);
+    $ip=mb_substr((string)($_SERVER['REMOTE_ADDR']??''),0,45);
+    $s=$pdo->prepare("INSERT INTO newsletter_subscribers(email,status,source,ip_address) VALUES(?,'active',?,?) ON DUPLICATE KEY UPDATE status='active',source=VALUES(source),ip_address=VALUES(ip_address),updated_at=NOW()");
+    $s->execute([$email,$source,$ip]);
+    $back=villa_safe_return_url((string)($_POST['return_to']??'/'));
+    redirect($back.(str_contains($back,'?')?'&':'?').'newsletter=success');
+});
+$router->post('/contact', static function (): void {
+    verify_csrf();$pdo=Database::connection();
+    if(trim((string)($_POST['website']??''))!==''){redirect('/?contact=success');}
+    $name=trim((string)($_POST['name']??''));$email=mb_strtolower(trim((string)($_POST['email']??'')));
+    $phone=trim((string)($_POST['phone']??''));$subject=trim((string)($_POST['subject']??''));$message=trim((string)($_POST['message']??''));
+    if($name===''||mb_strlen($name)>150||!filter_var($email,FILTER_VALIDATE_EMAIL)||mb_strlen($email)>190||$message===''||mb_strlen($message)>5000||mb_strlen($phone)>50||mb_strlen($subject)>220){
+        $back=villa_safe_return_url((string)($_POST['return_to']??'/'));redirect($back.(str_contains($back,'?')?'&':'?').'contact=invalid');
+    }
+    $s=$pdo->prepare("INSERT INTO contact_messages(name,email,phone,subject,message,ip_address) VALUES(?,?,?,?,?,?)");
+    $s->execute([$name,$email,$phone,$subject,$message,mb_substr((string)($_SERVER['REMOTE_ADDR']??''),0,45)]);
+    $back=villa_safe_return_url((string)($_POST['return_to']??'/'));redirect($back.(str_contains($back,'?')?'&':'?').'contact=success');
+});
+$router->get('/blog/{slug}', static function (array $params): void {
+    $pdo=Database::connection();$s=$pdo->prepare("SELECT * FROM blog_posts WHERE slug=? AND status='published' AND (published_at IS NULL OR published_at<=NOW()) LIMIT 1");$s->execute([(string)$params['slug']]);$post=$s->fetch(PDO::FETCH_ASSOC);
+    if(!$post){http_response_code(404);echo 'Yazı bulunamadı.';return;}
+    $page=['title'=>$post['title'],'content'=>trim((string)$post['excerpt'])."\n\n".(string)$post['content']];
+    $content=$pdo->query("SELECT content_key,content_value FROM site_content WHERE language_code='tr'")->fetchAll(PDO::FETCH_KEY_PAIR);$siteName=$content['site_name']??'VillaStay';
+    $navigation=villa_navigation_tree($pdo,'header','tr');$footerNavigation=villa_navigation_tree($pdo,'footer','tr');
+    $mode=(string)($pdo->query("SELECT setting_value FROM settings WHERE setting_key='app.mode' LIMIT 1")->fetchColumn() ?: 'single_vendor');$user=Auth::user();$locale='tr';
+    $pageBuilderLayout=['widgets'=>[],'status'=>'draft'];$destinations=[];$featuredProperties=[];$latestProperties=[];$categories=[];$stylePhotos=[];
+    ThemeManager::render('page.php',get_defined_vars());
+});
+
+
+$router->get('/admin/blog', static function (): void {
+    Auth::requireRole(['super_admin','admin']);$posts=Database::connection()->query("SELECT id,title,slug,status,published_at,updated_at FROM blog_posts ORDER BY updated_at DESC,id DESC")->fetchAll(PDO::FETCH_ASSOC);$post=null;require APP_ROOT.'/views/admin/blog.php';
+});
+$router->get('/admin/blog/new', static function (): void {
+    Auth::requireRole(['super_admin','admin']);$posts=[];$post=[];require APP_ROOT.'/views/admin/blog.php';
+});
+$router->get('/admin/blog/{id}', static function (array $params): void {
+    Auth::requireRole(['super_admin','admin']);$pdo=Database::connection();$posts=[];$s=$pdo->prepare('SELECT * FROM blog_posts WHERE id=?');$s->execute([(int)$params['id']]);$post=$s->fetch(PDO::FETCH_ASSOC);if(!$post){http_response_code(404);exit('Blog yazısı bulunamadı.');}require APP_ROOT.'/views/admin/blog.php';
+});
+$router->post('/admin/blog/save', static function (): void {
+    Auth::requireRole(['super_admin','admin']);verify_csrf();$pdo=Database::connection();$id=(int)($_POST['id']??0);
+    $title=trim((string)($_POST['title']??''));$slug=strtolower(trim((string)($_POST['slug']??'')));$slug=trim(preg_replace('/[^a-z0-9-]+/','-',$slug),'-');
+    $excerpt=trim((string)($_POST['excerpt']??''));$content=trim((string)($_POST['content']??''));$image=trim((string)($_POST['featured_image']??''));$status=($_POST['status']??'')==='published'?'published':'draft';
+    if($title===''||$slug===''||$content===''||mb_strlen($title)>220||mb_strlen($slug)>190||mb_strlen($excerpt)>1500||mb_strlen($image)>500||($image!==''&&!preg_match('~^(https?://|/)~i',$image))){http_response_code(422);exit('Başlık, URL, içerik ve görsel adresini kontrol edin.');}
+    try{if($id){$s=$pdo->prepare("UPDATE blog_posts SET title=?,slug=?,excerpt=?,content=?,featured_image=?,status=?,published_at=IF(?='published',COALESCE(published_at,NOW()),NULL) WHERE id=?");$s->execute([$title,$slug,$excerpt,$content,$image,$status,$status,$id]);}else{$s=$pdo->prepare("INSERT INTO blog_posts(title,slug,excerpt,content,featured_image,status,published_at) VALUES(?,?,?,?,?,?,IF(?='published',NOW(),NULL))");$s->execute([$title,$slug,$excerpt,$content,$image,$status,$status]);}}catch(PDOException $e){http_response_code(409);exit('Bu URL kısa adı başka bir yazıda kullanılıyor.');}
+    redirect('/admin/blog');
+});
+$router->post('/admin/blog/delete', static function (): void {
+    Auth::requireRole(['super_admin','admin']);verify_csrf();$s=Database::connection()->prepare('DELETE FROM blog_posts WHERE id=?');$s->execute([(int)($_POST['id']??0)]);redirect('/admin/blog');
+});
+$router->get('/admin/newsletter', static function (): void {
+    Auth::requireRole(['super_admin','admin']);$pdo=Database::connection();$subscribers=$pdo->query('SELECT id,email,status,source,created_at FROM newsletter_subscribers ORDER BY created_at DESC,id DESC')->fetchAll(PDO::FETCH_ASSOC);$activeCount=(int)$pdo->query("SELECT COUNT(*) FROM newsletter_subscribers WHERE status='active'")->fetchColumn();require APP_ROOT.'/views/admin/newsletter.php';
+});
+$router->post('/admin/newsletter/toggle', static function (): void {
+    Auth::requireRole(['super_admin','admin']);verify_csrf();$s=Database::connection()->prepare("UPDATE newsletter_subscribers SET status=IF(status='active','unsubscribed','active') WHERE id=?");$s->execute([(int)($_POST['id']??0)]);redirect('/admin/newsletter');
+});
+$router->get('/admin/messages', static function (): void {
+    Auth::requireRole(['super_admin','admin']);$pdo=Database::connection();$messages=$pdo->query('SELECT * FROM contact_messages ORDER BY FIELD(status,\'new\',\'read\',\'replied\',\'archived\'),created_at DESC,id DESC')->fetchAll(PDO::FETCH_ASSOC);$newCount=(int)$pdo->query("SELECT COUNT(*) FROM contact_messages WHERE status='new'")->fetchColumn();require APP_ROOT.'/views/admin/messages.php';
+});
+$router->post('/admin/messages/status', static function (): void {
+    Auth::requireRole(['super_admin','admin']);verify_csrf();$status=(string)($_POST['status']??'read');if(!in_array($status,['new','read','replied','archived'],true))$status='read';$s=Database::connection()->prepare('UPDATE contact_messages SET status=? WHERE id=?');$s->execute([$status,(int)($_POST['id']??0)]);redirect('/admin/messages');
+});
 
 $router->get('/admin/translations', static function (): void {
     Auth::requireRole(['super_admin','admin']);$pdo=Database::connection();$languages=$pdo->query('SELECT code,name FROM languages WHERE is_active=1 ORDER BY is_default DESC,name')->fetchAll();
