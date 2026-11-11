@@ -26,4 +26,9 @@ $header = '<header class="theme-header theme-header--luxury"><div class="theme-h
 $html = preg_replace('~<header\\b[^>]*>.*?</header>(?:\\s*<div class="drawer-overlay" id="(?:menuOverlay|siteMenuOverlay)"[^>]*></div>)?~s', $header, $html, 1) ?? $html;
 $menuScript = '<script>(function(){var b=document.getElementById("menuToggle"),n=document.getElementById("siteNavigation"),o=document.getElementById("menuOverlay");if(!b||!n||!o)return;function close(){n.classList.remove("is-open");o.classList.remove("is-open");b.setAttribute("aria-expanded","false");b.textContent="☰"}b.addEventListener("click",function(){var open=!n.classList.contains("is-open");n.classList.toggle("is-open",open);o.classList.toggle("is-open",open);b.setAttribute("aria-expanded",open?"true":"false");b.textContent=open?"×":"☰"});o.addEventListener("click",close);n.addEventListener("click",function(e){if(e.target.closest("a"))close()});document.addEventListener("keydown",function(e){if(e.key==="Escape")close()})})();</script>';
 $html = preg_replace('~</body>~i', $menuScript . '</body>', $html, 1) ?? $html;
+$html = preg_replace('~<body\\b~i', '<body class="villa-page-prestige"', $html, 1) ?? $html;
+$themePageCss = <<<'CSS'
+body.villa-page-prestige{background:#f5f1e8;color:#2a2c30}body.villa-page-prestige main.wrap{max-width:1180px;margin:0 auto;padding:70px 30px 90px}body.villa-page-prestige main h1{text-align:center;font:400 clamp(42px,5vw,70px) Georgia,serif;color:#202b3a;margin:0 auto 42px;max-width:900px}body.villa-page-prestige main article{max-width:780px;margin:0 auto;border-top:1px solid #cdbd9d;border-bottom:1px solid #cdbd9d;padding:38px 55px;color:#5e5b53;font:17px/2.1 Georgia,serif}body.villa-page-prestige .site-footer{background:#1e2c40}
+CSS;
+$html = str_replace('</head>', '<style>' . $themePageCss . '</style></head>', $html);
 echo $html;
