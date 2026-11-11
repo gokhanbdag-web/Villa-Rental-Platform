@@ -26,7 +26,6 @@ $accountLinks = [
     ['/account/bookings','Rezervasyonlarım'],
     ['/favorites','Favorilerim'],
     ['/account/notifications','Bildirimler'],
-    ['/account/messages','Mesajlarım'],
 ];
 $accountNav = '<nav class="villa-account-nav" aria-label="Hesap menüsü">';
 foreach ($accountLinks as [$path,$label]) {
