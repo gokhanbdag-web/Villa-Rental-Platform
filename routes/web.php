@@ -753,7 +753,7 @@ $router->get('/vendor/bookings', static function (): void {
     $v=$pdo->prepare('SELECT id FROM vendors WHERE user_id=?');$v->execute([(int)Auth::user()['id']]);$vendorId=(int)$v->fetchColumn();
     if(!$vendorId){http_response_code(403);return;}
     $status=(string)($_GET['status']??'');$allowed=['pending','confirmed','cancelled','completed'];
-    $sql='SELECT b.*,p.title,u.username AS guest_name,u.email AS guest_email FROM bookings b JOIN properties p ON p.id=b.property_id JOIN users u ON u.id=b.guest_user_id WHERE p.vendor_id=?';
+    $sql="SELECT b.*,p.title,COALESCE(NULLIF(b.guest_name,''),u.username,'Misafir') AS guest_name,COALESCE(NULLIF(b.guest_email,''),u.email,'') AS guest_email,COALESCE(b.guest_phone,'') AS guest_phone FROM bookings b JOIN properties p ON p.id=b.property_id LEFT JOIN users u ON u.id=b.guest_user_id WHERE p.vendor_id=?";
     if(in_array($status,$allowed,true)){$sql.=' AND b.status=?';$s=$pdo->prepare($sql.' ORDER BY b.created_at DESC LIMIT 250');$s->execute([$vendorId,$status]);$bookings=$s->fetchAll();}
     else{$s=$pdo->prepare($sql.' ORDER BY b.created_at DESC LIMIT 250');$s->execute([$vendorId]);$bookings=$s->fetchAll();}
     $bookingFilter=in_array($status,$allowed,true)?$status:'';
@@ -781,8 +781,10 @@ $router->post('/vendor/bookings/status', static function (): void {
         }
         $u=$pdo->prepare('UPDATE bookings SET status=? WHERE id=?');$u->execute([$status,$id]);
         $titles=['confirmed'=>'Rezervasyonunuz onaylandı','cancelled'=>'Rezervasyonunuz iptal edildi','completed'=>'Konaklamanız tamamlandı'];
-        $n=$pdo->prepare('INSERT INTO notifications(user_id,notification_type,title,body,created_at) VALUES(?,?,?,?,NOW())');
-        $n->execute([(int)$booking['guest_user_id'],'booking.status_changed',$titles[$status],'Rezervasyon durumunuz güncellendi.']);
+        if(!empty($booking['guest_user_id'])){
+            $n=$pdo->prepare('INSERT INTO notifications(user_id,notification_type,title,body,created_at) VALUES(?,?,?,?,NOW())');
+            $n->execute([(int)$booking['guest_user_id'],'booking.status_changed',$titles[$status],'Rezervasyon durumunuz güncellendi.']);
+        }
         $log=$pdo->prepare('INSERT INTO audit_logs(user_id,action,entity_type,entity_id,ip_address,details,created_at) VALUES(?,?,?,?,?,?,NOW())');
         $log->execute([(int)Auth::user()['id'],'booking.status_changed','booking',$id,$_SERVER['REMOTE_ADDR']??null,json_encode(['from'=>$booking['status'],'to'=>$status],JSON_UNESCAPED_UNICODE)]);
         $pdo->commit();redirect('/vendor/bookings');
