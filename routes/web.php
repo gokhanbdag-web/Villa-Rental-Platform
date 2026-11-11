@@ -81,6 +81,10 @@ $router->get('/admin/builder', static function (): void {
     if(!isset($pageNames[$pageKey]))$pageKey='home';
     $layout=PageBuilder::load($themeSlug,$pageKey);
     $widgetRegistry=PageBuilder::widgets();
+    $builderMode=(string)($pdo->query("SELECT setting_value FROM settings WHERE setting_key='app.mode' LIMIT 1")->fetchColumn()?:'single_vendor');
+    if($builderMode!=='multi_vendor')unset($widgetRegistry['hosts']);
+    $builderCountries=$pdo->query("SELECT id,name FROM locations WHERE location_type='country' AND is_active=1 ORDER BY sort_order,name")->fetchAll(PDO::FETCH_ASSOC);
+    $builderCities=$pdo->query("SELECT l.id,CONCAT(p.name,' / ',l.name) AS name FROM locations l JOIN locations p ON p.id=l.parent_id WHERE l.location_type='city' AND l.is_active=1 AND p.is_active=1 ORDER BY p.name,l.name")->fetchAll(PDO::FETCH_ASSOC);
     require APP_ROOT.'/views/admin/builder.php';
 });
 $router->post('/admin/builder/preview', static function (): void {
