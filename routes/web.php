@@ -232,6 +232,7 @@ $router->get('/', static function (): void {
     $categories=$pdo->query('SELECT id,name,slug FROM property_categories WHERE is_active=1 ORDER BY sort_order,name LIMIT 8')->fetchAll();
     $homeSections=[];foreach($pdo->query('SELECT * FROM homepage_sections ORDER BY sort_order,id')->fetchAll() as $section){$homeSections[$section['section_key']]=$section;}
     $locationCountries=$pdo->query("SELECT id,name FROM locations WHERE location_type='country' AND is_active=1 ORDER BY sort_order,name")->fetchAll();
+    $pageBuilderLayout=PageBuilder::load(ThemeManager::activeSlug($pdo),'home');
     ThemeManager::render('landing.php', get_defined_vars());
 });
 
