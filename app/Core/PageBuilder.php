@@ -186,7 +186,7 @@ final class PageBuilder
             if(!in_array($style,$registry[$type]['styles'],true))$style=$registry[$type]['default_style'];
             $settings=is_array($item['settings']??null)?$item['settings']:[];
             $safe=self::sanitizeSettings($settings);
-
+            $clean[]=['id'=>$id,'type'=>$type,'style'=>$style,'settings'=>$safe];
         }
         return ['widgets'=>$clean,'status'=>'published','version'=>0,'updated_at'=>null];
     }
@@ -210,7 +210,7 @@ final class PageBuilder
             if(!in_array($style,$registry[$type]['styles'],true))$style=$registry[$type]['default_style'];
             $settings=is_array($item['settings']??null)?$item['settings']:[];
             $safe=self::sanitizeSettings($settings);
-
+            $clean[]=['id'=>$id,'type'=>$type,'style'=>$style,'settings'=>$safe];
         }
         $json=json_encode(['widgets'=>$clean],JSON_UNESCAPED_UNICODE|JSON_UNESCAPED_SLASHES|JSON_THROW_ON_ERROR);
         $pdo=Database::connection();
