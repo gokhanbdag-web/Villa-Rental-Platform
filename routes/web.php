@@ -589,6 +589,31 @@ $router->post('/vendor/properties/delete', static function (): void {
     $b=$pdo->prepare('SELECT COUNT(*) FROM bookings WHERE property_id=?');$b->execute([$id]);if((int)$b->fetchColumn()>0){$archive=$pdo->prepare("UPDATE properties SET status='archived',updated_at=NOW() WHERE id=? AND vendor_id=?");$archive->execute([$id,$vendorId]);}else{delete_property_uploads($pdo,$id);$del=$pdo->prepare('DELETE FROM properties WHERE id=? AND vendor_id=?');$del->execute([$id,$vendorId]);}redirect('/vendor/properties');
 });
 
+$router->post('/admin/properties/media/manage', static function (): void {
+    Auth::requireRole(['super_admin','admin']); verify_csrf();
+    $pdo=Database::connection(); $pid=(int)($_POST['property_id']??0); $action=(string)($_POST['action']??'');
+    $check=$pdo->prepare('SELECT id FROM properties WHERE id=?'); $check->execute([$pid]); if(!$check->fetchColumn()){http_response_code(404);exit('Konaklama bulunamadı.');}
+    if($action==='cover'){
+        $mid=(int)($_POST['media_id']??0);$valid=$pdo->prepare('SELECT id FROM property_media WHERE id=? AND property_id=?');$valid->execute([$mid,$pid]);if(!$valid->fetchColumn()){http_response_code(404);exit('Fotoğraf bulunamadı.');}
+        $pdo->beginTransaction();try{$pdo->prepare('UPDATE property_media SET is_cover=0 WHERE property_id=?')->execute([$pid]);$pdo->prepare('UPDATE property_media SET is_cover=1 WHERE id=? AND property_id=?')->execute([$mid,$pid]);$pdo->commit();}catch(Throwable $e){$pdo->rollBack();throw $e;}
+    }elseif($action==='sort'){
+        $ids=array_values(array_unique(array_filter(array_map('intval',(array)($_POST['media_ids']??[])),static fn($v)=>$v>0)));
+        $all=$pdo->prepare('SELECT id FROM property_media WHERE property_id=?');$all->execute([$pid]);$known=array_map('intval',$all->fetchAll(PDO::FETCH_COLUMN));
+        if(count($ids)!==count($known)||array_diff($ids,$known)){http_response_code(422);exit('Fotoğraf sıralaması doğrulanamadı.');}
+        $pdo->beginTransaction();try{$u=$pdo->prepare('UPDATE property_media SET sort_order=? WHERE id=? AND property_id=?');foreach($ids as $i=>$mid)$u->execute([$i,$mid,$pid]);$pdo->commit();}catch(Throwable $e){$pdo->rollBack();throw $e;}
+    }else{http_response_code(422);exit('Geçersiz işlem.');}
+    header('Content-Type: application/json; charset=utf-8');echo json_encode(['ok'=>true],JSON_THROW_ON_ERROR);
+});
+$router->post('/vendor/properties/media/manage', static function (): void {
+    Auth::requireRole(['vendor']); verify_csrf();$pdo=Database::connection();
+    $v=$pdo->prepare('SELECT id FROM vendors WHERE user_id=?');$v->execute([(int)Auth::user()['id']]);$vid=(int)$v->fetchColumn();$pid=(int)($_POST['property_id']??0);
+    $own=$pdo->prepare('SELECT id FROM properties WHERE id=? AND vendor_id=?');$own->execute([$pid,$vid]);if(!$own->fetchColumn()){http_response_code(404);exit('Konaklama bulunamadı.');}
+    $action=(string)($_POST['action']??'');
+    if($action==='cover'){$mid=(int)($_POST['media_id']??0);$valid=$pdo->prepare('SELECT id FROM property_media WHERE id=? AND property_id=?');$valid->execute([$mid,$pid]);if(!$valid->fetchColumn()){http_response_code(404);exit('Fotoğraf bulunamadı.');}$pdo->beginTransaction();try{$pdo->prepare('UPDATE property_media SET is_cover=0 WHERE property_id=?')->execute([$pid]);$pdo->prepare('UPDATE property_media SET is_cover=1 WHERE id=? AND property_id=?')->execute([$mid,$pid]);$pdo->commit();}catch(Throwable $e){$pdo->rollBack();throw $e;}}
+    elseif($action==='sort'){$ids=array_values(array_unique(array_filter(array_map('intval',(array)($_POST['media_ids']??[])),static fn($v)=>$v>0)));$all=$pdo->prepare('SELECT id FROM property_media WHERE property_id=?');$all->execute([$pid]);$known=array_map('intval',$all->fetchAll(PDO::FETCH_COLUMN));if(count($ids)!==count($known)||array_diff($ids,$known)){http_response_code(422);exit('Fotoğraf sıralaması doğrulanamadı.');}$pdo->beginTransaction();try{$u=$pdo->prepare('UPDATE property_media SET sort_order=? WHERE id=? AND property_id=?');foreach($ids as $i=>$mid)$u->execute([$i,$mid,$pid]);$pdo->commit();}catch(Throwable $e){$pdo->rollBack();throw $e;}}
+    else{http_response_code(422);exit('Geçersiz işlem.');}
+    header('Content-Type: application/json; charset=utf-8');echo json_encode(['ok'=>true],JSON_THROW_ON_ERROR);
+});
 $router->post('/admin/properties/media/delete', static function (): void {
     Auth::requireRole(['super_admin','admin']);verify_csrf();$pid=(int)($_POST['property_id']??0);$mid=(int)($_POST['media_id']??0);delete_property_media(Database::connection(),$pid,$mid);redirect('/admin/properties/'.$pid);
 });
