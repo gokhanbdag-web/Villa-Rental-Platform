@@ -95,3 +95,41 @@ body[data-villa-theme] .theme-header .nav-dropdown .nav-entry-top>a{display:flex
  body[data-villa-theme="modern"] .theme-menu-toggle{position:relative;z-index:10030!important;pointer-events:auto!important}
  body[data-villa-theme="modern"] .drawer-overlay{z-index:10000!important;pointer-events:auto}
 }
+
+
+/* Premium stay cards — Modern urban edition */
+body[data-villa-theme="modern"] .cards,
+body[data-villa-theme="modern"] .grid{gap:20px}
+body[data-villa-theme="modern"] .stay{
+ display:block;min-width:0;overflow:hidden;padding:0 0 17px;
+ border:1px solid #303946;border-radius:7px;background:#202833;color:#f3f5f7;
+ box-shadow:0 12px 28px rgba(8,13,20,.13);
+ transition:transform .25s ease,border-color .25s ease,box-shadow .25s ease
+}
+body[data-villa-theme="modern"] .stay:hover{
+ transform:translateY(-5px);border-color:#8291a2;box-shadow:0 20px 38px rgba(8,13,20,.25)
+}
+body[data-villa-theme="modern"] .stay-photo,
+body[data-villa-theme="modern"] .grid .photo{height:238px;margin:0 0 15px;border-radius:0;position:relative;overflow:hidden;background:#303946}
+body[data-villa-theme="modern"] .stay-photo:after,
+body[data-villa-theme="modern"] .grid .photo:after{content:"";position:absolute;inset:55% 0 0;background:linear-gradient(transparent,rgba(9,14,21,.25));pointer-events:none}
+body[data-villa-theme="modern"] .stay-photo img,
+body[data-villa-theme="modern"] .grid .photo img{width:100%;height:100%;object-fit:cover;transition:transform .5s ease;filter:saturate(.88)}
+body[data-villa-theme="modern"] .stay:hover .stay-photo img,
+body[data-villa-theme="modern"] .stay:hover .photo img{transform:scale(1.045);filter:saturate(1.05)}
+body[data-villa-theme="modern"] .stay h3,
+body[data-villa-theme="modern"] .stay .meta,
+body[data-villa-theme="modern"] .stay .muted,
+body[data-villa-theme="modern"] .stay .rating-line,
+body[data-villa-theme="modern"] .stay .price,
+body[data-villa-theme="modern"] .stay .stay-price{margin-left:17px;margin-right:17px}
+body[data-villa-theme="modern"] .stay h3{font-size:16px;line-height:1.4;font-weight:800;color:#fff;margin-top:0;margin-bottom:7px}
+body[data-villa-theme="modern"] .stay .meta,
+body[data-villa-theme="modern"] .stay .muted{font-size:12px;color:#aab4c0;line-height:1.5}
+body[data-villa-theme="modern"] .stay .rating-line{margin-top:10px;font-size:11px;color:#b6c0ca}
+body[data-villa-theme="modern"] .stay .rating-score{color:#e7c77c;font-size:13px}
+body[data-villa-theme="modern"] .stay .price,
+body[data-villa-theme="modern"] .stay .stay-price{margin-top:13px;padding-top:12px;border-top:1px solid #3b4653;color:#aab4c0;font-size:12px}
+body[data-villa-theme="modern"] .stay .price strong,
+body[data-villa-theme="modern"] .stay .stay-price strong{color:#fff;font-size:20px;font-weight:900}
+@media(max-width:600px){body[data-villa-theme="modern"] .cards,body[data-villa-theme="modern"] .grid{gap:12px}body[data-villa-theme="modern"] .stay{padding-bottom:12px}body[data-villa-theme="modern"] .stay-photo,body[data-villa-theme="modern"] .grid .photo{height:155px;margin-bottom:11px}body[data-villa-theme="modern"] .stay h3,body[data-villa-theme="modern"] .stay .meta,body[data-villa-theme="modern"] .stay .muted,body[data-villa-theme="modern"] .stay .rating-line,body[data-villa-theme="modern"] .stay .price,body[data-villa-theme="modern"] .stay .stay-price{margin-left:11px;margin-right:11px}body[data-villa-theme="modern"] .stay h3{font-size:13px}body[data-villa-theme="modern"] .stay .price strong,body[data-villa-theme="modern"] .stay .stay-price strong{font-size:16px}}
