@@ -4,7 +4,8 @@ RewriteEngine On
 
 # Never expose application internals, configuration, SQL, or uploaded private storage.
 RewriteRule ^(app|config|database|storage|views|routes)/ - [F,L,NC]
-RewriteRule ^themes/ - [F,L,NC] # Theme files are served only through the validated asset route.
+# Theme files are served only through the validated asset route.
+RewriteRule ^themes/ - [F,L,NC]
 RewriteRule ^\. - [F,L]
 
 # Map public assets when the repository root is used as the document root.
