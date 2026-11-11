@@ -29,7 +29,8 @@ $accountLinks = [
 ];
 $accountNav = '<nav class="villa-account-nav" aria-label="Hesap menüsü">';
 foreach ($accountLinks as [$path,$label]) {
-    $active = $accountPath === $path || str_starts_with($accountPath, $path . '/');
+    $linkPath = (string)(parse_url(app_url($path), PHP_URL_PATH) ?: $path);
+    $active = $accountPath === $linkPath || str_starts_with($accountPath, rtrim($linkPath, '/') . '/');
     $accountNav .= '<a href="' . e(app_url($path)) . '"' . ($active ? ' aria-current="page" class="is-active"' : '') . '>' . e($label) . '</a>';
 }
 $accountNav .= '</nav>';
