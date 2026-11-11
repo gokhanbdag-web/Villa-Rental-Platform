@@ -100,10 +100,10 @@ final class PageBuilder
             if(!in_array($style,$registry[$type]['styles'],true))$style=$registry[$type]['default_style'];
             $settings=is_array($item['settings']??null)?$item['settings']:[];
             $safe=[];
-            foreach(['eyebrow','title','subtitle','description','items_text','image_url','mobile_image_url','video_url','map_query','contact_phone','contact_email','contact_address','target_date','button_text','button_url','alignment','background','columns','limit','show_title','layout','hero_layout','hero_text_position','search_position','search_layout','search_columns','show_search','hero_height','overlay_opacity'] as $key){
+            foreach(['eyebrow','title','subtitle','description','items_text','image_url','mobile_image_url','video_url','map_query','contact_phone','contact_email','contact_address','target_date','button_text','button_url','alignment','background','columns','limit','show_title','layout','hero_layout','hero_text_position','search_position','search_layout','search_columns','show_search','hero_height','overlay_opacity','sort_by','location_id','country_id','category_id','min_guests','min_price','max_price'] as $key){
                 if(!array_key_exists($key,$settings))continue;$value=$settings[$key];
                 if(in_array($key,['columns','limit','search_columns','hero_height','overlay_opacity'],true)){
-                    $ranges=['columns'=>[1,4],'limit'=>[1,24],'search_columns'=>[1,5],'hero_height'=>[300,900],'overlay_opacity'=>[0,90]];
+                    $ranges=['columns'=>[1,4],'limit'=>[1,24],'search_columns'=>[1,5],'hero_height'=>[300,900],'overlay_opacity'=>[0,90],'location_id'=>[0,2147483647],'country_id'=>[0,2147483647],'category_id'=>[0,2147483647],'min_guests'=>[0,100],'min_price'=>[0,100000000],'max_price'=>[0,100000000]];
                     [$min,$max]=$ranges[$key];$safe[$key]=max($min,min($max,(int)$value));continue;
                 }
                 if(in_array($key,['show_title','show_search'],true)){$safe[$key]=filter_var($value,FILTER_VALIDATE_BOOLEAN);continue;}
@@ -137,10 +137,10 @@ final class PageBuilder
             if(!in_array($style,$registry[$type]['styles'],true))$style=$registry[$type]['default_style'];
             $settings=is_array($item['settings']??null)?$item['settings']:[];
             $safe=[];
-            foreach(['eyebrow','title','subtitle','description','items_text','image_url','mobile_image_url','video_url','map_query','contact_phone','contact_email','contact_address','target_date','button_text','button_url','alignment','background','columns','limit','show_title','layout','hero_layout','hero_text_position','search_position','search_layout','search_columns','show_search','hero_height','overlay_opacity'] as $key){
+            foreach(['eyebrow','title','subtitle','description','items_text','image_url','mobile_image_url','video_url','map_query','contact_phone','contact_email','contact_address','target_date','button_text','button_url','alignment','background','columns','limit','show_title','layout','hero_layout','hero_text_position','search_position','search_layout','search_columns','show_search','hero_height','overlay_opacity','sort_by','location_id','country_id','category_id','min_guests','min_price','max_price'] as $key){
                 if(!array_key_exists($key,$settings))continue;
                 $value=$settings[$key];
-                if(in_array($key,['columns','limit','search_columns','hero_height','overlay_opacity'],true)){$ranges=['columns'=>[1,4],'limit'=>[1,24],'search_columns'=>[1,5],'hero_height'=>[300,900],'overlay_opacity'=>[0,90]];[$min,$max]=$ranges[$key];$safe[$key]=max($min,min($max,(int)$value));continue;}
+                if(in_array($key,['columns','limit','search_columns','hero_height','overlay_opacity'],true)){$ranges=['columns'=>[1,4],'limit'=>[1,24],'search_columns'=>[1,5],'hero_height'=>[300,900],'overlay_opacity'=>[0,90],'location_id'=>[0,2147483647],'country_id'=>[0,2147483647],'category_id'=>[0,2147483647],'min_guests'=>[0,100],'min_price'=>[0,100000000],'max_price'=>[0,100000000]];[$min,$max]=$ranges[$key];$safe[$key]=max($min,min($max,(int)$value));continue;}
                 if(in_array($key,['show_title','show_search'],true)){$safe[$key]=(bool)$value;continue;}
                 $choices=['hero_layout'=>['overlay','split','minimal'],'hero_text_position'=>['left','center','right'],'search_position'=>['below','left','right','inside-bottom'],'search_layout'=>['horizontal','vertical'],'alignment'=>['left','center','right']];
                 if(isset($choices[$key])){$candidate=(string)$value;$safe[$key]=in_array($candidate,$choices[$key],true)?$candidate:$choices[$key][0];continue;}
