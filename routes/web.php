@@ -21,6 +21,7 @@ function villa_navigation_tree(PDO $pdo, string $location, string $locale): arra
 }
 
 function villa_safe_return_url(string $url): string { $path=parse_url($url,PHP_URL_PATH)?:'/'; if(!str_starts_with($path,'/')||str_starts_with($path,'//'))return '/'; $query=parse_url($url,PHP_URL_QUERY); return $path.($query!==null?'?'.$query:''); }
+function villa_return_with_status(string $url,string $key,string $value): string { $back=villa_safe_return_url($url); return $back.(str_contains($back,'?')?'&':'?').rawurlencode($key).'='.rawurlencode($value); }
 
 function villa_resolve_location(PDO $pdo): array {
     $ids=['country'=>(int)($_POST['location_country_id']??0),'city'=>(int)($_POST['location_city_id']??0),'district'=>(int)($_POST['location_district_id']??0),'neighborhood'=>(int)($_POST['location_neighborhood_id']??0)];
@@ -1140,7 +1141,7 @@ $router->post('/newsletter/subscribe', static function (): void {
     verify_csrf();$pdo=Database::connection();
     if(trim((string)($_POST['website']??''))!==''){redirect('/?newsletter=success');}
     $email=mb_strtolower(trim((string)($_POST['email']??'')));
-    if(!filter_var($email,FILTER_VALIDATE_EMAIL)||mb_strlen($email)>190||empty($_POST['consent'])){redirect(villa_safe_return_url((string)($_POST['return_to']??'/')).'?newsletter=invalid');}
+    if(!filter_var($email,FILTER_VALIDATE_EMAIL)||mb_strlen($email)>190||empty($_POST['consent'])){redirect(villa_return_with_status((string)($_POST['return_to']??'/'),'newsletter','invalid'));}
     $source=mb_substr((string)($_POST['source']??'site'),0,190);
     $ip=mb_substr((string)($_SERVER['REMOTE_ADDR']??''),0,45);
     $s=$pdo->prepare("INSERT INTO newsletter_subscribers(email,status,source,ip_address) VALUES(?,'active',?,?) ON DUPLICATE KEY UPDATE status='active',source=VALUES(source),ip_address=VALUES(ip_address),updated_at=NOW()");
@@ -1154,11 +1155,11 @@ $router->post('/contact', static function (): void {
     $name=trim((string)($_POST['name']??''));$email=mb_strtolower(trim((string)($_POST['email']??'')));
     $phone=trim((string)($_POST['phone']??''));$subject=trim((string)($_POST['subject']??''));$message=trim((string)($_POST['message']??''));
     if($name===''||mb_strlen($name)>150||!filter_var($email,FILTER_VALIDATE_EMAIL)||mb_strlen($email)>190||$message===''||mb_strlen($message)>5000||mb_strlen($phone)>50||mb_strlen($subject)>220){
-        $back=villa_safe_return_url((string)($_POST['return_to']??'/'));redirect($back.(str_contains($back,'?')?'&':'?').'contact=invalid');
+        redirect(villa_return_with_status((string)($_POST['return_to']??'/'),'contact','invalid'));
     }
     $s=$pdo->prepare("INSERT INTO contact_messages(name,email,phone,subject,message,ip_address) VALUES(?,?,?,?,?,?)");
     $s->execute([$name,$email,$phone,$subject,$message,mb_substr((string)($_SERVER['REMOTE_ADDR']??''),0,45)]);
-    $back=villa_safe_return_url((string)($_POST['return_to']??'/'));redirect($back.(str_contains($back,'?')?'&':'?').'contact=success');
+    redirect(villa_return_with_status((string)($_POST['return_to']??'/'),'contact','success'));
 });
 $router->get('/blog/{slug}', static function (array $params): void {
     $pdo=Database::connection();$s=$pdo->prepare("SELECT * FROM blog_posts WHERE slug=? AND status='published' AND (published_at IS NULL OR published_at<=NOW()) LIMIT 1");$s->execute([(string)$params['slug']]);$post=$s->fetch(PDO::FETCH_ASSOC);
