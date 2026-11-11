@@ -1,0 +1,21 @@
+-- Additional editable labels used by the Mediterranean homepage.
+INSERT IGNORE INTO site_content(content_key,language_code,content_value) VALUES('home_latest_eyebrow','tr','YENİ EKLENENLER');
+INSERT IGNORE INTO site_content(content_key,language_code,content_value) VALUES('home_latest_link','tr','Tüm villaları gör ↗');
+INSERT IGNORE INTO site_content(content_key,language_code,content_value) VALUES('home_concepts_eyebrow','tr','TATİLİNİZİ KEŞFEDİN');
+INSERT IGNORE INTO site_content(content_key,language_code,content_value) VALUES('home_concepts_count_label','tr','villa seçeneği');
+INSERT IGNORE INTO site_content(content_key,language_code,content_value) VALUES('home_collections_eyebrow','tr','ÖZENLE HAZIRLANDI');
+INSERT IGNORE INTO site_content(content_key,language_code,content_value) VALUES('home_collection_count_suffix','tr','yayındaki villa arasından seçtiklerimiz');
+INSERT IGNORE INTO site_content(content_key,language_code,content_value) VALUES('home_collection_link','tr','Tümünü gör ↗');
+INSERT IGNORE INTO site_content(content_key,language_code,content_value) VALUES('home_regions_eyebrow','tr','KEŞFETMEYE BAŞLA');
+INSERT IGNORE INTO site_content(content_key,language_code,content_value) VALUES('home_reviews_eyebrow','tr','MİSAFİR DENEYİMLERİ');
+INSERT IGNORE INTO site_content(content_key,language_code,content_value) VALUES('home_review_verified_label','tr','Doğrulanmış konaklama yorumu');
+INSERT IGNORE INTO site_content(content_key,language_code,content_value) VALUES('home_faq_eyebrow','tr','YARDIM MERKEZİ');
+INSERT IGNORE INTO site_content(content_key,language_code,content_value) VALUES('home_support_eyebrow','tr','CANLI DESTEK');
+INSERT IGNORE INTO site_content(content_key,language_code,content_value) VALUES('home_support_whatsapp_label','tr','WhatsApp ile yazın ↗');
+INSERT IGNORE INTO site_content(content_key,language_code,content_value) VALUES('home_footer_regions_title','tr','Popüler Bölgeler');
+INSERT IGNORE INTO site_content(content_key,language_code,content_value) VALUES('home_footer_categories_title','tr','Villa Konseptleri');
+INSERT IGNORE INTO site_content(content_key,language_code,content_value) VALUES('home_footer_contact_title','tr','İletişim');
+INSERT IGNORE INTO site_content(content_key,language_code,content_value) VALUES('home_guest_unit','tr','misafir');
+INSERT IGNORE INTO site_content(content_key,language_code,content_value) VALUES('home_bedroom_unit','tr','yatak odası');
+INSERT IGNORE INTO site_content(content_key,language_code,content_value) VALUES('home_night_unit','tr','gece');
+INSERT IGNORE INTO site_content(content_key,language_code,content_value) VALUES('home_empty_photo','tr','Villa fotoğrafı');
