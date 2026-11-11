@@ -30,4 +30,29 @@ body.villa-home-boutique{background:#f1f2eb;color:#354238}body.villa-home-boutiq
 @media(max-width:600px){body.villa-home-boutique .destination-grid,body.villa-home-boutique .cards{grid-template-columns:minmax(0,1fr)!important;gap:18px!important}body.villa-home-boutique .destination-grid>.destination,body.villa-home-boutique .cards>.stay{grid-column:1/-1!important;width:100%;margin:0!important}body.villa-home-boutique .destination{height:220px!important}body.villa-home-boutique .stay-photo{height:230px!important}}
 CSS;
 $html = str_replace('</head>', '<style>' . $homeCss . '</style></head>', $html);
+$html = str_replace('</head>', '<style>' . <<<'CSS'
+
+/* Symmetric card system: remove intentional stagger and keep consistent columns. */
+body.villa-home-boutique .destination-grid,
+body.villa-home-boutique .cards{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));align-items:stretch;gap:24px}
+body.villa-home-boutique .destination-grid>.destination,
+body.villa-home-boutique .cards>.stay{margin:0!important;min-width:0;width:auto;align-self:stretch}
+body.villa-home-boutique .destination{height:240px}
+body.villa-home-boutique .stay-photo{height:245px}
+@media(max-width:900px){
+ body.villa-home-boutique .destination-grid,
+ body.villa-home-boutique .cards{grid-template-columns:repeat(2,minmax(0,1fr));gap:18px}
+ body.villa-home-boutique .destination-grid>.destination,
+ body.villa-home-boutique .cards>.stay{margin:0!important}
+}
+@media(max-width:600px){
+ body.villa-home-boutique .destination-grid,
+ body.villa-home-boutique .cards{grid-template-columns:minmax(0,1fr)!important;gap:18px!important}
+ body.villa-home-boutique .destination-grid>.destination,
+ body.villa-home-boutique .cards>.stay{grid-column:1/-1!important;width:100%;margin:0!important}
+ body.villa-home-boutique .destination{height:220px!important}
+ body.villa-home-boutique .stay-photo{height:230px!important}
+}
+CSS
+ . '</style></head>', $html);
 echo $html;
