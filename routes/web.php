@@ -1410,7 +1410,27 @@ $router->get('/admin/content', static function (): void {
         'home_support_whatsapp'=>'Canlı destek WhatsApp numarası',
         'home_host_title'=>'Villa sahipleri tanıtım başlığı',
         'home_host_subtitle'=>'Villa sahipleri tanıtım açıklaması',
-        'home_host_cta'=>'Villa sahipleri buton metni'
+        'home_host_cta'=>'Villa sahipleri buton metni',
+        'home_latest_eyebrow'=>'Son eklenenler üst etiketi',
+        'home_latest_link'=>'Son eklenenler bağlantı metni',
+        'home_concepts_eyebrow'=>'Konseptler üst etiketi',
+        'home_concepts_count_label'=>'Konsept kartı villa sayısı etiketi',
+        'home_collections_eyebrow'=>'Koleksiyonlar üst etiketi',
+        'home_collection_count_suffix'=>'Koleksiyon villa sayısı açıklaması',
+        'home_collection_link'=>'Koleksiyon bağlantı metni',
+        'home_regions_eyebrow'=>'Bölgeler üst etiketi',
+        'home_reviews_eyebrow'=>'Yorumlar üst etiketi',
+        'home_review_verified_label'=>'Yorum doğrulama etiketi',
+        'home_faq_eyebrow'=>'SSS üst etiketi',
+        'home_support_eyebrow'=>'Destek üst etiketi',
+        'home_support_whatsapp_label'=>'WhatsApp buton metni',
+        'home_footer_regions_title'=>'Footer bölgeler başlığı',
+        'home_footer_categories_title'=>'Footer konseptler başlığı',
+        'home_footer_contact_title'=>'Footer iletişim başlığı',
+        'home_guest_unit'=>'Misafir birimi ana sayfa',
+        'home_bedroom_unit'=>'Yatak odası birimi ana sayfa',
+        'home_night_unit'=>'Gece fiyat birimi',
+        'home_empty_photo'=>'Görsel bulunamadı metni'
     ];
     require APP_ROOT . '/views/admin/content.php';
 });
@@ -1418,7 +1438,7 @@ $router->get('/admin/content', static function (): void {
 $router->post('/admin/content', static function (): void {
     Auth::requireRole(['super_admin', 'admin']);
     verify_csrf();
-    $allowed = ['site_name','home_eyebrow','home_title','home_subtitle','home_search_placeholder','featured_title','featured_subtitle','empty_properties','search_button','guest_select_label','guest_unit','all_categories','property_about','property_reserve','property_no_images','booking_notice','footer_text','home_latest_title','home_latest_subtitle','home_trust_1_title','home_trust_1_text','home_trust_2_title','home_trust_2_text','home_trust_3_title','home_trust_3_text','home_trust_4_title','home_trust_4_text','home_concepts_title','home_concepts_subtitle','home_collections_title','home_collections_subtitle','home_regions_title','home_regions_subtitle','home_reviews_title','home_reviews_subtitle','home_faq_title','home_faq_subtitle','home_faq_1_question','home_faq_1_answer','home_faq_2_question','home_faq_2_answer','home_faq_3_question','home_faq_3_answer','home_faq_4_question','home_faq_4_answer','home_faq_5_question','home_faq_5_answer','home_support_title','home_support_subtitle','home_support_phone','home_support_whatsapp','home_host_title','home_host_subtitle','home_host_cta'];
+    $allowed = ['site_name','home_eyebrow','home_title','home_subtitle','home_search_placeholder','featured_title','featured_subtitle','empty_properties','search_button','guest_select_label','guest_unit','all_categories','property_about','property_reserve','property_no_images','booking_notice','footer_text','home_latest_title','home_latest_subtitle','home_trust_1_title','home_trust_1_text','home_trust_2_title','home_trust_2_text','home_trust_3_title','home_trust_3_text','home_trust_4_title','home_trust_4_text','home_concepts_title','home_concepts_subtitle','home_collections_title','home_collections_subtitle','home_regions_title','home_regions_subtitle','home_reviews_title','home_reviews_subtitle','home_faq_title','home_faq_subtitle','home_faq_1_question','home_faq_1_answer','home_faq_2_question','home_faq_2_answer','home_faq_3_question','home_faq_3_answer','home_faq_4_question','home_faq_4_answer','home_faq_5_question','home_faq_5_answer','home_support_title','home_support_subtitle','home_support_phone','home_support_whatsapp','home_host_title','home_host_subtitle','home_host_cta','home_latest_eyebrow','home_latest_link','home_concepts_eyebrow','home_concepts_count_label','home_collections_eyebrow','home_collection_count_suffix','home_collection_link','home_regions_eyebrow','home_reviews_eyebrow','home_review_verified_label','home_faq_eyebrow','home_support_eyebrow','home_support_whatsapp_label','home_footer_regions_title','home_footer_categories_title','home_footer_contact_title','home_guest_unit','home_bedroom_unit','home_night_unit','home_empty_photo'];
     $stmt = Database::connection()->prepare('INSERT INTO site_content (content_key,language_code,content_value,updated_at) VALUES (?,\'tr\',?,NOW()) ON DUPLICATE KEY UPDATE content_value=VALUES(content_value),updated_at=NOW()');
     foreach ((array)($_POST['content'] ?? []) as $key=>$value) {
         if (in_array($key,$allowed,true)) $stmt->execute([$key,trim((string)$value)]);
