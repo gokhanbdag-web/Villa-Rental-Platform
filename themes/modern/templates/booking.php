@@ -6,17 +6,13 @@ ob_start();
 require APP_ROOT . '/views/site/booking.php';
 $html = (string) ob_get_clean();
 
-$navHtml = '';
-if (preg_match('~<nav\\b[^>]*>.*?</nav>~s', $html, $navMatch)) {
-    $navHtml = preg_replace('~<nav\\b[^>]*>~', '<nav class="nav" id="siteNavigation">', $navMatch[0], 1) ?? $navMatch[0];
-}
-if ($navHtml === '') {
-    ob_start();
-    $navItems = $navigation ?? [];
-    $navAllowAuth = true;
-    require APP_ROOT . '/views/site/partials/navigation-items.php';
-    $navHtml = '<nav class="nav" id="siteNavigation">' . (string) ob_get_clean() . '</nav>';
-}
+// Booking view has its own footer navigation but intentionally no header navigation.
+// Always build the header from the same configured navigation source as other site pages.
+ob_start();
+$navItems = $navigation ?? [];
+$navAllowAuth = true;
+require APP_ROOT . '/views/site/partials/navigation-items.php';
+$navHtml = '<nav class="nav" id="siteNavigation">' . (string) ob_get_clean() . '</nav>';
 
 $themeSiteName = (string) ($content['site_name'] ?? $siteName ?? 'VillaStay');
 $brand = '<a class="theme-brand theme-brand--urban" href="' . e(app_url('/')) . '"><span class="theme-brand-name">' . e($themeSiteName) . '</span></a>';
