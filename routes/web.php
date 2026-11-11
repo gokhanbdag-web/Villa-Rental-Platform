@@ -955,10 +955,13 @@ $router->post('/admin/users/status', static function (): void {
 
 $router->get('/theme-assets/{slug}/{file}', static function (array $params): void {
     $slug=(string)($params['slug']??'');$file=(string)($params['file']??'');
-    if(!preg_match('/^[a-z0-9][a-z0-9_-]{1,49}$/',$slug)||$file!=='style.css'){http_response_code(404);exit;}
-    $path=APP_ROOT.'/themes/'.$slug.'/style.css';
+    if(!preg_match('/^[a-z0-9][a-z0-9_-]{1,49}$/',$slug)||!preg_match('/^[a-zA-Z0-9_.-]{1,100}$/',$file)){http_response_code(404);exit;}
+    $path=$file==='style.css'?APP_ROOT.'/themes/'.$slug.'/style.css':APP_ROOT.'/themes/'.$slug.'/assets/'.$file;
     if(!is_file($path)){http_response_code(404);exit;}
-    header('Content-Type: text/css; charset=UTF-8');header('X-Content-Type-Options: nosniff');header('Cache-Control: public, max-age=3600');
+    $extension=strtolower(pathinfo($path,PATHINFO_EXTENSION));
+    $types=['css'=>'text/css','js'=>'application/javascript','png'=>'image/png','jpg'=>'image/jpeg','jpeg'=>'image/jpeg','webp'=>'image/webp','svg'=>'image/svg+xml','woff'=>'font/woff','woff2'=>'font/woff2'];
+    if(!isset($types[$extension])){http_response_code(404);exit;}
+    header('Content-Type: '.$types[$extension].'; charset=UTF-8');header('X-Content-Type-Options: nosniff');header('Cache-Control: public, max-age=3600');
     readfile($path);exit;
 });
 
