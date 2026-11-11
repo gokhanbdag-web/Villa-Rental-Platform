@@ -1,0 +1,43 @@
+<?php
+declare(strict_types=1);
+
+// Shared account-page chrome. The account content remains in its focused view file.
+$accountView = (string)($accountView ?? 'bookings.php');
+if (!preg_match('/^[a-z0-9-]+\.php$/', $accountView)) {
+    throw new RuntimeException('Hesap sayfası şablonu geçersiz.');
+}
+ob_start();
+require APP_ROOT . '/views/account/' . $accountView;
+$html = (string)ob_get_clean();
+
+ob_start();
+$navItems = $navigation ?? [];
+$navAllowAuth = true;
+require APP_ROOT . '/views/site/partials/navigation-items.php';
+$navHtml = '<nav class="nav" id="siteNavigation">' . (string)ob_get_clean() . '</nav>';
+
+$themeSiteName = (string)($content['site_name'] ?? $siteName ?? 'VillaStay');
+$brand = '<a class="theme-brand ' . e($accountBrandClass) . '" href="' . e(app_url('/')) . '"><span class="theme-brand-name">' . e($themeSiteName) . '</span></a>';
+$toggle = '<button class="mobile-menu-toggle theme-menu-toggle" id="menuToggle" type="button" aria-label="Menüyü aç" aria-controls="siteNavigation" aria-expanded="false"><span class="menu-open-mark">☰</span><span class="menu-close-mark">×</span></button>';
+$header = '<header class="theme-header ' . e($accountHeaderClass) . '"><div class="theme-header-inner">' . $brand . $toggle . $navHtml . '</div></header><div class="drawer-overlay" id="menuOverlay"></div>';
+$html = preg_replace('~<body\\b[^>]*>~i', '$0' . $header, $html, 1) ?? $html;
+
+$footerItems = '';
+foreach (($footerNavigation ?? []) as $item) {
+    if (!is_array($item)) continue;
+    $url = (string)($item['url'] ?? '#');
+    $label = (string)($item['label'] ?? '');
+    if ($label === '') continue;
+    $target = (string)($item['target'] ?? '_self');
+    $footerItems .= '<a href="' . e(app_url($url)) . '"' . ($target === '_blank' ? ' target="_blank" rel="noopener noreferrer"' : '') . '>' . e($label) . '</a>';
+    foreach (($item['children'] ?? []) as $child) {
+        if (!is_array($child) || trim((string)($child['label'] ?? '')) === '') continue;
+        $footerItems .= '<a href="' . e(app_url((string)($child['url'] ?? '#'))) . '">' . e((string)$child['label']) . '</a>';
+    }
+}
+$footer = '<footer class="site-footer villa-account-footer"><div class="theme-footer-inner"><a class="theme-footer-brand" href="' . e(app_url('/')) . '">' . e($themeSiteName) . '</a><nav aria-label="Alt menü">' . $footerItems . '</nav><small>© ' . date('Y') . ' ' . e($themeSiteName) . '</small></div></footer>';
+$html = preg_replace('~</body>~i', $footer . '</body>', $html, 1) ?? $html;
+
+$menuScript = '<script>(function(){var b=document.getElementById("menuToggle"),n=document.getElementById("siteNavigation"),o=document.getElementById("menuOverlay");if(!b||!n||!o)return;function close(){n.classList.remove("is-open");o.classList.remove("is-open");b.setAttribute("aria-expanded","false");var x=b.querySelector(".menu-open-mark"),y=b.querySelector(".menu-close-mark");if(x)x.style.display="inline";if(y)y.style.display="none"}b.addEventListener("click",function(){var open=!n.classList.contains("is-open");n.classList.toggle("is-open",open);o.classList.toggle("is-open",open);b.setAttribute("aria-expanded",open?"true":"false");var x=b.querySelector(".menu-open-mark"),y=b.querySelector(".menu-close-mark");if(x)x.style.display=open?"none":"inline";if(y)y.style.display=open?"inline":"none"});o.addEventListener("click",close);n.addEventListener("click",function(e){if(e.target.closest("a"))close()});document.addEventListener("keydown",function(e){if(e.key==="Escape")close()})})();</script>';
+$html = preg_replace('~</body>~i', $menuScript . '<style>.villa-account-footer{margin-top:70px;padding:42px 24px}.villa-account-footer .theme-footer-inner{max-width:1120px;margin:auto;display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:22px}.villa-account-footer nav{display:flex;flex-wrap:wrap;gap:16px}.villa-account-footer a{color:inherit;text-decoration:none}.villa-account-footer small{opacity:.7}@media(max-width:650px){.villa-account-footer .theme-footer-inner{display:grid;grid-template-columns:1fr}.villa-account-footer nav{display:grid;grid-template-columns:repeat(2,minmax(0,1fr))}}</style></body>', $html, 1) ?? $html;
+echo $html;
