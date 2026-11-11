@@ -114,11 +114,11 @@ Türkiye;Bursa;Orhangazi;
 Türkiye;Bursa;Orhangazi;İznik Gölü kıyısı
 Türkiye;Bursa;Osmangazi;
 Türkiye;Bursa;Osmangazi;Uludağ
-Türkiye;Bursa;Osmangazi;Cumalıkızık
 Türkiye;Bursa;Osmangazi;Tophane
 Türkiye;Bursa;Yenişehir;
 Türkiye;Bursa;Yıldırım;
 Türkiye;Bursa;Yıldırım;Emir Sultan
+Türkiye;Bursa;Yıldırım;Cumalıkızık
 Türkiye;Bolu;Dörtdivan;
 Türkiye;Bolu;Gerede;
 Türkiye;Bolu;Gerede;Esentepe
@@ -178,8 +178,6 @@ Türkiye;Muğla;Marmaris;Orhaniye
 Türkiye;Muğla;Marmaris;Hisarönü
 Türkiye;Muğla;Marmaris;Söğüt
 Türkiye;Muğla;Menteşe;
-Türkiye;Muğla;Menteşe;Akyaka
-Türkiye;Muğla;Menteşe;Akbük Koyu
 Türkiye;Muğla;Milas;
 Türkiye;Muğla;Milas;Ören
 Türkiye;Muğla;Milas;Bördübet
@@ -219,7 +217,6 @@ Türkiye;Antalya;Döşemealtı;Termessos
 Türkiye;Antalya;Elmalı;
 Türkiye;Antalya;Elmalı;Gömbe
 Türkiye;Antalya;Finike;
-Türkiye;Antalya;Finike;Kumluca sınırı sahilleri
 Türkiye;Antalya;Gazipaşa;
 Türkiye;Antalya;Gazipaşa;Koru Plajı
 Türkiye;Antalya;Gazipaşa;Delik Deniz
@@ -271,11 +268,9 @@ Türkiye;Antalya;Serik;Kadriye
 Türkiye;Antalya;Serik;Boğazkent
 Türkiye;Antalya;Serik;Aspendos
 Türkiye;Mersin;Akdeniz;
-Türkiye;Mersin;Akdeniz;Mersin Marina
 Türkiye;Mersin;Anamur;
 Türkiye;Mersin;Anamur;Anemurium
 Türkiye;Mersin;Anamur;Mamure Kalesi
-Türkiye;Mersin;Anamur;Tisan yolu
 Türkiye;Mersin;Aydıncık;
 Türkiye;Mersin;Aydıncık;Aynalıgöl Mağarası
 Türkiye;Mersin;Aydıncık;Büyükeceli
@@ -311,8 +306,8 @@ Türkiye;Mersin;Toroslar;
 Türkiye;Mersin;Toroslar;Gözne
 Türkiye;Mersin;Toroslar;Ayvagediği
 Türkiye;Mersin;Yenişehir;
+Türkiye;Mersin;Yenişehir;Mersin Marina
 Türkiye;Mersin;Yenişehir;Kushimoto Sokağı
-Türkiye;Mersin;Yenişehir;Fenerbahçe Meydanı
 Türkiye;İzmir;Aliağa;
 Türkiye;İzmir;Aliağa;Çandarlı Körfezi
 Türkiye;İzmir;Balçova;
@@ -461,7 +456,7 @@ Türkiye;Balıkesir;Gömeç;Karaağaç
 Türkiye;Balıkesir;Gönen;
 Türkiye;Balıkesir;Gönen;Gönen Kaplıcaları
 Türkiye;Balıkesir;Havran;
-Türkiye;Balıkesir;Havran; İnboğazı
+Türkiye;Balıkesir;Havran;İnboğazı
 Türkiye;Balıkesir;İvrindi;
 Türkiye;Balıkesir;Karesi;
 Türkiye;Balıkesir;Karesi;Değirmenboğazı
@@ -481,7 +476,6 @@ Türkiye;Burdur;Ağlasun;
 Türkiye;Burdur;Ağlasun;Sagalassos Antik Kenti
 Türkiye;Burdur;Altınyayla;
 Türkiye;Burdur;Bucak;
-Türkiye;Burdur;Bucak;İnsuyu Mağarası
 Türkiye;Burdur;Bucak;Kremna Antik Kenti
 Türkiye;Burdur;Çavdır;
 Türkiye;Burdur;Çeltikçi;
