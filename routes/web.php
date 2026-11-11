@@ -810,17 +810,43 @@ $router->post('/admin/categories/delete', static function (): void {
 
 $router->get('/admin/navigation', static function (): void {
     Auth::requireRole(['super_admin','admin']);
-    $items=Database::connection()->query('SELECT * FROM navigation_items ORDER BY location,sort_order,id')->fetchAll();
+    $pdo=Database::connection();
+    $items=$pdo->query('SELECT * FROM navigation_items ORDER BY location,sort_order,id')->fetchAll();
+    $mode=(string)($pdo->query("SELECT setting_value FROM settings WHERE setting_key='app.mode' LIMIT 1")->fetchColumn() ?: 'single_vendor');
+    $systemPages=[
+        ['label'=>'Ana Sayfa','url'=>'/'],
+        ['label'=>'Konaklamalar','url'=>'/konaklamalar'],
+        ['label'=>'Destinasyonlar','url'=>'/destinasyonlar'],
+        ['label'=>'Giriş Yap','url'=>'/login'],
+        ['label'=>'Favorilerim','url'=>'/favorites'],
+        ['label'=>'Rezervasyonlarım','url'=>'/account/bookings'],
+    ];
+    if($mode==='multi_vendor')$systemPages[]=['label'=>'Ev Sahibi Kaydı','url'=>'/vendor/register'];
+    $cmsPages=$pdo->query("SELECT title,slug FROM cms_pages WHERE language_code='tr' AND status='published' ORDER BY title")->fetchAll();
+    $editItem=null;$editId=(int)($_GET['edit']??0);
+    if($editId>0){$find=$pdo->prepare('SELECT * FROM navigation_items WHERE id=? LIMIT 1');$find->execute([$editId]);$editItem=$find->fetch()?:null;}
     require APP_ROOT.'/views/admin/navigation.php';
 });
 $router->post('/admin/navigation/save', static function (): void {
-    Auth::requireRole(['super_admin','admin']);verify_csrf();
-    $label=trim((string)($_POST['label']??''));$url=trim((string)($_POST['url']??''));
+    Auth::requireRole(['super_admin','admin']);verify_csrf();$pdo=Database::connection();
+    $id=(int)($_POST['id']??0);$label=trim((string)($_POST['label']??''));$url=trim((string)($_POST['url']??''));
     $location=in_array($_POST['location']??'', ['header','footer'],true)?$_POST['location']:'header';
     $target=($_POST['target']??'')==='_blank'?'_blank':'_self';
-    if($label===''||strlen($label)>120||!preg_match('#^(https?://|/)#i',$url)){http_response_code(422);exit('Menü adı veya bağlantı adresi geçersiz.');}
-    $s=Database::connection()->prepare('INSERT INTO navigation_items(location,language_code,label,url,target,sort_order,is_active) VALUES(?,?,?,?,?,?,1)');
-    $s->execute([$location,'tr',$label,$url,$target,(int)($_POST['sort_order']??10)]);
+    $sort=max(0,min(9999,(int)($_POST['sort_order']??10)));$active=isset($_POST['is_active'])?1:0;
+    $validUrl=$url!==''&&!preg_match('/[\\r\\n\\x00-\\x1F]/',$url)&&!str_starts_with($url,'//')&&(str_starts_with($url,'/')||preg_match('#^https?://#i',$url));
+    if($label===''||mb_strlen($label)>120||!$validUrl){http_response_code(422);exit('Menü adı veya bağlantı adresi geçersiz.');}
+    if($id>0){
+        $s=$pdo->prepare('UPDATE navigation_items SET location=?,label=?,url=?,target=?,sort_order=?,is_active=? WHERE id=?');
+        $s->execute([$location,$label,$url,$target,$sort,$active,$id]);
+    }else{
+        $s=$pdo->prepare('INSERT INTO navigation_items(location,language_code,label,url,target,sort_order,is_active) VALUES(?,?,?,?,?,?,?)');
+        $s->execute([$location,'tr',$label,$url,$target,$sort,$active]);
+    }
+    redirect('/admin/navigation');
+});
+$router->post('/admin/navigation/toggle', static function (): void {
+    Auth::requireRole(['super_admin','admin']);verify_csrf();
+    $s=Database::connection()->prepare('UPDATE navigation_items SET is_active=1-is_active WHERE id=?');$s->execute([(int)($_POST['id']??0)]);
     redirect('/admin/navigation');
 });
 $router->post('/admin/navigation/delete', static function (): void {
