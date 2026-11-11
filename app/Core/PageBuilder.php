@@ -86,6 +86,38 @@ final class PageBuilder
         return ['widgets'=>is_array($layout['widgets']??null)?$layout['widgets']:[],'status'=>$row['status'],'version'=>(int)$row['version'],'updated_at'=>$row['updated_at']];
     }
 
+    public static function sanitizePreview(string $theme, array $payload): array
+    {
+        if (!isset(ThemeManager::installed()[$theme])) throw new RuntimeException('Geçersiz tema seçimi.');
+        $items=$payload['widgets']??[];
+        if (!is_array($items)||count($items)>80) throw new RuntimeException('Bir sayfada en fazla 80 widget kullanılabilir.');
+        $registry=self::widgets();$clean=[];$seen=[];
+        foreach($items as $item){
+            if(!is_array($item))continue;
+            $id=(string)($item['id']??'');$type=(string)($item['type']??'');
+            if(!preg_match('/^[a-zA-Z0-9_-]{1,40}$/',$id)||isset($seen[$id])||!isset($registry[$type]))continue;
+            $seen[$id]=true;$style=(string)($item['style']??$registry[$type]['default_style']);
+            if(!in_array($style,$registry[$type]['styles'],true))$style=$registry[$type]['default_style'];
+            $settings=is_array($item['settings']??null)?$item['settings']:[];
+            $safe=[];
+            foreach(['eyebrow','title','subtitle','description','image_url','mobile_image_url','button_text','button_url','alignment','background','columns','limit','show_title','layout','hero_layout','hero_text_position','search_position','search_layout','search_columns','show_search','hero_height','overlay_opacity'] as $key){
+                if(!array_key_exists($key,$settings))continue;$value=$settings[$key];
+                if(in_array($key,['columns','limit','search_columns','hero_height','overlay_opacity'],true)){
+                    $ranges=['columns'=>[1,4],'limit'=>[1,24],'search_columns'=>[1,5],'hero_height'=>[300,900],'overlay_opacity'=>[0,90]];
+                    [$min,$max]=$ranges[$key];$safe[$key]=max($min,min($max,(int)$value));continue;
+                }
+                if(in_array($key,['show_title','show_search'],true)){$safe[$key]=filter_var($value,FILTER_VALIDATE_BOOLEAN);continue;}
+                $choices=['hero_layout'=>['overlay','split','minimal'],'hero_text_position'=>['left','center','right'],'search_position'=>['below','left','right','inside-bottom'],'search_layout'=>['horizontal','vertical'],'alignment'=>['left','center','right']];
+                if(isset($choices[$key])){$candidate=(string)$value;$safe[$key]=in_array($candidate,$choices[$key],true)?$candidate:$choices[$key][0];continue;}
+                $value=trim((string)$value);
+                if(in_array($key,['image_url','mobile_image_url','button_url'],true)&&$value!==''&&!preg_match('~^(https?://|/)~i',$value))$value='';
+                $safe[$key]=mb_substr($value,0,($key==='description'||$key==='subtitle')?1200:500);
+            }
+            $clean[]=['id'=>$id,'type'=>$type,'style'=>$style,'settings'=>$safe];
+        }
+        return ['widgets'=>$clean,'status'=>'draft','version'=>0,'updated_at'=>null];
+    }
+
     public static function save(string $theme, string $page, array $payload, string $status, int $userId): void
     {
         if (!isset(ThemeManager::installed()[$theme])) throw new RuntimeException('Geçersiz tema seçimi.');
