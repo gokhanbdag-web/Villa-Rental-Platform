@@ -269,10 +269,10 @@ $router->get('/destinasyonlar', static function (): void {
     $pdo=Database::connection();$user=Auth::user();$locale='tr';
     try{$locale=(string)($pdo->query("SELECT setting_value FROM settings WHERE setting_key='app.locale' LIMIT 1")->fetchColumn() ?: 'tr');}catch(Throwable $e){}
     $contentStmt=$pdo->prepare('SELECT content_key,content_value FROM site_content WHERE language_code=?');$contentStmt->execute([$locale]);$content=$contentStmt->fetchAll(PDO::FETCH_KEY_PAIR);
-    $nav=$pdo->prepare('SELECT label,url,target FROM navigation_items WHERE location=? AND language_code=? AND is_active=1 ORDER BY sort_order,id');$nav->execute(['header',$locale]);$navigation=$nav->fetchAll();$nav->execute(['footer',$locale]);$footerNavigation=$nav->fetchAll();
+    $navigation=villa_navigation_tree($pdo,'header',$locale);$footerNavigation=villa_navigation_tree($pdo,'footer',$locale);
     $destinationsSql = "SELECT l.id AS location_id,l.name AS city,COUNT(DISTINCT p.id) AS property_count,(SELECT pm.file_path FROM property_media pm JOIN properties p2 ON p2.id=pm.property_id WHERE p2.status='published' AND p2.location_city_id=l.id ORDER BY pm.is_cover DESC,pm.sort_order,pm.id LIMIT 1) AS cover_image FROM locations l JOIN properties p ON p.location_city_id=l.id AND p.status='published' WHERE l.location_type='city' AND l.is_active=1 GROUP BY l.id,l.name,l.sort_order ORDER BY property_count DESC,l.sort_order,l.name";
     $destinations = $pdo->query($destinationsSql)->fetchAll();
-    $footerStmt=$pdo->prepare('SELECT label,url,target FROM navigation_items WHERE location=? AND language_code=? AND is_active=1 ORDER BY sort_order,id');$footerStmt->execute(['footer',$locale]);$footerNavigation=$footerStmt->fetchAll();
+    
     $mode=(string)($pdo->query("SELECT setting_value FROM settings WHERE setting_key='app.mode' LIMIT 1")->fetchColumn() ?: 'single_vendor');
     $user=Auth::user();
     require APP_ROOT.'/views/site/destinations.php';
