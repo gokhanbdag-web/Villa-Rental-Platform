@@ -1,6 +1,6 @@
 # Villa Rental Platform
 
-Native PHP 8.2+ and MySQL villa rental platform. No PHP framework is used. The first-run installer selects either single-vendor or multi-vendor operation and stores the selected mode in the database.
+Native PHP 8.2+ and MySQL villa rental platform. No PHP framework or Composer dependency is required. The first-run browser installer selects either single-vendor or multi-vendor operation and stores the selected mode in the database.
 
 ## Current implementation
 
@@ -14,7 +14,8 @@ Native PHP 8.2+ and MySQL villa rental platform. No PHP framework is used. The f
 - Admin user activation controls, editable navigation, CMS pages with SEO fields, platform settings, and translation catalogue editing.
 - Booking financial ledger, platform commission calculation, payment transaction, payout and notification database structures; editable translation catalogue.
 - 36 editable Turkish demo villa listings with 36 local SVG placeholder illustrations under `public/demo/villas/`.
-- GitHub Actions PHP syntax-check workflow.
+- Visual page builder with drag-and-drop widget ordering, responsive preview, per-section layout settings, image/text positioning, and independently configurable item-card spacing, radius, padding, icon size, and alignment.
+- GitHub Actions PHP syntax checks and a MySQL-backed installer / migration / page-builder persistence smoke test.
 
 ## Important operational notes
 
@@ -22,6 +23,12 @@ Native PHP 8.2+ and MySQL villa rental platform. No PHP framework is used. The f
 - Payment gateway integration, automated payout execution, email/SMS delivery, language switching, advanced permissions, and full automated integration/security tests remain to be implemented.
 - The current codebase is an active development build, not a production-ready booking service. Do not accept real payments or rely on it for live inventory until the remaining modules are implemented and a real PHP/MySQL deployment test and security review have passed.
 - The sample villa illustrations are local SVG artwork, not photographs of real properties. Demo listings can be edited, unpublished, or deleted from the admin panel.
+
+## Automated checks
+
+GitHub Actions runs PHP syntax checks and an installer smoke test against MySQL 8. The smoke test creates a clean installation, verifies the initial administrator and selected platform mode, checks the demo villa seed and required tables, applies migrations twice, and verifies that visual page-builder settings survive preview, save, and reload.
+
+These automated checks do not replace testing on the target shared-hosting provider, real browser testing, payment-provider certification, or a professional security review.
 
 ## Installation
 
