@@ -128,7 +128,7 @@ $html = str_replace('</nav></div></footer>', '</nav>'.$footerColumns.'</div></fo
 $regionTitle=trim((string)($content['home_regions_title']??''));
 $regionSubtitle=trim((string)($content['home_regions_subtitle']??''));
 $regionEyebrow=trim((string)($content['home_regions_eyebrow']??'KEŞFETMEYE BAŞLA'));
-if($regionTitle!==''||$regionSubtitle!==''||$regionEyebrow!==''){
+if($medSectionActive('destinations') && ($regionTitle!==''||$regionSubtitle!==''||$regionEyebrow!=='')){
     $html=preg_replace_callback('~(<span class="pill">).*?(</span><h2>).*?(</h2><p>).*?(</p>)~s',static function(array $m)use($regionTitle,$regionSubtitle,$regionEyebrow):string{
         return $m[1].e($regionEyebrow).$m[2].e($regionTitle!==''?$regionTitle:'Bölgeleri keşfedin').$m[3].e($regionSubtitle).$m[4];
     },$html,1)??$html;
