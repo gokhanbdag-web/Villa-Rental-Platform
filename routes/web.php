@@ -21,11 +21,15 @@ function villa_resolve_location(PDO $pdo): array {
 $router->get('/admin/homepage', static function (): void {
     Auth::requireRole(['super_admin','admin']);$pdo=Database::connection();
     $sections=$pdo->query('SELECT * FROM homepage_sections ORDER BY sort_order,id')->fetchAll();
+    $mode=(string)($pdo->query("SELECT setting_value FROM settings WHERE setting_key='app.mode'")->fetchColumn() ?: 'single_vendor');
+    if($mode!=='multi_vendor')$sections=array_values(array_filter($sections,static fn(array $section):bool=>$section['section_key']!=='hosts'));
     require APP_ROOT.'/views/admin/homepage.php';
 });
 $router->post('/admin/homepage', static function (): void {
     Auth::requireRole(['super_admin','admin']);verify_csrf();$pdo=Database::connection();
-    $allowed=['hero','destinations','featured','styles','gallery','hosts'];
+    $mode=(string)($pdo->query("SELECT setting_value FROM settings WHERE setting_key='app.mode'")->fetchColumn() ?: 'single_vendor');
+    $allowed=['hero','destinations','featured','styles','gallery'];
+    if($mode==='multi_vendor')$allowed[]='hosts';
     $stmt=$pdo->prepare('UPDATE homepage_sections SET title=?,subtitle=?,image_url=?,is_active=?,sort_order=? WHERE section_key=?');
     foreach($allowed as $key){$row=$_POST['sections'][$key]??null;if(!is_array($row))continue;
         $title=trim((string)($row['title']??''));$subtitle=trim((string)($row['subtitle']??''));$image=trim((string)($row['image_url']??''));
