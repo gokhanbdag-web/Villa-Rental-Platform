@@ -40,6 +40,10 @@ form.addEventListener('submit',async function(e){
    return;
   }
   var raw=await response.text(),data;
+  if(raw.trim().charAt(0)==='<'){
+   HTMLFormElement.prototype.submit.call(form);
+   return;
+  }
   try{data=JSON.parse(raw)}catch(parseError){throw new Error('Sunucu geçerli JSON yanıtı vermedi. Hosting hata kaydını kontrol edin.');}
   if(!response.ok||!data.ok)throw new Error(data.message||'Giriş yapılamadı.');
   document.querySelectorAll('[data-auth-link]').forEach(function(link){link.textContent=data.user.label;link.href=data.user.url;link.removeAttribute('data-login-trigger');});
