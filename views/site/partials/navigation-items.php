@@ -1,8 +1,8 @@
 <?php
-$renderVillaNav = function(array $entries) use (&$renderVillaNav, &$villaHasAuthLink, $user): void {
+$renderVillaNav = function(array $entries) use (&$renderVillaNav, &$villaHasAuthLink, $user, $navAllowAuth): void {
     foreach ($entries as $entry) {
         $url=(string)($entry['url']??'/');$label=(string)($entry['label']??'');$target=(string)($entry['target']??'_self');
-        $isLogin=in_array(rtrim($url,'/'),['/login'],true);if($isLogin&&isset($navAllowAuth)&&!$navAllowAuth)continue;
+        $isLogin=in_array(rtrim($url,'/'),['/login'],true);if($isLogin&&!$navAllowAuth)continue;
         $isAuthUser=!empty($user);
         $hasChildren=!empty($entry['children']);
         if($isLogin){$villaHasAuthLink=true;$url=$isAuthUser?(($user['role']??'')==='customer'?'/account/bookings':((($user['role']??'')==='vendor')?'/vendor':'/admin')):'#login';$label=$isAuthUser?(in_array(($user['role']??''),['admin','super_admin'],true)?'Yönetim Paneli':((($user['role']??'')==='vendor')?'Ev Sahibi Paneli':'Hesabım')):'Giriş Yap';}
