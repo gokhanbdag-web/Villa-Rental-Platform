@@ -550,7 +550,7 @@ $router->post('/login', static function (): void {
 $router->post('/logout', static function (): void {
     verify_csrf();
     Auth::logout();
-    redirect('/login');
+    redirect('/');
 });
 
 
