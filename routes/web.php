@@ -31,6 +31,15 @@ function villa_resolve_location(PDO $pdo): array {
     if(!$country||!$city||($ids['district']&&!$district)||($ids['neighborhood']&&!$neighborhood)||($neighborhood&&!$district))throw new InvalidArgumentException('Lütfen ülke ve şehir seçin; alt konum seçimlerini kontrol edin.');
     return ['location_country_id'=>$ids['country'],'location_city_id'=>$ids['city'],'location_district_id'=>$district?$ids['district']:null,'location_neighborhood_id'=>$neighborhood?$ids['neighborhood']:null,'country'=>$country['name'],'city'=>$city['name'],'district'=>$district['name']??'','neighborhood'=>$neighborhood['name']??''];
 }
+$router->get('/demo-theme/{slug}', static function (array $params): void {
+    $slug=(string)($params['slug']??'');
+    $themes=ThemeManager::installed();
+    if(!isset($themes[$slug])){http_response_code(404);exit('Demo teması bulunamadı.');}
+    // Demo selection is visitor-session scoped; it never changes the site's global active theme.
+    $_SESSION['villa_public_demo_theme']=$slug;
+    redirect('/');
+});
+
 $router->get('/admin/homepage', static function (): void {
     Auth::requireRole(['super_admin','admin']);$pdo=Database::connection();
     $sections=$pdo->query('SELECT * FROM homepage_sections ORDER BY sort_order,id')->fetchAll();
