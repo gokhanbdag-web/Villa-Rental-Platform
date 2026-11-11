@@ -174,7 +174,7 @@ if ($isAdminPage) {
         <script>
         (function(){
             if(window.__villaAdminShellReady)return;window.__villaAdminShellReady=true;
-            const layout=document.getElementById("vrAdminLayout"),burger=document.getElementById("vrAdminBurger"),overlay=document.getElementById("vrAdminOverlay"),content=document.getElementById("vrAdminContent"),adminRootPath=new URL(${adminRootUrl},location.href).pathname.replace(/\\/$/,"");
+            const layout=document.getElementById("vrAdminLayout"),burger=document.getElementById("vrAdminBurger"),overlay=document.getElementById("vrAdminOverlay"),content=document.getElementById("vrAdminContent"),adminRootPath=new URL(' . $adminRootUrl . ',location.href).pathname.replace(/\\/$/,"");
             function closeMenu(){layout&&layout.classList.remove("menu-open");burger&&burger.setAttribute("aria-expanded","false")}
             function enhanceResponsiveTables(root){
                 (root||content).querySelectorAll("table").forEach(function(table){
