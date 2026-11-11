@@ -138,7 +138,7 @@ final class PageBuilder
             if(!in_array($style,$registry[$type]['styles'],true))$style=$registry[$type]['default_style'];
             $settings=is_array($item['settings']??null)?$item['settings']:[];
             $safe=[];
-            foreach(['eyebrow','title','subtitle','description','image_url','mobile_image_url','button_text','button_url','alignment','background','columns','limit','show_title','layout','hero_layout','hero_text_position','search_position','search_layout','search_columns','show_search','hero_height','overlay_opacity'] as $key){
+            foreach(['eyebrow','title','subtitle','description','items_text','image_url','mobile_image_url','button_text','button_url','alignment','background','columns','limit','show_title','layout','hero_layout','hero_text_position','search_position','search_layout','search_columns','show_search','hero_height','overlay_opacity'] as $key){
                 if(!array_key_exists($key,$settings))continue;
                 $value=$settings[$key];
                 if(in_array($key,['columns','limit','search_columns','hero_height','overlay_opacity'],true)){$ranges=['columns'=>[1,4],'limit'=>[1,24],'search_columns'=>[1,5],'hero_height'=>[300,900],'overlay_opacity'=>[0,90]];[$min,$max]=$ranges[$key];$safe[$key]=max($min,min($max,(int)$value));continue;}
