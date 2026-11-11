@@ -74,7 +74,7 @@ if ($isAdminPage) {
                 '/admin/properties' => 'Konaklamalar',
                 '/admin/bookings' => 'Rezervasyonlar',
                 '/admin/users' => 'Kullanıcılar',
-                '/admin/reviews' => 'Yorumlar',
+                '/admin/reviews' => 'Değerlendirmeler',
                 '/admin/locations' => 'Lokasyonlar',
                 '/admin/categories' => 'Kategoriler',
                 '/admin/amenities' => 'Villa Özellikleri',
