@@ -89,6 +89,11 @@ final class ThemeManager
             if (stripos($html, '</head>') !== false) $html = preg_replace('/<\/head>/i', $tag . '</head>', $html, 1) ?? $html;
             $html = preg_replace('/<body\b/i', '<body data-villa-theme="' . e($slug) . '"', $html, 1) ?? $html;
         }
+        $preview = (string)($_SESSION['villa_theme_preview'] ?? '');
+        if ($preview !== '' && Auth::check() && in_array(Auth::user()['role'] ?? '', ['admin','super_admin'], true)) {
+            $banner = '<div style="position:fixed;z-index:99999;left:12px;right:12px;bottom:12px;display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px 16px;border-radius:12px;background:#182b24;color:#fff;font:13px/1.4 system-ui;box-shadow:0 8px 30px #0003"><span>Şu anda <strong>' . e(self::installed()[$preview]['name'] ?? $preview) . '</strong> temasını önizliyorsunuz. Bu görünüm ziyaretçilere açık değildir.</span><a href="' . e(app_url('/admin/themes/preview/clear')) . '" style="color:#fff;font-weight:800;text-decoration:underline;white-space:nowrap">Önizlemeyi kapat</a></div>';
+            $html = preg_replace('/<\\/body>/i', $banner . '</body>', $html, 1) ?? $html;
+        }
         echo $html;
     }
 
