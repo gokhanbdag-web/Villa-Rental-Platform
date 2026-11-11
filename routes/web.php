@@ -178,8 +178,21 @@ $router->get('/konaklamalar', static function (): void {
     $minPrice = min($minPrice,$priceCeiling);
     $maxPrice = $maxPrice > 0 ? min($maxPrice,$priceCeiling) : $priceCeiling;
     if ($minPrice >= $maxPrice) { $minPrice = 0; $maxPrice = $priceCeiling; }
+    $checkInDate = trim((string)($_GET['check_in'] ?? ''));
+    $checkOutDate = trim((string)($_GET['check_out'] ?? ''));
+    $dateRangeValid = false;
+    if ($checkInDate !== '' && $checkOutDate !== '') {
+        $checkInValue = \\DateTimeImmutable::createFromFormat('!Y-m-d', $checkInDate);
+        $checkOutValue = \\DateTimeImmutable::createFromFormat('!Y-m-d', $checkOutDate);
+        $todayValue = new \\DateTimeImmutable('today');
+        $dateRangeValid = $checkInValue && $checkOutValue
+            && $checkInValue->format('Y-m-d') === $checkInDate
+            && $checkOutValue->format('Y-m-d') === $checkOutDate
+            && $checkInValue >= $todayValue && $checkOutValue > $checkInValue;
+    }
+    if (!$dateRangeValid) { $checkInDate = ''; $checkOutDate = ''; }
     $sort = in_array($_GET['sort'] ?? '', ['price_asc','price_desc'], true) ? $_GET['sort'] : 'newest';
-    $filters = ['city' => $city, 'guests' => $guests, 'category' => $categoryId, 'min_price'=>$minPrice, 'max_price'=>$maxPrice, 'sort'=>$sort,'country_id'=>$locationCountryId,'city_id'=>$locationCityId,'district_id'=>$locationDistrictId,'neighborhood_id'=>$locationNeighborhoodId];
+    $filters = ['city' => $city, 'guests' => $guests, 'category' => $categoryId, 'min_price'=>$minPrice, 'max_price'=>$maxPrice, 'sort'=>$sort,'country_id'=>$locationCountryId,'city_id'=>$locationCityId,'district_id'=>$locationDistrictId,'neighborhood_id'=>$locationNeighborhoodId,'check_in'=>$checkInDate,'check_out'=>$checkOutDate];
     $sql = "SELECT p.*, (SELECT pm.file_path FROM property_media pm WHERE pm.property_id=p.id ORDER BY pm.is_cover DESC,pm.sort_order,pm.id LIMIT 1) AS cover_image FROM properties p WHERE p.status='published'";
     $params = [];
     if ($city !== '') { $sql .= ' AND (p.city LIKE ? OR p.district LIKE ? OR p.country LIKE ?)'; $like='%'.$city.'%'; array_push($params,$like,$like,$like); }
@@ -191,6 +204,14 @@ $router->get('/konaklamalar', static function (): void {
     if ($categoryId > 0) { $sql .= ' AND p.category_id = ?'; $params[]=$categoryId; }
     if ($minPrice > 0) { $sql .= ' AND p.base_nightly_price >= ?'; $params[]=$minPrice; }
     if ($maxPrice > 0) { $sql .= ' AND p.base_nightly_price <= ?'; $params[]=$maxPrice; }
+    if ($dateRangeValid) {
+        // A property is returned only when no booking or blocked calendar rule overlaps any night of the stay.
+        // Checkout is exclusive: a booking ending on check-in day does not conflict.
+        $sql .= " AND NOT EXISTS (SELECT 1 FROM bookings b WHERE b.property_id=p.id AND b.status IN ('pending','confirmed') AND b.check_in < ? AND b.check_out > ?)";
+        $params[] = $checkOutDate; $params[] = $checkInDate;
+        $sql .= " AND NOT EXISTS (SELECT 1 FROM availability a WHERE a.property_id=p.id AND a.status<>'available' AND a.date_from < ? AND a.date_to > ?)";
+        $params[] = $checkOutDate; $params[] = $checkInDate;
+    }
     $orderBy = $sort === 'price_asc' ? 'p.base_nightly_price ASC' : ($sort === 'price_desc' ? 'p.base_nightly_price DESC' : 'p.created_at DESC,p.id DESC');
     $countFrom = strpos($sql, ' FROM properties p WHERE ');
     $countSql = 'SELECT COUNT(*)' . substr($sql, $countFrom);
