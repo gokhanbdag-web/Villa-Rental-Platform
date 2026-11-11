@@ -8,10 +8,14 @@ use App\Core\Translator;
 
 function villa_navigation_tree(PDO $pdo, string $location, string $locale): array {
     $stmt=$pdo->prepare('SELECT id,parent_id,label,url,target FROM navigation_items WHERE location=? AND language_code=? AND is_active=1 ORDER BY sort_order,id');
-    $stmt->execute([$location,$locale]);$rows=$stmt->fetchAll(PDO::FETCH_ASSOC);$byId=[];$roots=[];
-    foreach($rows as $row){$row['children']=[];$byId[(int)$row['id']]=$row;}
-    foreach(array_keys($byId) as $id){$parent=(int)($byId[$id]['parent_id']??0);if($parent>0){if(isset($byId[$parent])&&$parent!==$id){$byId[$parent]['children'][]=&$byId[$id];}elseif($parent===$id){$roots[]=&$byId[$id];}}else{$roots[]=&$byId[$id];}}
-    return $roots;
+    $stmt->execute([$location,$locale]);$rows=$stmt->fetchAll(PDO::FETCH_ASSOC);$byId=[];$children=[];$roots=[];
+    foreach($rows as $row)$byId[(int)$row['id']]=$row;
+    foreach($rows as $row){$id=(int)$row['id'];$parent=(int)($row['parent_id']??0);
+        if($parent>0){if(isset($byId[$parent])&&$parent!==$id)$children[$parent][]=$row;elseif($parent===$id)$roots[]=$row;}
+        else $roots[]=$row;
+    }
+    foreach($roots as &$root)$root['children']=$children[(int)$root['id']]??[];
+    unset($root);return $roots;
 }
 
 function villa_resolve_location(PDO $pdo): array {
