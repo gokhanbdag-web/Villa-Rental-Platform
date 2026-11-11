@@ -1,9 +1,9 @@
 {
   "slug": "prestige",
   "name": "Prestige",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "author": "VillaStay",
-  "description": "Lacivert, şampanya altın ve editoryal lüks konaklama sunumu.",
+  "description": "Gümüş-mavi palet, rafine detaylar ve aydınlık premium deneyim.",
   "builtin": true,
   "templates": {
     "landing.php": "templates/landing.php",
