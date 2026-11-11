@@ -49,6 +49,8 @@ assets/
 - Statik dosyalar `/theme-assets/{slug}/{filename}` adresinden sunulur. Dosyaları `assets/` altında tutun ve CSS/şablonlarda bu yolu kullanın.
 - Tema ZIP dosyası en fazla 12 MB ve 150 dosya olabilir. Desteklenen dosyalar: `theme.json`, `style.css`, `templates/*.php` ve `assets/` altındaki CSS/JS/görsel/font dosyaları.
 - Yönetim paneli ZIP yükleme özelliği için sunucuda PHP `ZipArchive` eklentisi etkin olmalıdır. Etkin değilse hosting sağlayıcısından açılmasını isteyin.
+- Yönetim panelinde her tema için ana renk, vurgu rengi, sayfa zemini, panel rengi, yazı rengi ve kart köşe yuvarlaklığı ayrı ayrı ayarlanabilir. Bu tercihler mevcut `settings` tablosunda tema kimliğine göre saklanır; ek SQL migration gerekmez.
+- Tema kartındaki küçük görünüm, seçilen renklerle oluşturulan hızlı tasarım önizlemesidir. **Önizle** düğmesi ise seçilen temayı yönetici oturumunda gerçek site ana sayfasında açar; bu görünüm ziyaretçilere uygulanmaz. Önizleme çubuğundan önizleme kapatılabilir.
 
 ## Güvenlik
 
