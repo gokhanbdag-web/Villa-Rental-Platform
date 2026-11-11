@@ -264,7 +264,7 @@ $router->get('/', static function (): void {
     $pageBuilderLayout=PageBuilder::load(ThemeManager::activeSlug($pdo),'home');
     if(($_GET['builder_preview']??'')==='1' && Auth::check() && in_array($user['role']??'', ['admin','super_admin'], true)){
         $previewTheme=(string)($_SESSION['villa_builder_preview_theme']??'');
-        if($previewTheme!=='' && $previewTheme===ThemeManager::activeSlug($pdo) && is_array($_SESSION['villa_builder_preview_layout']??null)){
+        if($previewTheme!=='' && $previewTheme===ThemeManager::activeSlug($pdo) && (($_SESSION['villa_builder_preview_page']??'home')==='home') && is_array($_SESSION['villa_builder_preview_layout']??null)){
             $pageBuilderLayout=$_SESSION['villa_builder_preview_layout'];
         }
     }
