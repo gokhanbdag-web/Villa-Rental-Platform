@@ -82,7 +82,7 @@ if (($pageBuilderLayout['status'] ?? '') !== 'published') {
       <?php foreach ($homeCategoryCollections as $collection): ?>
       <div class="med-collection-row"><div class="med-collection-heading"><div><h3><?= e($collection['category']['name']) ?></h3><p><?= (int)$collection['category']['property_count'] ?> <?= e($content['home_collection_count_suffix'] ?? 'yayındaki villa arasından seçtiklerimiz') ?></p></div><a href="<?= e(app_url('/konaklamalar?category='.(int)$collection['category']['id'])) ?>"><?= e($content['home_collection_link'] ?? 'Tümünü gör ↗') ?></a></div><div class="med-property-grid med-property-grid--compact">
       <?php foreach ($collection['properties'] as $p): $img=$medImage($p); ?>
-        <a class="med-property-card" href="<?= e(app_url('/villa/'.rawurlencode((string)$p['slug']))) ?>"><div class="med-property-photo"><?php if($img): ?><img src="<?= e($img) ?>" alt="<?= e($p['title']) ?>" loading="lazy"><?php endif; ?></div><div class="med-property-body"><span class="med-property-place"><?= e(trim((string)($p['district'] ?? '').((string)($p['district'] ?? '')!=='' && (string)($p['city'] ?? '')!==''?', ':'').(string)($p['city'] ?? ''))) ?></span><h3><?= e($p['title']) ?></h3><div class="med-property-meta"><?= (int)$p['max_guests'] ?> misafir</div><div class="med-property-price"><strong><?= e(number_format((float)$p['base_nightly_price'],0,',','.')) ?> <?= e($p['currency']) ?></strong> / gece</div></div></a>
+        <a class="med-property-card" href="<?= e(app_url('/villa/'.rawurlencode((string)$p['slug']))) ?>"><div class="med-property-photo"><?php if($img): ?><img src="<?= e($img) ?>" alt="<?= e($p['title']) ?>" loading="lazy"><?php endif; ?></div><div class="med-property-body"><span class="med-property-place"><?= e(trim((string)($p['district'] ?? '').((string)($p['district'] ?? '')!=='' && (string)($p['city'] ?? '')!==''?', ':'').(string)($p['city'] ?? ''))) ?></span><h3><?= e($p['title']) ?></h3><div class="med-property-meta"><?= (int)$p['max_guests'] ?> <?= e($content['home_guest_unit'] ?? 'misafir') ?></div><div class="med-property-price"><strong><?= e(number_format((float)$p['base_nightly_price'],0,',','.')) ?> <?= e($p['currency']) ?></strong> / <?= e($content['home_night_unit'] ?? 'gece') ?></div></div></a>
       <?php endforeach; ?></div></div>
       <?php endforeach; ?>
     </div></section>
@@ -119,9 +119,10 @@ $footerColumns.='</ul></div><div><strong>'.e((string)($content['home_footer_cont
 $html = str_replace('</nav></div></footer>', '</nav>'.$footerColumns.'</div></footer>', $html);
 $regionTitle=trim((string)($content['home_regions_title']??''));
 $regionSubtitle=trim((string)($content['home_regions_subtitle']??''));
-if($regionTitle!==''||$regionSubtitle!==''){
-    $html=preg_replace_callback('~(<span class="pill"><?= e($content['home_regions_eyebrow'] ?? 'KEŞFETMEYE BAŞLA') ?></span><h2>).*?(</h2><p>).*?(</p>)~s',static function(array $m)use($regionTitle,$regionSubtitle):string{
-        return $m[1].e($regionTitle!==''?$regionTitle:'Bölgeleri keşfedin').$m[2].e($regionSubtitle).$m[3];
+$regionEyebrow=trim((string)($content['home_regions_eyebrow']??'KEŞFETMEYE BAŞLA'));
+if($regionTitle!==''||$regionSubtitle!==''||$regionEyebrow!==''){
+    $html=preg_replace_callback('~(<span class="pill">).*?(</span><h2>).*?(</h2><p>).*?(</p>)~s',static function(array $m)use($regionTitle,$regionSubtitle,$regionEyebrow):string{
+        return $m[1].e($regionEyebrow).$m[2].e($regionTitle!==''?$regionTitle:'Bölgeleri keşfedin').$m[3].e($regionSubtitle).$m[4];
     },$html,1)??$html;
 }
 
