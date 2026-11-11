@@ -1,0 +1,9 @@
+{
+  "slug": "modern",
+  "name": "Modern",
+  "version": "1.0.0",
+  "author": "VillaStay",
+  "description": "Keskin tipografi, yüksek kontrast ve şehirli, çağdaş yerleşim.",
+  "builtin": true,
+  "templates": {}
+}
