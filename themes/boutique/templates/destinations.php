@@ -40,4 +40,15 @@ body.villa-destinations-boutique{background:#f3f2eb;color:#354238}body.villa-des
 @media(max-width:600px){body.villa-destinations-boutique .grid{grid-template-columns:minmax(0,1fr)!important;grid-auto-rows:auto!important;gap:16px!important}body.villa-destinations-boutique .grid>.card{grid-column:1/-1!important;height:220px!important;margin:0!important;width:100%}}
 CSS;
 $html = str_replace('</head>', '<style>' . $themeDestinationsCss . '</style></head>', $html);
+$html = str_replace('</head>', '<style>' . <<<'CSS'
+
+/* Symmetric destination cards: remove editorial stagger on every viewport. */
+body.villa-destinations-boutique .grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));align-items:stretch;grid-auto-flow:row;gap:20px}
+body.villa-destinations-boutique .grid>.card,
+body.villa-destinations-boutique .grid>.card:nth-child(3n+2),
+body.villa-destinations-boutique .grid>.card:nth-child(3n){height:260px;margin:0!important;min-width:0;width:auto;align-self:stretch}
+@media(max-width:900px){body.villa-destinations-boutique .grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:16px}body.villa-destinations-boutique .grid>.card,body.villa-destinations-boutique .grid>.card:nth-child(3n+2),body.villa-destinations-boutique .grid>.card:nth-child(3n){height:220px;margin:0!important}}
+@media(max-width:600px){body.villa-destinations-boutique .grid{grid-template-columns:minmax(0,1fr)!important;gap:16px!important}body.villa-destinations-boutique .grid>.card,body.villa-destinations-boutique .grid>.card:nth-child(3n+2),body.villa-destinations-boutique .grid>.card:nth-child(3n){grid-column:1/-1!important;height:220px!important;margin:0!important;width:100%}}
+CSS
+ . '</style></head>', $html);
 echo $html;
