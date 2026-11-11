@@ -50,7 +50,12 @@ $router->get('/locations/search', static function (): void {
     if($q===''||mb_strlen($q)<1){echo '[]';return;}
     $like=$q.'%';
     $sql="SELECT l.id,l.location_type,l.name,
-        TRIM(BOTH ' / ' FROM CONCAT_WS(' / ',g.name,p.name,l.name)) AS label
+        CASE
+            WHEN l.location_type='city' THEN l.name
+            WHEN l.location_type='district' THEN TRIM(BOTH ' / ' FROM CONCAT_WS(' / ',p.name,l.name))
+            WHEN l.location_type='neighborhood' THEN TRIM(BOTH ' / ' FROM CONCAT_WS(' / ',g.name,p.name,l.name))
+            ELSE l.name
+        END AS label
         FROM locations l
         LEFT JOIN locations p ON p.id=l.parent_id
         LEFT JOIN locations g ON g.id=p.parent_id
