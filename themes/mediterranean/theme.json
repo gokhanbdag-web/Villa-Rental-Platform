@@ -1,9 +1,9 @@
 {
   "slug": "mediterranean",
   "name": "Akdeniz",
-  "version": "1.1.0",
+  "version": "1.2.0",
   "author": "VillaStay",
-  "description": "Buz mavisi, açık gökyüzü tonları ve modern kıyı minimalizmi.",
+  "description": "Zeytin yeşili, kırık beyaz ve sıcak taş tonlarıyla Akdeniz esintili editoryal villa tatili teması.",
   "builtin": true,
   "templates": {
     "landing.php": "templates/landing.php",
