@@ -61,7 +61,7 @@ function store_property_uploads(PDO $pdo, int $propertyId): void {
     }
     $allowed = ['image/jpeg'=>'jpg','image/png'=>'png','image/webp'=>'webp'];
     $finfo = new finfo(FILEINFO_MIME_TYPE);
-    $count = min(count($_FILES['images']['name']), 10);
+    $count = min(count($_FILES['images']['name']), 30);
     $existing = $pdo->prepare("SELECT COUNT(*) FROM property_media WHERE property_id=? AND file_path NOT LIKE 'demo/villas/%'");
     $existing->execute([$propertyId]);
     $cover = (int)$existing->fetchColumn() === 0 ? 1 : 0;
@@ -72,7 +72,7 @@ function store_property_uploads(PDO $pdo, int $propertyId): void {
         if ($error === UPLOAD_ERR_NO_FILE || $error !== UPLOAD_ERR_OK) continue;
         $tmp = (string)($_FILES['images']['tmp_name'][$i] ?? '');
         $size = (int)($_FILES['images']['size'][$i] ?? 0);
-        if ($tmp === '' || $size < 1 || $size > 8 * 1024 * 1024 || !is_uploaded_file($tmp)) continue;
+        if ($tmp === '' || $size < 1 || $size > 12 * 1024 * 1024 || !is_uploaded_file($tmp)) continue;
         $mime = $finfo->file($tmp);
         if (!isset($allowed[$mime])) continue;
         $filename = bin2hex(random_bytes(18)) . '.' . $allowed[$mime];
