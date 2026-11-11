@@ -65,6 +65,9 @@ function store_property_uploads(PDO $pdo, int $propertyId): void {
     $existing = $pdo->prepare("SELECT COUNT(*) FROM property_media WHERE property_id=? AND file_path NOT LIKE 'demo/villas/%'");
     $existing->execute([$propertyId]);
     $cover = (int)$existing->fetchColumn() === 0 ? 1 : 0;
+    $maxOrderStmt = $pdo->prepare('SELECT COALESCE(MAX(sort_order),-1) FROM property_media WHERE property_id=?');
+    $maxOrderStmt->execute([$propertyId]);
+    $nextSortOrder = (int)$maxOrderStmt->fetchColumn() + 1;
     if ($cover === 1) { $resetCover = $pdo->prepare('UPDATE property_media SET is_cover=0 WHERE property_id=?'); $resetCover->execute([$propertyId]); }
     $insert = $pdo->prepare('INSERT INTO property_media (property_id,file_path,alt_text,is_cover,sort_order) VALUES (?,?,?,?,?)');
     for ($i=0; $i<$count; $i++) {
@@ -79,7 +82,7 @@ function store_property_uploads(PDO $pdo, int $propertyId): void {
         if (!move_uploaded_file($tmp, $directory . '/' . $filename)) continue;
         $relative = 'uploads/properties/' . $filename;
         $alt = trim((string)($_POST['title'] ?? 'Villa fotoğrafı'));
-        $insert->execute([$propertyId,$relative,$alt,$cover,$i]);
+        $insert->execute([$propertyId,$relative,$alt,$cover,$nextSortOrder++]);
         $cover = 0;
     }
 }
