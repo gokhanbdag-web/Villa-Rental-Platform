@@ -31,7 +31,7 @@ article{line-height:1.85;white-space:pre-line;padding:30px 0;color:#4c5a50}
 body.menu-open{overflow:hidden}
 .wrap{margin:30px auto;padding:0 16px}
 }
-</style>
+.site-footer{background:#20352e;color:#fff;padding:36px 0;margin-top:55px}.site-footer p{color:#c3d2ca;line-height:1.65}.site-footer .footer-inner{width:min(1180px,calc(100% - 36px));margin:auto;display:grid;grid-template-columns:minmax(0,1fr) minmax(0,2fr);gap:26px;align-items:start}.site-footer .footer-copy{min-width:0}.site-footer .footer-links{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:11px 16px;font-size:13px}.site-footer .footer-links a{color:inherit;overflow-wrap:anywhere}@media(max-width:600px){.site-footer .footer-inner{grid-template-columns:1fr;gap:16px}.site-footer .footer-links{grid-template-columns:repeat(2,minmax(0,1fr))}}</style>
 </head>
 <body>
 <header class="site-header"><div class="wrap site-head">
@@ -44,6 +44,6 @@ body.menu-open{overflow:hidden}
 <?php if (($user['role'] ?? '') === 'customer'): ?><a href="/favorites">Favorilerim</a><a href="/account/bookings">Hesabım</a><?php endif; ?>
 </nav></div></header>
 <div class="drawer-overlay" id="siteMenuOverlay" aria-hidden="true"></div>
-<main class="wrap"><h1><?= e($page['title']) ?></h1><article><?= nl2br(e($page['content'])) ?></article></main>
+<main class="wrap"><h1><?= e($page['title']) ?></h1><article><?= nl2br(e($page['content'])) ?></article></main><footer class="site-footer"><div class="footer-inner"><div class="footer-copy"><strong><?= e($siteName) ?></strong><p><?= e($content['footer_text']??'') ?></p></div><nav class="footer-links"><?php foreach(($footerNavigation??[]) as $item): ?><a href="<?= e($item['url']) ?>" target="<?= e($item['target']??'_self') ?>"><?= e($item['label']) ?></a><?php endforeach; ?><a href="/konaklamalar">Konaklamalar</a><a href="/destinasyonlar">Destinasyonlar</a></nav></div></footer>
 <script>(function(){var button=document.querySelector(".mobile-menu-toggle"),menu=document.getElementById("siteNavigation"),overlay=document.getElementById("siteMenuOverlay");if(!button||!menu||!overlay)return;function close(){menu.classList.remove("is-open");overlay.classList.remove("is-open");document.body.classList.remove("menu-open");button.setAttribute("aria-expanded","false");button.setAttribute("aria-label","Menüyü aç");button.textContent="☰"}function open(){menu.classList.add("is-open");overlay.classList.add("is-open");document.body.classList.add("menu-open");button.setAttribute("aria-expanded","true");button.setAttribute("aria-label","Menüyü kapat");button.textContent="×"}button.addEventListener("click",function(){menu.classList.contains("is-open")?close():open()});overlay.addEventListener("click",close);menu.addEventListener("click",function(e){if(e.target.closest("a"))close()});document.addEventListener("keydown",function(e){if(e.key==="Escape")close()});window.addEventListener("resize",function(){if(window.innerWidth>700)close()})})();</script>
 </body></html>
