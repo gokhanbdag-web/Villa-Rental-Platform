@@ -89,7 +89,7 @@ if (($pageBuilderLayout['status'] ?? '') !== 'published') {
     <?php endif;
     if ($medSectionActive('reviews') && !empty($homeReviews)): ?>
     <section class="section med-reviews" style="order:<?= $medSectionOrder('reviews',8) ?>"><div class="wrap">
-      <div class="section-head"><div><span class="pill">MİSAFİR DENEYİMLERİ</span><h2><?= e($content['home_reviews_title'] ?? 'Misafirlerimizin Deneyimleri') ?></h2><p><?= e($content['home_reviews_subtitle'] ?? '') ?></p></div><a class="more" href="<?= e(app_url('/yorumlar')) ?>">Tüm yorumlar ↗</a></div>
+      <div class="section-head"><div><span class="pill">MİSAFİR DENEYİMLERİ</span><h2><?= e($content['home_reviews_title'] ?? 'Misafirlerimizin Deneyimleri') ?></h2><p><?= e($content['home_reviews_subtitle'] ?? '') ?></p></div></div>
       <div class="med-review-grid"><?php foreach ($homeReviews as $review): ?><article class="med-review-card"><div class="med-review-stars" aria-label="<?= (int)$review['rating'] ?> üzerinden 10 puan">★★★★★</div><p><?= e((string)$review['body']) ?></p><div class="med-review-author"><strong><?= e($review['username']) ?></strong><span><?= e($review['property_title']) ?></span><small>Doğrulanmış konaklama yorumu · <?= number_format((float)$review['rating'],1,',','.') ?>/10</small></div></article><?php endforeach; ?></div>
     </div></section>
     <?php endif;
@@ -107,16 +107,23 @@ $hostTitle=trim((string)($content['home_host_title']??''));
 $hostSubtitle=trim((string)($content['home_host_subtitle']??''));
 $hostCta=trim((string)($content['home_host_cta']??''));
 if($hostTitle!==''||$hostSubtitle!==''||$hostCta!==''){
-    $html=preg_replace_callback('~(<div class="host-copy"><h2>).*?(</h2><p>).*?(</p><a href=")[^"]*("?>).*?(</a>)~s',static function(array $m)use($hostTitle,$hostSubtitle,$hostCta):string{
-        return $m[1].e($hostTitle).$m[2].e($hostSubtitle).$m[3].e(app_url('/vendor/register')).$m[4].e($hostCta!==''?$hostCta:'Ev sahibi olarak katılın').' ↗'.$m[5];
+    $html=preg_replace_callback('~<div class="host-copy"><h2>.*?</h2><p>.*?</p><a href="[^"]*">.*?</a></div>~s',static function()use($hostTitle,$hostSubtitle,$hostCta):string{
+        return '<div class="host-copy"><h2>'.e($hostTitle).'</h2><p>'.e($hostSubtitle).'</p><a href="'.e(app_url('/vendor/register')).'">'.e($hostCta!==''?$hostCta:'Ev sahibi olarak katılın').' ↗</a></div>';
     },$html,1)??$html;
 }
 $footerColumns = '<div class="med-footer-columns"><div><strong>Popüler Bölgeler</strong><ul>';
 foreach(array_slice($destinations??[],0,6) as $destination){$footerColumns.='<li><a href="'.e(app_url('/konaklamalar?location_id='.(int)$destination['location_id'])).'">'.e($destination['city']).'</a></li>';}
 $footerColumns.='</ul></div><div><strong>Villa Konseptleri</strong><ul>';
 foreach(array_slice($categories??[],0,6) as $category){$footerColumns.='<li><a href="'.e(app_url('/konaklamalar?category='.(int)$category['id'])).'">'.e($category['name']).'</a></li>';}
-$footerColumns.='</ul></div><div><strong>İletişim</strong><ul><li>'.e((string)($content['home_support_phone']??'')).'</li><li><a href="'.e(app_url('/iletisim')).'">İletişim sayfası</a></li></ul></div></div>';
+$footerColumns.='</ul></div><div><strong>İletişim</strong><ul><li>'.e((string)($content['home_support_phone']??'')).'</li></ul></div></div>';
 $html = str_replace('</nav></div></footer>', '</nav>'.$footerColumns.'</div></footer>', $html);
+$regionTitle=trim((string)($content['home_regions_title']??''));
+$regionSubtitle=trim((string)($content['home_regions_subtitle']??''));
+if($regionTitle!==''||$regionSubtitle!==''){
+    $html=preg_replace_callback('~(<span class="pill">KEŞFETMEYE BAŞLA</span><h2>).*?(</h2><p>).*?(</p>)~s',static function(array $m)use($regionTitle,$regionSubtitle):string{
+        return $m[1].e($regionTitle!==''?$regionTitle:'Bölgeleri keşfedin').$m[2].e($regionSubtitle).$m[3];
+    },$html,1)??$html;
+}
 
 $menuIconCss = '.theme-menu-toggle .menu-open-mark{display:inline!important}.theme-menu-toggle .menu-close-mark,.theme-menu-toggle .menu-close-mark[hidden]{display:none!important}.theme-menu-toggle[aria-expanded="true"] .menu-open-mark{display:none!important}.theme-menu-toggle[aria-expanded="true"] .menu-close-mark{display:inline!important}.theme-menu-toggle[aria-expanded="true"] .menu-close-mark[hidden]{display:inline!important}';
 $html = str_replace('</head>', '<style id="villa-menu-icon-state">' . $menuIconCss . '</style><style>' . $homeCss . '</style></head>', $html);
@@ -198,7 +205,7 @@ body.villa-home-mediterranean .section:has(.styles),body.villa-home-mediterranea
 .med-support-actions a{display:block;padding:14px 18px;border-radius:11px;text-align:center;font:700 13px Arial,sans-serif}
 .med-support-phone{background:#fff;color:#385b40}
 .med-support-whatsapp{background:#365b42;color:#fff}
-.med-footer-columns{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:24px;min-width:0}
+.med-footer-columns{display:grid;grid-column:1/-1;grid-template-columns:repeat(3,minmax(0,1fr));gap:24px;min-width:0}
 .med-footer-columns strong{display:block;margin-bottom:12px;color:#f0f3e9;font:600 15px Georgia,serif}
 .med-footer-columns ul{margin:0;padding:0;list-style:none;display:grid;gap:9px}
 .med-footer-columns a,.med-footer-columns li{color:#c6d0c2;font:12px/1.5 Arial,sans-serif}
