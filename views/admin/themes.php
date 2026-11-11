@@ -21,6 +21,7 @@
 <label>Sayfa zemini<input type="color" name="background" value="<?= e($themeSettings[$slug]['background']??$palette[0]) ?>"></label>
 <label>Panel rengi<input type="color" name="surface" value="<?= e($themeSettings[$slug]['surface']??$palette[2]) ?>"></label>
 <label>Yazı rengi<input type="color" name="text" value="<?= e($themeSettings[$slug]['text']??'#26352e') ?>"></label>
+<label>Buton rengi<input type="color" name="button_color" value="<?= e($themeSettings[$slug]['button_color']??($themeSettings[$slug]['primary']??$palette[1])) ?>"></label>
 <label>Köşe yuvarlaklığı (px)<input type="number" name="radius" min="0" max="32" value="<?= e((string)($themeSettings[$slug]['radius']??18)) ?>"></label>
 </div><button type="submit">Görünüm ayarlarını kaydet</button></form></details></div></article>
 <?php endforeach; ?>
