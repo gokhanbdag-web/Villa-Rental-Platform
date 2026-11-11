@@ -69,7 +69,7 @@ $router->get('/admin/builder', static function (): void {
     $themeSlug=(string)($_GET['theme']??ThemeManager::activeSlug());
     if(!isset($themes[$themeSlug]))$themeSlug=ThemeManager::activeSlug();
     $pageKey=(string)($_GET['page']??'home');
-    if(!in_array($pageKey,['home','destinations','listing','property','content'],true))$pageKey='home';
+    if($pageKey!=='home')$pageKey='home';
     $layout=PageBuilder::load($themeSlug,$pageKey);
     $widgetRegistry=PageBuilder::widgets();
     require APP_ROOT.'/views/admin/builder.php';
@@ -78,6 +78,7 @@ $router->post('/admin/builder/save', static function (): void {
     Auth::requireRole(['super_admin','admin']);verify_csrf();
     $theme=(string)($_POST['theme']??'');
     $page=(string)($_POST['page']??'home');
+    if($page!=='home'){http_response_code(422);exit('Bu sayfa türü henüz görsel editöre bağlanmadı.');}
     $status=(string)($_POST['status']??'draft');
     $raw=(string)($_POST['layout_json']??'');
     if(strlen($raw)>500000){http_response_code(413);exit('Sayfa düzeni çok büyük.');}
