@@ -67,23 +67,30 @@ if ($isAdminPage) {
     ob_start(static function (string $html) use ($requestPath, $platformMode): string {
         $user = Auth::user();
         $username = e((string)($user['username'] ?? 'Yönetici'));
-        $links = [
-            '/admin' => 'Genel Bakış',
-            '/admin/properties' => 'Konaklamalar',
-            '/admin/locations' => 'Lokasyonlar',
-            '/admin/categories' => 'Kategoriler',
-            '/admin/amenities' => 'Villa Özellikleri',
-            '/admin/bookings' => 'Rezervasyonlar',
-            '/admin/users' => 'Kullanıcılar',
-            '/admin/reviews' => 'Yorumlar',
-            '/admin/pages' => 'İçerik Sayfaları',
-            '/admin/navigation' => 'Menü Yönetimi',
-            '/admin/content' => 'Site İçerikleri',
-            '/admin/settings' => 'Ayarlar',
-            '/admin/translations' => 'Çeviriler',
+        // Keep the same three navigation groups on the first load and every AJAX page.
+        $groups = [
+            'Yönetim' => [
+                '/admin' => 'Genel Bakış',
+                '/admin/properties' => 'Konaklamalar',
+                '/admin/bookings' => 'Rezervasyonlar',
+                '/admin/users' => 'Kullanıcılar',
+                '/admin/reviews' => 'Yorumlar',
+                '/admin/locations' => 'Lokasyonlar',
+                '/admin/categories' => 'Kategoriler',
+                '/admin/amenities' => 'Villa Özellikleri',
+            ],
+            'Web Sitesi' => [
+                '/admin/pages' => 'İçerik Sayfaları',
+                '/admin/navigation' => 'Menü Yönetimi',
+                '/admin/content' => 'Site İçerikleri',
+            ],
+            'Sistem' => [
+                '/admin/settings' => 'Ayarlar',
+                '/admin/translations' => 'Çeviriler',
+            ],
         ];
         if ($platformMode === 'multi_vendor') {
-            $links['/admin/vendors'] = 'Ev Sahipleri';
+            $groups['Yönetim']['/admin/vendors'] = 'Ev Sahipleri';
         }
 
         // Dashboard and sub-pages are reduced to content only; the shell below is the single admin layout.
@@ -122,11 +129,14 @@ if ($isAdminPage) {
             '/admin/vendors' => '♧',
         ];
         $nav = '';
-        foreach ($links as $url => $label) {
-            $active = $requestPath === $url || str_starts_with($requestPath, $url . '/');
-            $icon = $icons[$url] ?? '•';
-            $nav .= '<a class="vr-admin-link' . ($active ? ' is-active' : '') . '" href="' . e(app_url($url)) . '" data-admin-link>' .
-                '<span class="vr-admin-icon" aria-hidden="true">' . e($icon) . '</span><span class="vr-admin-link-label">' . e($label) . '</span></a>';
+        foreach ($groups as $groupLabel => $groupLinks) {
+            $nav .= '<div class="vr-admin-nav-title">' . e($groupLabel) . '</div>';
+            foreach ($groupLinks as $url => $label) {
+                $active = $requestPath === $url || str_starts_with($requestPath, $url . '/');
+                $icon = $icons[$url] ?? '•';
+                $nav .= '<a class="vr-admin-link' . ($active ? ' is-active' : '') . '" href="' . e(app_url($url)) . '" data-admin-link>' .
+                    '<span class="vr-admin-icon" aria-hidden="true">' . e($icon) . '</span><span class="vr-admin-link-label">' . e($label) . '</span></a>';
+            }
         }
         $adminRootUrl = json_encode(app_url('/admin'), JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_AMP | JSON_HEX_QUOT);
 
@@ -170,7 +180,7 @@ if ($isAdminPage) {
             }
             @media(max-width:900px){.vr-admin-top{height:62px;padding:0 16px}.vr-admin-burger{display:flex}.vr-admin-layout{display:block;min-height:calc(100vh - 62px)}.vr-admin-sidebar{position:fixed;z-index:1004;left:0;top:0;bottom:0;width:278px;max-width:84vw;overflow-y:auto;transform:translateX(-105%);transition:transform .22s ease;box-shadow:12px 0 35px rgba(20,30,40,.12);padding:22px 15px}.vr-admin-layout.menu-open .vr-admin-sidebar{transform:translateX(0)}.vr-admin-layout.menu-open .vr-admin-overlay{display:block;position:fixed;inset:0;background:rgba(15,23,32,.42);z-index:1003}.vr-admin-content{padding:22px 20px}}
             @media(max-width:520px){.vr-admin-brand{font-size:15px}.vr-admin-site-link{min-height:33px;padding:0 9px;font-size:11px}.vr-admin-user{display:none}.vr-admin-content{padding:16px 13px}}
-        </style><header class="vr-admin-top"><button class="vr-admin-burger" type="button" aria-label="Menüyü aç" aria-expanded="false" id="vrAdminBurger">☰</button><a class="vr-admin-brand" href="' . e(app_url('/admin')) . '" data-admin-link>VillaStay <span style="font-weight:500;color:#87918c">/ Yönetim</span></a><a class="vr-admin-site-link" href="' . e(app_url('/')) . '">Siteye dön ↗</a><form method="post" action="' . e(app_url('/logout')) . '" style="margin:0"><input type="hidden" name="_csrf" value="' . e(csrf_token()) . '"><button class="vr-admin-logout" type="submit">Çıkış Yap</button></form><span class="vr-admin-user">' . $username . '</span></header><div class="vr-admin-layout" id="vrAdminLayout"><aside class="vr-admin-sidebar" aria-label="Yönetim menüsü"><div class="vr-admin-nav-title">Yönetim Paneli</div>' . $nav . '</aside><div class="vr-admin-overlay" id="vrAdminOverlay"></div><main class="vr-admin-content" id="vrAdminContent">' . $bodyContent . '</main></div>
+        </style><header class="vr-admin-top"><button class="vr-admin-burger" type="button" aria-label="Menüyü aç" aria-expanded="false" id="vrAdminBurger">☰</button><a class="vr-admin-brand" href="' . e(app_url('/admin')) . '" data-admin-link>VillaStay <span style="font-weight:500;color:#87918c">/ Yönetim</span></a><a class="vr-admin-site-link" href="' . e(app_url('/')) . '">Siteye dön ↗</a><form method="post" action="' . e(app_url('/logout')) . '" style="margin:0"><input type="hidden" name="_csrf" value="' . e(csrf_token()) . '"><button class="vr-admin-logout" type="submit">Çıkış Yap</button></form><span class="vr-admin-user">' . $username . '</span></header><div class="vr-admin-layout" id="vrAdminLayout"><aside class="vr-admin-sidebar" aria-label="Yönetim menüsü">' . $nav . '</aside><div class="vr-admin-overlay" id="vrAdminOverlay"></div><main class="vr-admin-content" id="vrAdminContent">' . $bodyContent . '</main></div>
         <script>
         (function(){
             if(window.__villaAdminShellReady)return;window.__villaAdminShellReady=true;
@@ -194,33 +204,50 @@ if ($isAdminPage) {
             overlay&&overlay.addEventListener("click",closeMenu);
             function activate(url){document.querySelectorAll("[data-admin-link]").forEach(a=>{const u=new URL(a.href,location.href);a.classList.toggle("is-active",u.pathname===url|| (url!=="/admin"&&u.pathname!=="/admin"&&url.startsWith(u.pathname+"/")));});}
             async function navigate(url,push=true){
-                closeMenu();content.style.opacity=".55";
+                closeMenu();content.style.opacity=".58";
                 try{
-                    const response=await fetch(url,{headers:{"X-Requested-With":"XMLHttpRequest","Accept":"text/html"}});
-                    if(!response.ok)throw new Error("HTTP "+response.status);
-                    const source=await response.text(),doc=new DOMParser().parseFromString(source,"text/html"),next=doc.querySelector("#vrAdminContent");
-                    if(!next)throw new Error("Sayfa içeriği bulunamadı");
+                    const response=await fetch(url,{method:"GET",credentials:"same-origin",cache:"no-store",headers:{"X-Requested-With":"XMLHttpRequest","Accept":"text/html"}});
+                    if(!response.ok)throw new Error("Sunucu yanıtı: HTTP "+response.status);
+                    const source=await response.text();
+                    const doc=new DOMParser().parseFromString(source,"text/html");
+                    let next=doc.querySelector("#vrAdminContent");
+                    // Accept a plain admin document too; keep the existing shell/sidebar alive.
+                    if(!next){
+                        const main=doc.querySelector("main");
+                        const body=doc.body;
+                        const holder=document.createElement("div");
+                        holder.innerHTML=main?main.innerHTML:(body?body.innerHTML:"");
+                        holder.querySelectorAll("header,nav,aside").forEach(el=>el.remove());
+                        next=holder;
+                    }
+                    if(!next||!next.innerHTML.trim())throw new Error("Sayfa içeriği alınamadı. Oturum veya sunucu yanıtını kontrol edin.");
                     content.innerHTML=next.innerHTML;
                     enhanceResponsiveTables(content);
                     if(push)history.pushState({admin:true}, "",url);
                     activate(new URL(url,location.href).pathname);
                     if(doc.title)document.title=doc.title;
-                    content.querySelectorAll("script").forEach(old=>{const s=document.createElement("script");Array.from(old.attributes).forEach(a=>s.setAttribute(a.name,a.value));s.textContent=old.textContent;old.replaceWith(s)});
-                    window.scrollTo(0,0);
-                }catch(error){console.error("Admin navigation:",error);window.location.href=url}
-                finally{content.style.opacity="1"}
+                    content.querySelectorAll("script").forEach(old=>{const script=document.createElement("script");Array.from(old.attributes).forEach(a=>script.setAttribute(a.name,a.value));script.textContent=old.textContent;old.replaceWith(script)});
+                    window.scrollTo({top:0,behavior:"instant"});
+                }catch(error){
+                    console.error("Admin AJAX navigation failed:",error);
+                    let notice=content.querySelector(".vr-admin-navigation-error");
+                    if(!notice){notice=document.createElement("div");notice.className="vr-admin-navigation-error";notice.style.cssText="margin:0 0 18px;padding:13px 15px;border:1px solid #f0c8c3;border-radius:10px;background:#fff5f4;color:#963d35;font:13px/1.5 system-ui";content.prepend(notice)}
+                    notice.textContent="Sayfa yenilenmeden açılamadı: "+error.message+" — Lütfen tekrar deneyin.";
+                }finally{content.style.opacity="1"}
             }
             // Intercept every internal admin link, including dashboard quick actions,
             // rather than only sidebar links. This prevents mixed full reload / AJAX states.
-            document.addEventListener("click",function(event){
-                const link=event.target.closest("a[href]");if(!link)return;
-                if(event.defaultPrevented||event.button!==0||event.metaKey||event.ctrlKey||event.shiftKey||event.altKey)return;
+            window.addEventListener("click",function(event){
+                const origin=event.target instanceof Element?event.target:event.target&&event.target.parentElement;
+                const link=origin&&origin.closest("a[href]");if(!link)return;
+                if(event.button!==0||event.metaKey||event.ctrlKey||event.shiftKey||event.altKey)return;
                 if(link.target&&link.target!=="_self")return;
                 const target=new URL(link.href,location.href);
                 if(target.origin!==location.origin)return;
                 if(!(target.pathname===adminRootPath||target.pathname.startsWith(adminRootPath+"/")))return;
-                event.preventDefault();navigate(target.href,true);
-            });
+                event.preventDefault();event.stopPropagation();event.stopImmediatePropagation();
+                navigate(target.href,true);
+            },true);
             window.addEventListener("popstate",function(){if(location.pathname.startsWith((document.querySelector(".vr-admin-brand")?.pathname||"/admin").replace(/\/$/,"")))navigate(location.href,false);});
             activate(location.pathname);
         })();
