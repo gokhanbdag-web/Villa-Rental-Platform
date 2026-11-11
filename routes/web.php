@@ -20,6 +20,19 @@ function villa_navigation_tree(PDO $pdo, string $location, string $locale): arra
     unset($root);return $roots;
 }
 
+function villa_render_account_view(string $view, array $variables): void {
+    $pdo = Database::connection();
+    $locale = 'tr';
+    $navigation = villa_navigation_tree($pdo, 'header', $locale);
+    $footerNavigation = villa_navigation_tree($pdo, 'footer', $locale);
+    $contentStmt = $pdo->prepare('SELECT content_key,content_value FROM site_content WHERE language_code=?');
+    $contentStmt->execute([$locale]);
+    $content = $contentStmt->fetchAll(PDO::FETCH_KEY_PAIR);
+    $siteName = (string)($content['site_name'] ?? 'VillaStay');
+    $accountView = $view;
+    ThemeManager::render('account.php', array_merge($variables, compact('navigation','footerNavigation','content','siteName','accountView')));
+}
+
 function villa_safe_return_url(string $url): string { $path=parse_url($url,PHP_URL_PATH)?:'/'; if(!str_starts_with($path,'/')||str_starts_with($path,'//'))return '/'; $query=parse_url($url,PHP_URL_QUERY); return $path.($query!==null?'?'.$query:''); }
 function villa_return_with_status(string $url,string $key,string $value): string { $back=villa_safe_return_url($url); return $back.(str_contains($back,'?')?'&':'?').rawurlencode($key).'='.rawurlencode($value); }
 
@@ -628,7 +641,7 @@ $router->get('/account/messages/{bookingId}', static function (array $params): v
     $otherId=$currentId===$guestId?$vendorUserId:$guestId;$conversationKey=hash('sha256',$bookingId.':'.min($currentId,$otherId).':'.max($currentId,$otherId));
     $read=$pdo->prepare('UPDATE messages SET read_at=NOW() WHERE conversation_key=? AND recipient_user_id=? AND read_at IS NULL');$read->execute([$conversationKey,$currentId]);
     $messagesStmt=$pdo->prepare('SELECT m.*,u.username AS sender_name FROM messages m JOIN users u ON u.id=m.sender_user_id WHERE m.conversation_key=? ORDER BY m.created_at,id');$messagesStmt->execute([$conversationKey]);$messages=$messagesStmt->fetchAll();
-    require APP_ROOT.'/views/account/messages.php';
+    villa_render_account_view('messages.php', get_defined_vars());
 });
 $router->post('/account/messages/send', static function (): void {
     $user=Auth::user();if(!$user)redirect('/login');verify_csrf();$pdo=Database::connection();$bookingId=(int)($_POST['booking_id']??0);$body=trim((string)($_POST['body']??''));
@@ -645,7 +658,7 @@ $router->post('/account/messages/send', static function (): void {
 $router->get('/favorites', static function (): void {
     $user=Auth::user();if(!$user)redirect('/login');if(($user['role']??'')!=='customer')redirect('/admin');
     $s=Database::connection()->prepare("SELECT p.*, (SELECT file_path FROM property_media WHERE property_id=p.id ORDER BY is_cover DESC,sort_order,id LIMIT 1) AS cover_image FROM favorites f JOIN properties p ON p.id=f.property_id WHERE f.user_id=? AND p.status='published' ORDER BY f.created_at DESC");
-    $s->execute([(int)$user['id']]);$properties=$s->fetchAll();require APP_ROOT.'/views/account/favorites.php';
+    $s->execute([(int)$user['id']]);$properties=$s->fetchAll();villa_render_account_view('favorites.php', get_defined_vars());
 });
 $router->post('/favorites/toggle', static function (): void {
     $user=Auth::user();if(!$user)redirect('/login');if(($user['role']??'')!=='customer')redirect('/admin');verify_csrf();
@@ -662,7 +675,7 @@ $router->get('/account/reviews/{bookingId}', static function (array $params): vo
     $s=Database::connection()->prepare("SELECT b.id,p.title FROM bookings b JOIN properties p ON p.id=b.property_id WHERE b.id=? AND b.guest_user_id=? AND b.status='completed'");
     $s->execute([(int)$params['bookingId'],(int)$user['id']]);$booking=$s->fetch();if(!$booking){http_response_code(404);return;}
     $exists=Database::connection()->prepare('SELECT id FROM reviews WHERE booking_id=?');$exists->execute([(int)$booking['id']]);if($exists->fetchColumn()){http_response_code(409);exit('Bu rezervasyon için zaten değerlendirme gönderdiniz.');}
-    require APP_ROOT.'/views/account/review-form.php';
+    villa_render_account_view('review-form.php', get_defined_vars());
 });
 $router->post('/account/reviews', static function (): void {
     $user=Auth::user();if(!$user||($user['role']??'')!=='customer')redirect('/login');verify_csrf();
@@ -684,7 +697,7 @@ $router->get('/account/notifications', static function (): void {
     $user=Auth::user();if(!$user)redirect('/login');$pdo=Database::connection();
     $mark=$pdo->prepare('UPDATE notifications SET read_at=NOW() WHERE user_id=? AND read_at IS NULL');$mark->execute([(int)$user['id']]);
     $s=$pdo->prepare('SELECT * FROM notifications WHERE user_id=? ORDER BY created_at DESC LIMIT 100');$s->execute([(int)$user['id']]);$notifications=$s->fetchAll();
-    require APP_ROOT.'/views/account/notifications.php';
+    villa_render_account_view('notifications.php', get_defined_vars());
 });
 
 $router->get('/account/bookings', static function (): void {
@@ -696,16 +709,7 @@ $router->get('/account/bookings', static function (): void {
     $stmt->execute([(int)$user['id']]);
     $bookings = $stmt->fetchAll();
 
-    // Account pages use the same configured site navigation and active theme as public pages.
-    $locale = 'tr';
-    $navigation = villa_navigation_tree($pdo, 'header', $locale);
-    $footerNavigation = villa_navigation_tree($pdo, 'footer', $locale);
-    $contentStmt = $pdo->prepare('SELECT content_key,content_value FROM site_content WHERE language_code=?');
-    $contentStmt->execute([$locale]);
-    $content = $contentStmt->fetchAll(PDO::FETCH_KEY_PAIR);
-    $siteName = (string)($content['site_name'] ?? 'VillaStay');
-    $accountView = 'bookings.php';
-    ThemeManager::render('account.php', get_defined_vars());
+    villa_render_account_view('bookings.php', get_defined_vars());
 });
 
 $router->get('/login', static function (): void {
