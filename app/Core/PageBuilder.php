@@ -121,8 +121,7 @@ final class PageBuilder
     public static function save(string $theme, string $page, array $payload, string $status, int $userId): void
     {
         if (!isset(ThemeManager::installed()[$theme])) throw new RuntimeException('Geçersiz tema seçimi.');
-        $pages = ['home','destinations','listing','property','content'];
-        if (!in_array($page,$pages,true)) throw new RuntimeException('Geçersiz sayfa türü.');
+        if ($page!=='home' && !preg_match('/^[a-z0-9-]{1,40}$/',$page)) throw new RuntimeException('Geçersiz sayfa anahtarı.');
         if (!in_array($status,['draft','published'],true)) $status='draft';
         $registry=self::widgets();
         $items=$payload['widgets']??[];
