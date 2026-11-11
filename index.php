@@ -82,7 +82,8 @@ if ($isAdminPage) {
             'Web Sitesi' => [
                 '/admin/pages' => 'İçerik Sayfaları',
                 '/admin/navigation' => 'Menü Yönetimi',
-                '/admin/content' => 'Site İçerikleri',\n                '/admin/builder' => 'Görsel Sayfa Oluşturucu',
+                '/admin/content' => 'Site İçerikleri',
+                '/admin/builder' => 'Görsel Sayfa Oluşturucu',
             ],
             'Sistem' => [
                 '/admin/settings' => 'Ayarlar',
@@ -124,7 +125,8 @@ if ($isAdminPage) {
             '/admin/reviews' => '☆',
             '/admin/pages' => '▧',
             '/admin/navigation' => '☷',
-            '/admin/content' => '✎',\n            '/admin/builder' => '▦',
+            '/admin/content' => '✎',
+            '/admin/builder' => '▦',
             '/admin/settings' => '⚙',
             '/admin/themes' => '◈',
             '/admin/translations' => '文',
