@@ -5,6 +5,7 @@ use App\Core\Auth;
 use App\Core\Database;
 use App\Core\Router;
 use App\Core\Translator;
+use App\Core\ThemeManager;
 
 function villa_navigation_tree(PDO $pdo, string $location, string $locale): array {
     $stmt=$pdo->prepare('SELECT id,parent_id,label,url,target FROM navigation_items WHERE location=? AND language_code=? AND is_active=1 ORDER BY sort_order,id');
@@ -185,7 +186,7 @@ $router->get('/', static function (): void {
     $categories=$pdo->query('SELECT id,name,slug FROM property_categories WHERE is_active=1 ORDER BY sort_order,name LIMIT 8')->fetchAll();
     $homeSections=[];foreach($pdo->query('SELECT * FROM homepage_sections ORDER BY sort_order,id')->fetchAll() as $section){$homeSections[$section['section_key']]=$section;}
     $locationCountries=$pdo->query("SELECT id,name FROM locations WHERE location_type='country' AND is_active=1 ORDER BY sort_order,name")->fetchAll();
-    require APP_ROOT.'/views/site/landing.php';
+    ThemeManager::render('landing.php', get_defined_vars());
 });
 
 $router->get('/konaklamalar', static function (): void {
@@ -266,7 +267,7 @@ $router->get('/konaklamalar', static function (): void {
     $perPage=12;$totalPages=max(1,(int)ceil($totalProperties/$perPage));$currentPage=min($totalPages,max(1,(int)($_GET['page']??1)));
     $sql .= ' ORDER BY ' . $orderBy . ' LIMIT ' . $perPage . ' OFFSET ' . (($currentPage-1)*$perPage);
     $stmt=$pdo->prepare($sql); $stmt->execute($params); $properties=$stmt->fetchAll();
-    require APP_ROOT . '/views/site/listing.php';
+    ThemeManager::render('listing.php', get_defined_vars());
 });
 
 $router->get('/destinasyonlar', static function (): void {
@@ -279,7 +280,7 @@ $router->get('/destinasyonlar', static function (): void {
     
     $mode=(string)($pdo->query("SELECT setting_value FROM settings WHERE setting_key='app.mode' LIMIT 1")->fetchColumn() ?: 'single_vendor');
     $user=Auth::user();
-    require APP_ROOT.'/views/site/destinations.php';
+    ThemeManager::render('destinations.php', get_defined_vars());
 });
 
 $router->get('/villa/{slug}', static function (array $params): void {
@@ -303,7 +304,7 @@ $router->get('/villa/{slug}', static function (array $params): void {
     $ratingStmt->execute([(int)$property['id']]);$ratingSummary=$ratingStmt->fetch() ?: ['rating_average'=>null,'rating_count'=>0];
     $reviewsStmt=$pdo->prepare("SELECT r.rating,r.body,r.created_at,u.username FROM reviews r JOIN users u ON u.id=r.guest_user_id WHERE r.property_id=? AND r.status='approved' ORDER BY r.created_at DESC LIMIT 20");
     $reviewsStmt->execute([(int)$property['id']]);$reviews=$reviewsStmt->fetchAll();
-    require APP_ROOT . '/views/site/property.php';
+    ThemeManager::render('property.php', get_defined_vars());
 });
 
 
@@ -360,7 +361,7 @@ $router->get('/villa/{slug}/reserve', static function (array $params): void {
         for($night=$checkInValue;$night<$checkOutValue;$night=$night->modify('+1 day')){$day=$night->format('Y-m-d');$rate=(float)$property['base_nightly_price'];if((int)$night->format('N')>=6&&(float)($property['weekend_nightly_price']??0)>0)$rate=(float)$property['weekend_nightly_price'];foreach($previewRules as $rule){if($day>=$rule['date_from']&&$day<$rule['date_to']){if($rule['status']!=='available'){$previewUnavailable=true;break;}if($rule['nightly_price']!==null)$rate=(float)$rule['nightly_price'];}}if($previewUnavailable)break;$previewSubtotal+=$rate;$previewNights++;}
         if(!$previewUnavailable){$pricePreview=['nights'=>$previewNights,'subtotal'=>$previewSubtotal,'fees'=>(float)($property['cleaning_fee']??0),'total'=>$previewSubtotal+(float)($property['cleaning_fee']??0)];}
     }
-    require APP_ROOT . '/views/site/booking.php';
+    ThemeManager::render('booking.php', get_defined_vars());
 });
 
 $router->post('/villa/{slug}/reserve', static function (array $params): void {
@@ -923,7 +924,7 @@ $router->get('/page/{slug}', static function (array $params): void {
     $footerNavigation=villa_navigation_tree($pdo,'footer','tr');
     $mode=(string)($pdo->query("SELECT setting_value FROM settings WHERE setting_key='app.mode' LIMIT 1")->fetchColumn() ?: 'single_vendor');
     $user=Auth::user(); $locale='tr';
-    require APP_ROOT.'/views/site/page.php';
+    ThemeManager::render('page.php', get_defined_vars());
 });
 
 
@@ -949,6 +950,50 @@ $router->post('/admin/users/status', static function (): void {
     Auth::requireRole(['super_admin','admin']);verify_csrf();$id=(int)($_POST['id']??0);$status=($_POST['status']??'')==='active'?'active':'disabled';
     if($id===(int)Auth::user()['id']){http_response_code(422);exit('Kendi hesabınızın durumunu bu ekrandan değiştiremezsiniz.');}
     $s=Database::connection()->prepare("UPDATE users SET status=? WHERE id=? AND role<>'super_admin'");$s->execute([$status,$id]);redirect('/admin/users');
+});
+
+
+$router->get('/theme-assets/{slug}/{file}', static function (array $params): void {
+    $slug=(string)($params['slug']??'');$file=(string)($params['file']??'');
+    if(!preg_match('/^[a-z0-9][a-z0-9_-]{1,49}$/',$slug)||$file!=='style.css'){http_response_code(404);exit;}
+    $path=APP_ROOT.'/themes/'.$slug.'/style.css';
+    if(!is_file($path)){http_response_code(404);exit;}
+    header('Content-Type: text/css; charset=UTF-8');header('X-Content-Type-Options: nosniff');header('Cache-Control: public, max-age=3600');
+    readfile($path);exit;
+});
+
+$router->get('/admin/themes', static function (): void {
+    Auth::requireRole(['super_admin','admin']);
+    $themes=ThemeManager::installed();$activeTheme=ThemeManager::activeSlug();
+    $themeMessage=(string)($_SESSION['villa_theme_message']??'');unset($_SESSION['villa_theme_message']);
+    require APP_ROOT.'/views/admin/themes.php';
+});
+$router->post('/admin/themes/activate', static function (): void {
+    Auth::requireRole(['super_admin','admin']);verify_csrf();
+    try{ThemeManager::activate((string)($_POST['slug']??''));$_SESSION['villa_theme_message']='Tema başarıyla etkinleştirildi.';}
+    catch(Throwable $e){$_SESSION['villa_theme_message']=$e->getMessage();}
+    redirect('/admin/themes');
+});
+$router->post('/admin/themes/preview', static function (): void {
+    Auth::requireRole(['super_admin','admin']);verify_csrf();
+    try{ThemeManager::preview((string)($_POST['slug']??''));}
+    catch(Throwable $e){$_SESSION['villa_theme_message']=$e->getMessage();redirect('/admin/themes');}
+    redirect('/');
+});
+$router->get('/admin/themes/preview/clear', static function (): void {
+    Auth::requireRole(['super_admin','admin']);ThemeManager::clearPreview();redirect('/admin/themes');
+});
+$router->post('/admin/themes/upload', static function (): void {
+    Auth::requireRole(['super_admin','admin']);verify_csrf();
+    try{$slug=ThemeManager::installUploaded($_FILES['theme_zip']??[]);$_SESSION['villa_theme_message']='Tema yüklendi: '.$slug;}
+    catch(Throwable $e){$_SESSION['villa_theme_message']=$e->getMessage();}
+    redirect('/admin/themes');
+});
+$router->post('/admin/themes/delete', static function (): void {
+    Auth::requireRole(['super_admin','admin']);verify_csrf();
+    try{ThemeManager::remove((string)($_POST['slug']??''));$_SESSION['villa_theme_message']='Tema paketi silindi.';}
+    catch(Throwable $e){$_SESSION['villa_theme_message']=$e->getMessage();}
+    redirect('/admin/themes');
 });
 
 $router->get('/admin/settings', static function (): void {
