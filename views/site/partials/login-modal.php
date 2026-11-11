@@ -32,7 +32,15 @@ form.addEventListener('submit',async function(e){
  e.preventDefault();error.hidden=true;submit.disabled=true;submit.textContent='Kontrol ediliyor…';
  try{
   var response=await fetch(form.dataset.endpoint,{method:'POST',body:new FormData(form),credentials:'same-origin',headers:{'X-Requested-With':'XMLHttpRequest','Accept':'application/json'}});
-  var data=await response.json();
+  var contentType=(response.headers.get('content-type')||'').toLowerCase();
+  if(!contentType.includes('application/json')){
+   // Shared-hosting rewrite/error pages can return HTML for the AJAX URL.
+   // Fall back to the regular POST /login flow instead of exposing a JSON parse error.
+   HTMLFormElement.prototype.submit.call(form);
+   return;
+  }
+  var raw=await response.text(),data;
+  try{data=JSON.parse(raw)}catch(parseError){throw new Error('Sunucu geçerli JSON yanıtı vermedi. Hosting hata kaydını kontrol edin.');}
   if(!response.ok||!data.ok)throw new Error(data.message||'Giriş yapılamadı.');
   document.querySelectorAll('[data-auth-link]').forEach(function(link){link.textContent=data.user.label;link.href=data.user.url;link.removeAttribute('data-login-trigger');});
   close();form.reset();
