@@ -127,7 +127,6 @@ if($regionTitle!==''||$regionSubtitle!==''||$regionEyebrow!==''){
 }
 
 $menuIconCss = '.theme-menu-toggle .menu-open-mark{display:inline!important}.theme-menu-toggle .menu-close-mark,.theme-menu-toggle .menu-close-mark[hidden]{display:none!important}.theme-menu-toggle[aria-expanded="true"] .menu-open-mark{display:none!important}.theme-menu-toggle[aria-expanded="true"] .menu-close-mark{display:inline!important}.theme-menu-toggle[aria-expanded="true"] .menu-close-mark[hidden]{display:inline!important}';
-$html = str_replace('</head>', '<style id="villa-menu-icon-state">' . $menuIconCss . '</style><style>' . $homeCss . '</style></head>', $html);
 
 $homeCss .= <<<'CSS'
 /* Mediterranean editorial homepage */
@@ -214,4 +213,5 @@ body.villa-home-mediterranean .section:has(.styles),body.villa-home-mediterranea
 @media(max-width:600px){body.villa-home-mediterranean .hero-card{min-height:560px;border-radius:20px}.med-trust-grid{grid-template-columns:1fr 1fr;gap:18px 12px}.med-trust-item{align-items:flex-start;gap:9px}.med-trust-icon{flex-basis:36px;width:36px;height:36px;font-size:18px}.med-trust-item h3{font-size:12px}.med-trust-item p{font-size:11px}.med-property-grid,.med-property-grid--compact{grid-template-columns:1fr;gap:15px}.med-property-photo,.med-property-grid--compact .med-property-photo{height:225px}.med-concept-grid{grid-template-columns:1fr 1fr;gap:10px}.med-concept-card{height:170px;border-radius:14px}.med-concept-copy{left:11px;bottom:12px}.med-concept-copy strong{font-size:16px}.med-collection-heading h3{font-size:22px}.med-review-grid{grid-template-columns:1fr}.med-review-card>p{min-height:0}.med-faq-intro h2{font-size:33px}.med-faq-item summary{font-size:14px}.med-support-panel{display:block;padding:27px 22px;border-radius:19px}.med-support h2{font-size:29px}.med-support-actions{margin-top:22px}.med-footer-columns{grid-template-columns:1fr 1fr;gap:22px}.med-footer-columns>div:last-child{grid-column:1/-1}}
 CSS;
 
+$html = str_replace('</head>', '<style id="villa-menu-icon-state">' . $menuIconCss . '</style><style>' . $homeCss . '</style></head>', $html);
 echo $html;
