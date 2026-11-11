@@ -40,8 +40,6 @@ final class Migrator
                 throw new \RuntimeException('Migration failed: ' . $name . ' - ' . $e->getMessage(), 0, $e);
             }
         }
-        }
-
         // Self-heal the navigation schema if a previous deployment skipped
         // this migration or recorded it without applying the column.
         selfHealNavigationHierarchy($pdo);
