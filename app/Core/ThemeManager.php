@@ -38,6 +38,8 @@ final class ThemeManager
     {
         $preview = $_SESSION['villa_theme_preview'] ?? '';
         if (is_string($preview) && isset(self::installed()[$preview]) && Auth::check() && in_array(Auth::user()['role'] ?? '', ['admin','super_admin'], true)) return $preview;
+        $demo = $_SESSION['villa_public_demo_theme'] ?? '';
+        if (is_string($demo) && isset(self::installed()[$demo])) return $demo;
         $pdo ??= Database::connection();
         $stmt = $pdo->prepare('SELECT setting_value FROM settings WHERE setting_key=? LIMIT 1');
         $stmt->execute(['theme.active']);
