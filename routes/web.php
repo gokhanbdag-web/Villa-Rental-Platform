@@ -592,7 +592,13 @@ $router->post('/admin/properties/availability/delete', static function (): void 
 });
 $router->get('/vendor/properties/{id}/availability', static function (array $params): void {
     Auth::requireRole(['vendor']);$pdo=Database::connection();$v=$pdo->prepare('SELECT id FROM vendors WHERE user_id=?');$v->execute([(int)Auth::user()['id']]);$vid=(int)$v->fetchColumn();$s=$pdo->prepare('SELECT * FROM properties WHERE id=? AND vendor_id=?');$s->execute([(int)$params['id'],$vid]);$property=$s->fetch();
-    if(!$property){http_response_code(404);return;}$s=$pdo->prepare('SELECT * FROM availability WHERE property_id=? ORDER BY date_from');$s->execute([(int)$property['id']]);$ranges=$s->fetchAll();
+    if(!$property){http_response_code(404);return;}
+    $monthInput=(string)($_GET['month']??date('Y-m'));$monthDate=DateTimeImmutable::createFromFormat('!Y-m-d',$monthInput.'-01');
+    if(!$monthDate||$monthDate->format('Y-m')!==$monthInput)$monthDate=new DateTimeImmutable('first day of this month');
+    $calendarMonth=$monthDate->format('Y-m');$monthStart=$monthDate->format('Y-m-01');$monthEnd=$monthDate->modify('first day of next month')->format('Y-m-d');
+    $s=$pdo->prepare('SELECT * FROM availability WHERE property_id=? AND date_from < ? AND date_to > ? ORDER BY date_from');$s->execute([(int)$property['id'],$monthEnd,$monthStart]);$ranges=$s->fetchAll();
+    $s=$pdo->prepare("SELECT id,check_in,check_out,status,booking_code,guest_user_id FROM bookings WHERE property_id=? AND status IN ('pending','confirmed') AND check_in < ? AND check_out > ? ORDER BY check_in");$s->execute([(int)$property['id'],$monthEnd,$monthStart]);$calendarBookings=$s->fetchAll();
+    $calendarPrev=$monthDate->modify('-1 month')->format('Y-m');$calendarNext=$monthDate->modify('+1 month')->format('Y-m');
     $saveUrl='/vendor/properties/availability/save';$deleteUrl='/vendor/properties/availability/delete';$backUrl='/vendor/properties';require APP_ROOT.'/views/admin/availability.php';
 });
 $router->post('/vendor/properties/availability/save', static function (): void {
