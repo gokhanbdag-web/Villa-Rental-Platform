@@ -182,9 +182,9 @@ $router->get('/konaklamalar', static function (): void {
     $checkOutDate = trim((string)($_GET['check_out'] ?? ''));
     $dateRangeValid = false;
     if ($checkInDate !== '' && $checkOutDate !== '') {
-        $checkInValue = \\DateTimeImmutable::createFromFormat('!Y-m-d', $checkInDate);
-        $checkOutValue = \\DateTimeImmutable::createFromFormat('!Y-m-d', $checkOutDate);
-        $todayValue = new \\DateTimeImmutable('today');
+        $checkInValue = \DateTimeImmutable::createFromFormat('!Y-m-d', $checkInDate);
+        $checkOutValue = \DateTimeImmutable::createFromFormat('!Y-m-d', $checkOutDate);
+        $todayValue = new \DateTimeImmutable('today');
         $dateRangeValid = $checkInValue && $checkOutValue
             && $checkInValue->format('Y-m-d') === $checkInDate
             && $checkOutValue->format('Y-m-d') === $checkOutDate
