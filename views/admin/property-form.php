@@ -25,6 +25,7 @@ a{color:#176b50;text-decoration:none;transition:color .18s ease,background-color
 <label>Yatak sayısı<input type="number" min="0" max="100" name="beds" value="<?= (int)($property['beds']??1) ?>"></label>
 <label>Banyo sayısı<input type="number" min="0" max="50" step=".5" name="bathrooms" value="<?= e($property['bathrooms']??1) ?>"></label>
 <label>Hafta içi gecelik fiyat<input type="number" min="0" step=".01" name="base_nightly_price" required value="<?= e($property['base_nightly_price']??0) ?>"></label>
+<?php if($editing&&!empty($availabilityUrl)): ?><div class="wide" style="padding:14px;border:1px solid #cfe3d5;border-radius:10px;background:#f4faf5"><strong>Sezon ve tarih bazlı fiyatlandırma</strong><p class="hint">Yüksek sezon, bayram, özel gün veya seçtiğiniz herhangi bir tarih aralığı için ayrı gecelik fiyat ve müsaitlik kuralı tanımlayın.</p><a class="btn" style="display:inline-block;text-decoration:none" href="<?= e(app_url($availabilityUrl)) ?>">Fiyat ve müsaitlik takvimini yönet →</a></div><?php endif; ?>
 <label>Hafta sonu gecelik fiyat<input type="number" min="0" step=".01" name="weekend_nightly_price" value="<?= e($property['weekend_nightly_price']??0) ?>" placeholder="0: hafta içi fiyatını kullan"></label>
 <label>Temizlik ücreti (konaklama başına)<input type="number" min="0" step=".01" name="cleaning_fee" value="<?= e($property['cleaning_fee']??0) ?>"></label>
 <label>Para birimi<input name="currency" maxlength="3" value="<?= e($property['currency']??($defaultCurrency??'TRY')) ?>"></label>
