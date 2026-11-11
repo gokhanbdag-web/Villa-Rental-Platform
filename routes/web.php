@@ -296,9 +296,9 @@ $router->get('/villa/{slug}/reserve', static function (array $params): void {
     if (!$property) { http_response_code(404); echo 'Konaklama bulunamadı.'; return; }
     $checkInDate = trim((string)($_GET['check_in'] ?? ''));
     $checkOutDate = trim((string)($_GET['check_out'] ?? ''));
-    $checkInValue = \\DateTimeImmutable::createFromFormat('!Y-m-d', $checkInDate);
-    $checkOutValue = \\DateTimeImmutable::createFromFormat('!Y-m-d', $checkOutDate);
-    if (!$checkInValue || !$checkOutValue || $checkInValue->format('Y-m-d') !== $checkInDate || $checkOutValue->format('Y-m-d') !== $checkOutDate || $checkInValue < new \\DateTimeImmutable('today') || $checkOutValue <= $checkInValue) {
+    $checkInValue = \DateTimeImmutable::createFromFormat('!Y-m-d', $checkInDate);
+    $checkOutValue = \DateTimeImmutable::createFromFormat('!Y-m-d', $checkOutDate);
+    if (!$checkInValue || !$checkOutValue || $checkInValue->format('Y-m-d') !== $checkInDate || $checkOutValue->format('Y-m-d') !== $checkOutDate || $checkInValue < new \DateTimeImmutable('today') || $checkOutValue <= $checkInValue) {
         $checkInDate = ''; $checkOutDate = '';
     }
     $pdo=Database::connection();
