@@ -96,6 +96,8 @@ try {
     @mkdir($defaultAssetsDir, 0775, true);
     file_put_contents($smokeThemeDir . '/theme.json', json_encode(['slug'=>'smoke-theme','name'=>'Smoke Theme','version'=>'1.0.0'], JSON_UNESCAPED_SLASHES));
     file_put_contents($smokeThemeDir . '/partials/smoke-component.php', '<?php echo "active-component";');
+    @mkdir($smokeThemeDir . '/layouts', 0775, true);
+    file_put_contents($smokeThemeDir . '/layouts/admin-shell.php', '<?php return static fn(string $html, string $path, string $mode): string => "theme-admin:" . $html;');
     @mkdir($smokeThemeDir . '/templates/pages', 0775, true);
     file_put_contents($smokeThemeDir . '/templates/pages/smoke-page.php', '<?php echo "active-page";');
     file_put_contents($smokeThemeDir . '/style.css', '.smoke-theme{color:#123456}');
@@ -113,6 +115,8 @@ try {
     ThemeManager::renderTemplate('templates/pages/smoke-page.php');
     $renderedSmokePage = (string)ob_get_clean();
     assertSmoke($renderedSmokePage === 'active-page', 'An active theme page template was not rendered.');
+    assertSmoke(ThemeManager::resolveFile('templates/pages/admin/dashboard.php', 'smoke-theme') === realpath($root . '/themes/default/templates/pages/admin/dashboard.php'), 'Missing active admin pages did not fall back to the default theme.');
+    assertSmoke(ThemeManager::wrapAdminHtml('content', '/admin', 'single_vendor') === 'theme-admin:content', 'The active theme admin layout was not applied.');
     assertSmoke(ThemeManager::resolveFile('assets/icons/active.svg', 'smoke-theme') === realpath($smokeThemeDir . '/assets/icons/active.svg'), 'Active theme assets did not receive priority.');
     assertSmoke(ThemeManager::resolveFile('assets/smoke-fallback.svg', 'smoke-theme') === realpath($defaultAssetsDir . '/smoke-fallback.svg'), 'Missing active assets did not fall back to default.');
     assertSmoke(ThemeManager::resolveFile('partials/shared-topbar.php', 'smoke-theme') === realpath($root . '/themes/default/partials/shared-topbar.php'), 'Missing active PHP components did not fall back to default.');
@@ -124,12 +128,14 @@ try {
     $pdo->prepare('DELETE FROM settings WHERE setting_key=?')->execute(['theme.active']);
     @unlink($smokeThemeDir . '/partials/smoke-component.php');
     @unlink($smokeThemeDir . '/templates/pages/smoke-page.php');
+    @unlink($smokeThemeDir . '/layouts/admin-shell.php');
     @unlink($smokeThemeDir . '/style.css');
     @unlink($smokeThemeDir . '/assets/icons/active.svg');
     @unlink($smokeThemeDir . '/theme.json');
     @unlink($defaultAssetsDir . '/smoke-fallback.svg');
     @rmdir($smokeThemeDir . '/partials');
     @rmdir($smokeThemeDir . '/templates/pages');
+    @rmdir($smokeThemeDir . '/layouts');
     @rmdir($smokeThemeDir . '/templates');
     @rmdir($smokeThemeDir . '/assets/icons');
     @rmdir($smokeThemeDir . '/assets');
