@@ -1209,7 +1209,9 @@ $router->get('/theme-assets/{slug}/{file}', static function (array $params): voi
 $router->get('/admin/header-settings', static function (): void {
     Auth::requireRole(['super_admin','admin']);
     $socialSettings=ThemeManager::socialSettings();
-    $themeMessage=(string)($_SESSION['villa_theme_message']??'');unset($_SESSION['villa_theme_message']);
+    $themeMessage=(string)($_SESSION['villa_theme_message']??'');
+    $themeMessageType=(string)($_SESSION['villa_theme_message_type']??'success');
+    unset($_SESSION['villa_theme_message'],$_SESSION['villa_theme_message_type']);
     require APP_ROOT.'/views/admin/header-settings.php';
 });
 $router->post('/admin/header-settings/social-icons', static function (): void {
