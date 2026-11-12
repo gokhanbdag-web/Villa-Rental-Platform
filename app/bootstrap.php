@@ -26,6 +26,8 @@ if (app_base_path() !== '') {
             '/(\b(?:href|src|action|formaction)\s*=\s*)(["\'])(\/(?!\/)[^"\']*)/i',
             static function (array $m) use ($base): string {
                 $path = $m[3];
+                // app_url() may already have added the installation prefix.
+                // Never prepend it a second time to form actions or asset links.
                 if ($path === $base || str_starts_with($path, $base . '/')) return $m[0];
                 return $m[1] . $m[2] . $base . $path;
             },
