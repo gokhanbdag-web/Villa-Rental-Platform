@@ -142,7 +142,7 @@ final class ThemeManager
         }
         $address = is_array($input['_address'] ?? null) ? $input['_address'] : [];
         $addressText = trim((string)($address['text'] ?? ''));
-        if (mb_strlen($addressText) > 180) throw new RuntimeException('Header adres bilgisi en fazla 180 karakter olabilir.');
+        if ((function_exists('mb_strlen') ? mb_strlen($addressText) : strlen($addressText)) > 720) throw new RuntimeException('Header adres bilgisi en fazla 180 karakter olabilir.');
         $clean['_address'] = ['text'=>$addressText,'active'=>!empty($address['active']) && $addressText !== ''];
         $stmt = Database::connection()->prepare('INSERT INTO settings(setting_key,setting_value,autoload) VALUES(?,?,1) ON DUPLICATE KEY UPDATE setting_value=VALUES(setting_value),autoload=1');
         $stmt->execute(['theme.social_icons', json_encode($clean, JSON_UNESCAPED_UNICODE | JSON_THROW_ON_ERROR)]);
