@@ -47,7 +47,7 @@ try {
     $migrationCount = (int)$pdo->query('SELECT COUNT(*) FROM schema_migrations')->fetchColumn();
     assertSmoke($migrationCount >= 20, 'Expected database migrations were not applied.');
 
-    foreach (['vendors','properties','property_media','bookings','booking_financials','payment_transactions','vendor_payouts','reviews','notifications','cms_pages','navigation_items','page_builder_layouts','contact_messages','newsletter_subscribers'] as $table) {
+    foreach (['vendors','properties','property_media','bookings','booking_financials','payment_transactions','vendor_payouts','reviews','notifications','cms_pages','navigation_items','page_builder_layouts','theme_demo_imports','theme_demo_layouts','contact_messages','newsletter_subscribers'] as $table) {
         $check = $pdo->prepare('SELECT COUNT(*) FROM information_schema.TABLES WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME=?');
         $check->execute([$table]);
         assertSmoke((int)$check->fetchColumn() === 1, 'Missing required table: ' . $table);
@@ -99,12 +99,30 @@ try {
     sort($expectedSorted);
     assertSmoke($themeSlugs === $expectedSorted, 'Expected all ten built-in theme manifests to be installed and valid.');
 
+    foreach ($expectedThemes as $themeSlug) {
+        $demoResult = ThemeDemoImporter::import($themeSlug, $adminId);
+        assertSmoke(!$demoResult['already_imported'] && $demoResult['created'] >= 3, 'Theme demo package did not import its independent page layouts: ' . $themeSlug);
+        $themeHome = PageBuilder::load($themeSlug, 'home');
+        assertSmoke(($themeHome['status'] ?? '') === 'published' && count($themeHome['widgets'] ?? []) >= 5, 'Theme demo homepage was not published: ' . $themeSlug);
+        $demoStatus = ThemeDemoImporter::status($themeSlug);
+        assertSmoke(($demoStatus['package_version'] ?? '') === '1.0.0', 'Theme demo import ledger is missing: ' . $themeSlug);
+    }
+
+    // A reset removes untouched imported layouts but preserves a layout edited after import.
+    $alpineHome = PageBuilder::load('alpine', 'home');
+    $alpineHome['widgets'][0]['settings']['title'] = 'Smoke test: edited by site owner';
+    PageBuilder::save('alpine', 'home', $alpineHome, 'published', $adminId);
+    $resetResult = ThemeDemoImporter::reset('alpine');
+    assertSmoke($resetResult['preserved'] === 1 && $resetResult['removed'] >= 2, 'Demo reset did not preserve the owner-edited layout safely.');
+    $preservedAlpine = PageBuilder::load('alpine', 'home');
+    assertSmoke(($preservedAlpine['widgets'][0]['settings']['title'] ?? '') === 'Smoke test: edited by site owner', 'Demo reset deleted owner-edited content.');
+
     // A second migration pass must be safe and leave the migration ledger intact.
     Migrator::run($pdo, $root);
     $migrationCountAfter = (int)$pdo->query('SELECT COUNT(*) FROM schema_migrations')->fetchColumn();
     assertSmoke($migrationCountAfter === $migrationCount, 'Second migration pass changed the migration ledger.');
 
-    echo "Installer and builder smoke tests passed: admin, platform mode, {$villaCount} demo villas, {$migrationCount} migrations, required tables, ten themes, all 47+ widget registrations, image-text/item-card settings, shared widget sanitizer security and preview/save/load, and repeat migration.\n";
+    echo "Installer and builder smoke tests passed: admin, platform mode, {$villaCount} demo villas, {$migrationCount} migrations, required tables, ten themes, ten isolated demo packages, safe demo import/reset, all 47+ widget registrations, image-text/item-card settings, shared widget sanitizer security and preview/save/load, and repeat migration.\n";
 } finally {
     if (is_file($configFile)) unlink($configFile);
     if (is_file($lockFile)) unlink($lockFile);
