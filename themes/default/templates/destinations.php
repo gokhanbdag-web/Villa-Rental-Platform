@@ -3,7 +3,7 @@ declare(strict_types=1);
 
 // Theme-specific site chrome; the shared view retains its business flow and form handling.
 ob_start();
-$pageTemplate = \App\\Core\\ThemeManager::resolveFile('templates/pages/destinations.php');
+$pageTemplate = \App\Core\ThemeManager::resolveFile('templates/pages/destinations.php');
 if ($pageTemplate === null) throw new RuntimeException('Tema sayfa bileşeni bulunamadı: destinations');
 require $pageTemplate;
 $html = (string) ob_get_clean();
@@ -16,7 +16,7 @@ if ($navHtml === '') {
     ob_start();
     $navItems = $navigation ?? [];
     $navAllowAuth = true;
-    \App\\Core\\ThemeManager::renderPartial('partials/navigation-items.php', get_defined_vars());
+    \App\Core\ThemeManager::renderPartial('partials/navigation-items.php', get_defined_vars());
     $navHtml = '<nav class="nav" id="siteNavigation">' . (string) ob_get_clean() . '</nav>';
 }
 
