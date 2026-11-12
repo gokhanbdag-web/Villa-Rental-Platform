@@ -38,7 +38,7 @@
 </div>
 </aside>
 </div>
-<?php \App\\Core\\ThemeManager::renderPartial('partials/logout-button.php', get_defined_vars()); ?>
+<?php \App\Core\ThemeManager::renderPartial('partials/logout-button.php', get_defined_vars()); ?>
 </main>
 <footer><div class="footer-inner"><div><strong><?= e($siteName??'VillaStay') ?></strong><p><?= e($content['footer_text']??'') ?></p></div><nav><?php foreach(($footerNavigation??[]) as $item): ?><a href="<?= e($item['url']) ?>"><?= e($item['label']) ?></a><?php endforeach; ?><a href="<?= e(app_url('/konaklamalar')) ?>">Konaklamalar</a><a href="<?= e(app_url('/destinasyonlar')) ?>">Destinasyonlar</a></nav></div></footer>
 <script>
