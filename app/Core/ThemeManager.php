@@ -111,6 +111,17 @@ final class ThemeManager
         } catch (\Throwable $e) {
             error_log('Social icon settings read failed: ' . $e->getMessage());
         }
+        $defaults['_address'] = ['text'=>'','active'=>false];
+        try {
+            $stmt = Database::connection()->prepare('SELECT setting_value FROM settings WHERE setting_key=? LIMIT 1');
+            $stmt->execute(['theme.social_icons']);
+            $saved = json_decode((string)($stmt->fetchColumn() ?: '{}'), true);
+            if (is_array($saved) && isset($saved['_address']) && is_array($saved['_address'])) {
+                $defaults['_address'] = array_merge($defaults['_address'], $saved['_address']);
+            }
+        } catch (\\Throwable $e) {
+            error_log('Social header address read failed: ' . $e->getMessage());
+        }
         return $defaults;
     }
 
@@ -129,6 +140,10 @@ final class ThemeManager
             if ($size === false || $size < 14 || $size > 36) throw new RuntimeException('Sosyal medya ikon boyutu 14 ile 36 px arasında olmalıdır.');
             $clean[$platform] = ['url'=>$url,'family'=>$family,'size'=>$size,'active'=>!empty($row['active']) && $url !== ''];
         }
+        $address = is_array($input['_address'] ?? null) ? $input['_address'] : [];
+        $addressText = trim((string)($address['text'] ?? ''));
+        if (mb_strlen($addressText) > 180) throw new RuntimeException('Header adres bilgisi en fazla 180 karakter olabilir.');
+        $clean['_address'] = ['text'=>$addressText,'active'=>!empty($address['active']) && $addressText !== ''];
         $stmt = Database::connection()->prepare('INSERT INTO settings(setting_key,setting_value,autoload) VALUES(?,?,1) ON DUPLICATE KEY UPDATE setting_value=VALUES(setting_value),autoload=1');
         $stmt->execute(['theme.social_icons', json_encode($clean, JSON_UNESCAPED_UNICODE | JSON_THROW_ON_ERROR)]);
     }
@@ -206,8 +221,13 @@ final class ThemeManager
             $family = (string)($item['family'] ?? 'brand');
             $socialItems .= '<a class="villa-social-link villa-social-link--'.e($family).'" href="'.e($url).'" target="_blank" rel="noopener noreferrer" aria-label="'.e($label).'" title="'.e($label).'" style="--social-icon-size:'.$size.'px">'.self::renderSocialIcon($platform,$family).'</a>';
         }
-        if ($socialItems !== '' && stripos($html, 'villa-social-bar') === false) {
-            $socialBar = '<div class="villa-social-bar"><div class="villa-social-inner">'.$socialItems.'</div></div>';
+        $addressSettings = $socialSettings['_address'] ?? ['text'=>'','active'=>false];
+        $addressText = trim((string)($addressSettings['text'] ?? ''));
+        $addressMarkup = (!empty($addressSettings['active']) && $addressText !== '')
+            ? '<div class="villa-social-address">'.e($addressText).'</div>'
+            : '';
+        if (($socialItems !== '' || $addressMarkup !== '') && stripos($html, 'villa-social-bar') === false) {
+            $socialBar = '<div class="villa-social-bar"><div class="villa-social-inner"><div class="villa-social-left">'.$socialItems.'</div>'.$addressMarkup.'<div class="villa-social-right"></div></div></div>';
             if (preg_match('~<div class="med-topbar"~i', $html)) $html = preg_replace('~<div class="med-topbar"~i', $socialBar.'<div class="med-topbar"', $html, 1) ?? $html;
             else $html = preg_replace('~<header\\b~i', $socialBar.'<header', $html, 1) ?? $html;
         }
@@ -285,13 +305,16 @@ final class ThemeManager
             grid-template-columns:minmax(0,1fr)!important;
           }
         }
-        .villa-social-bar{position:relative;z-index:40;width:100%;background:#f5f5f0;border-bottom:1px solid #e8e8df}
-        .villa-social-inner{max-width:1240px;margin:0 auto;padding:7px 22px;display:flex;align-items:center;justify-content:flex-start;gap:10px}
+        .villa-social-bar{position:relative;z-index:40;width:100%;background:#f5f5f0;border-bottom:1px solid #e8e8df;box-sizing:border-box}
+        .villa-social-inner{width:100%;max-width:none;margin:0;padding:7px 22px;box-sizing:border-box;display:grid;grid-template-columns:1fr auto 1fr;align-items:center;gap:10px}
+        .villa-social-left{display:flex;align-items:center;justify-content:flex-start;gap:10px;min-width:0}
+        .villa-social-address{grid-column:2;text-align:center;color:#4b574f;font-size:12px;line-height:1.5;overflow-wrap:anywhere}
+        .villa-social-right{grid-column:3}
         .villa-social-link{width:30px;height:30px;display:inline-flex;align-items:center;justify-content:center;color:inherit;text-decoration:none;border-radius:50%;transition:opacity .2s,background .2s}
         .villa-social-link svg{width:var(--social-icon-size,20px);height:var(--social-icon-size,20px);display:block}
         .villa-social-link--circle{background:#ffffff;border:1px solid currentColor}
         .villa-social-link:hover{opacity:.72}
-        @media(max-width:760px){.villa-social-inner{padding:6px 14px;gap:8px}.villa-social-link{width:28px;height:28px}}
+        @media(max-width:760px){.villa-social-inner{padding:6px 12px;grid-template-columns:auto 1fr;gap:8px}.villa-social-address{grid-column:2;text-align:right;font-size:11px}.villa-social-right{display:none}.villa-social-left{gap:7px}.villa-social-link{width:28px;height:28px}}
         </style>';
         $html = preg_replace('/<\\/body>/i', $mobileLayout . '</body>', $html, 1) ?? $html;
 
