@@ -89,7 +89,7 @@ if ($isAdminPage) {
             ],
             'Sistem' => [
                 '/admin/settings' => 'Ayarlar',
-                '/admin/themes' => 'Üst Bilgi Ayarları',
+                '/admin/header-settings' => 'Üst Bilgi Ayarları',
                 '/admin/translations' => 'Çeviriler',
             ],
         ];
@@ -132,7 +132,7 @@ if ($isAdminPage) {
             '/admin/newsletter' => '✉',
             '/admin/messages' => '☏',
             '/admin/settings' => '⚙',
-            '/admin/themes' => '☷',
+            '/admin/header-settings' => '☷',
             '/admin/translations' => '文',
             '/admin/vendors' => '♧',
         ];
