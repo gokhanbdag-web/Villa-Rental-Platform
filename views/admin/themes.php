@@ -13,7 +13,7 @@
 </section>
 <section class="theme-upload" style="margin:0 0 22px">
 <h2>Ortak sosyal medya ikonları</h2>
-<p style="font-size:13px;color:#77827b">Bu ayarlar bütün temaların üst şeridinde geçerlidir. Bağlantı adresi girip aktif ettiğiniz ağlar ziyaretçilere gösterilir.</p>
+<p style="font-size:13px;color:#77827b">Bu ayarlar bütün temaların üst şeridinde geçerlidir. Profil bağlantısı girilen sosyal ağlar ziyaretçilere otomatik gösterilir.</p>
 <form method="post" action="<?= e(app_url('/admin/themes/social-icons')) ?>">
 <?= csrf_field() ?>
 <div class="social-address-admin">
@@ -26,7 +26,7 @@
 <label>Telefon numarası<input type="text" name="social[_call_center][phone]" maxlength="40" value="<?= e((string)($socialSettings['_call_center']['phone']??'')) ?>" placeholder="+90 5XX XXX XX XX" inputmode="tel"></label>
 </div>
 <div class="social-admin-grid">
-<?php foreach(['instagram'=>'Instagram','facebook'=>'Facebook','youtube'=>'YouTube','tiktok'=>'TikTok','x'=>'X','whatsapp'=>'WhatsApp','pinterest'=>'Pinterest','telegram'=>'Telegram','linkedin'=>'LinkedIn'] as $network=>$networkLabel): $social=$socialSettings[$network]??['url'=>'','family'=>'brand','size'=>20,'active'=>false]; ?>
+<?php foreach(['instagram'=>'Instagram','facebook'=>'Facebook','youtube'=>'YouTube','tiktok'=>'TikTok','x'=>'X','whatsapp'=>'WhatsApp','pinterest'=>'Pinterest','telegram'=>'Telegram','linkedin'=>'LinkedIn'] as $network=>$networkLabel): $social=$socialSettings[$network]??['url'=>'','family'=>'brand','size'=>20]; ?>
 <div class="social-admin-card">
 <strong><?= e($networkLabel) ?></strong>
 <label>Profil bağlantısı<input type="url" name="social[<?= e($network) ?>][url]" value="<?= e((string)($social['url']??'')) ?>" placeholder="https://..." inputmode="url"></label>
