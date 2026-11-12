@@ -168,6 +168,7 @@ final class ThemeManager
     {
         $slug = 'default';
         $renderSlug = 'default';
+        $isSharedDefaultTheme = true;
         $themeDir = self::root() . '/default';
         $manifest = self::installed()['default']['manifest'] ?? [];
         $map = $manifest['templates'] ?? [];
@@ -182,6 +183,7 @@ final class ThemeManager
         if ($template === '') $template = APP_ROOT . '/views/site/' . basename($view);
         if (!is_file($template)) throw new RuntimeException('Tema şablonu bulunamadı: ' . $view);
 
+        $variables['pageBuilderLayout'] = ['widgets'=>[],'status'=>'draft'];
         extract($variables, EXTR_SKIP);
         ob_start();
         require $template;
