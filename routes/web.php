@@ -1299,7 +1299,7 @@ $router->get('/theme-assets/{slug}/{file}', static function (array $params): voi
 
 $router->get('/admin/themes', static function (): void {
     Auth::requireRole(['super_admin','admin']);
-    $themes=ThemeManager::installed();$activeTheme=ThemeManager::activeSlug();$themeSettings=[];foreach($themes as $themeSlug=>$themeData){$themeSettings[$themeSlug]=ThemeManager::customSettings($themeSlug);}
+    $themes=ThemeManager::installed();$activeTheme=ThemeManager::activeSlug();$themeSettings=[];$themeDemoStatuses=[];foreach($themes as $themeSlug=>$themeData){$themeSettings[$themeSlug]=ThemeManager::customSettings($themeSlug);$themeDemoStatuses[$themeSlug]=ThemeDemoImporter::status($themeSlug);}
     $themeMessage=(string)($_SESSION['villa_theme_message']??'');unset($_SESSION['villa_theme_message']);
     require APP_ROOT.'/views/admin/themes.php';
 });
@@ -1318,6 +1318,27 @@ $router->post('/admin/themes/settings', static function (): void {
         ]);
         $_SESSION['villa_theme_message']='Tema görünüm ayarları kaydedildi.';
     } catch(Throwable $e) { $_SESSION['villa_theme_message']=$e->getMessage(); }
+    redirect('/admin/themes');
+});
+$router->post('/admin/themes/demo/import', static function (): void {
+    Auth::requireRole(['super_admin','admin']);verify_csrf();
+    $slug=(string)($_POST['slug']??'');
+    try{
+        $user=Auth::user();
+        $result=ThemeDemoImporter::import($slug,(int)($user['id']??0));
+        $_SESSION['villa_theme_message']=$result['already_imported']
+            ? 'Bu temanın demo içeriği daha önce yüklenmiş. Mevcut düzenler korunuyor.'
+            : 'Demo içeriği yüklendi. '.$result['created'].' sayfa düzeni eklendi; '.$result['skipped'].' mevcut veya uygun olmayan sayfa korundu.';
+    }catch(Throwable $e){$_SESSION['villa_theme_message']='Demo içeriği yüklenemedi: '.$e->getMessage();}
+    redirect('/admin/themes');
+});
+$router->post('/admin/themes/demo/reset', static function (): void {
+    Auth::requireRole(['super_admin','admin']);verify_csrf();
+    $slug=(string)($_POST['slug']??'');
+    try{
+        $result=ThemeDemoImporter::reset($slug);
+        $_SESSION['villa_theme_message']='Demo sıfırlandı. '.$result['removed'].' değiştirilmemiş demo düzeni kaldırıldı; '.$result['preserved'].' üzerinde değişiklik yapılmış düzen korundu.';
+    }catch(Throwable $e){$_SESSION['villa_theme_message']='Demo sıfırlanamadı: '.$e->getMessage();}
     redirect('/admin/themes');
 });
 $router->post('/admin/themes/activate', static function (): void {
