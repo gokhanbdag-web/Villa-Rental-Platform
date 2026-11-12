@@ -4,7 +4,7 @@ The `default` theme is the mandatory presentation layer. It cannot be removed or
 
 ## Responsibility boundary
 
-- The theme owns the complete rendered interface: HTML structure, page templates, reusable components, CSS, JavaScript, responsive behavior, cards, galleries, search/filter controls, calendars, booking presentation, blog layouts, account screens, and every other visual component.
+- The theme owns the complete rendered interface: HTML structure, page templates, reusable components, CSS, JavaScript, responsive behavior, cards, galleries, search/filter controls, calendars, booking presentation, blog layouts, customer and vendor screens, the CMS/admin interface, and every other visual component.
 - CMS/admin content data owns editable records and copy: page/article text, images, navigation entries, property data, labels/translations, settings and other content. CMS data does not store or generate CSS/JavaScript or define the visual layout.
 - Application code owns business rules and operations: authentication, authorization, reservations, availability calculations, payments, database access, validation and security. Themes may present these capabilities but must not replace their business logic.
 
