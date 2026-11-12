@@ -10,26 +10,74 @@ final class ThemeManager
 {
     private static function root(): string { return APP_ROOT . '/themes'; }
 
+    /** Discover valid theme folders; default is the mandatory base layer. */
     public static function installed(): array
     {
-        $manifestPath = self::root() . '/default/theme.json';
-        if (!is_file($manifestPath)) return [];
-        $manifest = json_decode((string)file_get_contents($manifestPath), true);
-        if (!is_array($manifest) || ($manifest['slug'] ?? '') !== 'default' || empty($manifest['name'])) return [];
-        return ['default' => [
-            'slug' => 'default',
-            'name' => (string)$manifest['name'],
-            'version' => (string)($manifest['version'] ?? '1.0.0'),
-            'description' => (string)($manifest['description'] ?? ''),
-            'author' => (string)($manifest['author'] ?? ''),
-            'builtin' => true,
-            'manifest' => $manifest,
-        ]];
+        $themes = [];
+        foreach (glob(self::root() . '/*', GLOB_ONLYDIR) ?: [] as $directory) {
+            $slug = basename($directory);
+            if (!preg_match('/^[a-z0-9_-]{1,60}$/', $slug)) continue;
+            $manifestPath = $directory . '/theme.json';
+            if (!is_file($manifestPath)) continue;
+            $manifest = json_decode((string)file_get_contents($manifestPath), true);
+            if (!is_array($manifest) || ($manifest['slug'] ?? '') !== $slug || trim((string)($manifest['name'] ?? '')) === '') continue;
+            $themes[$slug] = [
+                'slug' => $slug,
+                'name' => (string)$manifest['name'],
+                'version' => (string)($manifest['version'] ?? '1.0.0'),
+                'description' => (string)($manifest['description'] ?? ''),
+                'author' => (string)($manifest['author'] ?? ''),
+                'builtin' => $slug === 'default',
+                'manifest' => $manifest,
+            ];
+        }
+        if (!isset($themes['default'])) return [];
+        return $themes;
     }
 
     public static function activeSlug(?PDO $pdo = null): string
     {
-        return 'default';
+        try {
+            $pdo = $pdo ?? Database::connection();
+            $stmt = $pdo->prepare('SELECT setting_value FROM settings WHERE setting_key=? LIMIT 1');
+            $stmt->execute(['theme.active']);
+            $slug = trim((string)($stmt->fetchColumn() ?: 'default'));
+            return isset(self::installed()[$slug]) ? $slug : 'default';
+        } catch (\Throwable $e) {
+            return 'default';
+        }
+    }
+
+    /** Resolve a theme file active-first, then fall back to the default theme. */
+    public static function resolveFile(string $relative, ?string $slug = null): ?string
+    {
+        $relative = str_replace('\\', '/', trim($relative));
+        if ($relative === '' || str_starts_with($relative, '/') || preg_match('/^[a-zA-Z]:/', $relative)) return null;
+        foreach (explode('/', $relative) as $part) {
+            if ($part === '' || $part === '.' || $part === '..') return null;
+        }
+        $slug = $slug ?: self::activeSlug();
+        if (!preg_match('/^[a-z0-9_-]{1,60}$/', $slug) || !isset(self::installed()[$slug])) $slug = 'default';
+        foreach (array_unique([$slug, 'default']) as $candidateSlug) {
+            $base = realpath(self::root() . '/' . $candidateSlug);
+            if ($base === false) continue;
+            $candidate = realpath($base . '/' . $relative);
+            if ($candidate === false || !is_file($candidate)) continue;
+            if (!str_starts_with($candidate, $base . DIRECTORY_SEPARATOR)) continue;
+            return $candidate;
+        }
+        return null;
+    }
+
+    /** Build a URL that works both at the domain root and in a subdirectory. */
+    public static function assetUrl(string $relative, ?string $slug = null): string
+    {
+        $slug = $slug ?: self::activeSlug();
+        if (!preg_match('/^[a-z0-9_-]{1,60}$/', $slug) || !isset(self::installed()[$slug])) $slug = 'default';
+        $relative = str_replace('\\', '/', trim($relative));
+        $parts = explode('/', $relative);
+        if ($relative === '' || str_starts_with($relative, '/') || in_array('..', $parts, true) || in_array('.', $parts, true)) return app_url('/404');
+        return app_url('/theme-assets/' . rawurlencode($slug) . '/' . rawurlencode($relative));
     }
 
     public static function socialSettings(): array
@@ -203,18 +251,16 @@ final class ThemeManager
 
     public static function render(string $view, array $variables): void
     {
-        $slug = 'default';
-        $renderSlug = 'default';
-        $themeDir = self::root() . '/default';
-        $manifest = self::installed()['default']['manifest'] ?? [];
-        $map = $manifest['templates'] ?? [];
-        $relative = isset($map[$view]) && is_string($map[$view]) ? $map[$view] : '';
+        $renderSlug = self::activeSlug();
+        $installed = self::installed();
+        $defaultMap = $installed['default']['manifest']['templates'] ?? [];
+        $activeMap = $installed[$renderSlug]['manifest']['templates'] ?? [];
+        $relative = isset($activeMap[$view]) && is_string($activeMap[$view])
+            ? $activeMap[$view]
+            : (isset($defaultMap[$view]) && is_string($defaultMap[$view]) ? $defaultMap[$view] : '');
         $template = '';
-        if ($relative !== '' && !str_contains($relative, '..') && str_starts_with($relative, 'templates/')) {
-            $candidate = $themeDir . '/' . $relative;
-            $real = realpath($candidate);
-            $base = realpath($themeDir);
-            if ($real && $base && str_starts_with($real, $base . DIRECTORY_SEPARATOR) && is_file($real)) $template = $real;
+        if ($relative !== '' && str_starts_with($relative, 'templates/')) {
+            $template = self::resolveFile($relative, $renderSlug) ?? '';
         }
         if ($template === '') $template = APP_ROOT . '/views/site/' . basename($view);
         if (!is_file($template)) throw new RuntimeException('Tema şablonu bulunamadı: ' . $view);
@@ -227,7 +273,9 @@ final class ThemeManager
         $socialSettings = self::socialSettings();
         $renderSocialIcon = static fn(string $platform, string $family): string => self::renderSocialIcon($platform, $family);
         ob_start();
-        require APP_ROOT . '/themes/default/partials/shared-topbar.php';
+        $topbarTemplate = self::resolveFile('partials/shared-topbar.php', $renderSlug)
+            ?? APP_ROOT . '/themes/default/partials/shared-topbar.php';
+        require $topbarTemplate;
         $socialBar = (string)ob_get_clean();
         if (trim($socialBar) !== '' && stripos($html, 'villa-social-bar') === false) {
             if (preg_match('~<div class="med-topbar"~i', $html)) {
@@ -237,12 +285,22 @@ final class ThemeManager
             }
         }
 
-        $css = $themeDir . '/style.css';
-        if (is_file($css)) {
-            $tag = '<link rel="stylesheet" href="' . e(app_url('/theme-assets/' . rawurlencode($renderSlug) . '/style.css')) . '?v=' . rawurlencode((string)filemtime($css)) . '">';
-            if (stripos($html, '</head>') !== false) $html = preg_replace('/<\/head>/i', $tag . '</head>', $html, 1) ?? $html;
-            $html = preg_replace('/<body\b/i', '<body data-villa-theme="' . e($renderSlug) . '"', $html, 1) ?? $html;
+        // Base first, active second: browser cascade merges individual declarations.
+        $styleTags = '';
+        $defaultCss = self::resolveFile('style.css', 'default');
+        if ($defaultCss !== null) {
+            $styleTags .= '<link rel="stylesheet" href="' . e(self::assetUrl('style.css', 'default')) . '?v=' . rawurlencode((string)filemtime($defaultCss)) . '">';
         }
+        if ($renderSlug !== 'default') {
+            $activeCss = self::resolveFile('style.css', $renderSlug);
+            if ($activeCss !== null && $activeCss !== $defaultCss) {
+                $styleTags .= '<link rel="stylesheet" href="' . e(self::assetUrl('style.css', $renderSlug)) . '?v=' . rawurlencode((string)filemtime($activeCss)) . '">';
+            }
+        }
+        if ($styleTags !== '' && stripos($html, '</head>') !== false) {
+            $html = preg_replace('/<\/head>/i', $styleTags . '</head>', $html, 1) ?? $html;
+        }
+        $html = preg_replace('/<body\b/i', '<body data-villa-theme="' . e($renderSlug) . '"', $html, 1) ?? $html;
         $typography = self::typographySettings($renderSlug);
         $fontFamilies = [];
         foreach (['headings','span','paragraph','paragraph_links'] as $group) {
