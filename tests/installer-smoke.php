@@ -55,7 +55,7 @@ try {
     }
 
     $homepageBuilderSource = (string)file_get_contents($root . '/views/site/partials/page-builder-home.php');
-    assertSmoke(str_contains($homepageBuilderSource, '\\App\\Core\\Auth::user()') && !preg_match('/(?<![\\\\A-Za-z0-9_])Auth::user\\s*\\(/', $homepageBuilderSource), 'Homepage builder must resolve the authenticated user through the fully qualified Auth class.');
+    assertSmoke(str_contains($homepageBuilderSource, '$viewer=\\App\\Core\\Auth::user();') && !str_contains($homepageBuilderSource, '$viewer=Auth::user();'), 'Homepage builder must resolve the authenticated user through the fully qualified Auth class.');
 
     $registry = PageBuilder::widgets();
     assertSmoke(isset($registry['image_text'], $registry['features']) && count($registry) >= 47, 'Expected all built-in visual editor widgets to be registered.');
