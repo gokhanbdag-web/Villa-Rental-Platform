@@ -12,8 +12,8 @@
 <form method="post" action="<?= e(app_url('/admin/themes/demo/reset-all')) ?>" onsubmit="return confirm('Tüm temaların demo düzenleri sıfırlansın ve önceki düzenler geri yüklensin mi? Elle değiştirilmiş sayfalar korunacaktır.')"><?= csrf_field() ?><button type="submit" style="border:0;border-radius:8px;padding:10px 14px;background:#176b50;color:#fff;font-weight:800">Tüm temaların demolarını sıfırla</button></form>
 </section>
 <section class="theme-upload" style="margin:0 0 22px">
-<h2>Ortak sosyal medya ikonları</h2>
-<p style="font-size:13px;color:#77827b">Bu ayarlar bütün temaların üst şeridinde geçerlidir. Profil bağlantısı girilen sosyal ağlar ziyaretçilere otomatik gösterilir.</p>
+<h2>Üst bilgi ayarları</h2>
+<p style="font-size:13px;color:#77827b">Bu gruptaki ayarlar bütün temaların üst bilgi şeridinde geçerlidir. Bir alana değer girildiğinde otomatik gösterilir; boş bırakılan alanlar ziyaretçiye gösterilmez.</p>
 <form method="post" action="<?= e(app_url('/admin/themes/social-icons')) ?>">
 <?= csrf_field() ?>
 <div class="social-address-admin">
@@ -24,6 +24,11 @@
 <strong>Üst şerit üçüncü kolon – Başlık ve telefon</strong>
 <label>Başlık<input type="text" name="social[_call_center][title]" maxlength="60" value="<?= e((string)($socialSettings['_call_center']['title']??'Çağrı Merkezi')) ?>" placeholder="Örn. Çağrı Merkezi, İletişim"></label>
 <label>Telefon numarası<input type="text" name="social[_call_center][phone]" maxlength="40" value="<?= e((string)($socialSettings['_call_center']['phone']??'')) ?>" placeholder="+90 5XX XXX XX XX" inputmode="tel"></label>
+</div>
+<div class="social-address-admin">
+<strong>Üst şerit dördüncü kolon – TÜRSAB lisans bilgisi</strong>
+<label>Başlık<input type="text" name="social[_license][title]" maxlength="60" value="<?= e((string)($socialSettings['_license']['title']??'')) ?>" placeholder="Örn. TÜRSAB Lisans"></label>
+<label>Lisans numarası<input type="text" name="social[_license][number]" maxlength="40" value="<?= e((string)($socialSettings['_license']['number']??'')) ?>" placeholder="Örn. 1172"></label>
 </div>
 <div class="social-admin-grid">
 <?php foreach(['instagram'=>'Instagram','facebook'=>'Facebook','youtube'=>'YouTube','tiktok'=>'TikTok','x'=>'X','whatsapp'=>'WhatsApp','pinterest'=>'Pinterest','telegram'=>'Telegram','linkedin'=>'LinkedIn'] as $network=>$networkLabel): $social=$socialSettings[$network]??['url'=>'','family'=>'brand','size'=>20]; ?>
@@ -37,7 +42,7 @@
 </div>
 <?php endforeach; ?>
 </div>
-<button type="submit" style="margin-top:14px;border:0;border-radius:8px;padding:11px 16px;background:#176b50;color:#fff;font-weight:800;cursor:pointer">Sosyal medya ayarlarını kaydet</button>
+<button type="submit" style="margin-top:14px;border:0;border-radius:8px;padding:11px 16px;background:#176b50;color:#fff;font-weight:800;cursor:pointer">Üst bilgi ayarlarını kaydet</button>
 </form>
 </section>
 <div class="theme-grid">
