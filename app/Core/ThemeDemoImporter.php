@@ -31,9 +31,25 @@ final class ThemeDemoImporter
         if (!is_file($path) || !is_readable($path)) {
             throw new RuntimeException('Bu tema için demo içerik paketi bulunamadı.');
         }
+        if (filesize($path) > 1024 * 1024) throw new RuntimeException('Tema demo paketi 1 MB sınırını aşıyor.');
         $data = json_decode((string)file_get_contents($path), true, 64, JSON_THROW_ON_ERROR);
-        if (!is_array($data) || (string)($data['theme'] ?? '') !== $slug || !is_array($data['pages'] ?? null)) {
+        if (!is_array($data) || (string)($data['theme'] ?? '') !== $slug || !is_array($data['pages'] ?? null) || count($data['pages']) > 20) {
             throw new RuntimeException('Tema demo paketi geçersiz.');
+        }
+        // Demo packages may configure known visual widgets, but cannot inject raw HTML or embeds.
+        $allowedWidgets = ['hero','destinations','properties','image_text','features','cta','text','image','contact','faq'];
+        foreach ($data['pages'] as $page) {
+            if (!is_array($page) || !is_array($page['widgets'] ?? null) || count($page['widgets']) > 30) {
+                throw new RuntimeException('Demo sayfa düzeni geçersiz veya çok büyük.');
+            }
+            foreach ($page['widgets'] as $widget) {
+                if (!is_array($widget) || !in_array((string)($widget['type'] ?? ''), $allowedWidgets, true)) {
+                    throw new RuntimeException('Demo paketinde izin verilmeyen bir widget türü var.');
+                }
+                if (isset($widget['settings']['html_content'])) {
+                    throw new RuntimeException('Demo paketleri özel HTML içeremez.');
+                }
+            }
         }
         return $data;
     }
@@ -105,6 +121,7 @@ final class ThemeDemoImporter
 
     public static function reset(string $slug): array
     {
+        if (!isset(ThemeManager::installed()[$slug])) throw new RuntimeException('Tema paketi bulunamadı.');
         $pdo = Database::connection();
         $pdo->beginTransaction();
         try {
