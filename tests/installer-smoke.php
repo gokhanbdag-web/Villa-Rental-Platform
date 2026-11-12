@@ -78,6 +78,8 @@ try {
     assertSmoke(str_contains($themeManagerSource, "'/themes/default/partials/shared-topbar.php'") && !str_contains($themeManagerSource, 'villa-mobile-single-column-global'), 'Shared topbar markup and global responsive CSS must not be duplicated in ThemeManager.');
     $obsoleteTables = (int)$pdo->query("SELECT COUNT(*) FROM information_schema.TABLES WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME IN ('page_builder_layouts','theme_demo_imports','theme_demo_layouts')")->fetchColumn();
     assertSmoke($obsoleteTables === 0, 'Obsolete Page Builder and theme demo tables must be removed by migrations.');
+    $archiveTable = (int)$pdo->query("SELECT COUNT(*) FROM information_schema.TABLES WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='legacy_cleanup_archive'")->fetchColumn();
+    assertSmoke($archiveTable === 1, 'Legacy Page Builder records must be archived before obsolete tables are removed.');
     $obsoleteNavigation = (int)$pdo->query("SELECT COUNT(*) FROM navigation_items WHERE url LIKE '/demo-theme/%' OR (label='Demolar' AND url='#')")->fetchColumn();
     assertSmoke($obsoleteNavigation === 0, 'Obsolete demo theme navigation entries must be removed.');
 
