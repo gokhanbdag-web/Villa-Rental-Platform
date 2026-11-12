@@ -234,6 +234,25 @@ final class ThemeManager
         }
     }
 
+    public static function saveActiveTheme(string $slug): void
+    {
+        if (!preg_match('/^[a-z0-9_-]{1,60}$/', $slug)) {
+            throw new RuntimeException('Tema seçimi geçersiz.');
+        }
+        $installed = self::installed();
+        if (!isset($installed[$slug])) {
+            throw new RuntimeException('Seçilen tema kurulu değil veya tema bildirimi geçersiz.');
+        }
+        $pdo = Database::connection();
+        $stmt = $pdo->prepare('INSERT INTO settings(setting_key,setting_value,autoload) VALUES(?,?,1) ON DUPLICATE KEY UPDATE setting_value=VALUES(setting_value),autoload=1');
+        $stmt->execute(['theme.active', $slug]);
+        $verify = $pdo->prepare('SELECT setting_value FROM settings WHERE setting_key=? LIMIT 1');
+        $verify->execute(['theme.active']);
+        if ((string)$verify->fetchColumn() !== $slug) {
+            throw new RuntimeException('Aktif tema tercihi veritabanına kaydedilemedi.');
+        }
+    }
+
     public static function saveTypographySettings(array $input, ?string $slug = null): void
     {
         $slug = $slug ?: self::activeSlug();
