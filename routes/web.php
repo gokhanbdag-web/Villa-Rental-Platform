@@ -1228,6 +1228,29 @@ $router->post('/admin/header-settings/social-icons', static function (): void {
     redirect('/admin/header-settings');
 });
 
+$router->get('/admin/typography', static function (): void {
+    Auth::requireRole(['super_admin','admin']);
+    $typographySettings = ThemeManager::typographySettings(ThemeManager::activeSlug());
+    $typographyMessage = (string)($_SESSION['villa_typography_message'] ?? '');
+    $typographyMessageType = (string)($_SESSION['villa_typography_message_type'] ?? 'success');
+    unset($_SESSION['villa_typography_message'], $_SESSION['villa_typography_message_type']);
+    require APP_ROOT . '/views/admin/typography.php';
+});
+$router->post('/admin/typography', static function (): void {
+    Auth::requireRole(['super_admin','admin']);
+    verify_csrf();
+    try {
+        ThemeManager::saveTypographySettings((array)($_POST['typography'] ?? []), ThemeManager::activeSlug());
+        $_SESSION['villa_typography_message'] = 'Tema tipografi ayarları başarıyla kaydedildi.';
+        $_SESSION['villa_typography_message_type'] = 'success';
+    } catch (Throwable $e) {
+        error_log('Theme typography save failed: ' . $e->getMessage());
+        $_SESSION['villa_typography_message'] = 'Kayıt başarısız: ' . $e->getMessage();
+        $_SESSION['villa_typography_message_type'] = 'error';
+    }
+    redirect('/admin/typography');
+});
+
 $router->get('/admin/settings', static function (): void {
     Auth::requireRole(['super_admin','admin']);$settings=Database::connection()->query("SELECT setting_key,setting_value FROM settings WHERE setting_key IN ('platform.commission_percent','app.currency','app.timezone')")->fetchAll(PDO::FETCH_KEY_PAIR);require APP_ROOT.'/views/admin/settings.php';
 });
