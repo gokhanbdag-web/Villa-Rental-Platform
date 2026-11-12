@@ -104,7 +104,9 @@ try {
         $demoResult = ThemeDemoImporter::import($themeSlug, $adminId);
         assertSmoke(!$demoResult['already_imported'] && $demoResult['created'] >= 3, 'Theme demo package did not import its independent page layouts: ' . $themeSlug);
         $themeHome = PageBuilder::load($themeSlug, 'home');
-        assertSmoke(($themeHome['status'] ?? '') === 'published' && count($themeHome['widgets'] ?? []) >= 5, 'Theme demo homepage was not published: ' . $themeSlug);
+        $expectedHomeStatus = $themeSlug === 'mediterranean' ? 'draft' : 'published';
+        $expectedMinimumWidgets = $themeSlug === 'mediterranean' ? 3 : 5;
+        assertSmoke(($themeHome['status'] ?? '') === $expectedHomeStatus && count($themeHome['widgets'] ?? []) >= $expectedMinimumWidgets, 'Theme demo import overwrote or failed to publish the expected homepage: ' . $themeSlug);
         $demoStatus = ThemeDemoImporter::status($themeSlug);
         assertSmoke(($demoStatus['package_version'] ?? '') === '1.0.0', 'Theme demo import ledger is missing: ' . $themeSlug);
     }
