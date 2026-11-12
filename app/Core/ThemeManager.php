@@ -96,13 +96,23 @@ final class ThemeManager
     public static function render(string $view, array $variables): void
     {
         $slug = self::activeSlug();
-        // A published homepage layout is the explicit signal that a theme demo/custom
-        // page-builder composition is active. Without one, every theme uses the
-        // preserved Mediterranean editorial homepage as the shared default.
+        // Until a theme demo is imported, every frontend template uses the
+        // preserved Mediterranean design as the common default. Demo previews
+        // are exempt so administrators can inspect a package before importing it.
+        $hasImportedDemo = false;
+        try {
+            $hasImportedDemo = ThemeDemoImporter::status($slug) !== [];
+        } catch (\\Throwable $e) {
+            error_log('Theme demo status unavailable: ' . $e->getMessage());
+        }
         $layout = $variables['pageBuilderLayout'] ?? null;
-        $isSharedDefaultLanding = basename($view) === 'landing.php'
-            && (!is_array($layout) || (string)($layout['status'] ?? '') !== 'published');
-        $renderSlug = $isSharedDefaultLanding ? 'mediterranean' : $slug;
+        $isThemeDemoPreview = basename($view) === 'landing.php'
+            && (string)($_SESSION['villa_builder_preview_theme'] ?? '') === $slug
+            && is_array($layout)
+            && (string)($layout['status'] ?? '') === 'published';
+        $isSharedDefaultTheme = !$hasImportedDemo && !$isThemeDemoPreview;
+        $isSharedDefaultLanding = basename($view) === 'landing.php' && $isSharedDefaultTheme;
+        $renderSlug = $isSharedDefaultTheme ? 'mediterranean' : $slug;
         $themeDir = self::root() . '/' . $renderSlug;
         $manifest = self::installed()[$renderSlug]['manifest'] ?? [];
         $map = $manifest['templates'] ?? [];
@@ -130,7 +140,7 @@ final class ThemeManager
         $css = $themeDir . '/style.css';
         if (is_file($css)) {
             $tag = '<link rel="stylesheet" href="' . e(app_url('/theme-assets/' . rawurlencode($renderSlug) . '/style.css')) . '?v=' . rawurlencode((string)filemtime($css)) . '">';
-            $custom = $isSharedDefaultLanding ? [] : self::customSettings($slug);
+            $custom = $isSharedDefaultTheme ? [] : self::customSettings($slug);
             if ($custom !== []) {
                 $primary = e((string)($custom['primary'] ?? '#176b50'));
                 $background = e((string)($custom['background'] ?? '#f7f8f5'));
