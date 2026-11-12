@@ -95,8 +95,18 @@ final class ThemeManager
         if ($licenseTitleLength === false || $licenseTitleLength > 60) throw new RuntimeException('Lisans başlığı en fazla 60 karakter olabilir.');
         if ($licenseNumberLength === false || $licenseNumberLength > 40) throw new RuntimeException('Lisans numarası en fazla 40 karakter olabilir.');
         $clean['_license'] = ['title'=>$licenseTitle,'number'=>$licenseNumber];
-        $stmt = Database::connection()->prepare('INSERT INTO settings(setting_key,setting_value,autoload) VALUES(?,?,1) ON DUPLICATE KEY UPDATE setting_value=VALUES(setting_value),autoload=1');
-        $stmt->execute(['theme.social_icons', json_encode($clean, JSON_UNESCAPED_UNICODE | JSON_THROW_ON_ERROR)]);
+        $pdo = Database::connection();
+        $json = json_encode($clean, JSON_UNESCAPED_UNICODE | JSON_THROW_ON_ERROR);
+        $stmt = $pdo->prepare('INSERT INTO settings(setting_key,setting_value,autoload) VALUES(?,?,1) ON DUPLICATE KEY UPDATE setting_value=VALUES(setting_value),autoload=1');
+        $stmt->execute(['theme.social_icons', $json]);
+
+        // Verify the write before reporting success to the administrator.
+        $verify = $pdo->prepare('SELECT setting_value FROM settings WHERE setting_key=? LIMIT 1');
+        $verify->execute(['theme.social_icons']);
+        $stored = (string)($verify->fetchColumn() ?: '');
+        if ($stored !== $json) {
+            throw new RuntimeException('Üst bilgi ayarları veritabanına yazılamadı. Lütfen tekrar deneyin.');
+        }
     }
 
     private static function renderSocialIcon(string $platform, string $family): string
