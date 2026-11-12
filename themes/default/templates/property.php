@@ -3,7 +3,7 @@ declare(strict_types=1);
 
 // Theme-specific presentation shell. The shared page supplies all business data and actions.
 ob_start();
-$pageTemplate = \App\\Core\\ThemeManager::resolveFile('templates/pages/property.php');
+$pageTemplate = \App\Core\ThemeManager::resolveFile('templates/pages/property.php');
 if ($pageTemplate === null) throw new RuntimeException('Tema sayfa bileşeni bulunamadı: property');
 require $pageTemplate;
 $html = (string) ob_get_clean();
@@ -16,7 +16,7 @@ if ($navHtml === '') {
     ob_start();
     $navItems = $navigation ?? [];
     $navAllowAuth = true;
-    \App\\Core\\ThemeManager::renderPartial('partials/navigation-items.php', get_defined_vars());
+    \App\Core\ThemeManager::renderPartial('partials/navigation-items.php', get_defined_vars());
     $navHtml = '<nav class="nav" id="siteNavigation">' . (string) ob_get_clean() . '</nav>';
 }
 
