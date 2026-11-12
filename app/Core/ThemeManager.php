@@ -102,7 +102,7 @@ final class ThemeManager
         $hasImportedDemo = false;
         try {
             $hasImportedDemo = ThemeDemoImporter::status($slug) !== [];
-        } catch (\\Throwable $e) {
+        } catch (\Throwable $e) {
             error_log('Theme demo status unavailable: ' . $e->getMessage());
         }
         $layout = $variables['pageBuilderLayout'] ?? null;
