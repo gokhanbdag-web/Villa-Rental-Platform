@@ -165,6 +165,19 @@ final class ThemeManager
         }
         // Inject after the theme stylesheet so every theme obeys the phone layout rule.
         $mobileLayout = '<style id="villa-mobile-single-column-global">
+        /* Keep the account logout action on the same desktop navigation row. */
+        @media(min-width:761px){
+          body[data-villa-theme] .theme-header-inner{display:flex!important;flex-wrap:nowrap!important;align-items:center!important;gap:16px!important;min-width:0}
+          body[data-villa-theme] .theme-header .theme-brand{flex:0 0 auto!important;min-width:0!important}
+          body[data-villa-theme] .theme-header .nav{display:flex!important;flex:1 1 auto!important;flex-wrap:nowrap!important;align-items:center!important;justify-content:flex-end!important;gap:4px!important;min-width:0!important}
+          body[data-villa-theme] .theme-header .nav-entry{flex:0 0 auto!important;white-space:nowrap!important}
+          body[data-villa-theme] .theme-header .nav-entry-top{flex-wrap:nowrap!important;white-space:nowrap!important}
+          body[data-villa-theme] .theme-header .nav-entry-top>a,
+          body[data-villa-theme] .theme-header .nav .villa-logout-button{white-space:nowrap!important}
+          body[data-villa-theme] .theme-header .nav .nav-logout-entry{flex:0 0 auto!important;margin-left:4px!important}
+          body[data-villa-theme] .theme-header .nav .villa-logout-form{display:flex!important;align-items:center!important;margin:0!important;padding:0!important}
+          body[data-villa-theme] .theme-header .nav .villa-logout-button{display:inline-flex!important;align-items:center!important;justify-content:center!important;margin:0!important;padding:10px 12px!important;line-height:1.2!important}
+        }
         @media(max-width:760px){
           body[data-villa-theme] .cards,body[data-villa-theme] .grid,
           body[data-villa-theme] .destination-grid,body[data-villa-theme] .pb-grid,
