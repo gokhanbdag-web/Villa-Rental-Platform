@@ -1194,7 +1194,7 @@ $router->post('/admin/users/status', static function (): void {
 });
 
 
-$router->get('/theme-assets/{slug}/{file}', static function (array $params): void {
+$router->get('/theme-assets/{slug}/{file*}', static function (array $params): void {
     $slug = (string)($params['slug'] ?? '');
     $relative = str_replace('\\', '/', (string)($params['file'] ?? ''));
     if (!preg_match('/^[a-z0-9_-]{1,60}$/', $slug) || $relative === '') {
