@@ -86,13 +86,46 @@ try {
     $defaultManifestPath = $root . '/themes/default/theme.json';
     $defaultManifest = json_decode((string)file_get_contents($defaultManifestPath), true);
     assertSmoke(is_array($defaultManifest) && ($defaultManifest['slug'] ?? '') === 'default', 'The default base theme manifest is missing or invalid.');
+
+    // Exercise active-theme selection, component-level PHP fallback, and nested asset fallback.
+    $smokeThemeDir = $root . '/themes/smoke-theme';
+    $defaultAssetsDir = $root . '/themes/default/assets';
+    @mkdir($smokeThemeDir . '/partials', 0775, true);
+    @mkdir($smokeThemeDir . '/assets/icons', 0775, true);
+    @mkdir($defaultAssetsDir, 0775, true);
+    file_put_contents($smokeThemeDir . '/theme.json', json_encode(['slug'=>'smoke-theme','name'=>'Smoke Theme','version'=>'1.0.0'], JSON_UNESCAPED_SLASHES));
+    file_put_contents($smokeThemeDir . '/partials/smoke-component.php', '<?php echo "active-component";');
+    file_put_contents($smokeThemeDir . '/assets/icons/active.svg', '<svg xmlns="http://www.w3.org/2000/svg"></svg>');
+    file_put_contents($defaultAssetsDir . '/smoke-fallback.svg', '<svg xmlns="http://www.w3.org/2000/svg"></svg>');
+    $activateSmokeTheme = $pdo->prepare('INSERT INTO settings(setting_key,setting_value,autoload) VALUES(?,?,1) ON DUPLICATE KEY UPDATE setting_value=VALUES(setting_value)');
+    $activateSmokeTheme->execute(['theme.active', 'smoke-theme']);
+    assertSmoke(ThemeManager::activeSlug($pdo) === 'smoke-theme', 'A valid installed theme could not be activated.');
+    assertSmoke(ThemeManager::resolveFile('assets/icons/active.svg', 'smoke-theme') === realpath($smokeThemeDir . '/assets/icons/active.svg'), 'Active theme assets did not receive priority.');
+    assertSmoke(ThemeManager::resolveFile('assets/smoke-fallback.svg', 'smoke-theme') === realpath($defaultAssetsDir . '/smoke-fallback.svg'), 'Missing active assets did not fall back to default.');
+    assertSmoke(ThemeManager::resolveFile('partials/shared-topbar.php', 'smoke-theme') === realpath($root . '/themes/default/partials/shared-topbar.php'), 'Missing active PHP components did not fall back to default.');
+    $capturedRoute = [];
+    $testRouter = new Router();
+    $testRouter->get('/theme-assets/{slug}/{file*}', static function (array $params) use (&$capturedRoute): void { $capturedRoute = $params; });
+    $testRouter->dispatch('GET', '/theme-assets/smoke-theme/assets/icons/active.svg');
+    assertSmoke(($capturedRoute['slug'] ?? '') === 'smoke-theme' && ($capturedRoute['file'] ?? '') === 'assets/icons/active.svg', 'Nested theme asset routes did not preserve their relative path.');
+    $pdo->prepare('DELETE FROM settings WHERE setting_key=?')->execute(['theme.active']);
+    @unlink($smokeThemeDir . '/partials/smoke-component.php');
+    @unlink($smokeThemeDir . '/assets/icons/active.svg');
+    @unlink($smokeThemeDir . '/theme.json');
+    @unlink($defaultAssetsDir . '/smoke-fallback.svg');
+    @rmdir($smokeThemeDir . '/partials');
+    @rmdir($smokeThemeDir . '/assets/icons');
+    @rmdir($smokeThemeDir . '/assets');
+    @rmdir($smokeThemeDir);
+    @rmdir($defaultAssetsDir);
+
     foreach (['style.css','templates/landing.php','templates/listing.php','templates/property.php','templates/destinations.php','templates/booking.php','templates/page.php','templates/account.php'] as $themeFile) {
         assertSmoke(is_file($root . '/themes/default/' . $themeFile), 'Missing default theme file: ' . $themeFile);
     }
     assertSmoke(!is_file($root . '/app/Core/PageBuilder.php') && !is_file($root . '/app/Core/ThemeDemoImporter.php') && !is_file($root . '/views/admin/builder.php') && !is_file($root . '/views/site/partials/page-builder-home.php'), 'Page Builder and widget implementation files must be removed.');
 
     $themeManagerSource = (string)file_get_contents($root . '/app/Core/ThemeManager.php');
-    assertSmoke(str_contains($themeManagerSource, 'public static function resolveFile') && str_contains($themeManagerSource, 'public static function assetUrl') && str_contains($themeManagerSource, "['theme.active']"), 'Active theme resolution must use a validated setting and provide a safe file resolver.');
+    assertSmoke(str_contains($themeManagerSource, 'public static function resolveFile') && str_contains($themeManagerSource, 'public static function assetUrl') && str_contains($themeManagerSource, 'public static function renderPartial') && str_contains($themeManagerSource, "['theme.active']"), 'Active theme resolution must use a validated setting and provide safe file and component resolvers.');
     assertSmoke(str_contains($themeManagerSource, 'Base first, active second') && str_contains($themeManagerSource, "self::assetUrl('style.css', 'default')"), 'Default and active stylesheets must load in cascade order.');
     $defaultThemeCssSource = (string)file_get_contents($root . '/themes/default/style.css');
     assertSmoke(str_contains($defaultThemeCssSource, 'body[data-villa-theme]{background-color:#fff!important;}'), 'The shared white body background must remain enforced by the default theme stylesheet.');
