@@ -81,8 +81,8 @@ try {
     }
 
     $themeManifests = glob($root . '/themes/*/theme.json') ?: [];
-    assertSmoke(count($themeManifests) === 1 && basename(dirname($themeManifests[0])) === 'default', 'Only the default theme manifest may remain installed.');
-    assertSmoke(array_keys(ThemeManager::installed()) === ['default'] && ThemeManager::activeSlug() === 'default', 'Theme manager must expose and activate only the default theme.');
+    assertSmoke(is_file($root . '/themes/default/theme.json'), 'The required default theme manifest must remain installed.');
+    assertSmoke(isset(ThemeManager::installed()['default']) && ThemeManager::activeSlug() === 'default', 'The default theme must remain available and be the initial active theme.');
     $defaultManifestPath = $root . '/themes/default/theme.json';
     $defaultManifest = json_decode((string)file_get_contents($defaultManifestPath), true);
     assertSmoke(is_array($defaultManifest) && ($defaultManifest['slug'] ?? '') === 'default', 'The default base theme manifest is missing or invalid.');
@@ -92,9 +92,10 @@ try {
     assertSmoke(!is_file($root . '/app/Core/PageBuilder.php') && !is_file($root . '/app/Core/ThemeDemoImporter.php') && !is_file($root . '/views/admin/builder.php') && !is_file($root . '/views/site/partials/page-builder-home.php'), 'Page Builder and widget implementation files must be removed.');
 
     $themeManagerSource = (string)file_get_contents($root . '/app/Core/ThemeManager.php');
-    assertSmoke(str_contains($themeManagerSource, "return 'default';") && str_contains($themeManagerSource, "self::root() . '/default'"), 'The default theme must be the only active theme.');
+    assertSmoke(str_contains($themeManagerSource, 'public static function resolveFile') && str_contains($themeManagerSource, 'public static function assetUrl') && str_contains($themeManagerSource, "['theme.active']"), 'Active theme resolution must use a validated setting and provide a safe file resolver.');
+    assertSmoke(str_contains($themeManagerSource, 'Base first, active second') && str_contains($themeManagerSource, "self::assetUrl('style.css', 'default')"), 'Default and active stylesheets must load in cascade order.');
     $defaultThemeCssSource = (string)file_get_contents($root . '/themes/default/style.css');
-    assertSmoke(str_contains($themeManagerSource, 'rawurlencode($renderSlug) . \'/style.css\'') && str_contains($defaultThemeCssSource, 'body[data-villa-theme]{background-color:#fff!important;}'), 'Default theme assets and the shared white body background must be enforced by the theme stylesheet.');
+    assertSmoke(str_contains($defaultThemeCssSource, 'body[data-villa-theme]{background-color:#fff!important;}'), 'The shared white body background must remain enforced by the default theme stylesheet.');
     assertSmoke(str_contains($themeManagerSource, 'public static function socialSettings()') && str_contains($themeManagerSource, 'public static function saveSocialSettings(array $input)') && str_contains($themeManagerSource, 'villa-social-bar') && str_contains($themeManagerSource, 'renderSocialIcon'), 'Shared top information settings and rendering must remain available.');
     assertSmoke(str_contains($themeManagerSource, 'saveTypographySettings') && str_contains($themeManagerSource, 'typographySettings') && str_contains($themeManagerSource, 'fonts.googleapis.com') && str_contains($themeManagerSource, 'paragraph_links'), 'Theme-specific Google Fonts and typography rendering must be available.');
     $typographyViewSource = (string)file_get_contents($root . '/views/admin/typography.php');
@@ -130,7 +131,7 @@ try {
     $migrationCountAfter = (int)$pdo->query('SELECT COUNT(*) FROM schema_migrations')->fetchColumn();
     assertSmoke($migrationCountAfter === $migrationCount, 'Second migration pass changed the migration ledger.');
 
-    echo "Installer smoke tests passed: admin, platform mode, {$villaCount} demo villas, {$migrationCount} migrations, required tables, single default theme, removed builder/widget code, shared top information settings, and repeat migration.\n";
+    echo "Installer smoke tests passed: admin, platform mode, {$villaCount} demo villas, {$migrationCount} migrations, required tables, default theme fallback architecture, removed builder/widget code, shared top information settings, and repeat migration.\n";
 } finally {
     if (is_file($configFile)) unlink($configFile);
     if (is_file($lockFile)) unlink($lockFile);
