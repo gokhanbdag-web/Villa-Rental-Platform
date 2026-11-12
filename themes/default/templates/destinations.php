@@ -3,7 +3,9 @@ declare(strict_types=1);
 
 // Theme-specific site chrome; the shared view retains its business flow and form handling.
 ob_start();
-require APP_ROOT . '/views/site/destinations.php';
+$pageTemplate = \\App\\Core\\ThemeManager::resolveFile('templates/pages/destinations.php');
+if ($pageTemplate === null) throw new RuntimeException('Tema sayfa bileşeni bulunamadı: destinations');
+require $pageTemplate;
 $html = (string) ob_get_clean();
 
 $navHtml = '';
