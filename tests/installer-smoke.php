@@ -6,6 +6,7 @@ require_once dirname(__DIR__) . '/app/bootstrap.php';
 use App\Core\Installer;
 use App\Core\Migrator;
 use App\Core\ThemeManager;
+use App\Core\Router;
 
 function assertSmoke(bool $condition, string $message): void
 {
