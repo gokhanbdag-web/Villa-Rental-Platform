@@ -3,7 +3,9 @@ declare(strict_types=1);
 
 // Theme-specific presentation shell. The shared page supplies all business data and actions.
 ob_start();
-require APP_ROOT . '/views/site/landing.php';
+$pageTemplate = \\App\\Core\\ThemeManager::resolveFile('templates/pages/landing.php');
+if ($pageTemplate === null) throw new RuntimeException('Tema sayfa bileşeni bulunamadı: landing');
+require $pageTemplate;
 $html = (string) ob_get_clean();
 
 $navHtml = '';
