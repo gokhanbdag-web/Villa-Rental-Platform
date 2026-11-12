@@ -290,6 +290,8 @@ final class ThemeManager
         }
         // Inject after the theme stylesheet so every theme obeys the phone layout rule.
         $mobileLayout = '<style id="villa-mobile-single-column-global">
+        /* Every installed theme shares a clean white page canvas. */
+        body[data-villa-theme]{background-color:#fff!important;}
         /* Keep the account logout action on the same desktop navigation row. */
         @media(min-width:761px){
           body[data-villa-theme] .theme-header-inner{display:flex!important;flex-wrap:nowrap!important;align-items:center!important;gap:16px!important;min-width:0}
