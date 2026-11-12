@@ -99,28 +99,21 @@ final class ThemeManager
         foreach (['instagram','facebook','youtube','tiktok','x','whatsapp','pinterest','telegram','linkedin'] as $platform) {
             $defaults[$platform] = ['url'=>'','family'=>'brand','size'=>20,'active'=>false];
         }
-        try {
-            $stmt = Database::connection()->prepare('SELECT setting_value FROM settings WHERE setting_key=? LIMIT 1');
-            $stmt->execute(['theme.social_icons']);
-            $saved = json_decode((string)($stmt->fetchColumn() ?: '{}'), true);
-            if (!is_array($saved)) return $defaults;
-            foreach ($defaults as $platform=>$item) {
-                if (!isset($saved[$platform]) || !is_array($saved[$platform])) continue;
-                $defaults[$platform] = array_merge($item, $saved[$platform]);
-            }
-        } catch (\Throwable $e) {
-            error_log('Social icon settings read failed: ' . $e->getMessage());
-        }
         $defaults['_address'] = ['text'=>'','active'=>false];
+        $defaults['_call_center'] = ['phone'=>'','active'=>false];
         try {
             $stmt = Database::connection()->prepare('SELECT setting_value FROM settings WHERE setting_key=? LIMIT 1');
             $stmt->execute(['theme.social_icons']);
             $saved = json_decode((string)($stmt->fetchColumn() ?: '{}'), true);
-            if (is_array($saved) && isset($saved['_address']) && is_array($saved['_address'])) {
-                $defaults['_address'] = array_merge($defaults['_address'], $saved['_address']);
+            if (is_array($saved)) {
+                foreach ($defaults as $key=>$item) {
+                    if (isset($saved[$key]) && is_array($saved[$key])) {
+                        $defaults[$key] = array_merge($item, $saved[$key]);
+                    }
+                }
             }
         } catch (\\Throwable $e) {
-            error_log('Social header address read failed: ' . $e->getMessage());
+            error_log('Shared header settings read failed: ' . $e->getMessage());
         }
         return $defaults;
     }
@@ -145,6 +138,12 @@ final class ThemeManager
         $addressLength = preg_match_all('/./us', $addressText, $addressCharacters);
         if ($addressLength === false || $addressLength > 180) throw new RuntimeException('Header adres bilgisi en fazla 180 karakter olabilir.');
         $clean['_address'] = ['text'=>$addressText,'active'=>!empty($address['active']) && $addressText !== ''];
+        $callCenter = is_array($input['_call_center'] ?? null) ? $input['_call_center'] : [];
+        $phone = trim((string)($callCenter['phone'] ?? ''));
+        $phoneLength = preg_match_all('/./us', $phone, $phoneCharacters);
+        if ($phoneLength === false || $phoneLength > 40) throw new RuntimeException('Çağrı merkezi telefon numarası en fazla 40 karakter olabilir.');
+        if ($phone !== '' && !preg_match('/^[0-9+()\\s.\\-]+$/u', $phone)) throw new RuntimeException('Çağrı merkezi telefon numarası geçersiz karakter içeriyor.');
+        $clean['_call_center'] = ['phone'=>$phone,'active'=>!empty($callCenter['active']) && $phone !== ''];
         $stmt = Database::connection()->prepare('INSERT INTO settings(setting_key,setting_value,autoload) VALUES(?,?,1) ON DUPLICATE KEY UPDATE setting_value=VALUES(setting_value),autoload=1');
         $stmt->execute(['theme.social_icons', json_encode($clean, JSON_UNESCAPED_UNICODE | JSON_THROW_ON_ERROR)]);
     }
@@ -227,8 +226,14 @@ final class ThemeManager
         $addressMarkup = (!empty($addressSettings['active']) && $addressText !== '')
             ? '<div class="villa-social-address">'.e($addressText).'</div>'
             : '';
-        if (($socialItems !== '' || $addressMarkup !== '') && stripos($html, 'villa-social-bar') === false) {
-            $socialBar = '<div class="villa-social-bar"><div class="villa-social-inner"><div class="villa-social-left">'.$socialItems.'</div>'.$addressMarkup.'<div class="villa-social-right"></div></div></div>';
+        $callCenterSettings = $socialSettings['_call_center'] ?? ['phone'=>'','active'=>false];
+        $callCenterPhone = trim((string)($callCenterSettings['phone'] ?? ''));
+        $callCenterDigits = preg_replace('/[^0-9+]/', '', $callCenterPhone) ?? '';
+        $callCenterMarkup = (!empty($callCenterSettings['active']) && $callCenterPhone !== '' && $callCenterDigits !== '')
+            ? '<div class="villa-social-call-center"><span class="villa-social-call-label">Çağrı Merkezi</span><a href="tel:'.e($callCenterDigits).'">'.e($callCenterPhone).'</a></div>'
+            : '';
+        if (($socialItems !== '' || $addressMarkup !== '' || $callCenterMarkup !== '') && stripos($html, 'villa-social-bar') === false) {
+            $socialBar = '<div class="villa-social-bar"><div class="villa-social-inner"><div class="villa-social-left">'.$socialItems.'</div>'.$addressMarkup.$callCenterMarkup.'<div class="villa-social-right"></div></div></div>';
             if (preg_match('~<div class="med-topbar"~i', $html)) $html = preg_replace('~<div class="med-topbar"~i', $socialBar.'<div class="med-topbar"', $html, 1) ?? $html;
             else $html = preg_replace('~<header\\b~i', $socialBar.'<header', $html, 1) ?? $html;
         }
@@ -307,15 +312,19 @@ final class ThemeManager
           }
         }
         .villa-social-bar{position:relative;z-index:40;width:100%;background:#f5f5f0;border-bottom:1px solid #e8e8df;box-sizing:border-box}
-        .villa-social-inner{width:100%;max-width:none;margin:0;padding:7px 22px;box-sizing:border-box;display:grid;grid-template-columns:1fr auto 1fr;align-items:center;gap:10px}
-        .villa-social-left{display:flex;align-items:center;justify-content:flex-start;gap:10px;min-width:0}
+        .villa-social-inner{width:100%;max-width:none;margin:0;padding:7px 22px;box-sizing:border-box;display:grid;grid-template-columns:repeat(4,minmax(0,1fr));align-items:center;gap:10px}
+        .villa-social-left{grid-column:1;display:flex;align-items:center;justify-content:flex-start;gap:10px;min-width:0}
         .villa-social-address{grid-column:2;text-align:center;color:#4b574f;font-size:12px;line-height:1.5;overflow-wrap:anywhere}
-        .villa-social-right{grid-column:3}
+        .villa-social-call-center{grid-column:3;display:flex;align-items:center;justify-content:center;gap:7px;min-width:0;color:#4b574f;font-size:12px;line-height:1.4}
+        .villa-social-call-label{font-weight:700;white-space:nowrap}
+        .villa-social-call-center a{color:inherit;text-decoration:none;font-weight:700;white-space:nowrap}
+        .villa-social-call-center a:hover{text-decoration:underline}
+        .villa-social-right{grid-column:4;min-height:1px}
         .villa-social-link{width:30px;height:30px;display:inline-flex;align-items:center;justify-content:center;color:inherit;text-decoration:none;border-radius:50%;transition:opacity .2s,background .2s}
         .villa-social-link svg{width:var(--social-icon-size,20px);height:var(--social-icon-size,20px);display:block}
         .villa-social-link--circle{background:#ffffff;border:1px solid currentColor}
         .villa-social-link:hover{opacity:.72}
-        @media(max-width:760px){.villa-social-inner{padding:6px 12px;grid-template-columns:auto 1fr;gap:8px}.villa-social-address{grid-column:2;text-align:right;font-size:11px}.villa-social-right{display:none}.villa-social-left{gap:7px}.villa-social-link{width:28px;height:28px}}
+        @media(max-width:760px){.villa-social-inner{padding:6px 12px;grid-template-columns:1fr 1fr;gap:8px}.villa-social-left{grid-column:1;grid-row:1}.villa-social-address{grid-column:2;grid-row:1;text-align:right;font-size:11px}.villa-social-call-center{grid-column:1;grid-row:2;justify-content:flex-start;font-size:11px}.villa-social-right{display:none}.villa-social-link{width:28px;height:28px}}
         </style>';
         $html = preg_replace('/<\\/body>/i', $mobileLayout . '</body>', $html, 1) ?? $html;
 
