@@ -286,6 +286,17 @@ final class ThemeManager
         })($file, $variables);
     }
 
+    /** Apply the active theme's admin layout to rendered admin pages. */
+    public static function wrapAdminHtml(string $html, string $requestPath, string $platformMode): string
+    {
+        $file = self::resolveFile('layouts/admin-shell.php');
+        if ($file === null) return $html;
+        $load = static function (string $__file): mixed { return require $__file; };
+        $wrapper = $load($file);
+        if (!is_callable($wrapper)) throw new RuntimeException('Tema yönetim yerleşimi geçersiz.');
+        return (string)$wrapper($html, $requestPath, $platformMode);
+    }
+
     public static function renderPartial(string $relative, array $variables = []): void
     {
         $allowed = str_starts_with($relative, 'partials/') || str_starts_with($relative, 'layouts/');
