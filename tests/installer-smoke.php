@@ -87,15 +87,24 @@ try {
     assertSmoke(($savedLayout['widgets'][1]['settings']['item_alignment'] ?? '') === 'center', 'Item-card layout settings did not persist.');
     assertSmoke(($savedLayout['widgets'][2]['settings']['show_search'] ?? true) === false, 'Normalized widget settings did not persist consistently.');
 
-    $themeCount = count(glob($root . '/themes/*/theme.json') ?: []);
-    assertSmoke($themeCount === 4, 'Expected four built-in themes.');
+    $expectedThemes = ['mediterranean','modern','prestige','boutique','riviera','alpine','nocturne','kyoto','loft','bohem'];
+    $themeManifests = glob($root . '/themes/*/theme.json') ?: [];
+    $themeSlugs = [];
+    foreach ($themeManifests as $manifestPath) {
+        $manifest = json_decode((string)file_get_contents($manifestPath), true);
+        if (is_array($manifest) && !empty($manifest['slug'])) $themeSlugs[] = (string)$manifest['slug'];
+    }
+    sort($themeSlugs);
+    $expectedSorted = $expectedThemes;
+    sort($expectedSorted);
+    assertSmoke($themeSlugs === $expectedSorted, 'Expected all ten built-in theme manifests to be installed and valid.');
 
     // A second migration pass must be safe and leave the migration ledger intact.
     Migrator::run($pdo, $root);
     $migrationCountAfter = (int)$pdo->query('SELECT COUNT(*) FROM schema_migrations')->fetchColumn();
     assertSmoke($migrationCountAfter === $migrationCount, 'Second migration pass changed the migration ledger.');
 
-    echo "Installer and builder smoke tests passed: admin, platform mode, {$villaCount} demo villas, {$migrationCount} migrations, required tables, four themes, all 47+ widget registrations, image-text/item-card settings, shared widget sanitizer security and preview/save/load, and repeat migration.\n";
+    echo "Installer and builder smoke tests passed: admin, platform mode, {$villaCount} demo villas, {$migrationCount} migrations, required tables, ten themes, all 47+ widget registrations, image-text/item-card settings, shared widget sanitizer security and preview/save/load, and repeat migration.\n";
 } finally {
     if (is_file($configFile)) unlink($configFile);
     if (is_file($lockFile)) unlink($lockFile);
