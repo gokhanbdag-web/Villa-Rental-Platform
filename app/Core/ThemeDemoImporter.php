@@ -106,10 +106,10 @@ final class ThemeDemoImporter
                 $oldTrack = $readTrack->fetch(PDO::FETCH_ASSOC) ?: null;
 
                 // Keep the original pre-demo backup across package upgrades.
-                $previousJson = $oldTrack['previous_layout_json'] ?? ($existing['layout_json'] ?? null);
-                $previousStatus = $oldTrack['previous_status'] ?? ($existing['status'] ?? null);
-                $previousVersion = $oldTrack['previous_version'] ?? ($existing['version'] ?? null);
-                $previousUpdatedAt = $oldTrack['previous_updated_at'] ?? ($existing['updated_at'] ?? null);
+                $previousJson = $oldTrack !== null ? $oldTrack['previous_layout_json'] : ($existing['layout_json'] ?? null);
+                $previousStatus = $oldTrack !== null ? $oldTrack['previous_status'] : ($existing['status'] ?? null);
+                $previousVersion = $oldTrack !== null ? $oldTrack['previous_version'] : ($existing['version'] ?? null);
+                $previousUpdatedAt = $oldTrack !== null ? $oldTrack['previous_updated_at'] : ($existing['updated_at'] ?? null);
 
                 PageBuilder::save($slug, $pageKey, $clean, 'published', max(0,$userId));
                 $readLayout->execute([$slug,$pageKey]);
