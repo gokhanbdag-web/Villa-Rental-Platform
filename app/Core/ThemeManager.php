@@ -101,6 +101,7 @@ final class ThemeManager
         }
         $defaults['_address'] = ['text'=>'','active'=>false];
         $defaults['_call_center'] = ['title'=>'Çağrı Merkezi','phone'=>''];
+        $defaults['_license'] = ['title'=>'','number'=>''];
         try {
             $stmt = Database::connection()->prepare('SELECT setting_value FROM settings WHERE setting_key=? LIMIT 1');
             $stmt->execute(['theme.social_icons']);
@@ -147,6 +148,14 @@ final class ThemeManager
         if ($phoneLength === false || $phoneLength > 40) throw new RuntimeException('Çağrı merkezi telefon numarası en fazla 40 karakter olabilir.');
         if ($phone !== '' && !preg_match('/^[0-9+()\\s.\\-]+$/u', $phone)) throw new RuntimeException('Çağrı merkezi telefon numarası geçersiz karakter içeriyor.');
         $clean['_call_center'] = ['title'=>$callCenterTitle,'phone'=>$phone];
+        $license = is_array($input['_license'] ?? null) ? $input['_license'] : [];
+        $licenseTitle = trim((string)($license['title'] ?? ''));
+        $licenseNumber = trim((string)($license['number'] ?? ''));
+        $licenseTitleLength = preg_match_all('/./us', $licenseTitle, $licenseTitleCharacters);
+        $licenseNumberLength = preg_match_all('/./us', $licenseNumber, $licenseNumberCharacters);
+        if ($licenseTitleLength === false || $licenseTitleLength > 60) throw new RuntimeException('Lisans başlığı en fazla 60 karakter olabilir.');
+        if ($licenseNumberLength === false || $licenseNumberLength > 40) throw new RuntimeException('Lisans numarası en fazla 40 karakter olabilir.');
+        $clean['_license'] = ['title'=>$licenseTitle,'number'=>$licenseNumber];
         $stmt = Database::connection()->prepare('INSERT INTO settings(setting_key,setting_value,autoload) VALUES(?,?,1) ON DUPLICATE KEY UPDATE setting_value=VALUES(setting_value),autoload=1');
         $stmt->execute(['theme.social_icons', json_encode($clean, JSON_UNESCAPED_UNICODE | JSON_THROW_ON_ERROR)]);
     }
@@ -238,8 +247,17 @@ final class ThemeManager
         $callCenterMarkup = ($callCenterTitleMarkup !== '' || $callCenterPhoneMarkup !== '')
             ? '<div class="villa-social-call-center">'.$callCenterTitleMarkup.$callCenterPhoneMarkup.'</div>'
             : '';
-        if (($socialItems !== '' || $addressMarkup !== '' || $callCenterMarkup !== '') && stripos($html, 'villa-social-bar') === false) {
-            $socialBar = '<div class="villa-social-bar"><div class="villa-social-inner"><div class="villa-social-left">'.$socialItems.'</div>'.$addressMarkup.$callCenterMarkup.'<div class="villa-social-right"></div></div></div>';
+        $licenseSettings = $socialSettings['_license'] ?? ['title'=>'','number'=>''];
+        $licenseTitle = trim((string)($licenseSettings['title'] ?? ''));
+        $licenseNumber = trim((string)($licenseSettings['number'] ?? ''));
+        $licenseTitleMarkup = $licenseTitle !== '' ? '<span class="villa-social-license-title">'.e($licenseTitle).'</span>' : '';
+        $licenseNumberMarkup = $licenseNumber !== '' ? '<span class="villa-social-license-number">'.e($licenseNumber).'</span>' : '';
+        $licenseSeparator = ($licenseTitleMarkup !== '' && $licenseNumberMarkup !== '') ? '<span class="villa-social-license-separator">:</span>' : '';
+        $licenseMarkup = ($licenseTitleMarkup !== '' || $licenseNumberMarkup !== '')
+            ? '<div class="villa-social-license">'.$licenseTitleMarkup.$licenseSeparator.$licenseNumberMarkup.'</div>'
+            : '';
+        if (($socialItems !== '' || $addressMarkup !== '' || $callCenterMarkup !== '' || $licenseMarkup !== '') && stripos($html, 'villa-social-bar') === false) {
+            $socialBar = '<div class="villa-social-bar"><div class="villa-social-inner"><div class="villa-social-left">'.$socialItems.'</div>'.$addressMarkup.$callCenterMarkup.($licenseMarkup !== '' ? $licenseMarkup : '<div class="villa-social-right"></div>').'</div></div>';
             if (preg_match('~<div class="med-topbar"~i', $html)) $html = preg_replace('~<div class="med-topbar"~i', $socialBar.'<div class="med-topbar"', $html, 1) ?? $html;
             else $html = preg_replace('~<header\\b~i', $socialBar.'<header', $html, 1) ?? $html;
         }
@@ -325,12 +343,15 @@ final class ThemeManager
         .villa-social-call-label{font-weight:700;white-space:nowrap}
         .villa-social-call-center a{color:inherit;text-decoration:none;font-weight:700;white-space:nowrap}
         .villa-social-call-center a:hover{text-decoration:underline}
+        .villa-social-license{grid-column:4;display:flex;align-items:center;justify-content:center;gap:5px;min-width:0;color:#4b574f;font-size:12px;line-height:1.4;overflow-wrap:anywhere}
+        .villa-social-license-title{font-weight:700}
+        .villa-social-license-number{font-weight:700}
         .villa-social-right{grid-column:4;min-height:1px}
         .villa-social-link{width:30px;height:30px;display:inline-flex;align-items:center;justify-content:center;color:inherit;text-decoration:none;border-radius:50%;transition:opacity .2s,background .2s}
         .villa-social-link svg{width:var(--social-icon-size,20px);height:var(--social-icon-size,20px);display:block}
         .villa-social-link--circle{background:#ffffff;border:1px solid currentColor}
         .villa-social-link:hover{opacity:.72}
-        @media(max-width:760px){.villa-social-inner{padding:6px 12px;grid-template-columns:1fr 1fr;gap:8px}.villa-social-left{grid-column:1;grid-row:1}.villa-social-address{grid-column:2;grid-row:1;text-align:right;font-size:11px}.villa-social-call-center{grid-column:1;grid-row:2;justify-content:flex-start;font-size:11px}.villa-social-right{display:none}.villa-social-link{width:28px;height:28px}}
+        @media(max-width:760px){.villa-social-inner{padding:6px 12px;grid-template-columns:1fr 1fr;gap:8px}.villa-social-left{grid-column:1;grid-row:1}.villa-social-address{grid-column:2;grid-row:1;text-align:right;font-size:11px}.villa-social-call-center{grid-column:1;grid-row:2;justify-content:flex-start;font-size:11px}.villa-social-license{grid-column:2;grid-row:2;justify-content:flex-end;font-size:11px}.villa-social-right{display:none}.villa-social-link{width:28px;height:28px}}
         </style>';
         $html = preg_replace('/<\\/body>/i', $mobileLayout . '</body>', $html, 1) ?? $html;
 
