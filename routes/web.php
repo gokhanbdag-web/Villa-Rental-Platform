@@ -1300,7 +1300,7 @@ $router->get('/theme-assets/{slug}/{file}', static function (array $params): voi
 
 $router->get('/admin/themes', static function (): void {
     Auth::requireRole(['super_admin','admin']);
-    $themes=ThemeManager::installed();$activeTheme=ThemeManager::activeSlug();$themeSettings=[];$themeDemoStatuses=[];$themeDemoAvailable=[];foreach($themes as $themeSlug=>$themeData){$themeSettings[$themeSlug]=ThemeManager::customSettings($themeSlug);$themeDemoStatuses[$themeSlug]=ThemeDemoImporter::status($themeSlug);$themeDemoAvailable[$themeSlug]=ThemeDemoImporter::hasPackage($themeSlug);}
+    $themes=ThemeManager::installed();$activeTheme=ThemeManager::activeSlug();$themeSettings=[];$themeDemoStatuses=[];$themeDemoAvailable=[];$themeDemoVersions=[];foreach($themes as $themeSlug=>$themeData){$themeSettings[$themeSlug]=ThemeManager::customSettings($themeSlug);$themeDemoStatuses[$themeSlug]=ThemeDemoImporter::status($themeSlug);$themeDemoAvailable[$themeSlug]=ThemeDemoImporter::hasPackage($themeSlug);if($themeDemoAvailable[$themeSlug])$themeDemoVersions[$themeSlug]=(string)(ThemeDemoImporter::package($themeSlug)['version']??'1.0.0');}
     $themeMessage=(string)($_SESSION['villa_theme_message']??'');unset($_SESSION['villa_theme_message']);
     require APP_ROOT.'/views/admin/themes.php';
 });
