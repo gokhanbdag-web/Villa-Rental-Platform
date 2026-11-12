@@ -284,7 +284,15 @@ final class ThemeManager
           body[data-villa-theme] .pb-widget-destinations .pb-card{
             grid-template-columns:minmax(0,1fr)!important;
           }
-        }</style>';
+        }
+        .villa-social-bar{position:relative;z-index:40;width:100%;background:#f5f5f0;border-bottom:1px solid #e8e8df}
+        .villa-social-inner{max-width:1240px;margin:0 auto;padding:7px 22px;display:flex;align-items:center;justify-content:flex-start;gap:10px}
+        .villa-social-link{width:30px;height:30px;display:inline-flex;align-items:center;justify-content:center;color:inherit;text-decoration:none;border-radius:50%;transition:opacity .2s,background .2s}
+        .villa-social-link svg{width:var(--social-icon-size,20px);height:var(--social-icon-size,20px);display:block}
+        .villa-social-link--circle{background:#ffffff;border:1px solid currentColor}
+        .villa-social-link:hover{opacity:.72}
+        @media(max-width:760px){.villa-social-inner{padding:6px 14px;gap:8px}.villa-social-link{width:28px;height:28px}}
+        </style>';
         $html = preg_replace('/<\\/body>/i', $mobileLayout . '</body>', $html, 1) ?? $html;
 
         $preview = (string)($_SESSION['villa_theme_preview'] ?? '');
