@@ -109,7 +109,7 @@ try {
         $themeHome = PageBuilder::load($themeSlug, 'home');
         assertSmoke(($themeHome['status'] ?? '') === 'published' && count($themeHome['widgets'] ?? []) >= 6, 'Theme demo did not replace the old homepage with the complete six-section layout: ' . $themeSlug);
         $demoStatus = ThemeDemoImporter::status($themeSlug);
-        assertSmoke(($demoStatus['package_version'] ?? '') === '1.1.0', 'Theme demo import ledger is missing the current package version: ' . $themeSlug);
+        assertSmoke(($demoStatus['package_version'] ?? '') === '1.1.1', 'Theme demo import ledger is missing the current package version: ' . $themeSlug);
         if ($themeSlug === 'mediterranean') {
             $restored = ThemeDemoImporter::reset($themeSlug);
             $oldHome = PageBuilder::load('mediterranean', 'home');
