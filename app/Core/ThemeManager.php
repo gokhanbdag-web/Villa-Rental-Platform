@@ -249,6 +249,24 @@ final class ThemeManager
         if ((string)$verify->fetchColumn() !== $json) throw new RuntimeException('Tema tipografi ayarları veritabanına kaydedilemedi.');
     }
 
+    /**
+     * Render one overridable PHP component. Themes may replace a single partial
+     * or layout without replacing the page template that composes it.
+     */
+    public static function renderPartial(string $relative, array $variables = []): void
+    {
+        $allowed = str_starts_with($relative, 'partials/') || str_starts_with($relative, 'layouts/');
+        if (!$allowed || strtolower(pathinfo($relative, PATHINFO_EXTENSION)) !== 'php') {
+            throw new RuntimeException('Tema bileşen yolu geçersiz.');
+        }
+        $file = self::resolveFile($relative);
+        if ($file === null) throw new RuntimeException('Tema bileşeni bulunamadı: ' . $relative);
+        (static function (string $__file, array $__variables): void {
+            extract($__variables, EXTR_SKIP);
+            require $__file;
+        })($file, $variables);
+    }
+
     public static function render(string $view, array $variables): void
     {
         $renderSlug = self::activeSlug();
@@ -275,9 +293,10 @@ final class ThemeManager
         $socialSettings = self::socialSettings();
         $renderSocialIcon = static fn(string $platform, string $family): string => self::renderSocialIcon($platform, $family);
         ob_start();
-        $topbarTemplate = self::resolveFile('partials/shared-topbar.php', $renderSlug)
-            ?? APP_ROOT . '/themes/default/partials/shared-topbar.php';
-        require $topbarTemplate;
+        self::renderPartial('partials/shared-topbar.php', [
+            'socialSettings' => $socialSettings,
+            'renderSocialIcon' => $renderSocialIcon,
+        ]);
         $socialBar = (string)ob_get_clean();
         if (trim($socialBar) !== '' && stripos($html, 'villa-social-bar') === false) {
             if (preg_match('~<div class="med-topbar"~i', $html)) {
