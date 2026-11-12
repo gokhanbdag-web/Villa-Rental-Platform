@@ -353,7 +353,7 @@ $router->get('/villa/{slug}', static function (array $params): void {
 $router->get('/register', static function (): void {
     if (Auth::check()) redirect('/account/bookings');
     $error = null;
-    require APP_ROOT . '/views/auth/register.php';
+    ThemeManager::renderTemplate('templates/pages/auth/register.php', get_defined_vars());
 });
 
 $router->post('/register', static function (): void {
@@ -363,7 +363,7 @@ $router->post('/register', static function (): void {
     $password = (string)($_POST['password'] ?? '');
     if (strlen($username) < 3 || !$email || strlen($password) < 10 || !hash_equals($password,(string)($_POST['password_confirm'] ?? ''))) {
         $error = 'Bilgileri kontrol edin. Şifre en az 10 karakter olmalı ve tekrar alanıyla eşleşmelidir.';
-        require APP_ROOT . '/views/auth/register.php';
+        ThemeManager::renderTemplate('templates/pages/auth/register.php', get_defined_vars());
         return;
     }
     try {
@@ -373,7 +373,7 @@ $router->post('/register', static function (): void {
         redirect('/account/bookings');
     } catch (PDOException $e) {
         $error = $e->getCode() === '23000' ? 'Bu kullanıcı adı veya e-posta zaten kayıtlı.' : 'Hesap oluşturulurken bir hata oluştu.';
-        require APP_ROOT . '/views/auth/register.php';
+        ThemeManager::renderTemplate('templates/pages/auth/register.php', get_defined_vars());
     }
 });
 
@@ -661,7 +661,7 @@ $router->get('/account/bookings', static function (): void {
 
 $router->get('/login', static function (): void {
     if (Auth::check()) { $user = Auth::user(); redirect(($user['role'] ?? '') === 'customer' ? '/account/bookings' : (($user['role'] ?? '') === 'vendor' ? '/vendor' : '/admin')); }
-    require APP_ROOT . '/views/auth/login.php';
+    ThemeManager::renderTemplate('templates/pages/auth/login.php', get_defined_vars());
 });
 
 $router->post('/login/ajax', static function (): void {
@@ -693,7 +693,7 @@ $router->post('/logout', static function (): void {
 $router->get('/vendor/register', static function (): void {
     $pdo=Database::connection();
     if ((string)$pdo->query("SELECT setting_value FROM settings WHERE setting_key='app.mode'")->fetchColumn() !== 'multi_vendor') { http_response_code(404); return; }
-    $error=null; require APP_ROOT . '/views/vendor/register.php';
+    $error=null; ThemeManager::renderTemplate('templates/pages/vendor/register.php', get_defined_vars());
 });
 $router->post('/vendor/register', static function (): void {
     verify_csrf(); $pdo=Database::connection();
@@ -701,9 +701,9 @@ $router->post('/vendor/register', static function (): void {
     $business=trim((string)($_POST['business_name']??'')); $username=trim((string)($_POST['username']??''));
     $email=filter_var(trim((string)($_POST['email']??'')),FILTER_VALIDATE_EMAIL); $phone=trim((string)($_POST['phone']??''));
     $password=(string)($_POST['password']??'');
-    if($business===''||strlen($username)<3||!$email||strlen($password)<10){$error='Bilgileri kontrol edin. Şifre en az 10 karakter olmalıdır.';require APP_ROOT.'/views/vendor/register.php';return;}
+    if($business===''||strlen($username)<3||!$email||strlen($password)<10){$error='Bilgileri kontrol edin. Şifre en az 10 karakter olmalıdır.';ThemeManager::renderTemplate('templates/pages/vendor/register.php', get_defined_vars());return;}
     try{$pdo->beginTransaction();$u=$pdo->prepare("INSERT INTO users(username,email,password_hash,role,status,created_at) VALUES(?,?,?,'vendor','active',NOW())");$u->execute([$username,$email,password_hash($password,PASSWORD_DEFAULT)]);$v=$pdo->prepare("INSERT INTO vendors(user_id,business_name,phone,status,created_at) VALUES(?,?,?,'pending',NOW())");$v->execute([(int)$pdo->lastInsertId(),$business,$phone]);$pdo->commit();Auth::attempt($email,$password);redirect('/vendor');}
-    catch(PDOException $e){if($pdo->inTransaction())$pdo->rollBack();$error='Bu kullanıcı adı veya e-posta kullanılıyor ya da başvuru kaydedilemedi.';require APP_ROOT.'/views/vendor/register.php';}
+    catch(PDOException $e){if($pdo->inTransaction())$pdo->rollBack();$error='Bu kullanıcı adı veya e-posta kullanılıyor ya da başvuru kaydedilemedi.';ThemeManager::renderTemplate('templates/pages/vendor/register.php', get_defined_vars());}
 });
 $router->get('/vendor', static function (): void {
     Auth::requireRole(['vendor']);$pdo=Database::connection();
@@ -711,7 +711,7 @@ $router->get('/vendor', static function (): void {
     $s=$pdo->prepare('SELECT * FROM vendors WHERE user_id=?');$s->execute([(int)Auth::user()['id']]);$vendor=$s->fetch();
     if(!$vendor){http_response_code(403);return;}
     $s=$pdo->prepare('SELECT COUNT(*) FROM properties WHERE vendor_id=?');$s->execute([(int)$vendor['id']]);$propertyCount=(int)$s->fetchColumn();
-    require APP_ROOT.'/views/vendor/dashboard.php';
+    ThemeManager::renderTemplate('templates/pages/vendor/dashboard.php', get_defined_vars());
 });
 
 $router->get('/vendor/bookings', static function (): void {
@@ -724,7 +724,7 @@ $router->get('/vendor/bookings', static function (): void {
     if(in_array($status,$allowed,true)){$sql.=' AND b.status=?';$s=$pdo->prepare($sql.' ORDER BY b.created_at DESC LIMIT 250');$s->execute([$vendorId,$status]);$bookings=$s->fetchAll();}
     else{$s=$pdo->prepare($sql.' ORDER BY b.created_at DESC LIMIT 250');$s->execute([$vendorId]);$bookings=$s->fetchAll();}
     $bookingFilter=in_array($status,$allowed,true)?$status:'';
-    require APP_ROOT.'/views/vendor/bookings.php';
+    ThemeManager::renderTemplate('templates/pages/vendor/bookings.php', get_defined_vars());
 });
 
 $router->post('/vendor/bookings/status', static function (): void {
