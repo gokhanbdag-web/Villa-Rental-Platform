@@ -1347,6 +1347,20 @@ $router->post('/admin/themes/demo/import', static function (): void {
     }catch(Throwable $e){$_SESSION['villa_theme_message']='Demo içeriği yüklenemedi: '.$e->getMessage();}
     redirect('/admin/themes');
 });
+$router->post('/admin/themes/demo/reset-all', static function (): void {
+    Auth::requireRole(['super_admin','admin']);verify_csrf();
+    $removed=0;$restored=0;$preserved=0;$failed=[];
+    foreach(ThemeManager::installed() as $slug=>$theme){
+        try{
+            $result=ThemeDemoImporter::reset((string)$slug);
+            $removed+=(int)($result['removed']??0);
+            $restored+=(int)($result['restored']??0);
+            $preserved+=(int)($result['preserved']??0);
+        }catch(Throwable $e){$failed[]=(string)$slug;}
+    }
+    $_SESSION['villa_theme_message']='Toplu demo sıfırlama tamamlandı. '.$removed.' demo düzeni kaldırıldı, '.$restored.' önceki düzen geri yüklendi, '.$preserved.' elle değiştirilmiş düzen veri kaybını önlemek için korundu.'.($failed?' Hata alınan temalar: '.implode(', ',$failed):'');
+    redirect('/admin/themes');
+});
 $router->post('/admin/themes/demo/reset', static function (): void {
     Auth::requireRole(['super_admin','admin']);verify_csrf();
     $slug=(string)($_POST['slug']??'');
