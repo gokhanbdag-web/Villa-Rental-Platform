@@ -16,6 +16,7 @@
 <strong><?= $demoStatus ? '✓ Demo içeriği yüklü' : 'Tema demo içeriği hazır' ?></strong>
 <p><?= $demoStatus ? 'Yüklenme: '.e((string)$demoStatus['imported_at']).' · '.e((string)$demoStatus['created_layouts']).' sayfa düzeni' : 'Bu temaya özel ana sayfa ve içerik sayfası düzenlerini tek tıklamayla yükleyin.' ?></p>
 <div class="theme-demo-actions">
+<form method="post" action="<?= e(app_url('/admin/themes/demo/preview')) ?>" target="_blank"><?= csrf_field() ?><input type="hidden" name="slug" value="<?= e($slug) ?>"><button class="secondary" type="submit">Demo önizlemesi</button></form>
 <?php if(!$demoStatus): ?><form method="post" action="<?= e(app_url('/admin/themes/demo/import')) ?>"><?= csrf_field() ?><input type="hidden" name="slug" value="<?= e($slug) ?>"><button type="submit">Demo içeriğini yükle</button></form>
 <?php else: ?><form method="post" action="<?= e(app_url('/admin/themes/demo/reset')) ?>" onsubmit="return confirm('Demo tarafından eklenen ve hiç değiştirilmemiş sayfa düzenleri kaldırılsın mı? Düzenlediğiniz sayfalar korunacaktır.')"><?= csrf_field() ?><input type="hidden" name="slug" value="<?= e($slug) ?>"><button class="secondary" type="submit">Demo içeriğini güvenle sıfırla</button></form><?php endif; ?>
 </div></div><?php else: ?><div class="theme-demo"><strong>Demo paketi bulunmuyor</strong><p>Bu tema için henüz tek tıklamalı demo içeriği eklenmemiş.</p></div><?php endif; ?>
