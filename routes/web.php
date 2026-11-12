@@ -1300,9 +1300,17 @@ $router->get('/theme-assets/{slug}/{file}', static function (array $params): voi
 
 $router->get('/admin/themes', static function (): void {
     Auth::requireRole(['super_admin','admin']);
-    $themes=ThemeManager::installed();$activeTheme=ThemeManager::activeSlug();$themeSettings=[];$themeDemoStatuses=[];$themeDemoAvailable=[];$themeDemoVersions=[];foreach($themes as $themeSlug=>$themeData){$themeSettings[$themeSlug]=ThemeManager::customSettings($themeSlug);$themeDemoStatuses[$themeSlug]=ThemeDemoImporter::status($themeSlug);$themeDemoAvailable[$themeSlug]=ThemeDemoImporter::hasPackage($themeSlug);if($themeDemoAvailable[$themeSlug])$themeDemoVersions[$themeSlug]=(string)(ThemeDemoImporter::package($themeSlug)['version']??'1.0.0');}
+    $themes=ThemeManager::installed();$activeTheme=ThemeManager::activeSlug();$socialSettings=ThemeManager::socialSettings();$themeSettings=[];$themeDemoStatuses=[];$themeDemoAvailable=[];$themeDemoVersions=[];foreach($themes as $themeSlug=>$themeData){$themeSettings[$themeSlug]=ThemeManager::customSettings($themeSlug);$themeDemoStatuses[$themeSlug]=ThemeDemoImporter::status($themeSlug);$themeDemoAvailable[$themeSlug]=ThemeDemoImporter::hasPackage($themeSlug);if($themeDemoAvailable[$themeSlug])$themeDemoVersions[$themeSlug]=(string)(ThemeDemoImporter::package($themeSlug)['version']??'1.0.0');}
     $themeMessage=(string)($_SESSION['villa_theme_message']??'');unset($_SESSION['villa_theme_message']);
     require APP_ROOT.'/views/admin/themes.php';
+});
+$router->post('/admin/themes/social-icons', static function (): void {
+    Auth::requireRole(['super_admin','admin']);verify_csrf();
+    try {
+        ThemeManager::saveSocialSettings((array)($_POST['social']??[]));
+        $_SESSION['villa_theme_message']='Ortak sosyal medya ikon ayarları kaydedildi.';
+    } catch(Throwable $e) { $_SESSION['villa_theme_message']=$e->getMessage(); }
+    redirect('/admin/themes');
 });
 $router->post('/admin/themes/settings', static function (): void {
     Auth::requireRole(['super_admin','admin']);verify_csrf();
