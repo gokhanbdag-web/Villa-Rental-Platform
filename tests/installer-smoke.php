@@ -105,7 +105,7 @@ try {
 
     $themeManagerSource = (string)file_get_contents($root . '/app/Core/ThemeManager.php');
     assertSmoke(str_contains($themeManagerSource, '$isSharedDefaultLanding') && str_contains($themeManagerSource, "self::root() . '/mediterranean'"), 'All themes must fall back to the preserved Mediterranean homepage when no published demo layout exists.');
-    assertSmoke(str_contains($themeManagerSource, "rawurlencode($renderSlug) . '/style.css'") && str_contains($themeManagerSource, "e($renderSlug)"), 'Shared default homepage must load the Mediterranean template stylesheet and CSS scope.');
+    assertSmoke(str_contains($themeManagerSource, "rawurlencode(\\$renderSlug) . '/style.css'") && str_contains($themeManagerSource, "e(\\$renderSlug)"), 'Shared default homepage must load the Mediterranean template stylesheet and CSS scope.');
 
     foreach ($expectedThemes as $themeSlug) {
         $demoResult = ThemeDemoImporter::import($themeSlug, $adminId);
