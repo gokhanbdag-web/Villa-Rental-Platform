@@ -1,52 +1,27 @@
-# Default tema ve override mimarisi
+# Theme architecture
 
-Bu projede tek ana tema `themes/default/` klasörüdür. Bütün genel tasarım çalışmaları önce bu klasörde yapılır. Tema seçme, ZIP tema yükleme, demo tema ve Page Builder/widget sistemi bulunmaz.
+The `default` theme is the required base layer and cannot be removed. Each valid theme directory contains a `theme.json` manifest whose `slug` matches its directory name.
 
-## Temel yapı
+## Cascade and fallback
 
-```text
-themes/
-  default/
-    theme.json
-    style.css
-    templates/
-      landing.php
-      listing.php
-      property.php
-      destinations.php
-      booking.php
-      page.php
-      account.php
-    partials/
-      # Ortak tema parçaları burada tutulur.
+- The active theme is selected through the `theme.active` setting. Missing or invalid selections fall back to `default`.
+- CSS loads `themes/default/style.css` first and the active theme's `style.css` second. The browser's native cascade merges declarations property-by-property. An active theme only overrides declarations it actually supplies.
+- Theme assets resolve active-first and then default, including nested paths under `assets/`.
+- PHP template mappings prefer the active theme; when the mapped file is absent, the default theme's mapped template is used. Core site views remain the final fallback.
+- Shared topbar partials use the same active-first/default fallback.
+- Theme PHP files are presentation templates only. Authentication, reservations, payments, database access, authorization and security remain in application code.
+
+## Manifest example
+
+```json
+{
+  "slug": "coastal",
+  "name": "Coastal",
+  "version": "1.0.0",
+  "templates": {
+    "landing.php": "templates/landing.php"
+  }
+}
 ```
 
-## Override kuralı
-
-İleride yeni bir tema tasarımı gerektiğinde ana dosyalar kopyalanmaz. Yalnızca değiştirilmesi gereken dosya, aynı göreli yol ve dosya adıyla ilgili tema klasörüne eklenir.
-
-Örnek:
-
-```text
-themes/
-  default/
-    partials/shared-topbar.php
-    templates/landing.php
-  coastal/
-    partials/shared-topbar.php
-```
-
-Override çalışma zamanı henüz etkin değildir; şu an tek tema `default` olarak sabitlenmiştir. İleride yeni tema desteği açıldığında dosya çözümleyici önce aktif temadaki aynı isimli override dosyasını, bulamazsa `default` altındaki karşılığını kullanacak şekilde genişletilecektir. Override dosyaları yalnızca gerçekten farklı tasarım gerektiğinde oluşturulacaktır.
-
-## Ortak kurallar
-
-- Tema içeriği ve sayfa metinleri yönetim panelinden yönetilen CMS verilerinden gelir; tema dosyalarına müşteri içeriği sabit yazılmaz.
-- Rezervasyon, kullanıcı, ilan, ödeme ve CMS iş mantığı tema dosyalarından ayrı tutulur.
-- Bütün temalarda sayfa gövdesi beyaz zeminle başlar.
-- Ortak üst bilgi alanı tek merkezden yönetilir. Tema farklılığı gerekiyorsa yalnızca tipografi gibi sunum değişkenleri override edilir.
-- Yeni override dosyaları güvenli dosya çözümleyicisiyle yüklenmeli; kullanıcıdan gelen dosya yolu doğrudan `require` edilmemelidir.
-- Tema varlıkları yalnızca `default` temasından sunulur. Yeni tema altyapısı gerektiğinde bu kural kontrollü biçimde genişletilir.
-
-## Güvenlik ve veri
-
-Tema dosyaları veritabanı şemasını değiştirmez. Kullanıcı, villa, rezervasyon, ödeme ve mevcut CMS verileri tema değişikliklerinden etkilenmez. Veritabanı şema değişiklikleri sürümlü migration dosyalarıyla yapılır.
+An active theme may therefore override selected CSS declarations, templates and assets while inheriting everything it does not provide from `default`.
