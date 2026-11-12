@@ -260,8 +260,17 @@ final class ThemeManager
         $span = $typography['span'];
         $paragraph = $typography['paragraph'];
         $paragraphLinks = $typography['paragraph_links'];
+        $headingBaseSize = (int)$heading['size'];
+        $headingBaseRule = '{font-family:' . json_encode($heading['family']) . '!important;color:' . $heading['color'] . '!important;font-weight:' . (int)$heading['weight'] . '!important;font-style:' . $heading['style'] . '!important}';
+        $headingRules = $themeScope . ' h1,' . $themeScope . ' h2,' . $themeScope . ' h3,' . $themeScope . ' h4,' . $themeScope . ' h5,' . $themeScope . ' h6' . $headingBaseRule
+            . $themeScope . ' h1{font-size:' . $headingBaseSize . 'px!important}'
+            . $themeScope . ' h2{font-size:' . max(18, (int)round($headingBaseSize * .78)) . 'px!important}'
+            . $themeScope . ' h3{font-size:' . max(16, (int)round($headingBaseSize * .64)) . 'px!important}'
+            . $themeScope . ' h4{font-size:' . max(15, (int)round($headingBaseSize * .55)) . 'px!important}'
+            . $themeScope . ' h5{font-size:' . max(14, (int)round($headingBaseSize * .48)) . 'px!important}'
+            . $themeScope . ' h6{font-size:' . max(13, (int)round($headingBaseSize * .44)) . 'px!important}';
         $typographyCss = $themeScope . ' .villa-social-inner{min-height:' . (int)$typography['topbar_height'] . 'px}'
-            . $themeScope . ' h1,' . $themeScope . ' h2,' . $themeScope . ' h3,' . $themeScope . ' h4,' . $themeScope . ' h5,' . $themeScope . ' h6{font-family:' . json_encode($heading['family']) . '!important;font-size:' . (int)$heading['size'] . 'px!important;color:' . $heading['color'] . '!important;font-weight:' . (int)$heading['weight'] . '!important;font-style:' . $heading['style'] . '!important}'
+            . $headingRules
             . $themeScope . ' span{font-family:' . json_encode($span['family']) . '!important;font-size:' . (int)$span['size'] . 'px!important;color:' . $span['color'] . '!important;font-weight:' . (int)$span['weight'] . '!important;font-style:' . $span['style'] . '!important}'
             . $themeScope . ' p{font-family:' . json_encode($paragraph['family']) . '!important;font-size:' . (int)$paragraph['size'] . 'px!important;color:' . $paragraph['color'] . '!important;font-weight:' . (int)$paragraph['weight'] . '!important;font-style:' . $paragraph['style'] . '!important}'
             . $themeScope . ' p a:not(.button):not(.btn):not([class*="button"]):not([class*="btn"]):not([class*="cta"]):not(.search-submit):not([role="button"]){font-family:' . json_encode($paragraphLinks['family']) . '!important;font-size:' . (int)$paragraphLinks['size'] . 'px!important;color:' . $paragraphLinks['color'] . '!important;font-weight:' . (int)$paragraphLinks['weight'] . '!important;font-style:' . $paragraphLinks['style'] . '!important}';
