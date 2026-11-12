@@ -1195,15 +1195,31 @@ $router->post('/admin/users/status', static function (): void {
 
 
 $router->get('/theme-assets/{slug}/{file}', static function (array $params): void {
-    $slug=(string)($params['slug']??'');$file=(string)($params['file']??'');
-    if($slug!=='default'||!preg_match('/^[a-zA-Z0-9_.-]{1,100}$/',$file)){http_response_code(404);exit;}
-    $path=$file==='style.css'?APP_ROOT.'/themes/'.$slug.'/style.css':APP_ROOT.'/themes/'.$slug.'/assets/'.$file;
-    if(!is_file($path)){http_response_code(404);exit;}
-    $extension=strtolower(pathinfo($path,PATHINFO_EXTENSION));
-    $types=['css'=>'text/css','js'=>'application/javascript','png'=>'image/png','jpg'=>'image/jpeg','jpeg'=>'image/jpeg','webp'=>'image/webp','svg'=>'image/svg+xml','woff'=>'font/woff','woff2'=>'font/woff2'];
-    if(!isset($types[$extension])){http_response_code(404);exit;}
-    header('Content-Type: '.$types[$extension].'; charset=UTF-8');header('X-Content-Type-Options: nosniff');header('Cache-Control: public, max-age=3600');
-    readfile($path);exit;
+    $slug = (string)($params['slug'] ?? '');
+    $relative = str_replace('\\', '/', (string)($params['file'] ?? ''));
+    if (!preg_match('/^[a-z0-9_-]{1,60}$/', $slug) || $relative === '') {
+        http_response_code(404); exit;
+    }
+    $themeRelative = $relative === 'style.css' ? 'style.css' : 'assets/' . $relative;
+    $path = ThemeManager::resolveFile($themeRelative, $slug);
+    if ($path === null) { http_response_code(404); exit; }
+    $extension = strtolower(pathinfo($path, PATHINFO_EXTENSION));
+    $types = [
+        'css'=>'text/css','js'=>'application/javascript','mjs'=>'application/javascript',
+        'png'=>'image/png','jpg'=>'image/jpeg','jpeg'=>'image/jpeg','gif'=>'image/gif',
+        'webp'=>'image/webp','avif'=>'image/avif','svg'=>'image/svg+xml','ico'=>'image/x-icon',
+        'woff'=>'font/woff','woff2'=>'font/woff2','ttf'=>'font/ttf','otf'=>'font/otf','eot'=>'application/vnd.ms-fontobject',
+        'json'=>'application/json','map'=>'application/json'
+    ];
+    if (!isset($types[$extension])) { http_response_code(404); exit; }
+    $etag = '"' . sha1($path . ':' . (string)filemtime($path)) . '"';
+    $charset = in_array($extension, ['css','js','mjs','svg','json','map'], true) ? '; charset=UTF-8' : '';
+    header('Content-Type: ' . $types[$extension] . $charset);
+    header('X-Content-Type-Options: nosniff');
+    header('Cache-Control: public, max-age=3600');
+    header('ETag: ' . $etag);
+    if (trim((string)($_SERVER['HTTP_IF_NONE_MATCH'] ?? '')) === $etag) { http_response_code(304); exit; }
+    readfile($path); exit;
 });
 
 $router->get('/admin/header-settings', static function (): void {
