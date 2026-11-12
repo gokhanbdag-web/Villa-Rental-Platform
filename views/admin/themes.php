@@ -19,12 +19,11 @@
 <div class="social-address-admin">
 <strong>Üst şerit orta alanı – adres bilgisi</strong>
 <label>Adres metni<input type="text" name="social[_address][text]" maxlength="180" value="<?= e((string)($socialSettings['_address']['text']??'')) ?>" placeholder="Örn. Ölüdeniz, Fethiye / Muğla"></label>
-<label class="social-admin-active"><input type="checkbox" name="social[_address][active]" value="1" <?= !empty($socialSettings['_address']['active'])?'checked':'' ?>> Adresi üst şeritte göster</label>
 </div>
 <div class="social-address-admin">
-<strong>Üst şerit üçüncü kolon – Çağrı Merkezi</strong>
+<strong>Üst şerit üçüncü kolon – Başlık ve telefon</strong>
+<label>Başlık<input type="text" name="social[_call_center][title]" maxlength="60" value="<?= e((string)($socialSettings['_call_center']['title']??'Çağrı Merkezi')) ?>" placeholder="Örn. Çağrı Merkezi, İletişim"></label>
 <label>Telefon numarası<input type="text" name="social[_call_center][phone]" maxlength="40" value="<?= e((string)($socialSettings['_call_center']['phone']??'')) ?>" placeholder="+90 5XX XXX XX XX" inputmode="tel"></label>
-<label class="social-admin-active"><input type="checkbox" name="social[_call_center][active]" value="1" <?= !empty($socialSettings['_call_center']['active'])?'checked':'' ?>> Çağrı merkezini üst şeritte göster</label>
 </div>
 <div class="social-admin-grid">
 <?php foreach(['instagram'=>'Instagram','facebook'=>'Facebook','youtube'=>'YouTube','tiktok'=>'TikTok','x'=>'X','whatsapp'=>'WhatsApp','pinterest'=>'Pinterest','telegram'=>'Telegram','linkedin'=>'LinkedIn'] as $network=>$networkLabel): $social=$socialSettings[$network]??['url'=>'','family'=>'brand','size'=>20,'active'=>false]; ?>
@@ -35,7 +34,6 @@
 <label>İkon ailesi<select name="social[<?= e($network) ?>][family]"><option value="brand" <?= ($social['family']??'brand')==='brand'?'selected':'' ?>>Marka çizgisi</option><option value="circle" <?= ($social['family']??'brand')==='circle'?'selected':'' ?>>Daireli</option></select></label>
 <label>İkon boyutu<select name="social[<?= e($network) ?>][size]"><?php foreach([16,18,20,22,24,28,32,36] as $px): ?><option value="<?= $px ?>" <?= (int)($social['size']??20)===$px?'selected':'' ?>><?= $px ?> px</option><?php endforeach; ?></select></label>
 </div>
-<label class="social-admin-active"><input type="checkbox" name="social[<?= e($network) ?>][active]" value="1" <?= !empty($social['active'])?'checked':'' ?>> Aktif göster</label>
 </div>
 <?php endforeach; ?>
 </div>
