@@ -49,7 +49,7 @@ $medImage = static function (array $row): string {
     return $value === '' ? '' : (preg_match('~^https?://~i', $value) ? $value : app_url('/' . ltrim($value, '/')));
 };
 $medBlocks = '';
-if (($pageBuilderLayout['status'] ?? '') !== 'published') {
+{
     ob_start();
     if ($medSectionActive('trust')): ?>
     <section class="section med-trust" style="order:<?= $medSectionOrder('trust',2) ?>"><div class="wrap med-trust-grid">
