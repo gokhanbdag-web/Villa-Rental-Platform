@@ -83,7 +83,7 @@
             "eyebrow": "KONAKLAMANIZ BOYUNCA",
             "title": "İyi bir tatil için gereken her şey",
             "subtitle": "Aradığınız konforu kolayca bulun.",
-            "items_text": "Özenle seçilmiş konaklamalar\\nKolay ve güvenli rezervasyon\\nŞeffaf fiyat ve müsaitlik bilgisi",
+            "items_text": "Özenle seçilmiş konaklamalar\nKolay ve güvenli rezervasyon\nŞeffaf fiyat ve müsaitlik bilgisi",
             "columns": 3,
             "section_spacing": "normal"
           }
@@ -135,7 +135,7 @@
           "style": "İkon ızgarası",
           "settings": {
             "title": "Neye önem veriyoruz?",
-            "items_text": "Güvenilir ve açık bilgiler\\nÖzenli konaklama seçkisi\\nMisafir memnuniyeti",
+            "items_text": "Güvenilir ve açık bilgiler\nÖzenli konaklama seçkisi\nMisafir memnuniyeti",
             "columns": 3
           }
         }
@@ -191,7 +191,7 @@
           "style": "Akordeon",
           "settings": {
             "title": "Sıkça sorulan sorular",
-            "items_text": "Rezervasyonum nasıl kesinleşir?\\nİlanın rezervasyon ve ödeme adımlarını tamamladığınızda rezervasyon durumunuzu hesabınızdan takip edebilirsiniz.\\nFiyatlara hangi ücretler dahildir?\\nİlan ve ödeme adımında gösterilen fiyat ve ücret detayları geçerlidir.\\nTarih değişikliği yapabilir miyim?\\nDeğişiklik talebiniz için rezervasyon koşullarını kontrol ederek destek ekibine ulaşabilirsiniz.",
+            "items_text": "Rezervasyonum nasıl kesinleşir?\nİlanın rezervasyon ve ödeme adımlarını tamamladığınızda rezervasyon durumunuzu hesabınızdan takip edebilirsiniz.\nFiyatlara hangi ücretler dahildir?\nİlan ve ödeme adımında gösterilen fiyat ve ücret detayları geçerlidir.\nTarih değişikliği yapabilir miyim?\nDeğişiklik talebiniz için rezervasyon koşullarını kontrol ederek destek ekibine ulaşabilirsiniz.",
             "section_width": "narrow"
           }
         }
