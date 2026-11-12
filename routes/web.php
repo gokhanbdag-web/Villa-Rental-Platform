@@ -7,6 +7,7 @@ use App\Core\Router;
 use App\Core\Translator;
 use App\Core\ThemeManager;
 use App\Core\PageBuilder;
+use App\Core\ThemeDemoImporter;
 
 function villa_navigation_tree(PDO $pdo, string $location, string $locale): array {
     $stmt=$pdo->prepare('SELECT id,parent_id,label,url,target FROM navigation_items WHERE location=? AND language_code=? AND is_active=1 ORDER BY sort_order,id');
