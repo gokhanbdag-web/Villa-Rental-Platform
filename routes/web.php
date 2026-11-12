@@ -1321,6 +1321,20 @@ $router->post('/admin/themes/settings', static function (): void {
     } catch(Throwable $e) { $_SESSION['villa_theme_message']=$e->getMessage(); }
     redirect('/admin/themes');
 });
+$router->post('/admin/themes/demo/preview', static function (): void {
+    Auth::requireRole(['super_admin','admin']);verify_csrf();
+    $slug=(string)($_POST['slug']??'');
+    try{
+        $package=ThemeDemoImporter::package($slug);
+        $home=$package['pages']['home']??null;
+        if(!is_array($home))throw new RuntimeException('Demo ana sayfa düzeni bulunamadı.');
+        $_SESSION['villa_builder_preview_layout']=PageBuilder::sanitizePreview($slug,$home);
+        $_SESSION['villa_builder_preview_theme']=$slug;
+        $_SESSION['villa_builder_preview_page']='home';
+        ThemeManager::preview($slug);
+    }catch(Throwable $e){$_SESSION['villa_theme_message']='Demo önizlemesi açılamadı: '.$e->getMessage();redirect('/admin/themes');}
+    redirect('/?builder_preview=1');
+});
 $router->post('/admin/themes/demo/import', static function (): void {
     Auth::requireRole(['super_admin','admin']);verify_csrf();
     $slug=(string)($_POST['slug']??'');
