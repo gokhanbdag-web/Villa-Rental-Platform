@@ -58,7 +58,7 @@ header{height:76px;border-bottom:1px solid var(--line);display:flex;align-items:
 <?php foreach($properties as $p):
     $cardImages=array_map(static fn($v)=>preg_match('~^https?://~i',(string)$v)?(string)$v:'/'.ltrim((string)$v,'/'),$listingCardImages[(int)$p['id']]??($cover($p)?[$cover($p)]:[]));
     $isCardFavorite=in_array((int)$p['id'],$favoritePropertyIds??[],true);
-    \\App\\Core\\ThemeManager::renderPartial('components/cards/villa-card.php', get_defined_vars());
+    \App\Core\ThemeManager::renderPartial('components/cards/villa-card.php', get_defined_vars());
 endforeach; ?>
 </div>
 <?php endif; ?>
