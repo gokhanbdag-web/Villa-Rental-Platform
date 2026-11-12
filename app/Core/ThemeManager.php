@@ -299,7 +299,7 @@ final class ThemeManager
 
     public static function renderPartial(string $relative, array $variables = []): void
     {
-        $allowed = str_starts_with($relative, 'partials/') || str_starts_with($relative, 'layouts/');
+        $allowed = str_starts_with($relative, 'partials/') || str_starts_with($relative, 'layouts/') || str_starts_with($relative, 'components/');
         if (!$allowed || strtolower(pathinfo($relative, PATHINFO_EXTENSION)) !== 'php') {
             throw new RuntimeException('Tema bileşen yolu geçersiz.');
         }
