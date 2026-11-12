@@ -38,9 +38,74 @@ $groups = [
 <div class="type-field"><label for="<?= e($key) ?>Weight">Font kalınlığı</label><select id="<?= e($key) ?>Weight" name="typography[<?= e($key) ?>][weight]"><?php foreach([300=>'Light',400=>'Normal',500=>'Medium',600=>'Semi Bold',700=>'Bold',800=>'Extra Bold',900=>'Black'] as $weight=>$label): ?><option value="<?= $weight ?>" <?= (int)($item['weight']??400)===$weight?'selected':'' ?>><?= e($label) ?></option><?php endforeach; ?></select></div>
 <div class="type-field"><label for="<?= e($key) ?>Style">Yazı biçimi</label><select id="<?= e($key) ?>Style" name="typography[<?= e($key) ?>][style]"><option value="normal" <?= ($item['style']??'normal')==='normal'?'selected':'' ?>>Normal</option><option value="italic" <?= ($item['style']??'normal')==='italic'?'selected':'' ?>>İtalik</option></select></div>
 </div>
-<div class="type-preview"><strong>Örnek görünüm</strong><span><?= e($meta[0]) ?> — Villa tatiliniz için keyifli bir deneyim.</span></div>
+<div class="type-preview" data-type-preview="<?= e($key) ?>"><strong>Canlı önizleme</strong>
+<?php if($key==='headings'): ?><h2 class="type-preview-content">Villa tatiliniz için keyifli bir deneyim</h2>
+<?php elseif($key==='span'): ?><span class="type-preview-content">Kısa metin örneği — özel fırsatları keşfedin.</span>
+<?php elseif($key==='paragraph'): ?><p class="type-preview-content">Denize yakın konumda, konforlu ve özenle hazırlanmış villalarımızda unutulmaz bir tatil geçirin.</p>
+<?php else: ?><p>Villalarımızı inceleyin ve <a class="type-preview-content" href="#preview-link" onclick="return false">size uygun tatili keşfedin</a>.</p><?php endif; ?>
+</div>
 </section>
 <?php endforeach; ?>
 <div class="type-actions"><button class="type-save" type="submit">Tema tipografisini kaydet</button><span class="type-help">Kaydettiğiniz ayarlar sayfa yenilendiğinde korunur.</span></div>
 </form>
-</main></body></html>
+</main>
+<script>
+(function () {
+    const form = document.querySelector('.typography-settings form');
+    if (!form) return;
+    const weights = 'ital,wght@0,300;0,400;0,500;0,600;0,700;0,800;0,900;1,300;1,400;1,500;1,600;1,700;1,800;1,900';
+    let fontLink = document.getElementById('typography-preview-fonts');
+    if (!fontLink) {
+        fontLink = document.createElement('link');
+        fontLink.id = 'typography-preview-fonts';
+        fontLink.rel = 'stylesheet';
+        document.head.appendChild(fontLink);
+    }
+    function refreshFonts() {
+        const families = Array.from(form.querySelectorAll('select[id$="Family"]'))
+            .map(select => select.value)
+            .filter((value, index, list) => list.indexOf(value) === index);
+        const query = families.map(family => 'family=' + encodeURIComponent(family).replace(/%20/g, '+') + ':' + weights).join('&');
+        fontLink.href = 'https://fonts.googleapis.com/css2?' + query + '&display=swap';
+    }
+    function applyGroup(group) {
+        const preview = form.querySelector('[data-type-preview="' + group + '"] .type-preview-content');
+        if (!preview) return;
+        const fields = {
+            family: form.querySelector('[name="typography[' + group + '][family]"]'),
+            size: form.querySelector('[name="typography[' + group + '][size]"]'),
+            color: form.querySelector('[name="typography[' + group + '][color]"]'),
+            weight: form.querySelector('[name="typography[' + group + '][weight]"]'),
+            style: form.querySelector('[name="typography[' + group + '][style]"]')
+        };
+        if (fields.family) preview.style.fontFamily = '"' + fields.family.value + '", sans-serif';
+        if (fields.size) preview.style.fontSize = Math.max(10, Math.min(64, Number(fields.size.value) || 16)) + 'px';
+        if (fields.color) preview.style.color = fields.color.value;
+        if (fields.weight) preview.style.fontWeight = fields.weight.value;
+        if (fields.style) preview.style.fontStyle = fields.style.value;
+    }
+    ['headings', 'span', 'paragraph', 'paragraph_links'].forEach(group => {
+        const preview = form.querySelector('[data-type-preview="' + group + '"]');
+        if (!preview) return;
+        ['family', 'size', 'color', 'weight', 'style'].forEach(field => {
+            const input = form.querySelector('[name="typography[' + group + '][' + field + ']"]');
+            if (input) input.addEventListener('input', function () { applyGroup(group); if (field === 'family') refreshFonts(); });
+            if (input && input.tagName === 'SELECT') input.addEventListener('change', function () { applyGroup(group); if (field === 'family') refreshFonts(); });
+        });
+        applyGroup(group);
+    });
+    const heightInput = document.getElementById('topbarHeight');
+    if (heightInput) {
+        const preview = document.createElement('div');
+        preview.className = 'type-preview';
+        preview.innerHTML = '<strong>Üst bilgi çubuğu yüksekliği önizlemesi</strong><div class="topbar-height-sample" style="display:flex;align-items:center;justify-content:center;min-height:64px;background:#176b50;color:#fff;border-radius:7px;padding:6px 12px;font-size:13px;font-weight:700">Telefon · Sosyal medya · İletişim</div>';
+        heightInput.closest('.type-panel').appendChild(preview);
+        const sample = preview.querySelector('.topbar-height-sample');
+        const updateHeight = function () { sample.style.minHeight = Math.max(52, Math.min(100, Number(heightInput.value) || 64)) + 'px'; };
+        heightInput.addEventListener('input', updateHeight);
+        updateHeight();
+    }
+    refreshFonts();
+})();
+</script>
+</body></html>
