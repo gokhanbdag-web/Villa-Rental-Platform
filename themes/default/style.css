@@ -257,7 +257,7 @@ body[data-villa-theme]{background-color:#fff!important;}
   font-family:var(--villa-topbar-font-family);font-size:var(--villa-topbar-font-size);
   font-weight:var(--villa-topbar-font-weight);
 }
-.villa-social-inner{width:100%;max-width:none;margin:0;padding:7px 22px;box-sizing:border-box;display:grid;grid-template-columns:repeat(4,minmax(0,1fr));align-items:center;gap:10px}
+.villa-social-inner{width:100%;max-width:none;min-height:64px;margin:0;padding:10px 22px;box-sizing:border-box;display:grid;grid-template-columns:repeat(4,minmax(0,1fr));align-items:center;gap:10px}
 .villa-social-left{grid-column:1;display:flex;align-items:center;justify-content:flex-start;gap:10px;min-width:0}
 .villa-social-address{grid-column:2;text-align:center;color:#4b574f;font-size:inherit;line-height:1.5;overflow-wrap:anywhere}
 .villa-social-call-center{grid-column:3;display:flex;align-items:center;justify-content:center;gap:7px;min-width:0;color:#4b574f;font-size:inherit;line-height:1.4}
@@ -267,7 +267,7 @@ body[data-villa-theme]{background-color:#fff!important;}
 .villa-social-call-center a:hover{text-decoration:underline}
 .villa-social-license{grid-column:4;display:flex;align-items:center;justify-content:center;gap:5px;min-width:0;color:#4b574f;font-size:inherit;line-height:1.4;overflow-wrap:anywhere}
 .villa-social-right{grid-column:4;min-height:1px}
-.villa-social-link{width:30px;height:30px;display:inline-flex;align-items:center;justify-content:center;color:inherit;text-decoration:none;border-radius:50%;transition:opacity .2s,background .2s}
+.villa-social-link{width:34px;height:34px;display:inline-flex;align-items:center;justify-content:center;color:inherit;text-decoration:none;border-radius:50%;transition:opacity .2s,background .2s}
 .villa-social-link svg{width:var(--social-icon-size,20px);height:var(--social-icon-size,20px);display:block}
 .villa-social-link--circle{background:#fff;border:1px solid currentColor}
 .villa-social-link:hover{opacity:.72}
@@ -286,7 +286,7 @@ body[data-villa-theme]{background-color:#fff!important;}
 @media(max-width:760px){
   body[data-villa-theme] .cards,body[data-villa-theme] .grid,body[data-villa-theme] .gallery-grid{display:grid!important;grid-template-columns:minmax(0,1fr)!important;grid-auto-flow:row!important;grid-auto-rows:auto!important;width:100%!important;min-width:0!important}
   body[data-villa-theme] .cards>*,body[data-villa-theme] .grid>*,body[data-villa-theme] .gallery-grid>*{grid-column:1/-1!important;grid-row:auto!important;width:100%!important;max-width:100%!important;min-width:0!important}
-  .villa-social-inner{padding:6px 12px;grid-template-columns:1fr 1fr;gap:8px}
+  .villa-social-inner{min-height:64px;padding:9px 12px;grid-template-columns:1fr 1fr;gap:8px}
   .villa-social-left{grid-column:1;grid-row:1}
   .villa-social-address{grid-column:2;grid-row:1;text-align:right;font-size:11px}
   .villa-social-call-center{grid-column:1;grid-row:2;justify-content:flex-start;font-size:11px}
