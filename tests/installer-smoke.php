@@ -102,13 +102,16 @@ try {
 
     foreach ($expectedThemes as $themeSlug) {
         $demoResult = ThemeDemoImporter::import($themeSlug, $adminId);
-        assertSmoke(!$demoResult['already_imported'] && $demoResult['created'] >= 3, 'Theme demo package did not import its independent page layouts: ' . $themeSlug);
+        assertSmoke(!$demoResult['already_imported'] && $demoResult['created'] >= 4, 'Theme demo package did not apply all of its independent page layouts: ' . $themeSlug);
         $themeHome = PageBuilder::load($themeSlug, 'home');
-        $expectedHomeStatus = $themeSlug === 'mediterranean' ? 'draft' : 'published';
-        $expectedMinimumWidgets = $themeSlug === 'mediterranean' ? 3 : 5;
-        assertSmoke(($themeHome['status'] ?? '') === $expectedHomeStatus && count($themeHome['widgets'] ?? []) >= $expectedMinimumWidgets, 'Theme demo import overwrote or failed to publish the expected homepage: ' . $themeSlug);
+        assertSmoke(($themeHome['status'] ?? '') === 'published' && count($themeHome['widgets'] ?? []) >= 6, 'Theme demo did not replace the old homepage with the complete six-section layout: ' . $themeSlug);
         $demoStatus = ThemeDemoImporter::status($themeSlug);
-        assertSmoke(($demoStatus['package_version'] ?? '') === '1.0.0', 'Theme demo import ledger is missing: ' . $themeSlug);
+        assertSmoke(($demoStatus['package_version'] ?? '') === '1.1.0', 'Theme demo import ledger is missing the current package version: ' . $themeSlug);
+        if ($themeSlug === 'mediterranean') {
+            $restored = ThemeDemoImporter::reset($themeSlug);
+            $oldHome = PageBuilder::load('mediterranean', 'home');
+            assertSmoke($restored['restored'] === 1 && ($oldHome['status'] ?? '') === 'draft' && count($oldHome['widgets'] ?? []) === 3, 'Demo reset did not restore the pre-existing homepage layout.');
+        }
     }
 
     // A reset removes untouched imported layouts but preserves a layout edited after import.
