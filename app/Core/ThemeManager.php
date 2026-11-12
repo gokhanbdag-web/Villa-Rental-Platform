@@ -127,6 +127,80 @@ final class ThemeManager
         return '<svg viewBox="0 0 24 24" aria-hidden="true" '.$stroke.'>'.$shape.'</svg>';
     }
 
+    private static function typographyFonts(): array
+    {
+        return [
+            'Inter'=>'Inter','Roboto'=>'Roboto','Open Sans'=>'Open Sans','Lato'=>'Lato',
+            'Montserrat'=>'Montserrat','Poppins'=>'Poppins','Nunito Sans'=>'Nunito Sans',
+            'Playfair Display'=>'Playfair Display','Merriweather'=>'Merriweather',
+            'DM Sans'=>'DM Sans','Manrope'=>'Manrope','Source Sans 3'=>'Source Sans 3',
+            'Raleway'=>'Raleway','PT Sans'=>'PT Sans','Libre Baskerville'=>'Libre Baskerville',
+        ];
+    }
+
+    private static function typographyDefaults(): array
+    {
+        return [
+            'topbar_height'=>64,
+            'headings'=>['family'=>'Playfair Display','size'=>36,'color'=>'#263b31','weight'=>700,'style'=>'normal'],
+            'span'=>['family'=>'Inter','size'=>14,'color'=>'#344039','weight'=>400,'style'=>'normal'],
+            'paragraph'=>['family'=>'Inter','size'=>16,'color'=>'#4b574f','weight'=>400,'style'=>'normal'],
+            'paragraph_links'=>['family'=>'Inter','size'=>16,'color'=>'#176b50','weight'=>600,'style'=>'normal'],
+        ];
+    }
+
+    private static function normalizeTypography(array $input): array
+    {
+        $clean = self::typographyDefaults();
+        $height = filter_var($input['topbar_height'] ?? $clean['topbar_height'], FILTER_VALIDATE_INT);
+        if ($height !== false) $clean['topbar_height'] = max(52, min(100, $height));
+        $weights = [300,400,500,600,700,800,900];
+        foreach (['headings','span','paragraph','paragraph_links'] as $group) {
+            $row = is_array($input[$group] ?? null) ? $input[$group] : [];
+            $family = (string)($row['family'] ?? $clean[$group]['family']);
+            if (isset(self::typographyFonts()[$family])) $clean[$group]['family'] = $family;
+            $size = filter_var($row['size'] ?? $clean[$group]['size'], FILTER_VALIDATE_INT);
+            if ($size !== false) $clean[$group]['size'] = max(10, min(64, $size));
+            $color = strtolower(trim((string)($row['color'] ?? $clean[$group]['color'])));
+            if (preg_match('/^#[0-9a-f]{6}$/', $color)) $clean[$group]['color'] = $color;
+            $weight = filter_var($row['weight'] ?? $clean[$group]['weight'], FILTER_VALIDATE_INT);
+            if ($weight !== false && in_array($weight, $weights, true)) $clean[$group]['weight'] = $weight;
+            $style = (string)($row['style'] ?? $clean[$group]['style']);
+            if (in_array($style, ['normal','italic'], true)) $clean[$group]['style'] = $style;
+        }
+        return $clean;
+    }
+
+    public static function typographySettings(?string $slug = null): array
+    {
+        $slug = $slug ?: self::activeSlug();
+        if (!preg_match('/^[a-z0-9_-]{1,60}$/', $slug)) $slug = 'default';
+        try {
+            $stmt = Database::connection()->prepare('SELECT setting_value FROM settings WHERE setting_key=? LIMIT 1');
+            $stmt->execute(['theme.' . $slug . '.typography']);
+            $saved = json_decode((string)($stmt->fetchColumn() ?: '{}'), true);
+            return self::normalizeTypography(is_array($saved) ? $saved : []);
+        } catch (\Throwable $e) {
+            error_log('Theme typography settings read failed: ' . $e->getMessage());
+            return self::typographyDefaults();
+        }
+    }
+
+    public static function saveTypographySettings(array $input, ?string $slug = null): void
+    {
+        $slug = $slug ?: self::activeSlug();
+        if (!preg_match('/^[a-z0-9_-]{1,60}$/', $slug)) throw new RuntimeException('Tema kodu geçersiz.');
+        $clean = self::normalizeTypography($input);
+        $key = 'theme.' . $slug . '.typography';
+        $json = json_encode($clean, JSON_UNESCAPED_UNICODE | JSON_THROW_ON_ERROR);
+        $pdo = Database::connection();
+        $stmt = $pdo->prepare('INSERT INTO settings(setting_key,setting_value,autoload) VALUES(?,?,1) ON DUPLICATE KEY UPDATE setting_value=VALUES(setting_value),autoload=1');
+        $stmt->execute([$key, $json]);
+        $verify = $pdo->prepare('SELECT setting_value FROM settings WHERE setting_key=? LIMIT 1');
+        $verify->execute([$key]);
+        if ((string)$verify->fetchColumn() !== $json) throw new RuntimeException('Tema tipografi ayarları veritabanına kaydedilemedi.');
+    }
+
     public static function render(string $view, array $variables): void
     {
         $slug = 'default';
