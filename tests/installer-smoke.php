@@ -96,6 +96,8 @@ try {
     @mkdir($defaultAssetsDir, 0775, true);
     file_put_contents($smokeThemeDir . '/theme.json', json_encode(['slug'=>'smoke-theme','name'=>'Smoke Theme','version'=>'1.0.0'], JSON_UNESCAPED_SLASHES));
     file_put_contents($smokeThemeDir . '/partials/smoke-component.php', '<?php echo "active-component";');
+    @mkdir($smokeThemeDir . '/templates/pages', 0775, true);
+    file_put_contents($smokeThemeDir . '/templates/pages/smoke-page.php', '<?php echo "active-page";');
     file_put_contents($smokeThemeDir . '/style.css', '.smoke-theme{color:#123456}');
     file_put_contents($smokeThemeDir . '/assets/icons/active.svg', '<svg xmlns="http://www.w3.org/2000/svg"></svg>');
     file_put_contents($defaultAssetsDir . '/smoke-fallback.svg', '<svg xmlns="http://www.w3.org/2000/svg"></svg>');
@@ -106,6 +108,11 @@ try {
     ThemeManager::renderPartial('partials/smoke-component.php');
     $renderedSmokeComponent = (string)ob_get_clean();
     assertSmoke($renderedSmokeComponent === 'active-component', 'A PHP component override was not rendered from the active theme.');
+    assertSmoke(ThemeManager::resolveFile('templates/pages/listing.php', 'smoke-theme') === realpath($root . '/themes/default/templates/pages/listing.php'), 'Missing active page templates did not fall back to the default page template.');
+    ob_start();
+    ThemeManager::renderTemplate('templates/pages/smoke-page.php');
+    $renderedSmokePage = (string)ob_get_clean();
+    assertSmoke($renderedSmokePage === 'active-page', 'An active theme page template was not rendered.');
     assertSmoke(ThemeManager::resolveFile('assets/icons/active.svg', 'smoke-theme') === realpath($smokeThemeDir . '/assets/icons/active.svg'), 'Active theme assets did not receive priority.');
     assertSmoke(ThemeManager::resolveFile('assets/smoke-fallback.svg', 'smoke-theme') === realpath($defaultAssetsDir . '/smoke-fallback.svg'), 'Missing active assets did not fall back to default.');
     assertSmoke(ThemeManager::resolveFile('partials/shared-topbar.php', 'smoke-theme') === realpath($root . '/themes/default/partials/shared-topbar.php'), 'Missing active PHP components did not fall back to default.');
@@ -116,11 +123,14 @@ try {
     assertSmoke(($capturedRoute['slug'] ?? '') === 'smoke-theme' && ($capturedRoute['file'] ?? '') === 'assets/icons/active.svg', 'Nested theme asset routes did not preserve their relative path.');
     $pdo->prepare('DELETE FROM settings WHERE setting_key=?')->execute(['theme.active']);
     @unlink($smokeThemeDir . '/partials/smoke-component.php');
+    @unlink($smokeThemeDir . '/templates/pages/smoke-page.php');
     @unlink($smokeThemeDir . '/style.css');
     @unlink($smokeThemeDir . '/assets/icons/active.svg');
     @unlink($smokeThemeDir . '/theme.json');
     @unlink($defaultAssetsDir . '/smoke-fallback.svg');
     @rmdir($smokeThemeDir . '/partials');
+    @rmdir($smokeThemeDir . '/templates/pages');
+    @rmdir($smokeThemeDir . '/templates');
     @rmdir($smokeThemeDir . '/assets/icons');
     @rmdir($smokeThemeDir . '/assets');
     @rmdir($smokeThemeDir);
