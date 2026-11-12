@@ -3,7 +3,9 @@ declare(strict_types=1);
 
 // Theme-specific site chrome; the shared view retains its business flow and form handling.
 ob_start();
-require APP_ROOT . '/views/site/booking.php';
+$pageTemplate = \\App\\Core\\ThemeManager::resolveFile('templates/pages/booking.php');
+if ($pageTemplate === null) throw new RuntimeException('Tema sayfa bileşeni bulunamadı: booking');
+require $pageTemplate;
 $html = (string) ob_get_clean();
 
 // Booking view has its own footer navigation but intentionally no header navigation.
