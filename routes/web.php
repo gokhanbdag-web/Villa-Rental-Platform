@@ -52,7 +52,7 @@ $router->get('/admin/homepage', static function (): void {
     $sections=$pdo->query('SELECT * FROM homepage_sections ORDER BY sort_order,id')->fetchAll();
     $mode=(string)($pdo->query("SELECT setting_value FROM settings WHERE setting_key='app.mode'")->fetchColumn() ?: 'single_vendor');
     if($mode!=='multi_vendor')$sections=array_values(array_filter($sections,static fn(array $section):bool=>$section['section_key']!=='hosts'));
-    require APP_ROOT.'/views/admin/homepage.php';
+    ThemeManager::renderTemplate('templates/pages/admin/homepage.php', get_defined_vars());
 });
 $router->post('/admin/homepage', static function (): void {
     Auth::requireRole(['super_admin','admin']);verify_csrf();$pdo=Database::connection();
@@ -103,7 +103,7 @@ $router->get('/admin/locations', static function (): void {
     Auth::requireRole(['super_admin','admin']);$pdo=Database::connection();
     $locations=$pdo->query("SELECT l.*,p.name AS parent_name FROM locations l LEFT JOIN locations p ON p.id=l.parent_id ORDER BY FIELD(l.location_type,'country','city','district','neighborhood'),p.name,l.sort_order,l.name")->fetchAll();
     $parents=$pdo->query("SELECT c.id,c.location_type,CONCAT(COALESCE(p.name,''),CASE WHEN p.name IS NULL THEN '' ELSE ' / ' END,c.name) AS full_name FROM locations c LEFT JOIN locations p ON p.id=c.parent_id WHERE c.is_active=1 ORDER BY FIELD(c.location_type,'country','city','district'),p.name,c.name")->fetchAll();
-    require APP_ROOT.'/views/admin/locations.php';
+    ThemeManager::renderTemplate('templates/pages/admin/locations.php', get_defined_vars());
 });
 
 $router->get('/admin/locations/template', static function (): void {
@@ -176,7 +176,7 @@ $router->post('/admin/locations/import', static function (): void {
     $locations=$pdo->query("SELECT l.*,p.name AS parent_name FROM locations l LEFT JOIN locations p ON p.id=l.parent_id ORDER BY FIELD(l.location_type,'country','city','district','neighborhood'),p.name,l.sort_order,l.name")->fetchAll();
     $parents=$pdo->query("SELECT c.id,c.location_type,CONCAT(COALESCE(p.name,''),CASE WHEN p.name IS NULL THEN '' ELSE ' / ' END,c.name) AS full_name FROM locations c LEFT JOIN locations p ON p.id=c.parent_id WHERE c.is_active=1 ORDER BY FIELD(c.location_type,'country','city','district'),p.name,c.name")->fetchAll();
     $importReport=['counts'=>$counts,'errors'=>$errorRows];
-    require APP_ROOT.'/views/admin/locations.php';
+    ThemeManager::renderTemplate('templates/pages/admin/locations.php', get_defined_vars());
 });
 
 $router->post('/admin/locations/save', static function (): void {
@@ -634,7 +634,7 @@ $router->post('/account/reviews', static function (): void {
     catch(PDOException $e){http_response_code(409);exit('Bu rezervasyon için değerlendirme zaten mevcut.');}
 });
 $router->get('/admin/reviews', static function (): void {
-    Auth::requireRole(['super_admin','admin']);$reviews=Database::connection()->query('SELECT r.*,p.title,u.username FROM reviews r JOIN properties p ON p.id=r.property_id JOIN users u ON u.id=r.guest_user_id ORDER BY r.created_at DESC LIMIT 250')->fetchAll();require APP_ROOT.'/views/admin/reviews.php';
+    Auth::requireRole(['super_admin','admin']);$reviews=Database::connection()->query('SELECT r.*,p.title,u.username FROM reviews r JOIN properties p ON p.id=r.property_id JOIN users u ON u.id=r.guest_user_id ORDER BY r.created_at DESC LIMIT 250')->fetchAll();ThemeManager::renderTemplate('templates/pages/admin/reviews.php', get_defined_vars());
 });
 $router->post('/admin/reviews/status', static function (): void {
     Auth::requireRole(['super_admin','admin']);verify_csrf();$status=($_POST['status']??'')==='approved'?'approved':'rejected';$s=Database::connection()->prepare('UPDATE reviews SET status=? WHERE id=?');$s->execute([$status,(int)($_POST['id']??0)]);redirect('/admin/reviews');
@@ -761,15 +761,15 @@ $router->post('/vendor/bookings/status', static function (): void {
 $router->get('/vendor/properties', static function (): void {
     Auth::requireRole(['vendor']);$pdo=Database::connection();$s=$pdo->prepare('SELECT id FROM vendors WHERE user_id=?');$s->execute([(int)Auth::user()['id']]);$vid=(int)$s->fetchColumn();
     $s=$pdo->prepare('SELECT id,title,slug,city,district,max_guests,base_nightly_price,currency,status FROM properties WHERE vendor_id=? ORDER BY id DESC');$s->execute([$vid]);$properties=$s->fetchAll();
-    $newUrl='/vendor/properties/new';$editBase='/vendor/properties';$deleteAction='/vendor/properties/delete';$backUrl='/vendor';require APP_ROOT.'/views/admin/properties.php';
+    $newUrl='/vendor/properties/new';$editBase='/vendor/properties';$deleteAction='/vendor/properties/delete';$backUrl='/vendor';ThemeManager::renderTemplate('templates/pages/admin/properties.php', get_defined_vars());
 });
 $router->get('/vendor/properties/new', static function (): void {
-    Auth::requireRole(['vendor']);$property=[];$existingImages=[];$deleteMediaAction='/vendor/properties/media/delete';$categories=Database::connection()->query('SELECT id,name FROM property_categories WHERE is_active=1 ORDER BY sort_order,name')->fetchAll();$amenities=Database::connection()->query('SELECT id,name FROM amenities WHERE is_active=1 ORDER BY sort_order,name')->fetchAll();$selectedAmenities=[];$defaultCurrency=(string)(Database::connection()->query("SELECT setting_value FROM settings WHERE setting_key='app.currency'")->fetchColumn()?:'TRY');$formAction='/vendor/properties/save';$backUrl='/vendor/properties';require APP_ROOT.'/views/admin/property-form.php';
+    Auth::requireRole(['vendor']);$property=[];$existingImages=[];$deleteMediaAction='/vendor/properties/media/delete';$categories=Database::connection()->query('SELECT id,name FROM property_categories WHERE is_active=1 ORDER BY sort_order,name')->fetchAll();$amenities=Database::connection()->query('SELECT id,name FROM amenities WHERE is_active=1 ORDER BY sort_order,name')->fetchAll();$selectedAmenities=[];$defaultCurrency=(string)(Database::connection()->query("SELECT setting_value FROM settings WHERE setting_key='app.currency'")->fetchColumn()?:'TRY');$formAction='/vendor/properties/save';$backUrl='/vendor/properties';ThemeManager::renderTemplate('templates/pages/admin/property-form.php', get_defined_vars());
 });
 $router->get('/vendor/properties/{id}', static function (array $params): void {
     Auth::requireRole(['vendor']);$pdo=Database::connection();$s=$pdo->prepare('SELECT id FROM vendors WHERE user_id=?');$s->execute([(int)Auth::user()['id']]);$vid=(int)$s->fetchColumn();
     $s=$pdo->prepare('SELECT * FROM properties WHERE id=? AND vendor_id=?');$s->execute([(int)$params['id'],$vid]);$property=$s->fetch();
-    if(!$property){http_response_code(404);return;}$mediaStmt=$pdo->prepare('SELECT * FROM property_media WHERE property_id=? ORDER BY is_cover DESC,sort_order,id');$mediaStmt->execute([(int)$property['id']]);$existingImages=$mediaStmt->fetchAll();$deleteMediaAction='/vendor/properties/media/delete';$categories=$pdo->query('SELECT id,name FROM property_categories WHERE is_active=1 ORDER BY sort_order,name')->fetchAll();$amenities=$pdo->query('SELECT id,name FROM amenities WHERE is_active=1 ORDER BY sort_order,name')->fetchAll();$a=$pdo->prepare('SELECT amenity_id FROM property_amenities WHERE property_id=?');$a->execute([(int)$property['id']]);$selectedAmenities=array_map('intval',$a->fetchAll(PDO::FETCH_COLUMN));$defaultCurrency=(string)($pdo->query("SELECT setting_value FROM settings WHERE setting_key='app.currency'")->fetchColumn()?:'TRY');$formAction='/vendor/properties/save';$backUrl='/vendor/properties';$availabilityUrl='/vendor/properties/'.(int)$property['id'].'/availability';require APP_ROOT.'/views/admin/property-form.php';
+    if(!$property){http_response_code(404);return;}$mediaStmt=$pdo->prepare('SELECT * FROM property_media WHERE property_id=? ORDER BY is_cover DESC,sort_order,id');$mediaStmt->execute([(int)$property['id']]);$existingImages=$mediaStmt->fetchAll();$deleteMediaAction='/vendor/properties/media/delete';$categories=$pdo->query('SELECT id,name FROM property_categories WHERE is_active=1 ORDER BY sort_order,name')->fetchAll();$amenities=$pdo->query('SELECT id,name FROM amenities WHERE is_active=1 ORDER BY sort_order,name')->fetchAll();$a=$pdo->prepare('SELECT amenity_id FROM property_amenities WHERE property_id=?');$a->execute([(int)$property['id']]);$selectedAmenities=array_map('intval',$a->fetchAll(PDO::FETCH_COLUMN));$defaultCurrency=(string)($pdo->query("SELECT setting_value FROM settings WHERE setting_key='app.currency'")->fetchColumn()?:'TRY');$formAction='/vendor/properties/save';$backUrl='/vendor/properties';$availabilityUrl='/vendor/properties/'.(int)$property['id'].'/availability';ThemeManager::renderTemplate('templates/pages/admin/property-form.php', get_defined_vars());
 });
 $router->post('/vendor/properties/save', static function (): void {
     Auth::requireRole(['vendor']);verify_csrf();$pdo=Database::connection();
@@ -790,7 +790,7 @@ $router->post('/vendor/properties/save', static function (): void {
 $router->get('/admin/vendors', static function (): void {
     Auth::requireRole(['super_admin','admin']);$pdo=Database::connection();
     if((string)$pdo->query("SELECT setting_value FROM settings WHERE setting_key='app.mode'")->fetchColumn()!=='multi_vendor')redirect('/admin');
-    $vendors=$pdo->query('SELECT v.*,u.username,u.email FROM vendors v JOIN users u ON u.id=v.user_id ORDER BY v.created_at DESC')->fetchAll();require APP_ROOT.'/views/admin/vendors.php';
+    $vendors=$pdo->query('SELECT v.*,u.username,u.email FROM vendors v JOIN users u ON u.id=v.user_id ORDER BY v.created_at DESC')->fetchAll();ThemeManager::renderTemplate('templates/pages/admin/vendors.php', get_defined_vars());
 });
 
 $router->post('/admin/vendors/commission', static function (): void {
@@ -818,7 +818,7 @@ $router->get('/admin/properties/{id}/availability', static function (array $para
     $s=$pdo->prepare('SELECT * FROM availability WHERE property_id=? AND date_from < ? AND date_to > ? ORDER BY date_from');$s->execute([(int)$property['id'],$monthEnd,$monthStart]);$ranges=$s->fetchAll();
     $s=$pdo->prepare("SELECT id,check_in,check_out,status,booking_code,guest_user_id FROM bookings WHERE property_id=? AND status IN ('pending','confirmed') AND check_in < ? AND check_out > ? ORDER BY check_in");$s->execute([(int)$property['id'],$monthEnd,$monthStart]);$calendarBookings=$s->fetchAll();
     $calendarPrev=$monthDate->modify('-1 month')->format('Y-m');$calendarNext=$monthDate->modify('+1 month')->format('Y-m');
-    $saveUrl='/admin/properties/availability/save';$deleteUrl='/admin/properties/availability/delete';$backUrl='/admin/properties';require APP_ROOT.'/views/admin/availability.php';
+    $saveUrl='/admin/properties/availability/save';$deleteUrl='/admin/properties/availability/delete';$backUrl='/admin/properties';ThemeManager::renderTemplate('templates/pages/admin/availability.php', get_defined_vars());
 });
 $router->post('/admin/properties/availability/save', static function (): void {
     Auth::requireRole(['super_admin','admin']);verify_csrf();$pdo=Database::connection();$pid=(int)($_POST['property_id']??0);$ruleId=(int)($_POST['id']??0);$from=(string)($_POST['date_from']??'');$to=(string)($_POST['date_to']??'');$status=($_POST['status']??'')==='available'?'available':'blocked';$price=trim((string)($_POST['nightly_price']??''));$a=DateTimeImmutable::createFromFormat('!Y-m-d',$from);$b=DateTimeImmutable::createFromFormat('!Y-m-d',$to);
@@ -841,7 +841,7 @@ $router->get('/vendor/properties/{id}/availability', static function (array $par
     $s=$pdo->prepare('SELECT * FROM availability WHERE property_id=? AND date_from < ? AND date_to > ? ORDER BY date_from');$s->execute([(int)$property['id'],$monthEnd,$monthStart]);$ranges=$s->fetchAll();
     $s=$pdo->prepare("SELECT id,check_in,check_out,status,booking_code,guest_user_id FROM bookings WHERE property_id=? AND status IN ('pending','confirmed') AND check_in < ? AND check_out > ? ORDER BY check_in");$s->execute([(int)$property['id'],$monthEnd,$monthStart]);$calendarBookings=$s->fetchAll();
     $calendarPrev=$monthDate->modify('-1 month')->format('Y-m');$calendarNext=$monthDate->modify('+1 month')->format('Y-m');
-    $saveUrl='/vendor/properties/availability/save';$deleteUrl='/vendor/properties/availability/delete';$backUrl='/vendor/properties';require APP_ROOT.'/views/admin/availability.php';
+    $saveUrl='/vendor/properties/availability/save';$deleteUrl='/vendor/properties/availability/delete';$backUrl='/vendor/properties';ThemeManager::renderTemplate('templates/pages/admin/availability.php', get_defined_vars());
 });
 $router->post('/vendor/properties/availability/save', static function (): void {
     Auth::requireRole(['vendor']);verify_csrf();$pdo=Database::connection();$v=$pdo->prepare('SELECT id FROM vendors WHERE user_id=?');$v->execute([(int)Auth::user()['id']]);$vid=(int)$v->fetchColumn();$pid=(int)($_POST['property_id']??0);$own=$pdo->prepare('SELECT id FROM properties WHERE id=? AND vendor_id=?');$own->execute([$pid,$vid]);if(!$own->fetchColumn()){http_response_code(404);return;}
@@ -860,13 +860,13 @@ $router->post('/vendor/properties/availability/delete', static function (): void
 $router->get('/admin/properties', static function (): void {
     Auth::requireRole(['super_admin', 'admin']);
     $properties = Database::connection()->query('SELECT id,title,slug,city,district,max_guests,base_nightly_price,currency,status FROM properties ORDER BY id DESC')->fetchAll();
-    require APP_ROOT . '/views/admin/properties.php';
+    ThemeManager::renderTemplate('templates/pages/admin/properties.php', get_defined_vars());
 });
 
 $router->get('/admin/properties/new', static function (): void {
     Auth::requireRole(['super_admin', 'admin']);
     $property = []; $existingImages=[]; $deleteMediaAction='/admin/properties/media/delete'; $categories = Database::connection()->query('SELECT id,name FROM property_categories WHERE is_active=1 ORDER BY sort_order,name')->fetchAll(); $amenities=Database::connection()->query('SELECT id,name FROM amenities WHERE is_active=1 ORDER BY sort_order,name')->fetchAll(); $selectedAmenities=[]; $defaultCurrency=(string)(Database::connection()->query("SELECT setting_value FROM settings WHERE setting_key='app.currency'")->fetchColumn() ?: 'TRY');
-    require APP_ROOT . '/views/admin/property-form.php';
+    ThemeManager::renderTemplate('templates/pages/admin/property-form.php', get_defined_vars());
 });
 
 $router->get('/admin/properties/{id}', static function (array $params): void {
@@ -879,7 +879,7 @@ $router->get('/admin/properties/{id}', static function (array $params): void {
     $mediaStmt=$pdo->prepare('SELECT * FROM property_media WHERE property_id=? ORDER BY is_cover DESC,sort_order,id');$mediaStmt->execute([(int)$property['id']]);$existingImages=$mediaStmt->fetchAll();$deleteMediaAction='/admin/properties/media/delete';
     $categories = Database::connection()->query('SELECT id,name FROM property_categories WHERE is_active=1 ORDER BY sort_order,name')->fetchAll(); $amenities=Database::connection()->query('SELECT id,name FROM amenities WHERE is_active=1 ORDER BY sort_order,name')->fetchAll(); $a=$pdo->prepare('SELECT amenity_id FROM property_amenities WHERE property_id=?');$a->execute([(int)$property['id']]);$selectedAmenities=array_map('intval',$a->fetchAll(PDO::FETCH_COLUMN)); $defaultCurrency=(string)(Database::connection()->query("SELECT setting_value FROM settings WHERE setting_key='app.currency'")->fetchColumn() ?: 'TRY');
     $availabilityUrl='/admin/properties/'.(int)$property['id'].'/availability';
-    require APP_ROOT . '/views/admin/property-form.php';
+    ThemeManager::renderTemplate('templates/pages/admin/property-form.php', get_defined_vars());
 });
 
 
@@ -978,7 +978,7 @@ $router->post('/admin/properties/save', static function (): void {
 
 
 $router->get('/admin/amenities', static function (): void {
-    Auth::requireRole(['super_admin','admin']);$amenities=Database::connection()->query('SELECT * FROM amenities ORDER BY sort_order,name')->fetchAll();require APP_ROOT.'/views/admin/amenities.php';
+    Auth::requireRole(['super_admin','admin']);$amenities=Database::connection()->query('SELECT * FROM amenities ORDER BY sort_order,name')->fetchAll();ThemeManager::renderTemplate('templates/pages/admin/amenities.php', get_defined_vars());
 });
 $router->post('/admin/amenities/save', static function (): void {
     Auth::requireRole(['super_admin','admin']);verify_csrf();$name=trim((string)($_POST['name']??''));$icon=trim((string)($_POST['icon']??''));if($name===''){http_response_code(422);exit('Özellik adı zorunludur.');}
@@ -989,7 +989,7 @@ $router->post('/admin/amenities/delete', static function (): void {
 });
 
 $router->get('/admin/categories', static function (): void {
-    Auth::requireRole(['super_admin','admin']);$categories=Database::connection()->query('SELECT * FROM property_categories ORDER BY sort_order,name')->fetchAll();require APP_ROOT.'/views/admin/categories.php';
+    Auth::requireRole(['super_admin','admin']);$categories=Database::connection()->query('SELECT * FROM property_categories ORDER BY sort_order,name')->fetchAll();ThemeManager::renderTemplate('templates/pages/admin/categories.php', get_defined_vars());
 });
 $router->post('/admin/categories/save', static function (): void {
     Auth::requireRole(['super_admin','admin']);verify_csrf();$name=trim((string)($_POST['name']??''));$slug=strtolower(trim((string)($_POST['slug']??'')));$slug=trim(preg_replace('/[^a-z0-9-]+/','-',$slug),'-');
@@ -1017,7 +1017,7 @@ $router->get('/admin/navigation', static function (): void {
     $cmsPages=$pdo->query("SELECT title,slug FROM cms_pages WHERE language_code='tr' AND status='published' ORDER BY title")->fetchAll();
     $editItem=null;$editId=(int)($_GET['edit']??0);
     if($editId>0){$find=$pdo->prepare('SELECT * FROM navigation_items WHERE id=? LIMIT 1');$find->execute([$editId]);$editItem=$find->fetch()?:null;}
-    require APP_ROOT.'/views/admin/navigation.php';
+    ThemeManager::renderTemplate('templates/pages/admin/navigation.php', get_defined_vars());
 });
 $router->post('/admin/navigation/save', static function (): void {
     Auth::requireRole(['super_admin','admin']);verify_csrf();$pdo=Database::connection();
@@ -1066,14 +1066,14 @@ $router->post('/admin/navigation/delete', static function (): void {
 $router->get('/admin/pages', static function (): void {
     Auth::requireRole(['super_admin','admin']);
     $pages=Database::connection()->query("SELECT id,title,slug,status FROM cms_pages WHERE language_code='tr' ORDER BY id DESC")->fetchAll();
-    require APP_ROOT.'/views/admin/pages.php';
+    ThemeManager::renderTemplate('templates/pages/admin/pages.php', get_defined_vars());
 });
 $router->get('/admin/pages/new', static function (): void {
-    Auth::requireRole(['super_admin','admin']);$page=[];require APP_ROOT.'/views/admin/page-form.php';
+    Auth::requireRole(['super_admin','admin']);$page=[];ThemeManager::renderTemplate('templates/pages/admin/page-form.php', get_defined_vars());
 });
 $router->get('/admin/pages/{id}', static function (array $params): void {
     Auth::requireRole(['super_admin','admin']);$s=Database::connection()->prepare("SELECT * FROM cms_pages WHERE id=? AND language_code='tr'");$s->execute([(int)$params['id']]);$page=$s->fetch();
-    if(!$page){http_response_code(404);return;}require APP_ROOT.'/views/admin/page-form.php';
+    if(!$page){http_response_code(404);return;}ThemeManager::renderTemplate('templates/pages/admin/page-form.php', get_defined_vars());
 });
 $router->post('/admin/pages/save', static function (): void {
     Auth::requireRole(['super_admin','admin']);verify_csrf();$pdo=Database::connection();
@@ -1139,13 +1139,13 @@ $router->get('/blog/{slug}', static function (array $params): void {
 
 
 $router->get('/admin/blog', static function (): void {
-    Auth::requireRole(['super_admin','admin']);$posts=Database::connection()->query("SELECT id,title,slug,status,published_at,updated_at FROM blog_posts ORDER BY updated_at DESC,id DESC")->fetchAll(PDO::FETCH_ASSOC);$post=null;require APP_ROOT.'/views/admin/blog.php';
+    Auth::requireRole(['super_admin','admin']);$posts=Database::connection()->query("SELECT id,title,slug,status,published_at,updated_at FROM blog_posts ORDER BY updated_at DESC,id DESC")->fetchAll(PDO::FETCH_ASSOC);$post=null;ThemeManager::renderTemplate('templates/pages/admin/blog.php', get_defined_vars());
 });
 $router->get('/admin/blog/new', static function (): void {
-    Auth::requireRole(['super_admin','admin']);$posts=[];$post=[];require APP_ROOT.'/views/admin/blog.php';
+    Auth::requireRole(['super_admin','admin']);$posts=[];$post=[];ThemeManager::renderTemplate('templates/pages/admin/blog.php', get_defined_vars());
 });
 $router->get('/admin/blog/{id}', static function (array $params): void {
-    Auth::requireRole(['super_admin','admin']);$pdo=Database::connection();$posts=[];$s=$pdo->prepare('SELECT * FROM blog_posts WHERE id=?');$s->execute([(int)$params['id']]);$post=$s->fetch(PDO::FETCH_ASSOC);if(!$post){http_response_code(404);exit('Blog yazısı bulunamadı.');}require APP_ROOT.'/views/admin/blog.php';
+    Auth::requireRole(['super_admin','admin']);$pdo=Database::connection();$posts=[];$s=$pdo->prepare('SELECT * FROM blog_posts WHERE id=?');$s->execute([(int)$params['id']]);$post=$s->fetch(PDO::FETCH_ASSOC);if(!$post){http_response_code(404);exit('Blog yazısı bulunamadı.');}ThemeManager::renderTemplate('templates/pages/admin/blog.php', get_defined_vars());
 });
 $router->post('/admin/blog/save', static function (): void {
     Auth::requireRole(['super_admin','admin']);verify_csrf();$pdo=Database::connection();$id=(int)($_POST['id']??0);
@@ -1159,13 +1159,13 @@ $router->post('/admin/blog/delete', static function (): void {
     Auth::requireRole(['super_admin','admin']);verify_csrf();$s=Database::connection()->prepare('DELETE FROM blog_posts WHERE id=?');$s->execute([(int)($_POST['id']??0)]);redirect('/admin/blog');
 });
 $router->get('/admin/newsletter', static function (): void {
-    Auth::requireRole(['super_admin','admin']);$pdo=Database::connection();$subscribers=$pdo->query('SELECT id,email,status,source,created_at FROM newsletter_subscribers ORDER BY created_at DESC,id DESC')->fetchAll(PDO::FETCH_ASSOC);$activeCount=(int)$pdo->query("SELECT COUNT(*) FROM newsletter_subscribers WHERE status='active'")->fetchColumn();require APP_ROOT.'/views/admin/newsletter.php';
+    Auth::requireRole(['super_admin','admin']);$pdo=Database::connection();$subscribers=$pdo->query('SELECT id,email,status,source,created_at FROM newsletter_subscribers ORDER BY created_at DESC,id DESC')->fetchAll(PDO::FETCH_ASSOC);$activeCount=(int)$pdo->query("SELECT COUNT(*) FROM newsletter_subscribers WHERE status='active'")->fetchColumn();ThemeManager::renderTemplate('templates/pages/admin/newsletter.php', get_defined_vars());
 });
 $router->post('/admin/newsletter/toggle', static function (): void {
     Auth::requireRole(['super_admin','admin']);verify_csrf();$s=Database::connection()->prepare("UPDATE newsletter_subscribers SET status=IF(status='active','unsubscribed','active') WHERE id=?");$s->execute([(int)($_POST['id']??0)]);redirect('/admin/newsletter');
 });
 $router->get('/admin/messages', static function (): void {
-    Auth::requireRole(['super_admin','admin']);$pdo=Database::connection();$messages=$pdo->query('SELECT * FROM contact_messages ORDER BY FIELD(status,\'new\',\'read\',\'replied\',\'archived\'),created_at DESC,id DESC')->fetchAll(PDO::FETCH_ASSOC);$newCount=(int)$pdo->query("SELECT COUNT(*) FROM contact_messages WHERE status='new'")->fetchColumn();require APP_ROOT.'/views/admin/messages.php';
+    Auth::requireRole(['super_admin','admin']);$pdo=Database::connection();$messages=$pdo->query('SELECT * FROM contact_messages ORDER BY FIELD(status,\'new\',\'read\',\'replied\',\'archived\'),created_at DESC,id DESC')->fetchAll(PDO::FETCH_ASSOC);$newCount=(int)$pdo->query("SELECT COUNT(*) FROM contact_messages WHERE status='new'")->fetchColumn();ThemeManager::renderTemplate('templates/pages/admin/messages.php', get_defined_vars());
 });
 $router->post('/admin/messages/status', static function (): void {
     Auth::requireRole(['super_admin','admin']);verify_csrf();$status=(string)($_POST['status']??'read');if(!in_array($status,['new','read','replied','archived'],true))$status='read';$s=Database::connection()->prepare('UPDATE contact_messages SET status=? WHERE id=?');$s->execute([$status,(int)($_POST['id']??0)]);redirect('/admin/messages');
@@ -1174,7 +1174,7 @@ $router->post('/admin/messages/status', static function (): void {
 $router->get('/admin/translations', static function (): void {
     Auth::requireRole(['super_admin','admin']);$pdo=Database::connection();$languages=$pdo->query('SELECT code,name FROM languages WHERE is_active=1 ORDER BY is_default DESC,name')->fetchAll();
     $locale=(string)($_GET['lang']??'tr');$codes=array_column($languages,'code');if(!in_array($locale,$codes,true))$locale='tr';
-    $s=$pdo->prepare('SELECT translation_key,translation_value FROM translations WHERE language_code=? ORDER BY translation_key');$s->execute([$locale]);$translations=$s->fetchAll(PDO::FETCH_KEY_PAIR);require APP_ROOT.'/views/admin/translations.php';
+    $s=$pdo->prepare('SELECT translation_key,translation_value FROM translations WHERE language_code=? ORDER BY translation_key');$s->execute([$locale]);$translations=$s->fetchAll(PDO::FETCH_KEY_PAIR);ThemeManager::renderTemplate('templates/pages/admin/translations.php', get_defined_vars());
 });
 $router->post('/admin/translations', static function (): void {
     Auth::requireRole(['super_admin','admin']);verify_csrf();$pdo=Database::connection();$locale=(string)($_POST['lang']??'tr');$check=$pdo->prepare('SELECT code FROM languages WHERE code=? AND is_active=1');$check->execute([$locale]);if(!$check->fetchColumn()){$locale='tr';}
@@ -1185,7 +1185,7 @@ $router->post('/admin/translations', static function (): void {
 });
 
 $router->get('/admin/users', static function (): void {
-    Auth::requireRole(['super_admin','admin']);$users=Database::connection()->query('SELECT id,username,email,role,status,created_at FROM users ORDER BY created_at DESC LIMIT 500')->fetchAll();$currentUser=Auth::user();require APP_ROOT.'/views/admin/users.php';
+    Auth::requireRole(['super_admin','admin']);$users=Database::connection()->query('SELECT id,username,email,role,status,created_at FROM users ORDER BY created_at DESC LIMIT 500')->fetchAll();$currentUser=Auth::user();ThemeManager::renderTemplate('templates/pages/admin/users.php', get_defined_vars());
 });
 $router->post('/admin/users/status', static function (): void {
     Auth::requireRole(['super_admin','admin']);verify_csrf();$id=(int)($_POST['id']??0);$status=($_POST['status']??'')==='active'?'active':'disabled';
@@ -1229,7 +1229,7 @@ $router->get('/admin/themes', static function (): void {
     $themeMessage = (string)($_SESSION['villa_theme_manager_message'] ?? '');
     $themeMessageType = (string)($_SESSION['villa_theme_manager_message_type'] ?? 'success');
     unset($_SESSION['villa_theme_manager_message'], $_SESSION['villa_theme_manager_message_type']);
-    require APP_ROOT . '/views/admin/themes.php';
+    ThemeManager::renderTemplate('templates/pages/admin/themes.php', get_defined_vars());
 });
 $router->post('/admin/themes/activate', static function (): void {
     Auth::requireRole(['super_admin','admin']);
@@ -1252,7 +1252,7 @@ $router->get('/admin/header-settings', static function (): void {
     $themeMessage=(string)($_SESSION['villa_theme_message']??'');
     $themeMessageType=(string)($_SESSION['villa_theme_message_type']??'success');
     unset($_SESSION['villa_theme_message'],$_SESSION['villa_theme_message_type']);
-    require APP_ROOT.'/views/admin/header-settings.php';
+    ThemeManager::renderTemplate('templates/pages/admin/header-settings.php', get_defined_vars());
 });
 $router->post('/admin/header-settings/social-icons', static function (): void {
     Auth::requireRole(['super_admin','admin']);verify_csrf();
@@ -1274,7 +1274,7 @@ $router->get('/admin/typography', static function (): void {
     $typographyMessage = (string)($_SESSION['villa_typography_message'] ?? '');
     $typographyMessageType = (string)($_SESSION['villa_typography_message_type'] ?? 'success');
     unset($_SESSION['villa_typography_message'], $_SESSION['villa_typography_message_type']);
-    require APP_ROOT . '/views/admin/typography.php';
+    ThemeManager::renderTemplate('templates/pages/admin/typography.php', get_defined_vars());
 });
 $router->post('/admin/typography', static function (): void {
     Auth::requireRole(['super_admin','admin']);
@@ -1292,7 +1292,7 @@ $router->post('/admin/typography', static function (): void {
 });
 
 $router->get('/admin/settings', static function (): void {
-    Auth::requireRole(['super_admin','admin']);$settings=Database::connection()->query("SELECT setting_key,setting_value FROM settings WHERE setting_key IN ('platform.commission_percent','app.currency','app.timezone')")->fetchAll(PDO::FETCH_KEY_PAIR);require APP_ROOT.'/views/admin/settings.php';
+    Auth::requireRole(['super_admin','admin']);$settings=Database::connection()->query("SELECT setting_key,setting_value FROM settings WHERE setting_key IN ('platform.commission_percent','app.currency','app.timezone')")->fetchAll(PDO::FETCH_KEY_PAIR);ThemeManager::renderTemplate('templates/pages/admin/settings.php', get_defined_vars());
 });
 $router->post('/admin/settings', static function (): void {
     Auth::requireRole(['super_admin','admin']);verify_csrf();$commission=(float)($_POST['commission']??12);$currency=strtoupper(trim((string)($_POST['currency']??'TRY')));$timezone=trim((string)($_POST['timezone']??'Europe/Istanbul'));
@@ -1381,7 +1381,7 @@ $router->get('/admin/content', static function (): void {
         'home_night_unit'=>'Gece fiyat birimi',
         'home_empty_photo'=>'Görsel bulunamadı metni'
     ];
-    require APP_ROOT . '/views/admin/content.php';
+    ThemeManager::renderTemplate('templates/pages/admin/content.php', get_defined_vars());
 });
 
 $router->post('/admin/content', static function (): void {
@@ -1405,7 +1405,7 @@ $router->get('/admin/bookings', static function (): void {
     else{$bookings=$pdo->query($sql.' ORDER BY b.created_at DESC LIMIT 250')->fetchAll();}
     $bookingProperties=$pdo->query("SELECT id,title,max_guests FROM properties WHERE status<>'archived' ORDER BY title")->fetchAll();
     $bookingFilter=in_array($status,$allowed,true)?$status:'';
-    require APP_ROOT.'/views/admin/bookings.php';
+    ThemeManager::renderTemplate('templates/pages/admin/bookings.php', get_defined_vars());
 });
 $router->post('/admin/bookings/manual', static function (): void {
     Auth::requireRole(['super_admin','admin']);verify_csrf();
@@ -1491,5 +1491,5 @@ $router->get('/admin', static function (): void {
     $recentBookings = $pdo->query("SELECT b.booking_code,b.check_in,b.check_out,b.total,b.currency,b.status,b.created_at,p.title AS property_title,COALESCE(NULLIF(b.guest_name,''),u.username,'Misafir') AS guest_name
         FROM bookings b JOIN properties p ON p.id=b.property_id LEFT JOIN users u ON u.id=b.guest_user_id
         ORDER BY b.created_at DESC LIMIT 6")->fetchAll();
-    require APP_ROOT . '/views/admin/dashboard.php';
+    ThemeManager::renderTemplate('templates/pages/admin/dashboard.php', get_defined_vars());
 });
