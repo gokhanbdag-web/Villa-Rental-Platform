@@ -201,7 +201,7 @@ final class ThemeManager
                 $name = str_replace('\\', '/', (string)$zip->getNameIndex($i));
                 if ($name === '' || str_starts_with($name, '/') || preg_match('#(^|/)\.\.?(/|$)#', $name) || str_contains($name, ':')) throw new RuntimeException('ZIP içinde güvenli olmayan dosya yolu bulundu.');
                 if (str_ends_with($name, '/')) continue;
-                if ($name !== 'theme.json' && $name !== 'style.css' && !preg_match('#^(templates/[a-zA-Z0-9_-]+\.php|assets/[a-zA-Z0-9_.-]+\.(css|js|png|jpg|jpeg|webp|svg|woff2?))$#i', $name)) throw new RuntimeException('Desteklenmeyen tema dosyası: ' . $name);
+                if ($name !== 'theme.json' && $name !== 'style.css' && $name !== 'demo.json' && !preg_match('#^(templates/[a-zA-Z0-9_-]+\.php|assets/[a-zA-Z0-9_.-]+\.(css|js|png|jpg|jpeg|webp|svg|woff2?))$#i', $name)) throw new RuntimeException('Desteklenmeyen tema dosyası: ' . $name);
                 $stat = $zip->statIndex($i);
                 if (!$stat || (int)$stat['size'] > 4 * 1024 * 1024) throw new RuntimeException('Tema içindeki bir dosya çok büyük.');
                 $data = $zip->getFromIndex($i);
