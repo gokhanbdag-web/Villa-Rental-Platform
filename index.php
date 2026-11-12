@@ -87,7 +87,7 @@ if ($isAdminPage) {
                 '/admin/newsletter' => 'E-posta Aboneleri',
                 '/admin/messages' => 'İletişim Mesajları',
                 '/admin/typography' => 'Tema Tipografi',
-                '/admin/themes' => 'Tema Yönetimi',
+                '/admin/themes' => Translator::get('admin.themes.title'),
             ],
             'Sistem' => [
                 '/admin/settings' => 'Ayarlar',
