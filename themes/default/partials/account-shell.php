@@ -7,13 +7,13 @@ if (!preg_match('/^[a-z0-9-]+\.php$/', $accountView)) {
     throw new RuntimeException('Hesap sayfası şablonu geçersiz.');
 }
 ob_start();
-require APP_ROOT . '/views/account/' . $accountView;
+\\App\\Core\\ThemeManager::renderTemplate('templates/pages/account/' . $accountView, get_defined_vars());
 $html = (string)ob_get_clean();
 
 ob_start();
 $navItems = $navigation ?? [];
 $navAllowAuth = true;
-require APP_ROOT . '/views/site/partials/navigation-items.php';
+\\App\\Core\\ThemeManager::renderPartial('partials/navigation-items.php', get_defined_vars());
 $navHtml = '<nav class="nav" id="siteNavigation">' . (string)ob_get_clean() . '</nav>';
 
 $themeSiteName = (string)($content['site_name'] ?? $siteName ?? 'VillaStay');
