@@ -107,6 +107,10 @@ try {
     assertSmoke(str_contains($themeManagerSource, '$isSharedDefaultLanding') && str_contains($themeManagerSource, '\'mediterranean\' : $slug'), 'All themes must fall back to the preserved Mediterranean homepage when no published demo layout exists.');
     assertSmoke(str_contains($themeManagerSource, 'rawurlencode($renderSlug) . \'/style.css\'') && str_contains($themeManagerSource, 'e($renderSlug)'), 'Shared default homepage must load the Mediterranean template stylesheet and CSS scope.');
     assertSmoke(str_contains($themeManagerSource, 'flex-wrap:nowrap!important') && str_contains($themeManagerSource, '.nav-logout-entry{flex:0 0 auto!important') && str_contains($themeManagerSource, '.villa-logout-form{display:flex!important'), 'Desktop logout action must remain on the same navigation row across themes.');
+    assertSmoke(str_contains($themeManagerSource, 'public static function socialSettings()') && str_contains($themeManagerSource, 'public static function saveSocialSettings(array $input)') && str_contains($themeManagerSource, 'villa-social-bar') && str_contains($themeManagerSource, 'renderSocialIcon'), 'Shared social media settings and header rendering must be available to every theme.');
+    $themeRoutesSource = (string)file_get_contents($root . '/routes/web.php');
+    $themeSettingsViewSource = (string)file_get_contents($root . '/views/admin/themes.php');
+    assertSmoke(str_contains($themeRoutesSource, "/admin/themes/social-icons") && str_contains($themeSettingsViewSource, 'social[instagram][url]') && str_contains($themeSettingsViewSource, 'social[instagram][family]') && str_contains($themeSettingsViewSource, 'social[instagram][size]') && str_contains($themeSettingsViewSource, 'social[instagram][active]'), 'Theme settings must expose shared social profile URL, icon family, size, and active controls.');
 
     foreach ($expectedThemes as $themeSlug) {
         $demoResult = ThemeDemoImporter::import($themeSlug, $adminId);
