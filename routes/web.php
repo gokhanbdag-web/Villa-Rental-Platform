@@ -1206,19 +1206,19 @@ $router->get('/theme-assets/{slug}/{file}', static function (array $params): voi
     readfile($path);exit;
 });
 
-$router->get('/admin/themes', static function (): void {
+$router->get('/admin/header-settings', static function (): void {
     Auth::requireRole(['super_admin','admin']);
     $socialSettings=ThemeManager::socialSettings();
     $themeMessage=(string)($_SESSION['villa_theme_message']??'');unset($_SESSION['villa_theme_message']);
-    require APP_ROOT.'/views/admin/themes.php';
+    require APP_ROOT.'/views/admin/header-settings.php';
 });
-$router->post('/admin/themes/social-icons', static function (): void {
+$router->post('/admin/header-settings/social-icons', static function (): void {
     Auth::requireRole(['super_admin','admin']);verify_csrf();
     try {
         ThemeManager::saveSocialSettings((array)($_POST['social']??[]));
         $_SESSION['villa_theme_message']='Üst bilgi ayarları kaydedildi.';
     } catch(Throwable $e) { $_SESSION['villa_theme_message']=$e->getMessage(); }
-    redirect('/admin/themes');
+    redirect('/admin/header-settings');
 });
 
 $router->get('/admin/settings', static function (): void {
