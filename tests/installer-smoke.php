@@ -66,7 +66,8 @@ try {
 
     $themeManagerSource = (string)file_get_contents($root . '/app/Core/ThemeManager.php');
     assertSmoke(str_contains($themeManagerSource, "return 'default';") && str_contains($themeManagerSource, "self::root() . '/default'"), 'The default theme must be the only active theme.');
-    assertSmoke(str_contains($themeManagerSource, 'rawurlencode($renderSlug) . \'/style.css\'') && str_contains($themeManagerSource, 'body[data-villa-theme]{background-color:#fff!important;}'), 'Default theme assets and the shared white body background must be enforced.');
+    $defaultThemeCssSource = (string)file_get_contents($root . '/themes/default/style.css');
+    assertSmoke(str_contains($themeManagerSource, 'rawurlencode($renderSlug) . \'/style.css\'') && str_contains($defaultThemeCssSource, 'body[data-villa-theme]{background-color:#fff!important;}'), 'Default theme assets and the shared white body background must be enforced by the theme stylesheet.');
     assertSmoke(str_contains($themeManagerSource, 'public static function socialSettings()') && str_contains($themeManagerSource, 'public static function saveSocialSettings(array $input)') && str_contains($themeManagerSource, 'villa-social-bar') && str_contains($themeManagerSource, 'renderSocialIcon'), 'Shared top information settings and rendering must remain available.');
     assertSmoke(!str_contains($themeManagerSource, 'PageBuilder') && !str_contains($themeManagerSource, 'ThemeDemoImporter') && !str_contains($themeManagerSource, 'ZipArchive'), 'Theme manager must not contain builder, demo importer or theme package upload dependencies.');
 
