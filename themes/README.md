@@ -55,3 +55,21 @@ assets/
 ## Güvenlik
 
 PHP tema şablonları uygulama kullanıcısının yetkileriyle çalışır. Yalnızca kaynağına güvendiğiniz tema paketlerini yükleyin. Tema paketleri veritabanı tablolarını değiştirmemeli ve kullanıcı/rezervasyon verilerini silmemelidir.
+
+
+## Yerleşik tasarım koleksiyonu
+
+Sistemle birlikte gelen 10 tema, tema yöneticisinden etkinleştirilebilir ve canlı önizlenebilir:
+
+- **Akdeniz:** zeytin, taş ve kırık beyaz; Akdeniz editoryal stili.
+- **Modern:** çağdaş ve minimal.
+- **Prestige:** rafine premium.
+- **Boutique:** yumuşak butik.
+- **Riviera:** sahil evi, kum ve deniz tonları.
+- **Alpine:** dağ evi, çam ve bakır.
+- **Nocturne:** koyu sinematik lüks.
+- **Kyoto:** Japon minimalizmi ve wabi-sabi.
+- **Loft:** mimari grid ve elektrik mavisi.
+- **Bohem:** terracotta, zeytin ve keten.
+
+Altı yeni tema kendi `theme.json` ve `style.css` dosyalarına sahiptir. Her tema ortak rezervasyon, kullanıcı ve içerik işlemlerini koruyarak kendi görsel dilini uygular. Yerleşik temalar panelden yanlışlıkla silinemez.

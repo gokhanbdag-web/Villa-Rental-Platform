@@ -1,0 +1,9 @@
+{
+  "slug": "alpine",
+  "name": "Alpine",
+  "version": "1.0.0",
+  "author": "VillaStay Design Studio",
+  "description": "Dağ evlerinin sıcaklığı; çam yeşili, kaya grisi ve bakır tonlarında doğa odaklı tasarım.",
+  "builtin": true,
+  "templates": {}
+}
