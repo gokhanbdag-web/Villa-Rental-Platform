@@ -99,8 +99,7 @@ try {
     file_put_contents($smokeThemeDir . '/style.css', '.smoke-theme{color:#123456}');
     file_put_contents($smokeThemeDir . '/assets/icons/active.svg', '<svg xmlns="http://www.w3.org/2000/svg"></svg>');
     file_put_contents($defaultAssetsDir . '/smoke-fallback.svg', '<svg xmlns="http://www.w3.org/2000/svg"></svg>');
-    $activateSmokeTheme = $pdo->prepare('INSERT INTO settings(setting_key,setting_value,autoload) VALUES(?,?,1) ON DUPLICATE KEY UPDATE setting_value=VALUES(setting_value)');
-    $activateSmokeTheme->execute(['theme.active', 'smoke-theme']);
+    ThemeManager::saveActiveTheme('smoke-theme');
     assertSmoke(ThemeManager::activeSlug($pdo) === 'smoke-theme', 'A valid installed theme could not be activated.');
     assertSmoke(ThemeManager::resolveFile('style.css', 'smoke-theme') === realpath($smokeThemeDir . '/style.css'), 'Active theme CSS did not receive priority over the default stylesheet.');
     ob_start();
@@ -162,6 +161,7 @@ try {
     $adminShellSource = (string)file_get_contents($root . '/index.php');
     assertSmoke(str_contains($themeRoutesSource, "/admin/header-settings/social-icons") && !str_contains($themeRoutesSource, 'PageBuilder') && !str_contains($themeRoutesSource, '/admin/builder') && !str_contains($adminShellSource, '/admin/builder'), 'Builder routes and navigation must be removed while shared top information settings remain available.');
     assertSmoke(str_contains($themeRoutesSource, "/admin/typography") && str_contains($adminShellSource, "/admin/typography"), 'Theme typography must have an admin route and navigation entry.');
+    assertSmoke(str_contains($themeRoutesSource, "/admin/themes") && str_contains($themeRoutesSource, "ThemeManager::saveActiveTheme") && str_contains($adminShellSource, "Translator::get('admin.themes.title')"), 'Theme activation must be available through the translated admin theme manager.');
     $themeCssSource = (string)file_get_contents($root . '/themes/default/style.css');
     assertSmoke(str_contains($themeCssSource, 'min-height:64px') && str_contains($themeCssSource, 'padding:10px 22px'), 'Shared top information bar must use the increased height and spacing.');
     assertSmoke(str_contains($themeRoutesSource, "villa_theme_message_type") && str_contains($themeRoutesSource, 'Shared header settings save failed'), 'Header settings save failures must be logged and surfaced to the administrator.');
