@@ -70,11 +70,11 @@ try {
     assertSmoke(str_contains($themeManagerSource, 'public static function socialSettings()') && str_contains($themeManagerSource, 'public static function saveSocialSettings(array $input)') && str_contains($themeManagerSource, 'villa-social-bar') && str_contains($themeManagerSource, 'renderSocialIcon'), 'Shared top information settings and rendering must remain available.');
     assertSmoke(!str_contains($themeManagerSource, 'PageBuilder') && !str_contains($themeManagerSource, 'ThemeDemoImporter') && !str_contains($themeManagerSource, 'ZipArchive'), 'Theme manager must not contain builder, demo importer or theme package upload dependencies.');
 
-    $themeSettingsViewSource = (string)file_get_contents($root . '/views/admin/themes.php');
+    $themeSettingsViewSource = (string)file_get_contents($root . '/views/admin/header-settings.php');
     assertSmoke(str_contains($themeSettingsViewSource, 'social[_address][text]') && str_contains($themeSettingsViewSource, 'social[_call_center][title]') && str_contains($themeSettingsViewSource, 'social[_call_center][phone]') && str_contains($themeSettingsViewSource, 'social[_license][title]') && str_contains($themeSettingsViewSource, 'social[_license][number]') && str_contains($themeSettingsViewSource, 'Üst Bilgi Ayarları'), 'Shared top information settings must remain editable.');
     $themeRoutesSource = (string)file_get_contents($root . '/routes/web.php');
     $adminShellSource = (string)file_get_contents($root . '/index.php');
-    assertSmoke(str_contains($themeRoutesSource, "/admin/themes/social-icons") && !str_contains($themeRoutesSource, 'PageBuilder') && !str_contains($themeRoutesSource, '/admin/builder') && !str_contains($adminShellSource, '/admin/builder'), 'Builder routes and navigation must be removed while shared top information settings remain available.');
+    assertSmoke(str_contains($themeRoutesSource, "/admin/header-settings/social-icons") && !str_contains($themeRoutesSource, 'PageBuilder') && !str_contains($themeRoutesSource, '/admin/builder') && !str_contains($adminShellSource, '/admin/builder'), 'Builder routes and navigation must be removed while shared top information settings remain available.');
 
     // A second migration pass must be safe and leave the migration ledger intact.
     Migrator::run($pdo, $root);
