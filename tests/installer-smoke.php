@@ -41,6 +41,18 @@ try {
     $mode = $pdo->query("SELECT setting_value FROM settings WHERE setting_key='app.mode'")->fetchColumn();
     assertSmoke($mode === 'multi_vendor', 'Selected marketplace mode was not saved.');
 
+    ThemeManager::saveSocialSettings([
+        'instagram'=>['url'=>'https://instagram.com/example','family'=>'brand','size'=>22],
+        '_address'=>['text'=>'Test adresi'],
+        '_call_center'=>['title'=>'Çağrı Merkezi','phone'=>'+90 555 111 2233'],
+        '_license'=>['title'=>'TÜRSAB Lisans','number'=>'12345'],
+    ]);
+    $savedHeaderJson = $pdo->query("SELECT setting_value FROM settings WHERE setting_key='theme.social_icons'")->fetchColumn();
+    $savedHeader = json_decode((string)$savedHeaderJson, true);
+    assertSmoke(is_array($savedHeader) && ($savedHeader['instagram']['url'] ?? '') === 'https://instagram.com/example' && ($savedHeader['_address']['text'] ?? '') === 'Test adresi' && ($savedHeader['_call_center']['phone'] ?? '') === '+90 555 111 2233' && ($savedHeader['_license']['number'] ?? '') === '12345', 'Shared header settings did not persist in the database.');
+    $loadedHeader = ThemeManager::socialSettings();
+    assertSmoke(($loadedHeader['_address']['text'] ?? '') === 'Test adresi' && ($loadedHeader['instagram']['size'] ?? 0) === 22, 'Shared header settings could not be loaded after saving.');
+
     $villaCount = (int)$pdo->query("SELECT COUNT(*) FROM properties WHERE status='published'")->fetchColumn();
     assertSmoke($villaCount >= 30, 'Demo villa seed did not create at least 30 published villas.');
 
@@ -89,6 +101,8 @@ try {
     $themeRoutesSource = (string)file_get_contents($root . '/routes/web.php');
     $adminShellSource = (string)file_get_contents($root . '/index.php');
     assertSmoke(str_contains($themeRoutesSource, "/admin/header-settings/social-icons") && !str_contains($themeRoutesSource, 'PageBuilder') && !str_contains($themeRoutesSource, '/admin/builder') && !str_contains($adminShellSource, '/admin/builder'), 'Builder routes and navigation must be removed while shared top information settings remain available.');
+    assertSmoke(str_contains($themeRoutesSource, "villa_theme_message_type") && str_contains($themeRoutesSource, 'Shared header settings save failed'), 'Header settings save failures must be logged and surfaced to the administrator.');
+    assertSmoke(str_contains($themeSettingsViewSource, 'role="status"') && str_contains($themeSettingsViewSource, '.notice.error'), 'Header settings must visibly distinguish a failed save from a successful save.');
 
     // A second migration pass must be safe and leave the migration ledger intact.
     Migrator::run($pdo, $root);
