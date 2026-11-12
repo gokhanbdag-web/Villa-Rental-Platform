@@ -223,7 +223,6 @@ $router->get('/', static function (): void {
      $blogPosts=$pdo->query("SELECT id,title,slug,excerpt,featured_image,published_at FROM blog_posts WHERE status='published' AND (published_at IS NULL OR published_at<=NOW()) ORDER BY COALESCE(published_at,created_at) DESC,id DESC LIMIT 12")->fetchAll(PDO::FETCH_ASSOC);
     $homeSections=[];foreach($pdo->query('SELECT * FROM homepage_sections ORDER BY sort_order,id')->fetchAll() as $section){$homeSections[$section['section_key']]=$section;}
     $locationCountries=$pdo->query("SELECT id,name FROM locations WHERE location_type='country' AND is_active=1 ORDER BY sort_order,name")->fetchAll();
-     $pageBuilderLayout=['widgets'=>[],'status'=>'draft'];
      ThemeManager::render('landing.php', get_defined_vars());
 });
 
@@ -1095,7 +1094,6 @@ $router->get('/page/{slug}', static function (array $params): void {
     $footerNavigation=villa_navigation_tree($pdo,'footer','tr');
     $mode=(string)($pdo->query("SELECT setting_value FROM settings WHERE setting_key='app.mode' LIMIT 1")->fetchColumn() ?: 'single_vendor');
     $user=Auth::user(); $locale='tr';
-    $pageBuilderLayout=['widgets'=>[],'status'=>'draft'];
     $destinations=[];$featuredProperties=[];$latestProperties=[];$categories=[];$stylePhotos=[];
     $blogPosts=$pdo->query("SELECT id,title,slug,excerpt,featured_image,published_at FROM blog_posts WHERE status='published' AND (published_at IS NULL OR published_at<=NOW()) ORDER BY COALESCE(published_at,created_at) DESC,id DESC LIMIT 12")->fetchAll(PDO::FETCH_ASSOC);
     ThemeManager::render('page.php', get_defined_vars());
@@ -1135,8 +1133,7 @@ $router->get('/blog/{slug}', static function (array $params): void {
     $page=['title'=>$post['title'],'content'=>trim((string)$post['excerpt'])."\n\n".(string)$post['content']];
     $content=$pdo->query("SELECT content_key,content_value FROM site_content WHERE language_code='tr'")->fetchAll(PDO::FETCH_KEY_PAIR);$siteName=$content['site_name']??'VillaStay';
     $navigation=villa_navigation_tree($pdo,'header','tr');$footerNavigation=villa_navigation_tree($pdo,'footer','tr');
-    $mode=(string)($pdo->query("SELECT setting_value FROM settings WHERE setting_key='app.mode' LIMIT 1")->fetchColumn() ?: 'single_vendor');$user=Auth::user();$locale='tr';
-    $pageBuilderLayout=['widgets'=>[],'status'=>'draft'];$destinations=[];$featuredProperties=[];$latestProperties=[];$categories=[];$stylePhotos=[];
+    $mode=(string)($pdo->query("SELECT setting_value FROM settings WHERE setting_key='app.mode' LIMIT 1")->fetchColumn() ?: 'single_vendor');$user=Auth::user();$locale='tr';$destinations=[];$featuredProperties=[];$latestProperties=[];$categories=[];$stylePhotos=[];
     ThemeManager::render('page.php',get_defined_vars());
 });
 
