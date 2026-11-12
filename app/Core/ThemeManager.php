@@ -93,6 +93,64 @@ final class ThemeManager
         $stmt->execute(['theme.custom.' . $slug, json_encode($clean, JSON_UNESCAPED_UNICODE | JSON_THROW_ON_ERROR)]);
     }
 
+    public static function socialSettings(): array
+    {
+        $defaults = [];
+        foreach (['instagram','facebook','youtube','tiktok','x','whatsapp','pinterest','telegram','linkedin'] as $platform) {
+            $defaults[$platform] = ['url'=>'','family'=>'brand','size'=>20,'active'=>false];
+        }
+        try {
+            $stmt = Database::connection()->prepare('SELECT setting_value FROM settings WHERE setting_key=? LIMIT 1');
+            $stmt->execute(['theme.social_icons']);
+            $saved = json_decode((string)($stmt->fetchColumn() ?: '{}'), true);
+            if (!is_array($saved)) return $defaults;
+            foreach ($defaults as $platform=>$item) {
+                if (!isset($saved[$platform]) || !is_array($saved[$platform])) continue;
+                $defaults[$platform] = array_merge($item, $saved[$platform]);
+            }
+        } catch (\\Throwable $e) {
+            error_log('Social icon settings read failed: ' . $e->getMessage());
+        }
+        return $defaults;
+    }
+
+    public static function saveSocialSettings(array $input): void
+    {
+        $clean = [];
+        foreach (['instagram','facebook','youtube','tiktok','x','whatsapp','pinterest','telegram','linkedin'] as $platform) {
+            $row = is_array($input[$platform] ?? null) ? $input[$platform] : [];
+            $url = trim((string)($row['url'] ?? ''));
+            if ($url !== '' && (!filter_var($url, FILTER_VALIDATE_URL) || !in_array(strtolower((string)parse_url($url, PHP_URL_SCHEME)), ['http','https'], true))) {
+                throw new RuntimeException(strtoupper($platform) . ' bağlantısı geçerli bir http/https adresi olmalıdır.');
+            }
+            $family = (string)($row['family'] ?? 'brand');
+            if (!in_array($family, ['brand','circle'], true)) $family = 'brand';
+            $size = filter_var($row['size'] ?? 20, FILTER_VALIDATE_INT);
+            if ($size === false || $size < 14 || $size > 36) throw new RuntimeException('Sosyal medya ikon boyutu 14 ile 36 px arasında olmalıdır.');
+            $clean[$platform] = ['url'=>$url,'family'=>$family,'size'=>$size,'active'=>!empty($row['active']) && $url !== ''];
+        }
+        $stmt = Database::connection()->prepare('INSERT INTO settings(setting_key,setting_value,autoload) VALUES(?,?,1) ON DUPLICATE KEY UPDATE setting_value=VALUES(setting_value),autoload=1');
+        $stmt->execute(['theme.social_icons', json_encode($clean, JSON_UNESCAPED_UNICODE | JSON_THROW_ON_ERROR)]);
+    }
+
+    private static function renderSocialIcon(string $platform, string $family): string
+    {
+        $marks = [
+            'instagram'=>'<rect x="3" y="3" width="18" height="18" rx="6"/><circle cx="12" cy="12" r="4"/><circle cx="18" cy="6" r="1" fill="currentColor" stroke="none"/>',
+            'facebook'=>'<path d="M14 8h3V4h-3c-3 0-5 2-5 5v2H6v4h3v5h4v-5h3l1-4h-4V9c0-.7.3-1 1-1z" fill="currentColor" stroke="none"/>',
+            'youtube'=>'<rect x="2" y="5" width="20" height="14" rx="4"/><path d="m10 9 5 3-5 3z" fill="currentColor" stroke="none"/>',
+            'tiktok'=>'<path d="M14 3v11a4 4 0 1 1-4-4" /><path d="M14 3c1 3 3 4 6 4"/>',
+            'x'=>'<path d="M4 4l16 16M20 4 4 20"/>',
+            'whatsapp'=>'<path d="M5 19l1-4a8 8 0 1 1 3 3z"/><path d="M9 9c1 3 3 5 6 6l1-2-2-1-1 1c-1-1-2-2-2-3l1-1-1-2z" fill="currentColor" stroke="none"/>',
+            'pinterest'=>'<circle cx="12" cy="12" r="9"/><path d="m10 18 3-11m-2 6c2 2 5 0 5-3 0-3-5-4-7-1-2 3 0 5 2 5" />',
+            'telegram'=>'<path d="m3 11 18-7-5 17-4-6-4-3z"/><path d="m8 12 8-5-4 8"/>',
+            'linkedin'=>'<rect x="3" y="3" width="18" height="18" rx="2"/><path d="M8 10v7m0-10v.1M12 17v-7m0 3c0-3 5-3 5 0v4"/>'
+        ];
+        $shape = $marks[$platform] ?? '';
+        $stroke = $family === 'circle' ? 'stroke="currentColor" stroke-width="1.8" fill="none" stroke-linecap="round" stroke-linejoin="round"' : 'stroke="currentColor" stroke-width="1.4" fill="none" stroke-linecap="round" stroke-linejoin="round"';
+        return '<svg viewBox="0 0 24 24" aria-hidden="true" '.$stroke.'>'.$shape.'</svg>';
+    }
+
     public static function render(string $view, array $variables): void
     {
         $slug = self::activeSlug();
@@ -136,6 +194,23 @@ final class ThemeManager
         ob_start();
         require $template;
         $html = (string)ob_get_clean();
+
+        $socialSettings = self::socialSettings();
+        $socialNames = ['instagram'=>'Instagram','facebook'=>'Facebook','youtube'=>'YouTube','tiktok'=>'TikTok','x'=>'X','whatsapp'=>'WhatsApp','pinterest'=>'Pinterest','telegram'=>'Telegram','linkedin'=>'LinkedIn'];
+        $socialItems = '';
+        foreach ($socialNames as $platform=>$label) {
+            $item = $socialSettings[$platform] ?? [];
+            $url = trim((string)($item['url'] ?? ''));
+            if (empty($item['active']) || $url === '') continue;
+            $size = max(14, min(36, (int)($item['size'] ?? 20)));
+            $family = (string)($item['family'] ?? 'brand');
+            $socialItems .= '<a class="villa-social-link villa-social-link--'.e($family).'" href="'.e($url).'" target="_blank" rel="noopener noreferrer" aria-label="'.e($label).'" title="'.e($label).'" style="--social-icon-size:'.$size.'px">'.self::renderSocialIcon($platform,$family).'</a>';
+        }
+        if ($socialItems !== '' && stripos($html, 'villa-social-bar') === false) {
+            $socialBar = '<div class="villa-social-bar"><div class="villa-social-inner">'.$socialItems.'</div></div>';
+            if (preg_match('~<div class="med-topbar"~i', $html)) $html = preg_replace('~<div class="med-topbar"~i', $socialBar.'<div class="med-topbar"', $html, 1) ?? $html;
+            else $html = preg_replace('~<header\\b~i', $socialBar.'<header', $html, 1) ?? $html;
+        }
 
         $css = $themeDir . '/style.css';
         if (is_file($css)) {
