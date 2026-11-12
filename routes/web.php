@@ -1222,6 +1222,30 @@ $router->get('/theme-assets/{slug}/{file*}', static function (array $params): vo
     readfile($path); exit;
 });
 
+$router->get('/admin/themes', static function (): void {
+    Auth::requireRole(['super_admin','admin']);
+    $themes = ThemeManager::installed();
+    $activeTheme = ThemeManager::activeSlug();
+    $themeMessage = (string)($_SESSION['villa_theme_manager_message'] ?? '');
+    $themeMessageType = (string)($_SESSION['villa_theme_manager_message_type'] ?? 'success');
+    unset($_SESSION['villa_theme_manager_message'], $_SESSION['villa_theme_manager_message_type']);
+    require APP_ROOT . '/views/admin/themes.php';
+});
+$router->post('/admin/themes/activate', static function (): void {
+    Auth::requireRole(['super_admin','admin']);
+    verify_csrf();
+    try {
+        ThemeManager::saveActiveTheme((string)($_POST['theme_slug'] ?? ''));
+        $_SESSION['villa_theme_manager_message'] = Translator::get('admin.themes.save_success');
+        $_SESSION['villa_theme_manager_message_type'] = 'success';
+    } catch (Throwable $e) {
+        error_log('Theme activation failed: ' . $e->getMessage());
+        $_SESSION['villa_theme_manager_message'] = Translator::get('admin.themes.save_error');
+        $_SESSION['villa_theme_manager_message_type'] = 'error';
+    }
+    redirect('/admin/themes');
+});
+
 $router->get('/admin/header-settings', static function (): void {
     Auth::requireRole(['super_admin','admin']);
     $socialSettings=ThemeManager::socialSettings();
