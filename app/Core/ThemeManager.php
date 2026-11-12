@@ -215,10 +215,6 @@ final class ThemeManager
             grid-column:1/-1!important;grid-row:auto!important;width:100%!important;
             max-width:100%!important;min-width:0!important;
           }
-            grid-template-columns:minmax(0,1fr)!important;
-          }
-            grid-template-columns:minmax(0,1fr)!important;
-          }
         }
         .villa-social-bar{position:relative;z-index:40;width:100%;background:#f5f5f0;border-bottom:1px solid #e8e8df;box-sizing:border-box}
         .villa-social-inner{width:100%;max-width:none;margin:0;padding:7px 22px;box-sizing:border-box;display:grid;grid-template-columns:repeat(4,minmax(0,1fr));align-items:center;gap:10px}
