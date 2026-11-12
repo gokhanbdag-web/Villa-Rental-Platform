@@ -53,6 +53,21 @@ try {
     $loadedHeader = ThemeManager::socialSettings();
     assertSmoke(($loadedHeader['_address']['text'] ?? '') === 'Test adresi' && ($loadedHeader['instagram']['size'] ?? 0) === 22, 'Shared header settings could not be loaded after saving.');
 
+    ThemeManager::saveTypographySettings([
+        'topbar_height'=>72,
+        'headings'=>['family'=>'Playfair Display','size'=>40,'color'=>'#123456','weight'=>700,'style'=>'normal'],
+        'span'=>['family'=>'Inter','size'=>15,'color'=>'#234567','weight'=>500,'style'=>'normal'],
+        'paragraph'=>['family'=>'Roboto','size'=>17,'color'=>'#345678','weight'=>400,'style'=>'normal'],
+        'paragraph_links'=>['family'=>'Montserrat','size'=>16,'color'=>'#456789','weight'=>600,'style'=>'italic'],
+    ], 'default');
+    $savedTypographyJson = $pdo->query("SELECT setting_value FROM settings WHERE setting_key='theme.default.typography'")->fetchColumn();
+    $savedTypography = json_decode((string)$savedTypographyJson, true);
+    assertSmoke(is_array($savedTypography) && ($savedTypography['topbar_height'] ?? 0) === 72 && ($savedTypography['headings']['size'] ?? 0) === 40 && ($savedTypography['paragraph_links']['family'] ?? '') === 'Montserrat', 'Theme typography settings were not persisted correctly.');
+    $loadedTypography = ThemeManager::typographySettings('default');
+    assertSmoke(($loadedTypography['paragraph']['family'] ?? '') === 'Roboto' && ($loadedTypography['span']['color'] ?? '') === '#234567', 'Theme typography settings could not be loaded after saving.');
+    ThemeManager::saveTypographySettings(['headings'=>['family'=>'Lato','size'=>32]], 'futuretheme');
+    assertSmoke((int)$pdo->query("SELECT COUNT(*) FROM settings WHERE setting_key IN ('theme.default.typography','theme.futuretheme.typography')")->fetchColumn() === 2, 'Typography settings must be stored separately for each theme.');
+
     $villaCount = (int)$pdo->query("SELECT COUNT(*) FROM properties WHERE status='published'")->fetchColumn();
     assertSmoke($villaCount >= 30, 'Demo villa seed did not create at least 30 published villas.');
 
@@ -81,6 +96,9 @@ try {
     $defaultThemeCssSource = (string)file_get_contents($root . '/themes/default/style.css');
     assertSmoke(str_contains($themeManagerSource, 'rawurlencode($renderSlug) . \'/style.css\'') && str_contains($defaultThemeCssSource, 'body[data-villa-theme]{background-color:#fff!important;}'), 'Default theme assets and the shared white body background must be enforced by the theme stylesheet.');
     assertSmoke(str_contains($themeManagerSource, 'public static function socialSettings()') && str_contains($themeManagerSource, 'public static function saveSocialSettings(array $input)') && str_contains($themeManagerSource, 'villa-social-bar') && str_contains($themeManagerSource, 'renderSocialIcon'), 'Shared top information settings and rendering must remain available.');
+    assertSmoke(str_contains($themeManagerSource, 'saveTypographySettings') && str_contains($themeManagerSource, 'typographySettings') && str_contains($themeManagerSource, 'fonts.googleapis.com') && str_contains($themeManagerSource, 'paragraph_links'), 'Theme-specific Google Fonts and typography rendering must be available.');
+    $typographyViewSource = (string)file_get_contents($root . '/views/admin/typography.php');
+    assertSmoke(str_contains($typographyViewSource, 'typography[headings][family]') && str_contains($typographyViewSource, 'typography[paragraph_links][color]') && str_contains($typographyViewSource, 'topbar_height'), 'Theme typography controls must expose font family, size, color and topbar height.');
     assertSmoke(!str_contains($themeManagerSource, 'PageBuilder') && !str_contains($themeManagerSource, 'ThemeDemoImporter') && !str_contains($themeManagerSource, 'ZipArchive'), 'Theme manager must not contain builder, demo importer or theme package upload dependencies.');
 
     $themeSettingsViewSource = (string)file_get_contents($root . '/views/admin/header-settings.php');
@@ -101,6 +119,9 @@ try {
     $themeRoutesSource = (string)file_get_contents($root . '/routes/web.php');
     $adminShellSource = (string)file_get_contents($root . '/index.php');
     assertSmoke(str_contains($themeRoutesSource, "/admin/header-settings/social-icons") && !str_contains($themeRoutesSource, 'PageBuilder') && !str_contains($themeRoutesSource, '/admin/builder') && !str_contains($adminShellSource, '/admin/builder'), 'Builder routes and navigation must be removed while shared top information settings remain available.');
+    assertSmoke(str_contains($themeRoutesSource, "/admin/typography") && str_contains($adminShellSource, "/admin/typography"), 'Theme typography must have an admin route and navigation entry.');
+    $themeCssSource = (string)file_get_contents($root . '/themes/default/style.css');
+    assertSmoke(str_contains($themeCssSource, 'min-height:64px') && str_contains($themeCssSource, 'padding:10px 22px'), 'Shared top information bar must use the increased height and spacing.');
     assertSmoke(str_contains($themeRoutesSource, "villa_theme_message_type") && str_contains($themeRoutesSource, 'Shared header settings save failed'), 'Header settings save failures must be logged and surfaced to the administrator.');
     assertSmoke(str_contains($themeSettingsViewSource, 'role="status"') && str_contains($themeSettingsViewSource, '.notice.error'), 'Header settings must visibly distinguish a failed save from a successful save.');
 
