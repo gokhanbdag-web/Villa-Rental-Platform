@@ -272,6 +272,20 @@ final class ThemeManager
      * Render one overridable PHP component. Themes may replace a single partial
      * or layout without replacing the page template that composes it.
      */
+    /** Render a page-level presentation file from the active theme or default layer. */
+    public static function renderTemplate(string $relative, array $variables = []): void
+    {
+        if (!str_starts_with($relative, 'templates/pages/') || strtolower(pathinfo($relative, PATHINFO_EXTENSION)) !== 'php') {
+            throw new RuntimeException('Tema şablon yolu geçersiz.');
+        }
+        $file = self::resolveFile($relative);
+        if ($file === null) throw new RuntimeException('Tema şablonu bulunamadı: ' . $relative);
+        (static function (string $__file, array $__variables): void {
+            extract($__variables, EXTR_SKIP);
+            require $__file;
+        })($file, $variables);
+    }
+
     public static function renderPartial(string $relative, array $variables = []): void
     {
         $allowed = str_starts_with($relative, 'partials/') || str_starts_with($relative, 'layouts/');
