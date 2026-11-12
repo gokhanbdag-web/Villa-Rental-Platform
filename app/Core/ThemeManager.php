@@ -129,7 +129,7 @@ final class ThemeManager
 
         $css = $themeDir . '/style.css';
         if (is_file($css)) {
-            $tag = '<link rel="stylesheet" href="' . e(app_url('/theme-assets/' . rawurlencode($slug) . '/style.css')) . '?v=' . rawurlencode((string)filemtime($css)) . '">';
+            $tag = '<link rel="stylesheet" href="' . e(app_url('/theme-assets/' . rawurlencode($renderSlug) . '/style.css')) . '?v=' . rawurlencode((string)filemtime($css)) . '">';
             $custom = $isSharedDefaultLanding ? [] : self::customSettings($slug);
             if ($custom !== []) {
                 $primary = e((string)($custom['primary'] ?? '#176b50'));
@@ -139,7 +139,7 @@ final class ThemeManager
                 $accent = e((string)($custom['accent'] ?? '#c5a56b'));
                 $buttonColor = e((string)($custom['button_color'] ?? $custom['primary'] ?? '#176b50'));
                 $radius = max(0, min(32, (int)($custom['radius'] ?? 18)));
-                $scope = 'body[data-villa-theme="' . e($slug) . '"]';
+                $scope = 'body[data-villa-theme="' . e($renderSlug) . '"]';
                 $tag .= '<style id="villa-theme-custom">' . $scope . '{--villa-theme-primary:' . $primary . ';--villa-theme-background:' . $background . ';--villa-theme-surface:' . $surface . ';--villa-theme-text:' . $text . ';--villa-theme-accent:' . $accent . ';--villa-theme-button:' . $buttonColor . ';--villa-theme-radius:' . $radius . 'px;background:var(--villa-theme-background);color:var(--villa-theme-text)}' . $scope . ' .theme-header{' . 'background:var(--villa-theme-surface)}' . $scope . ' .theme-header .nav a:hover,' . $scope . ' .search-submit{background:var(--villa-theme-primary);color:#fff}' . $scope . ' .theme-brand,' . $scope . ' .section h2{color:var(--villa-theme-primary)}' . $scope . ' .stay,' . $scope . ' .hero-card,' . $scope . ' .search{border-radius:var(--villa-theme-radius)}' . $scope . ' .site-footer{background:var(--villa-theme-primary)}' .
                 $scope . ' button,' . $scope . ' input[type=submit],' . $scope . ' input[type=button],' . $scope . ' .btn,' . $scope . ' a.btn,' . $scope . ' .button,' . $scope . ' a.more,' . $scope . ' a.reserve,' . $scope . ' .gallery-count,' . $scope . ' .lightbox-arrow,' . $scope . ' .lightbox-close,' . $scope . ' .pagination a,' . $scope . ' .calendar-reserve,' . $scope . ' .search-submit,' . $scope . ' .submit,' . $scope . ' .guest-done button,' . $scope . ' .booking button,' . $scope . ' .booking a,' . $scope . ' .theme-menu-toggle,' . $scope . ' .nav-submenu-toggle,' . $scope . ' .calendar-nav button,' . $scope . ' .card-gallery-arrow,' . $scope . ' .card-favorite,' . $scope . ' .property-favorite-button,' . $scope . ' .pagination a.active{background:var(--villa-theme-button)!important;border-color:var(--villa-theme-button)!important;color:#fff!important}' .
                 $scope . ' .nav a:hover,' . $scope . ' .nav a[aria-current=page]{background:var(--villa-theme-button)!important;color:#fff!important}' .
@@ -151,7 +151,7 @@ final class ThemeManager
                 '</style>';
             }
             if (stripos($html, '</head>') !== false) $html = preg_replace('/<\/head>/i', $tag . '</head>', $html, 1) ?? $html;
-            $html = preg_replace('/<body\b/i', '<body data-villa-theme="' . e($slug) . '"', $html, 1) ?? $html;
+            $html = preg_replace('/<body\b/i', '<body data-villa-theme="' . e($renderSlug) . '"', $html, 1) ?? $html;
         }
         // Inject after the theme stylesheet so every theme obeys the phone layout rule.
         $mobileLayout = '<style id="villa-mobile-single-column-global">
