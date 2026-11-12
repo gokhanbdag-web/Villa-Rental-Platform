@@ -11,14 +11,14 @@
 <article class="theme-card"><div class="theme-live-preview"><div class="mock-top" style="background:<?= e($themeSettings[$slug]['surface']??$palette[2]) ?>;color:<?= e($themeSettings[$slug]['text']??'#26352e') ?>"><span><?= e($theme['name']) ?></span><span>MENÜ　☰</span></div><div class="mock-hero" style="background:linear-gradient(120deg,<?= e($themeSettings[$slug]['primary']??$palette[1]) ?>,<?= e($themeSettings[$slug]['accent']??$palette[1]) ?>)"><small>VİLLA TATİLİNİZ</small>Hayalinizdeki konaklama</div><div class="mock-cards"><i></i><i></i><i></i></div></div><div class="theme-info">
 <?php if($activeTheme===$slug): ?><div class="theme-status">● ETKİN TEMA</div><?php endif; ?>
 <h2><?= e($theme['name']) ?></h2><p><?= e($theme['description']) ?></p><small style="display:block;color:#89938d;margin-bottom:13px">Sürüm <?= e($theme['version']) ?> · <?= e($theme['author']) ?></small>
-<?php $demoStatus=$themeDemoStatuses[$slug]??[]; ?>
-<div class="theme-demo">
+<?php $demoStatus=$themeDemoStatuses[$slug]??[]; $hasDemo=!empty($themeDemoAvailable[$slug]); ?>
+<?php if($hasDemo): ?><div class="theme-demo">
 <strong><?= $demoStatus ? '✓ Demo içeriği yüklü' : 'Tema demo içeriği hazır' ?></strong>
 <p><?= $demoStatus ? 'Yüklenme: '.e((string)$demoStatus['imported_at']).' · '.e((string)$demoStatus['created_layouts']).' sayfa düzeni' : 'Bu temaya özel ana sayfa ve içerik sayfası düzenlerini tek tıklamayla yükleyin.' ?></p>
 <div class="theme-demo-actions">
 <?php if(!$demoStatus): ?><form method="post" action="<?= e(app_url('/admin/themes/demo/import')) ?>"><?= csrf_field() ?><input type="hidden" name="slug" value="<?= e($slug) ?>"><button type="submit">Demo içeriğini yükle</button></form>
 <?php else: ?><form method="post" action="<?= e(app_url('/admin/themes/demo/reset')) ?>" onsubmit="return confirm('Demo tarafından eklenen ve hiç değiştirilmemiş sayfa düzenleri kaldırılsın mı? Düzenlediğiniz sayfalar korunacaktır.')"><?= csrf_field() ?><input type="hidden" name="slug" value="<?= e($slug) ?>"><button class="secondary" type="submit">Demo içeriğini güvenle sıfırla</button></form><?php endif; ?>
-</div></div>
+</div></div><?php else: ?><div class="theme-demo"><strong>Demo paketi bulunmuyor</strong><p>Bu tema için henüz tek tıklamalı demo içeriği eklenmemiş.</p></div><?php endif; ?>
 <div class="theme-actions">
 <form method="post" action="<?= e(app_url('/admin/themes/activate')) ?>"><?= csrf_field() ?><input type="hidden" name="slug" value="<?= e($slug) ?>"><button type="submit" <?= $activeTheme===$slug?'disabled':'' ?>><?= $activeTheme===$slug?'Etkin':'Temayı etkinleştir' ?></button></form>
 <form method="post" action="<?= e(app_url('/admin/themes/preview')) ?>" target="_blank"><?= csrf_field() ?><input type="hidden" name="slug" value="<?= e($slug) ?>"><button class="secondary" type="submit">Canlı önizle</button></form>
