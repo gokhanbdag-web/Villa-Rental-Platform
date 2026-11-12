@@ -77,7 +77,7 @@ final class ThemeManager
         $relative = str_replace('\\', '/', trim($relative));
         $parts = explode('/', $relative);
         if ($relative === '' || str_starts_with($relative, '/') || in_array('..', $parts, true) || in_array('.', $parts, true)) return app_url('/404');
-        return app_url('/theme-assets/' . rawurlencode($slug) . '/' . rawurlencode($relative));
+        return app_url('/theme-assets/' . rawurlencode($slug) . '/' . implode('/', array_map('rawurlencode', explode('/', $relative))));
     }
 
     public static function socialSettings(): array
@@ -255,12 +255,14 @@ final class ThemeManager
         $installed = self::installed();
         $defaultMap = $installed['default']['manifest']['templates'] ?? [];
         $activeMap = $installed[$renderSlug]['manifest']['templates'] ?? [];
-        $relative = isset($activeMap[$view]) && is_string($activeMap[$view])
-            ? $activeMap[$view]
-            : (isset($defaultMap[$view]) && is_string($defaultMap[$view]) ? $defaultMap[$view] : '');
+        $activeRelative = isset($activeMap[$view]) && is_string($activeMap[$view]) ? $activeMap[$view] : '';
+        $defaultRelative = isset($defaultMap[$view]) && is_string($defaultMap[$view]) ? $defaultMap[$view] : '';
         $template = '';
-        if ($relative !== '' && str_starts_with($relative, 'templates/')) {
-            $template = self::resolveFile($relative, $renderSlug) ?? '';
+        if ($activeRelative !== '' && str_starts_with($activeRelative, 'templates/')) {
+            $template = self::resolveFile($activeRelative, $renderSlug) ?? '';
+        }
+        if ($template === '' && $defaultRelative !== '' && str_starts_with($defaultRelative, 'templates/')) {
+            $template = self::resolveFile($defaultRelative, 'default') ?? '';
         }
         if ($template === '') $template = APP_ROOT . '/views/site/' . basename($view);
         if (!is_file($template)) throw new RuntimeException('Tema şablonu bulunamadı: ' . $view);
