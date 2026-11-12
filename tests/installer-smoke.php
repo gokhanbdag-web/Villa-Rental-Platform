@@ -106,6 +106,7 @@ try {
     $themeManagerSource = (string)file_get_contents($root . '/app/Core/ThemeManager.php');
     assertSmoke(str_contains($themeManagerSource, '$isSharedDefaultLanding') && str_contains($themeManagerSource, '\'mediterranean\' : $slug'), 'All themes must fall back to the preserved Mediterranean homepage when no published demo layout exists.');
     assertSmoke(str_contains($themeManagerSource, 'rawurlencode($renderSlug) . \'/style.css\'') && str_contains($themeManagerSource, 'e($renderSlug)'), 'Shared default homepage must load the Mediterranean template stylesheet and CSS scope.');
+    assertSmoke(str_contains($themeManagerSource, 'flex-wrap:nowrap!important') && str_contains($themeManagerSource, '.nav-logout-entry{flex:0 0 auto!important') && str_contains($themeManagerSource, '.villa-logout-form{display:flex!important'), 'Desktop logout action must remain on the same navigation row across themes.');
 
     foreach ($expectedThemes as $themeSlug) {
         $demoResult = ThemeDemoImporter::import($themeSlug, $adminId);
