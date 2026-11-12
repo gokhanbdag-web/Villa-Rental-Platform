@@ -108,7 +108,7 @@ final class ThemeManager
                 if (!isset($saved[$platform]) || !is_array($saved[$platform])) continue;
                 $defaults[$platform] = array_merge($item, $saved[$platform]);
             }
-        } catch (\\Throwable $e) {
+        } catch (\Throwable $e) {
             error_log('Social icon settings read failed: ' . $e->getMessage());
         }
         return $defaults;
