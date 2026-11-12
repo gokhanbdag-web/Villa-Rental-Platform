@@ -14,7 +14,8 @@ Native PHP 8.2+ and MySQL villa rental platform. No PHP framework or Composer de
 - Admin user activation controls, editable navigation, CMS pages with SEO fields, platform settings, and translation catalogue editing.
 - Booking financial ledger, platform commission calculation, payment transaction, payout and notification database structures; editable translation catalogue.
 - 36 editable Turkish demo villa listings with illustrative property imagery; listings and media remain editable from the admin panel.
-- One active `default` theme. Shared top information markup is centralized in `themes/default/partials/shared-topbar.php`; common styling is in `themes/default/style.css`.
+- One active `default` theme. Shared top information markup is centralized in `themes/default/partials/shared-topbar.php`; common styling is in `themes/default/style.css`. The topbar has a taller layout and theme-specific height control.
+- Theme typography is managed separately for each theme from Admin → Website → Theme Typography. Heading, span, paragraph and paragraph-link families, sizes, colors, weights and styles are configurable; selected Google Fonts are loaded on the storefront. Paragraph button/CTA links are excluded from paragraph-link styling.
 - GitHub Actions PHP syntax checks and a MySQL-backed installer / migration smoke test. Retired theme-demo and Page Builder database structures are removed by migration `029_retired_builder_cleanup.sql`.
 
 ## Important operational notes
