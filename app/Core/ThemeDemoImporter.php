@@ -38,6 +38,12 @@ final class ThemeDemoImporter
         return $data;
     }
 
+    public static function hasPackage(string $slug): bool
+    {
+        try { self::package($slug); return true; }
+        catch (Throwable $e) { return false; }
+    }
+
     public static function status(string $slug): array
     {
         $stmt = Database::connection()->prepare('SELECT package_version,imported_at,created_layouts,skipped_layouts FROM theme_demo_imports WHERE theme_slug=? LIMIT 1');
