@@ -112,7 +112,7 @@ final class ThemeManager
                     }
                 }
             }
-        } catch (\\Throwable $e) {
+        } catch (\Throwable $e) {
             error_log('Shared header settings read failed: ' . $e->getMessage());
         }
         return $defaults;
