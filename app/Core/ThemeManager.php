@@ -243,6 +243,33 @@ final class ThemeManager
             if (stripos($html, '</head>') !== false) $html = preg_replace('/<\/head>/i', $tag . '</head>', $html, 1) ?? $html;
             $html = preg_replace('/<body\b/i', '<body data-villa-theme="' . e($renderSlug) . '"', $html, 1) ?? $html;
         }
+        $typography = self::typographySettings($renderSlug);
+        $fontFamilies = [];
+        foreach (['headings','span','paragraph','paragraph_links'] as $group) {
+            $fontFamilies[(string)$typography[$group]['family']] = true;
+        }
+        $fontQuery = [];
+        foreach (array_keys($fontFamilies) as $family) {
+            $encodedFamily = str_replace('%20', '+', rawurlencode($family));
+            $fontQuery[] = 'family=' . $encodedFamily . ':ital,wght@0,300;0,400;0,500;0,600;0,700;0,800;0,900;1,300;1,400;1,500;1,600;1,700;1,800;1,900';
+        }
+        $fontAssets = '<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>';
+        $fontAssets .= '<link rel="stylesheet" href="https://fonts.googleapis.com/css2?' . e(implode('&', $fontQuery)) . '&amp;display=swap">';
+        $themeScope = 'body[data-villa-theme="' . e($renderSlug) . '"]';
+        $heading = $typography['headings'];
+        $span = $typography['span'];
+        $paragraph = $typography['paragraph'];
+        $paragraphLinks = $typography['paragraph_links'];
+        $typographyCss = $themeScope . ' .villa-social-inner{min-height:' . (int)$typography['topbar_height'] . 'px}'
+            . $themeScope . ' h1,' . $themeScope . ' h2,' . $themeScope . ' h3,' . $themeScope . ' h4,' . $themeScope . ' h5,' . $themeScope . ' h6{font-family:' . json_encode($heading['family']) . '!important;font-size:' . (int)$heading['size'] . 'px!important;color:' . $heading['color'] . '!important;font-weight:' . (int)$heading['weight'] . '!important;font-style:' . $heading['style'] . '!important}'
+            . $themeScope . ' span{font-family:' . json_encode($span['family']) . '!important;font-size:' . (int)$span['size'] . 'px!important;color:' . $span['color'] . '!important;font-weight:' . (int)$span['weight'] . '!important;font-style:' . $span['style'] . '!important}'
+            . $themeScope . ' p{font-family:' . json_encode($paragraph['family']) . '!important;font-size:' . (int)$paragraph['size'] . 'px!important;color:' . $paragraph['color'] . '!important;font-weight:' . (int)$paragraph['weight'] . '!important;font-style:' . $paragraph['style'] . '!important}'
+            . $themeScope . ' p a:not(.button):not(.btn):not(.theme-button):not(.search-submit):not([role="button"]){font-family:' . json_encode($paragraphLinks['family']) . '!important;font-size:' . (int)$paragraphLinks['size'] . 'px!important;color:' . $paragraphLinks['color'] . '!important;font-weight:' . (int)$paragraphLinks['weight'] . '!important;font-style:' . $paragraphLinks['style'] . '!important}';
+        $typographyAssets = $fontAssets . '<style id="villa-theme-typography">' . $typographyCss . '</style>';
+        if (stripos($html, '</head>') !== false) {
+            $html = preg_replace('/<\/head>/i', $typographyAssets . '</head>', $html, 1) ?? $html;
+        }
+
         echo $html;
     }
 
