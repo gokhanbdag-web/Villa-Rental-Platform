@@ -36,7 +36,7 @@ themes/
     partials/shared-topbar.php
 ```
 
-Dosya çözümleyici önce aktif temadaki aynı isimli override dosyasını, bulamazsa `default` altındaki karşılığını kullanır. Bu sayede ortak davranış ve içerik tek merkezde kalır. Override dosyaları yalnızca gerçekten farklı tasarım gerektiğinde oluşturulur.
+Override çalışma zamanı henüz etkin değildir; şu an tek tema `default` olarak sabitlenmiştir. İleride yeni tema desteği açıldığında dosya çözümleyici önce aktif temadaki aynı isimli override dosyasını, bulamazsa `default` altındaki karşılığını kullanacak şekilde genişletilecektir. Override dosyaları yalnızca gerçekten farklı tasarım gerektiğinde oluşturulacaktır.
 
 ## Ortak kurallar
 
