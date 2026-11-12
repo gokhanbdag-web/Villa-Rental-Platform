@@ -96,12 +96,24 @@ final class ThemeManager
     public static function render(string $view, array $variables): void
     {
         $slug = self::activeSlug();
-        $themeDir = self::root() . '/' . $slug;
-        $manifest = self::installed()[$slug]['manifest'] ?? [];
+        // A published homepage layout is the explicit signal that a theme demo/custom
+        // page-builder composition is active. Without one, every theme uses the
+        // preserved Mediterranean editorial homepage as the shared default.
+        $layout = $variables['pageBuilderLayout'] ?? null;
+        $isSharedDefaultLanding = basename($view) === 'landing.php'
+            && (!is_array($layout) || (string)($layout['status'] ?? '') !== 'published');
+        $renderSlug = $isSharedDefaultLanding ? 'mediterranean' : $slug;
+        $themeDir = self::root() . '/' . $renderSlug;
+        $manifest = self::installed()[$renderSlug]['manifest'] ?? [];
         $map = $manifest['templates'] ?? [];
         $relative = isset($map[$view]) && is_string($map[$view]) ? $map[$view] : '';
         $template = '';
-        if ($relative !== '' && !str_contains($relative, '..') && str_starts_with($relative, 'templates/')) {
+        if ($isSharedDefaultLanding) {
+            $candidate = $themeDir . '/templates/landing.php';
+            $real = realpath($candidate);
+            $base = realpath($themeDir);
+            if ($real && $base && str_starts_with($real, $base . DIRECTORY_SEPARATOR) && is_file($real)) $template = $real;
+        } elseif ($relative !== '' && !str_contains($relative, '..') && str_starts_with($relative, 'templates/')) {
             $candidate = $themeDir . '/' . $relative;
             $real = realpath($candidate);
             $base = realpath($themeDir);
@@ -118,7 +130,7 @@ final class ThemeManager
         $css = $themeDir . '/style.css';
         if (is_file($css)) {
             $tag = '<link rel="stylesheet" href="' . e(app_url('/theme-assets/' . rawurlencode($slug) . '/style.css')) . '?v=' . rawurlencode((string)filemtime($css)) . '">';
-            $custom = self::customSettings($slug);
+            $custom = $isSharedDefaultLanding ? [] : self::customSettings($slug);
             if ($custom !== []) {
                 $primary = e((string)($custom['primary'] ?? '#176b50'));
                 $background = e((string)($custom['background'] ?? '#f7f8f5'));
