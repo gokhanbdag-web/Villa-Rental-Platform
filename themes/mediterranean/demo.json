@@ -1,102 +1,138 @@
 {
   "theme": "mediterranean",
-  "version": "1.1.1",
-  "name": "Akdeniz'in en güzel koylarında size özel bir tatil",
-  "description": "Tema için hazırlanmış Türkçe demo sayfa düzenleri.",
+  "version": "1.2.0",
+  "name": "Akdeniz'de size özel, seçkin bir villa tatili",
+  "description": "Akdeniz ruhunu yansıtan, destinasyonları ve seçkin villaları öne çıkaran özgün demo ana sayfası.",
   "pages": {
     "home": {
       "widgets": [
         {
-          "id": "demo-hero",
+          "id": "med-demo-hero",
           "type": "hero",
           "style": "Tam genişlik",
           "settings": {
-            "eyebrow": "AKDENİZ'DE YAVAŞLAYIN",
-            "title": "Akdeniz'in en güzel koylarında size özel bir tatil",
-            "subtitle": "Deniz manzaralı villalar, özel havuzlar ve güne güzel başlayan uzun yaz sabahları.",
-            "image_url": "https://images.unsplash.com/photo-1613490493576-7fde63acd811?auto=format&fit=crop&w=2000&q=88",
+            "eyebrow": "EGE'DEN AKDENİZ'E, HER ŞEY SİZE ÖZEL",
+            "title": "Güne deniz kokusuyla, size ait bir villada başlayın",
+            "subtitle": "Özel havuzlu villalar, büyüleyici koylar ve unutulmaz bir tatil için size en uygun konaklamayı keşfedin.",
+            "image_url": "https://images.unsplash.com/photo-1613490493576-7fde63acd811?auto=format&fit=crop&w=2200&q=90",
             "hero_layout": "overlay",
             "hero_text_position": "left",
-            "search_position": "below",
+            "search_position": "inside-bottom",
             "show_search": true,
-            "hero_height": 590,
-            "overlay_opacity": 48,
+            "hero_height": 650,
+            "overlay_opacity": 42,
             "section_width": "wide",
             "section_spacing": "airy"
           }
         },
         {
-          "id": "demo-destinations",
+          "id": "med-demo-destinations",
           "type": "destinations",
           "style": "Büyük görsel",
           "settings": {
-            "eyebrow": "KEŞFEDİLECEK YERLER",
-            "title": "Bir sonraki rotanızı seçin",
-            "subtitle": "Kalkan, Kaş ve Fethiye'nin seçkin konaklamalarını keşfedin.",
-            "columns": 3,
-            "limit": 6,
+            "eyebrow": "AKDENİZ'İN EN GÜZEL ROTALARI",
+            "title": "Bu yaz nerede olmak istersiniz?",
+            "subtitle": "Her biri kendine özgü koyları, sokakları ve manzaralarıyla öne çıkan tatil beldelerini keşfedin.",
+            "columns": 4,
+            "limit": 8,
+            "section_width": "wide",
             "section_spacing": "airy",
-            "section_width": "wide"
+            "show_property_count": true,
+            "card_radius": 20,
+            "card_gap": 18,
+            "image_height": 260,
+            "card_shadow": "soft"
           }
         },
         {
-          "id": "demo-properties",
+          "id": "med-demo-properties",
           "type": "properties",
           "style": "Büyük görsel",
           "settings": {
-            "eyebrow": "ÖZENLE SEÇİLDİ",
-            "title": "Size uygun konaklamalar",
-            "subtitle": "Gerçek ilanları inceleyin, tarihlerinizi seçin ve rezervasyonunuzu oluşturun.",
+            "eyebrow": "SİZİN İÇİN SEÇTİK",
+            "title": "Öne çıkan villa koleksiyonu",
+            "subtitle": "Konforu, konumu ve kendine ait atmosferiyle öne çıkan konaklamalara göz atın.",
             "columns": 3,
             "limit": 6,
             "sort_by": "popular",
             "show_rating": true,
+            "show_review_count": true,
             "show_price": true,
             "show_gallery": true,
-            "section_width": "wide"
+            "show_favorite": true,
+            "show_badges": true,
+            "section_width": "wide",
+            "section_spacing": "airy",
+            "card_radius": 20,
+            "card_gap": 22,
+            "image_height": 280,
+            "card_shadow": "soft",
+            "image_ratio": "3:2"
           }
         },
         {
-          "id": "demo-story",
+          "id": "med-demo-story",
           "type": "image_text",
-          "style": "Görsel solda",
+          "style": "Görsel sağda",
           "settings": {
-            "eyebrow": "BİZİM YAKLAŞIMIMIZ",
-            "title": "Her konaklamada özenle seçilmiş detaylar",
-            "description": "Deniz manzaralı villalar, özel havuzlar ve güne güzel başlayan uzun yaz sabahları.",
-            "image_url": "https://images.unsplash.com/photo-1613490493576-7fde63acd811?auto=format&fit=crop&w=1200&q=82",
-            "button_text": "Tüm konaklamaları keşfet",
+            "eyebrow": "BİR TATİLDEN DAHA FAZLASI",
+            "title": "Kendi ritminizde, size ait bir Akdeniz",
+            "subtitle": "Sabah kahvenizi havuz başında yudumlayın, gün içinde saklı koyları keşfedin. Akşamı ise sevdiklerinizle, yalnızca size ait bir villanın huzurunda karşılayın.",
+            "image_url": "https://images.unsplash.com/photo-1600607687939-ce8a6c25118c?auto=format&fit=crop&w=1400&q=88",
+            "button_text": "Tüm villaları keşfet",
             "button_url": "/konaklamalar",
-            "media_width": 52,
-            "content_gap": 42,
-            "media_radius": 18,
+            "media_width": 54,
+            "content_gap": 52,
+            "media_radius": 26,
             "media_ratio": "4:3",
-            "content_position": "left",
+            "content_position": "right",
+            "section_width": "wide",
             "section_spacing": "airy"
           }
         },
         {
-          "id": "demo-features",
+          "id": "med-demo-benefits",
           "type": "features",
-          "style": "İkon ızgarası",
+          "style": "Yatay liste",
           "settings": {
-            "eyebrow": "KONAKLAMANIZ BOYUNCA",
-            "title": "İyi bir tatil için gereken her şey",
-            "subtitle": "Aradığınız konforu kolayca bulun.",
-            "items_text": "Özenle seçilmiş konaklamalar\nKolay ve güvenli rezervasyon\nŞeffaf fiyat ve müsaitlik bilgisi",
-            "columns": 3,
-            "section_spacing": "normal"
+            "eyebrow": "İÇİNİZ RAHAT OLSUN",
+            "title": "Tatilinizin her adımında yanınızdayız",
+            "subtitle": "İlk aramadan konaklamanızın son gününe kadar kolay ve anlaşılır bir deneyim.",
+            "items_text": "Özenle sunulan villalar|Fotoğrafları ve özellikleriyle detaylı ilanlar\nKolay rezervasyon süreci|Tarihlerinizi seçin, talebinizi birkaç adımda iletin\nAçık fiyat bilgisi|Konaklama ücretlerini ve koşulları önceden inceleyin\nMisafir desteği|Sorularınız için ihtiyaç duyduğunuzda bize ulaşın",
+            "columns": 4,
+            "section_width": "wide",
+            "section_spacing": "airy",
+            "item_gap": 18,
+            "item_radius": 18,
+            "item_padding": 22,
+            "item_icon_size": 24
           }
         },
         {
-          "id": "demo-cta",
-          "type": "cta",
-          "style": "Renkli bant",
+          "id": "med-demo-faq",
+          "type": "faq",
+          "style": "Akordeon",
           "settings": {
-            "title": "Bir sonraki tatiliniz burada başlıyor",
-            "description": "Tüm seçenekleri keşfedin ve size en uygun konaklamayı bulun.",
-            "button_text": "Villaları keşfet",
+            "eyebrow": "MERAK ETTİKLERİNİZ",
+            "title": "Rezervasyon öncesinde bilmeniz gerekenler",
+            "subtitle": "Villa tatilinizi planlarken en çok sorulan soruların yanıtları.",
+            "items_text": "Rezervasyon talebimi nasıl oluşturabilirim?\nBeğendiğiniz villanın sayfasından giriş ve çıkış tarihlerinizi, misafir sayınızı seçerek rezervasyon talebinizi iletebilirsiniz.\nVillanın müsait olduğunu nasıl kontrol ederim?\nVilla detay sayfasındaki takvim ve arama sonuçları üzerinden uygun tarihleri kontrol edebilirsiniz. Gerekirse ekibimizden destek alabilirsiniz.\nÖdeme koşullarını nereden görebilirim?\nÖdeme planı ve varsa ön ödeme koşulları rezervasyon adımında, ilgili villanın koşullarına göre gösterilir.\nRezervasyonumla ilgili destek alabilir miyim?\nHesabınız üzerinden rezervasyonunuzu takip edebilir, iletişim sayfasındaki kanallardan ekibimize ulaşabilirsiniz.",
+            "columns": 1,
+            "section_width": "narrow",
+            "section_spacing": "airy"
+          }
+        },
+        {
+          "id": "med-demo-cta",
+          "type": "cta",
+          "style": "Görselli",
+          "settings": {
+            "title": "Bir sonraki güzel anınız burada başlasın",
+            "subtitle": "Size uygun villayı bulun; Akdeniz'in tadını kendi planınıza göre çıkarın.",
+            "image_url": "https://images.unsplash.com/photo-1602343168117-bb8ffe3e2e9f?auto=format&fit=crop&w=900&q=85",
+            "button_text": "Hayalinizdeki villayı bulun",
             "button_url": "/konaklamalar",
+            "section_width": "wide",
             "section_spacing": "airy"
           }
         }
