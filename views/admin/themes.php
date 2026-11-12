@@ -21,6 +21,11 @@
 <label>Adres metni<input type="text" name="social[_address][text]" maxlength="180" value="<?= e((string)($socialSettings['_address']['text']??'')) ?>" placeholder="Örn. Ölüdeniz, Fethiye / Muğla"></label>
 <label class="social-admin-active"><input type="checkbox" name="social[_address][active]" value="1" <?= !empty($socialSettings['_address']['active'])?'checked':'' ?>> Adresi üst şeritte göster</label>
 </div>
+<div class="social-address-admin">
+<strong>Üst şerit üçüncü kolon – Çağrı Merkezi</strong>
+<label>Telefon numarası<input type="text" name="social[_call_center][phone]" maxlength="40" value="<?= e((string)($socialSettings['_call_center']['phone']??'')) ?>" placeholder="+90 5XX XXX XX XX" inputmode="tel"></label>
+<label class="social-admin-active"><input type="checkbox" name="social[_call_center][active]" value="1" <?= !empty($socialSettings['_call_center']['active'])?'checked':'' ?>> Çağrı merkezini üst şeritte göster</label>
+</div>
 <div class="social-admin-grid">
 <?php foreach(['instagram'=>'Instagram','facebook'=>'Facebook','youtube'=>'YouTube','tiktok'=>'TikTok','x'=>'X','whatsapp'=>'WhatsApp','pinterest'=>'Pinterest','telegram'=>'Telegram','linkedin'=>'LinkedIn'] as $network=>$networkLabel): $social=$socialSettings[$network]??['url'=>'','family'=>'brand','size'=>20,'active'=>false]; ?>
 <div class="social-admin-card">
