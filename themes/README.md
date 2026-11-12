@@ -73,3 +73,14 @@ Sistemle birlikte gelen 10 tema, tema yöneticisinden etkinleştirilebilir ve ca
 - **Bohem:** terracotta, zeytin ve keten.
 
 Altı yeni tema kendi `theme.json` ve `style.css` dosyalarına sahiptir. Her tema ortak rezervasyon, kullanıcı ve içerik işlemlerini koruyarak kendi görsel dilini uygular. Yerleşik temalar panelden yanlışlıkla silinemez.
+
+## Tema başına demo içeriği
+
+Yerleşik temaların her birinde `demo.json` dosyası bulunur. Paket, ilgili temanın `home`, `hakkimizda`, `iletisim` ve `sikca-sorulan-sorular` sayfaları için ayrı görsel sayfa oluşturucu düzenleri taşır. Demo içeriği Türkçe hazırlanır ve sayfa düzenleri `page_builder_layouts` tablosunda tema kimliğiyle ayrı saklanır.
+
+- Yönetim paneli → Görünüm → Temalar bölümünden **Demo içeriğini yükle** seçilir.
+- İçe aktarma mevcut sayfa düzenlerini asla ezmez; dolu olan sayfaları atlar.
+- İlanlar, kullanıcılar, ev sahipleri, rezervasyonlar, ödeme kayıtları ve ortak CMS metinleri değiştirilmez.
+- **Demo içeriğini güvenle sıfırla** yalnızca içe aktarma sırasında oluşturulan ve sonradan değiştirilmemiş sayfa düzenlerini siler. Yönetici tarafından düzenlenen sayfalar korunur.
+- Her tema paketi ZIP içinde isteğe bağlı `demo.json` taşıyabilir. Demo JSON içeriği mevcut PageBuilder widget allowlist ve ayar doğrulamasından geçirilir.
+- Demo içeriği, temanın aktif edilmesiyle otomatik yüklenmez; yönetici açıkça tek tıklamayla başlatır.
