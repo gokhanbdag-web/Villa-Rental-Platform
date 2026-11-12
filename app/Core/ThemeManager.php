@@ -183,7 +183,6 @@ final class ThemeManager
         if ($template === '') $template = APP_ROOT . '/views/site/' . basename($view);
         if (!is_file($template)) throw new RuntimeException('Tema şablonu bulunamadı: ' . $view);
 
-        $variables['pageBuilderLayout'] = ['widgets'=>[],'status'=>'draft'];
         extract($variables, EXTR_SKIP);
         ob_start();
         require $template;
