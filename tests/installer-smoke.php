@@ -174,7 +174,7 @@ try {
     assertSmoke(!str_contains($rootHtaccess, 'public/demo/') && str_contains($rootHtaccess, 'public/uploads/'), 'Root rewrite rules must not point to the removed demo asset directory and must retain upload routing.');
 
     $themeRoutesSource = (string)file_get_contents($root . '/routes/web.php');
-    $adminShellSource = (string)file_get_contents($root . '/index.php');
+    $adminShellSource = (string)file_get_contents($root . '/themes/default/layouts/admin-shell.php');
     assertSmoke(str_contains($themeRoutesSource, "/admin/header-settings/social-icons") && !str_contains($themeRoutesSource, 'PageBuilder') && !str_contains($themeRoutesSource, '/admin/builder') && !str_contains($adminShellSource, '/admin/builder'), 'Builder routes and navigation must be removed while shared top information settings remain available.');
     assertSmoke(str_contains($themeRoutesSource, "/admin/typography") && str_contains($adminShellSource, "/admin/typography"), 'Theme typography must have an admin route and navigation entry.');
     assertSmoke(str_contains($themeRoutesSource, "/admin/themes") && str_contains($themeRoutesSource, "ThemeManager::saveActiveTheme") && str_contains($adminShellSource, "Translator::get('admin.themes.title')"), 'Theme activation must be available through the translated admin theme manager.');
