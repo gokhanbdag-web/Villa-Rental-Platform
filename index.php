@@ -87,6 +87,7 @@ if ($isAdminPage) {
                 '/admin/newsletter' => 'E-posta Aboneleri',
                 '/admin/messages' => 'İletişim Mesajları',
                 '/admin/typography' => 'Tema Tipografi',
+                '/admin/themes' => 'Tema Yönetimi',
             ],
             'Sistem' => [
                 '/admin/settings' => 'Ayarlar',
@@ -133,6 +134,7 @@ if ($isAdminPage) {
             '/admin/newsletter' => '✉',
             '/admin/messages' => '☏',
             '/admin/typography' => 'Aa',
+            '/admin/themes' => '◈',
             '/admin/settings' => '⚙',
             '/admin/header-settings' => '☷',
             '/admin/translations' => '文',
