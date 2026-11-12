@@ -1,0 +1,17 @@
+{
+  "slug": "default",
+  "name": "Default",
+  "version": "1.0.0",
+  "author": "VillaStay",
+  "description": "Platformun ortak temel teması. Tema override dosyaları bu yapı üzerinden çalışır.",
+  "builtin": true,
+  "templates": {
+    "landing.php": "templates/landing.php",
+    "listing.php": "templates/listing.php",
+    "property.php": "templates/property.php",
+    "destinations.php": "templates/destinations.php",
+    "booking.php": "templates/booking.php",
+    "page.php": "templates/page.php",
+    "account.php": "templates/account.php"
+  }
+}
