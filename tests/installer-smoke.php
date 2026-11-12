@@ -52,7 +52,9 @@ try {
         assertSmoke((int)$check->fetchColumn() === 1, 'Missing required table: ' . $table);
     }
 
-    $expectedThemes = ['default'];
+    $themeManifests = glob($root . '/themes/*/theme.json') ?: [];
+    assertSmoke(count($themeManifests) === 1 && basename(dirname($themeManifests[0])) === 'default', 'Only the default theme manifest may remain installed.');
+    assertSmoke(array_keys(ThemeManager::installed()) === ['default'] && ThemeManager::activeSlug() === 'default', 'Theme manager must expose and activate only the default theme.');
     $defaultManifestPath = $root . '/themes/default/theme.json';
     $defaultManifest = json_decode((string)file_get_contents($defaultManifestPath), true);
     assertSmoke(is_array($defaultManifest) && ($defaultManifest['slug'] ?? '') === 'default', 'The default base theme manifest is missing or invalid.');
