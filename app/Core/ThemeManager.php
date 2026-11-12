@@ -141,43 +141,16 @@ final class ThemeManager
         $html = (string)ob_get_clean();
 
         $socialSettings = self::socialSettings();
-        $socialNames = ['instagram'=>'Instagram','facebook'=>'Facebook','youtube'=>'YouTube','tiktok'=>'TikTok','x'=>'X','whatsapp'=>'WhatsApp','pinterest'=>'Pinterest','telegram'=>'Telegram','linkedin'=>'LinkedIn'];
-        $socialItems = '';
-        foreach ($socialNames as $platform=>$label) {
-            $item = $socialSettings[$platform] ?? [];
-            $url = trim((string)($item['url'] ?? ''));
-            if ($url === '') continue;
-            $size = max(14, min(36, (int)($item['size'] ?? 20)));
-            $family = (string)($item['family'] ?? 'brand');
-            $socialItems .= '<a class="villa-social-link villa-social-link--'.e($family).'" href="'.e($url).'" target="_blank" rel="noopener noreferrer" aria-label="'.e($label).'" title="'.e($label).'" style="--social-icon-size:'.$size.'px">'.self::renderSocialIcon($platform,$family).'</a>';
-        }
-        $addressSettings = $socialSettings['_address'] ?? ['text'=>'','active'=>false];
-        $addressText = trim((string)($addressSettings['text'] ?? ''));
-        $addressMarkup = ($addressText !== '')
-            ? '<div class="villa-social-address">'.e($addressText).'</div>'
-            : '';
-        $callCenterSettings = $socialSettings['_call_center'] ?? ['title'=>'','phone'=>''];
-        $callCenterTitle = trim((string)($callCenterSettings['title'] ?? ''));
-        $callCenterPhone = trim((string)($callCenterSettings['phone'] ?? ''));
-        $callCenterDigits = preg_replace('/[^0-9+]/', '', $callCenterPhone) ?? '';
-        $callCenterTitleMarkup = $callCenterTitle !== '' ? '<span class="villa-social-call-label">'.e($callCenterTitle).'</span>' : '';
-        $callCenterPhoneMarkup = $callCenterPhone !== '' && $callCenterDigits !== '' ? '<a href="tel:'.e($callCenterDigits).'">'.e($callCenterPhone).'</a>' : '';
-        $callCenterMarkup = ($callCenterTitleMarkup !== '' || $callCenterPhoneMarkup !== '')
-            ? '<div class="villa-social-call-center">'.$callCenterTitleMarkup.$callCenterPhoneMarkup.'</div>'
-            : '';
-        $licenseSettings = $socialSettings['_license'] ?? ['title'=>'','number'=>''];
-        $licenseTitle = trim((string)($licenseSettings['title'] ?? ''));
-        $licenseNumber = trim((string)($licenseSettings['number'] ?? ''));
-        $licenseTitleMarkup = $licenseTitle !== '' ? '<span class="villa-social-license-title">'.e($licenseTitle).'</span>' : '';
-        $licenseNumberMarkup = $licenseNumber !== '' ? '<span class="villa-social-license-number">'.e($licenseNumber).'</span>' : '';
-        $licenseSeparator = ($licenseTitleMarkup !== '' && $licenseNumberMarkup !== '') ? '<span class="villa-social-license-separator">:</span>' : '';
-        $licenseMarkup = ($licenseTitleMarkup !== '' || $licenseNumberMarkup !== '')
-            ? '<div class="villa-social-license">'.$licenseTitleMarkup.$licenseSeparator.$licenseNumberMarkup.'</div>'
-            : '';
-        if (($socialItems !== '' || $addressMarkup !== '' || $callCenterMarkup !== '' || $licenseMarkup !== '') && stripos($html, 'villa-social-bar') === false) {
-            $socialBar = '<div class="villa-social-bar"><div class="villa-social-inner"><div class="villa-social-left">'.$socialItems.'</div>'.$addressMarkup.$callCenterMarkup.($licenseMarkup !== '' ? $licenseMarkup : '<div class="villa-social-right"></div>').'</div></div>';
-            if (preg_match('~<div class="med-topbar"~i', $html)) $html = preg_replace('~<div class="med-topbar"~i', $socialBar.'<div class="med-topbar"', $html, 1) ?? $html;
-            else $html = preg_replace('~<header\\b~i', $socialBar.'<header', $html, 1) ?? $html;
+        $renderSocialIcon = static fn(string $platform, string $family): string => self::renderSocialIcon($platform, $family);
+        ob_start();
+        require APP_ROOT . '/themes/default/partials/shared-topbar.php';
+        $socialBar = (string)ob_get_clean();
+        if (trim($socialBar) !== '' && stripos($html, 'villa-social-bar') === false) {
+            if (preg_match('~<div class="med-topbar"~i', $html)) {
+                $html = preg_replace('~<div class="med-topbar"~i', $socialBar . '<div class="med-topbar"', $html, 1) ?? $html;
+            } else {
+                $html = preg_replace('~<header\\b~i', $socialBar . '<header', $html, 1) ?? $html;
+            }
         }
 
         $css = $themeDir . '/style.css';
@@ -186,56 +159,6 @@ final class ThemeManager
             if (stripos($html, '</head>') !== false) $html = preg_replace('/<\/head>/i', $tag . '</head>', $html, 1) ?? $html;
             $html = preg_replace('/<body\b/i', '<body data-villa-theme="' . e($renderSlug) . '"', $html, 1) ?? $html;
         }
-        // Inject after the theme stylesheet so every theme obeys the phone layout rule.
-        $mobileLayout = '<style id="villa-mobile-single-column-global">
-        /* Every installed theme shares a clean white page canvas. */
-        body[data-villa-theme]{background-color:#fff!important;}
-        /* Keep the account logout action on the same desktop navigation row. */
-        @media(min-width:761px){
-          body[data-villa-theme] .theme-header-inner{display:flex!important;flex-wrap:nowrap!important;align-items:center!important;gap:16px!important;min-width:0}
-          body[data-villa-theme] .theme-header .theme-brand{flex:0 0 auto!important;min-width:0!important}
-          body[data-villa-theme] .theme-header .nav{display:flex!important;flex:1 1 auto!important;flex-wrap:nowrap!important;align-items:center!important;justify-content:flex-end!important;gap:4px!important;min-width:0!important}
-          body[data-villa-theme] .theme-header .nav-entry{flex:0 0 auto!important;white-space:nowrap!important}
-          body[data-villa-theme] .theme-header .nav-entry-top{flex-wrap:nowrap!important;white-space:nowrap!important}
-          body[data-villa-theme] .theme-header .nav-entry-top>a,
-          body[data-villa-theme] .theme-header .nav .villa-logout-button{white-space:nowrap!important}
-          body[data-villa-theme] .theme-header .nav .nav-logout-entry{flex:0 0 auto!important;margin-left:4px!important}
-          body[data-villa-theme] .theme-header .nav .villa-logout-form{display:flex!important;align-items:center!important;margin:0!important;padding:0!important}
-          body[data-villa-theme] .theme-header .nav .villa-logout-button{display:inline-flex!important;align-items:center!important;justify-content:center!important;margin:0!important;padding:10px 12px!important;line-height:1.2!important}
-        }
-        @media(max-width:760px){
-          body[data-villa-theme] .cards,body[data-villa-theme] .grid,
-          body[data-villa-theme] .gallery-grid{
-            display:grid!important;grid-template-columns:minmax(0,1fr)!important;
-            grid-auto-flow:row!important;grid-auto-rows:auto!important;
-            width:100%!important;min-width:0!important;
-          }
-          body[data-villa-theme] .cards>*,body[data-villa-theme] .grid>*,
-          body[data-villa-theme] .gallery-grid>*{
-            grid-column:1/-1!important;grid-row:auto!important;width:100%!important;
-            max-width:100%!important;min-width:0!important;
-          }
-        }
-        .villa-social-bar{position:relative;z-index:40;width:100%;background:#f5f5f0;border-bottom:1px solid #e8e8df;box-sizing:border-box}
-        .villa-social-inner{width:100%;max-width:none;margin:0;padding:7px 22px;box-sizing:border-box;display:grid;grid-template-columns:repeat(4,minmax(0,1fr));align-items:center;gap:10px}
-        .villa-social-left{grid-column:1;display:flex;align-items:center;justify-content:flex-start;gap:10px;min-width:0}
-        .villa-social-address{grid-column:2;text-align:center;color:#4b574f;font-size:12px;line-height:1.5;overflow-wrap:anywhere}
-        .villa-social-call-center{grid-column:3;display:flex;align-items:center;justify-content:center;gap:7px;min-width:0;color:#4b574f;font-size:12px;line-height:1.4}
-        .villa-social-call-label{font-weight:700;white-space:nowrap}
-        .villa-social-call-center a{color:inherit;text-decoration:none;font-weight:700;white-space:nowrap}
-        .villa-social-call-center a:hover{text-decoration:underline}
-        .villa-social-license{grid-column:4;display:flex;align-items:center;justify-content:center;gap:5px;min-width:0;color:#4b574f;font-size:12px;line-height:1.4;overflow-wrap:anywhere}
-        .villa-social-license-title{font-weight:700}
-        .villa-social-license-number{font-weight:700}
-        .villa-social-right{grid-column:4;min-height:1px}
-        .villa-social-link{width:30px;height:30px;display:inline-flex;align-items:center;justify-content:center;color:inherit;text-decoration:none;border-radius:50%;transition:opacity .2s,background .2s}
-        .villa-social-link svg{width:var(--social-icon-size,20px);height:var(--social-icon-size,20px);display:block}
-        .villa-social-link--circle{background:#ffffff;border:1px solid currentColor}
-        .villa-social-link:hover{opacity:.72}
-        @media(max-width:760px){.villa-social-inner{padding:6px 12px;grid-template-columns:1fr 1fr;gap:8px}.villa-social-left{grid-column:1;grid-row:1}.villa-social-address{grid-column:2;grid-row:1;text-align:right;font-size:11px}.villa-social-call-center{grid-column:1;grid-row:2;justify-content:flex-start;font-size:11px}.villa-social-license{grid-column:2;grid-row:2;justify-content:flex-end;font-size:11px}.villa-social-right{display:none}.villa-social-link{width:28px;height:28px}}
-        </style>';
-        $html = preg_replace('/<\\/body>/i', $mobileLayout . '</body>', $html, 1) ?? $html;
-
         echo $html;
     }
 

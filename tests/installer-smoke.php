@@ -72,6 +72,14 @@ try {
 
     $themeSettingsViewSource = (string)file_get_contents($root . '/views/admin/header-settings.php');
     assertSmoke(str_contains($themeSettingsViewSource, 'social[_address][text]') && str_contains($themeSettingsViewSource, 'social[_call_center][title]') && str_contains($themeSettingsViewSource, 'social[_call_center][phone]') && str_contains($themeSettingsViewSource, 'social[_license][title]') && str_contains($themeSettingsViewSource, 'social[_license][number]') && str_contains($themeSettingsViewSource, 'Üst Bilgi Ayarları'), 'Shared top information settings must remain editable.');
+    $sharedTopbarPath = $root . '/themes/default/partials/shared-topbar.php';
+    assertSmoke(is_file($sharedTopbarPath), 'The shared top information bar must live in one reusable theme partial.');
+    assertSmoke(str_contains($themeManagerSource, "'/themes/default/partials/shared-topbar.php'") && !str_contains($themeManagerSource, 'villa-mobile-single-column-global'), 'Shared topbar markup and global responsive CSS must not be duplicated in ThemeManager.');
+    $obsoleteTables = (int)$pdo->query("SELECT COUNT(*) FROM information_schema.TABLES WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME IN ('page_builder_layouts','theme_demo_imports','theme_demo_layouts')")->fetchColumn();
+    assertSmoke($obsoleteTables === 0, 'Obsolete Page Builder and theme demo tables must be removed by migrations.');
+    $obsoleteNavigation = (int)$pdo->query("SELECT COUNT(*) FROM navigation_items WHERE url LIKE '/demo-theme/%' OR (label='Demolar' AND url='#')")->fetchColumn();
+    assertSmoke($obsoleteNavigation === 0, 'Obsolete demo theme navigation entries must be removed.');
+
     $themeRoutesSource = (string)file_get_contents($root . '/routes/web.php');
     $adminShellSource = (string)file_get_contents($root . '/index.php');
     assertSmoke(str_contains($themeRoutesSource, "/admin/header-settings/social-icons") && !str_contains($themeRoutesSource, 'PageBuilder') && !str_contains($themeRoutesSource, '/admin/builder') && !str_contains($adminShellSource, '/admin/builder'), 'Builder routes and navigation must be removed while shared top information settings remain available.');
