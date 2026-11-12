@@ -13,38 +13,24 @@ final class ThemeManager
 
     public static function installed(): array
     {
-        $themes = [];
-        foreach (glob(self::root() . '/*/theme.json') ?: [] as $manifestPath) {
-            $dir = dirname($manifestPath);
-            $slug = basename($dir);
-            if (!preg_match('/^[a-z0-9][a-z0-9_-]{1,49}$/', $slug)) continue;
-            $manifest = json_decode((string)file_get_contents($manifestPath), true);
-            if (!is_array($manifest) || ($manifest['slug'] ?? '') !== $slug || empty($manifest['name'])) continue;
-            $themes[$slug] = [
-                'slug' => $slug,
-                'name' => (string)$manifest['name'],
-                'version' => (string)($manifest['version'] ?? '1.0.0'),
-                'description' => (string)($manifest['description'] ?? ''),
-                'author' => (string)($manifest['author'] ?? ''),
-                'builtin' => !empty($manifest['builtin']),
-                'manifest' => $manifest,
-            ];
-        }
-        uasort($themes, static fn(array $a, array $b): int => strcasecmp($a['name'], $b['name']));
-        return $themes;
+        $manifestPath = self::root() . '/default/theme.json';
+        if (!is_file($manifestPath)) return [];
+        $manifest = json_decode((string)file_get_contents($manifestPath), true);
+        if (!is_array($manifest) || ($manifest['slug'] ?? '') !== 'default' || empty($manifest['name'])) return [];
+        return ['default' => [
+            'slug' => 'default',
+            'name' => (string)$manifest['name'],
+            'version' => (string)($manifest['version'] ?? '1.0.0'),
+            'description' => (string)($manifest['description'] ?? ''),
+            'author' => (string)($manifest['author'] ?? ''),
+            'builtin' => true,
+            'manifest' => $manifest,
+        ]];
     }
 
     public static function activeSlug(?PDO $pdo = null): string
     {
-        $preview = $_SESSION['villa_theme_preview'] ?? '';
-        if (is_string($preview) && isset(self::installed()[$preview]) && Auth::check() && in_array(Auth::user()['role'] ?? '', ['admin','super_admin'], true)) return $preview;
-        $demo = $_SESSION['villa_public_demo_theme'] ?? '';
-        if (is_string($demo) && isset(self::installed()[$demo])) return $demo;
-        $pdo ??= Database::connection();
-        $stmt = $pdo->prepare('SELECT setting_value FROM settings WHERE setting_key=? LIMIT 1');
-        $stmt->execute(['theme.active']);
-        $slug = (string)($stmt->fetchColumn() ?: 'mediterranean');
-        return isset(self::installed()[$slug]) ? $slug : (array_key_first(self::installed()) ?: 'mediterranean');
+        return 'default';
     }
 
     public static function activate(string $slug): void
@@ -180,35 +166,14 @@ final class ThemeManager
 
     public static function render(string $view, array $variables): void
     {
-        $slug = self::activeSlug();
-        // Until a theme demo is imported, every frontend template uses the
-        // preserved Mediterranean design as the common default. Demo previews
-        // are exempt so administrators can inspect a package before importing it.
-        $hasImportedDemo = false;
-        try {
-            $hasImportedDemo = ThemeDemoImporter::status($slug) !== [];
-        } catch (\Throwable $e) {
-            error_log('Theme demo status unavailable: ' . $e->getMessage());
-        }
-        $layout = $variables['pageBuilderLayout'] ?? null;
-        $isThemeDemoPreview = basename($view) === 'landing.php'
-            && (string)($_SESSION['villa_builder_preview_theme'] ?? '') === $slug
-            && is_array($layout)
-            && (string)($layout['status'] ?? '') === 'published';
-        $isSharedDefaultTheme = !$hasImportedDemo && !$isThemeDemoPreview;
-        $isSharedDefaultLanding = basename($view) === 'landing.php' && $isSharedDefaultTheme;
-        $renderSlug = $isSharedDefaultTheme ? 'mediterranean' : $slug;
-        $themeDir = self::root() . '/' . $renderSlug;
-        $manifest = self::installed()[$renderSlug]['manifest'] ?? [];
+        $slug = 'default';
+        $renderSlug = 'default';
+        $themeDir = self::root() . '/default';
+        $manifest = self::installed()['default']['manifest'] ?? [];
         $map = $manifest['templates'] ?? [];
         $relative = isset($map[$view]) && is_string($map[$view]) ? $map[$view] : '';
         $template = '';
-        if ($isSharedDefaultLanding) {
-            $candidate = $themeDir . '/templates/landing.php';
-            $real = realpath($candidate);
-            $base = realpath($themeDir);
-            if ($real && $base && str_starts_with($real, $base . DIRECTORY_SEPARATOR) && is_file($real)) $template = $real;
-        } elseif ($relative !== '' && !str_contains($relative, '..') && str_starts_with($relative, 'templates/')) {
+        if ($relative !== '' && !str_contains($relative, '..') && str_starts_with($relative, 'templates/')) {
             $candidate = $themeDir . '/' . $relative;
             $real = realpath($candidate);
             $base = realpath($themeDir);
