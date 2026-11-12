@@ -100,7 +100,7 @@ final class ThemeManager
             $defaults[$platform] = ['url'=>'','family'=>'brand','size'=>20,'active'=>false];
         }
         $defaults['_address'] = ['text'=>'','active'=>false];
-        $defaults['_call_center'] = ['phone'=>'','active'=>false];
+        $defaults['_call_center'] = ['title'=>'Çağrı Merkezi','phone'=>''];
         try {
             $stmt = Database::connection()->prepare('SELECT setting_value FROM settings WHERE setting_key=? LIMIT 1');
             $stmt->execute(['theme.social_icons']);
@@ -131,19 +131,22 @@ final class ThemeManager
             if (!in_array($family, ['brand','circle'], true)) $family = 'brand';
             $size = filter_var($row['size'] ?? 20, FILTER_VALIDATE_INT);
             if ($size === false || $size < 14 || $size > 36) throw new RuntimeException('Sosyal medya ikon boyutu 14 ile 36 px arasında olmalıdır.');
-            $clean[$platform] = ['url'=>$url,'family'=>$family,'size'=>$size,'active'=>!empty($row['active']) && $url !== ''];
+            $clean[$platform] = ['url'=>$url,'family'=>$family,'size'=>$size];
         }
         $address = is_array($input['_address'] ?? null) ? $input['_address'] : [];
         $addressText = trim((string)($address['text'] ?? ''));
         $addressLength = preg_match_all('/./us', $addressText, $addressCharacters);
         if ($addressLength === false || $addressLength > 180) throw new RuntimeException('Header adres bilgisi en fazla 180 karakter olabilir.');
-        $clean['_address'] = ['text'=>$addressText,'active'=>!empty($address['active']) && $addressText !== ''];
+        $clean['_address'] = ['text'=>$addressText];
         $callCenter = is_array($input['_call_center'] ?? null) ? $input['_call_center'] : [];
+        $callCenterTitle = trim((string)($callCenter['title'] ?? ''));
+        $titleLength = preg_match_all('/./us', $callCenterTitle, $titleCharacters);
+        if ($titleLength === false || $titleLength > 60) throw new RuntimeException('Üst şerit başlığı en fazla 60 karakter olabilir.');
         $phone = trim((string)($callCenter['phone'] ?? ''));
         $phoneLength = preg_match_all('/./us', $phone, $phoneCharacters);
         if ($phoneLength === false || $phoneLength > 40) throw new RuntimeException('Çağrı merkezi telefon numarası en fazla 40 karakter olabilir.');
         if ($phone !== '' && !preg_match('/^[0-9+()\\s.\\-]+$/u', $phone)) throw new RuntimeException('Çağrı merkezi telefon numarası geçersiz karakter içeriyor.');
-        $clean['_call_center'] = ['phone'=>$phone,'active'=>!empty($callCenter['active']) && $phone !== ''];
+        $clean['_call_center'] = ['title'=>$callCenterTitle,'phone'=>$phone];
         $stmt = Database::connection()->prepare('INSERT INTO settings(setting_key,setting_value,autoload) VALUES(?,?,1) ON DUPLICATE KEY UPDATE setting_value=VALUES(setting_value),autoload=1');
         $stmt->execute(['theme.social_icons', json_encode($clean, JSON_UNESCAPED_UNICODE | JSON_THROW_ON_ERROR)]);
     }
@@ -216,21 +219,24 @@ final class ThemeManager
         foreach ($socialNames as $platform=>$label) {
             $item = $socialSettings[$platform] ?? [];
             $url = trim((string)($item['url'] ?? ''));
-            if (empty($item['active']) || $url === '') continue;
+            if ($url === '') continue;
             $size = max(14, min(36, (int)($item['size'] ?? 20)));
             $family = (string)($item['family'] ?? 'brand');
             $socialItems .= '<a class="villa-social-link villa-social-link--'.e($family).'" href="'.e($url).'" target="_blank" rel="noopener noreferrer" aria-label="'.e($label).'" title="'.e($label).'" style="--social-icon-size:'.$size.'px">'.self::renderSocialIcon($platform,$family).'</a>';
         }
         $addressSettings = $socialSettings['_address'] ?? ['text'=>'','active'=>false];
         $addressText = trim((string)($addressSettings['text'] ?? ''));
-        $addressMarkup = (!empty($addressSettings['active']) && $addressText !== '')
+        $addressMarkup = ($addressText !== '')
             ? '<div class="villa-social-address">'.e($addressText).'</div>'
             : '';
-        $callCenterSettings = $socialSettings['_call_center'] ?? ['phone'=>'','active'=>false];
+        $callCenterSettings = $socialSettings['_call_center'] ?? ['title'=>'','phone'=>''];
+        $callCenterTitle = trim((string)($callCenterSettings['title'] ?? ''));
         $callCenterPhone = trim((string)($callCenterSettings['phone'] ?? ''));
         $callCenterDigits = preg_replace('/[^0-9+]/', '', $callCenterPhone) ?? '';
-        $callCenterMarkup = (!empty($callCenterSettings['active']) && $callCenterPhone !== '' && $callCenterDigits !== '')
-            ? '<div class="villa-social-call-center"><span class="villa-social-call-label">Çağrı Merkezi</span><a href="tel:'.e($callCenterDigits).'">'.e($callCenterPhone).'</a></div>'
+        $callCenterTitleMarkup = $callCenterTitle !== '' ? '<span class="villa-social-call-label">'.e($callCenterTitle).'</span>' : '';
+        $callCenterPhoneMarkup = $callCenterPhone !== '' && $callCenterDigits !== '' ? '<a href="tel:'.e($callCenterDigits).'">'.e($callCenterPhone).'</a>' : '';
+        $callCenterMarkup = ($callCenterTitleMarkup !== '' || $callCenterPhoneMarkup !== '')
+            ? '<div class="villa-social-call-center">'.$callCenterTitleMarkup.$callCenterPhoneMarkup.'</div>'
             : '';
         if (($socialItems !== '' || $addressMarkup !== '' || $callCenterMarkup !== '') && stripos($html, 'villa-social-bar') === false) {
             $socialBar = '<div class="villa-social-bar"><div class="villa-social-inner"><div class="villa-social-left">'.$socialItems.'</div>'.$addressMarkup.$callCenterMarkup.'<div class="villa-social-right"></div></div></div>';
