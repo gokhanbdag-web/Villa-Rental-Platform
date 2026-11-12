@@ -9,8 +9,7 @@ RewriteRule ^(app|config|database|storage|views|routes)/ - [F,L,NC]
 RewriteRule ^themes/ - [F,L,NC]
 RewriteRule ^\. - [F,L]
 
-# Map public assets when the repository root is used as the document root.
-RewriteRule ^demo/(.*)$ public/demo/$1 [L]
+# Map uploaded media when the repository root is used as the document root.
 RewriteRule ^uploads/(.*)$ public/uploads/$1 [L]
 
 # Let existing files/directories (including the installer) be served normally.

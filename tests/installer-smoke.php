@@ -81,6 +81,9 @@ try {
     $obsoleteNavigation = (int)$pdo->query("SELECT COUNT(*) FROM navigation_items WHERE url LIKE '/demo-theme/%' OR (label='Demolar' AND url='#')")->fetchColumn();
     assertSmoke($obsoleteNavigation === 0, 'Obsolete demo theme navigation entries must be removed.');
 
+    $rootHtaccess = (string)file_get_contents($root . '/.htaccess');
+    assertSmoke(!str_contains($rootHtaccess, 'public/demo/') && str_contains($rootHtaccess, 'public/uploads/'), 'Root rewrite rules must not point to the removed demo asset directory and must retain upload routing.');
+
     $themeRoutesSource = (string)file_get_contents($root . '/routes/web.php');
     $adminShellSource = (string)file_get_contents($root . '/index.php');
     assertSmoke(str_contains($themeRoutesSource, "/admin/header-settings/social-icons") && !str_contains($themeRoutesSource, 'PageBuilder') && !str_contains($themeRoutesSource, '/admin/builder') && !str_contains($adminShellSource, '/admin/builder'), 'Builder routes and navigation must be removed while shared top information settings remain available.');
