@@ -3,7 +3,7 @@ declare(strict_types=1);
 
 // Theme-specific site chrome; the shared view retains its business flow and form handling.
 ob_start();
-$pageTemplate = \App\\Core\\ThemeManager::resolveFile('templates/pages/booking.php');
+$pageTemplate = \App\Core\ThemeManager::resolveFile('templates/pages/booking.php');
 if ($pageTemplate === null) throw new RuntimeException('Tema sayfa bileşeni bulunamadı: booking');
 require $pageTemplate;
 $html = (string) ob_get_clean();
@@ -13,7 +13,7 @@ $html = (string) ob_get_clean();
 ob_start();
 $navItems = $navigation ?? [];
 $navAllowAuth = true;
-\App\\Core\\ThemeManager::renderPartial('partials/navigation-items.php', get_defined_vars());
+\App\Core\ThemeManager::renderPartial('partials/navigation-items.php', get_defined_vars());
 $navHtml = '<nav class="nav" id="siteNavigation">' . (string) ob_get_clean() . '</nav>';
 
 $themeSiteName = (string) ($content['site_name'] ?? $siteName ?? 'VillaStay');
