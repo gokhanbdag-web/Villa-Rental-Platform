@@ -1,79 +1,31 @@
-<?php declare(strict_types=1); ?>
-<!doctype html><html lang="tr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Tema yönetimi</title>
+<?php declare(strict_types=1);
+$platforms = [
+    'instagram'=>'Instagram','facebook'=>'Facebook','youtube'=>'YouTube','tiktok'=>'TikTok',
+    'x'=>'X','whatsapp'=>'WhatsApp','pinterest'=>'Pinterest','telegram'=>'Telegram','linkedin'=>'LinkedIn'
+];
+$settings = is_array($socialSettings ?? null) ? $socialSettings : [];
+?>
+<!doctype html>
+<html lang="tr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Üst Bilgi Ayarları</title>
 <style>
-.theme-page{max-width:1180px;margin:auto;color:#26352e}.theme-page h1{font-size:27px;margin:0 0 8px}.theme-lead{color:#738078;margin:0 0 24px}.theme-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:17px}.theme-card{background:#fff;border:1px solid #e5ebe7;border-radius:16px;overflow:hidden;box-shadow:0 4px 16px #1b30200a}.theme-preview{height:128px;padding:18px;display:flex;align-items:end;gap:8px}.theme-preview span{display:block;height:65px;flex:1;border-radius:9px 9px 3px 3px;background:#ffffffa8}.theme-info{padding:17px}.theme-info h2{font-size:17px;margin:0 0 5px}.theme-info p{font-size:12px;line-height:1.5;color:#78847c;min-height:36px}.theme-actions{display:flex;gap:8px;flex-wrap:wrap}.theme-actions form{margin:0}.theme-actions button,.theme-upload button{border:0;border-radius:8px;padding:10px 13px;background:#176b50;color:#fff;font-weight:750;font-size:12px;cursor:pointer}.theme-actions .secondary{background:#f0f5f1;color:#176b50}.theme-status{font-size:11px;font-weight:800;color:#176b50;margin-bottom:8px}.theme-upload{margin-top:24px;background:#fff;border:1px solid #e5ebe7;border-radius:15px;padding:20px}.theme-upload h2{font-size:18px;margin:0 0 8px}.theme-upload input{display:block;margin:12px 0;max-width:100%}.theme-notice{padding:12px 14px;border-radius:9px;background:#eff7f1;color:#176b50;margin:0 0 16px;font-size:13px}.theme-warning{padding:12px 14px;border-radius:9px;background:#fff7e8;color:#79591f;margin-top:13px;font-size:12px;line-height:1.5}
-.social-address-admin{max-width:680px;margin:14px 0 18px;padding:14px;border:1px solid #e5ebe7;border-radius:11px;background:#fbfcfa}.social-address-admin>strong{display:block;margin-bottom:10px;color:#26352e;font-size:13px}.social-address-admin label{display:block;margin:8px 0;font-size:11px;font-weight:700;color:#68766d}.social-address-admin input[type=text]{display:block;box-sizing:border-box;width:100%;margin-top:5px;padding:10px;border:1px solid #dce5dd;border-radius:7px;background:#fff;color:#26352e;font-size:13px}.social-address-admin .social-admin-active{display:flex;align-items:center;gap:7px}.social-address-admin .social-admin-active input{width:16px;height:16px}.social-admin-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:11px;margin-top:15px}.social-admin-card{padding:13px;border:1px solid #e5ebe7;border-radius:11px;background:#fbfcfa}.social-admin-card>strong{display:block;margin-bottom:10px;color:#26352e;font-size:13px}.social-admin-card label{display:block;margin:8px 0;font-size:11px;font-weight:700;color:#68766d}.social-admin-card input[type=url],.social-admin-card select{display:block;box-sizing:border-box;width:100%;margin-top:5px;padding:9px;border:1px solid #dce5dd;border-radius:7px;background:#fff;color:#26352e;font-size:12px}.social-admin-fields{display:grid;grid-template-columns:1fr 1fr;gap:8px}.social-admin-card .social-admin-active{display:flex;align-items:center;gap:7px;margin-top:10px}.social-admin-active input{width:16px;height:16px}.theme-custom-settings{border-top:1px solid #edf1ed;margin-top:15px;padding-top:13px}.theme-custom-settings summary{cursor:pointer;color:#176b50;font-size:12px;font-weight:800}.theme-custom-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px;margin:12px 0}.theme-custom-grid label{font-size:11px;font-weight:700;color:#68766d}.theme-custom-grid input[type=color]{display:block;width:100%;height:35px;padding:2px;border:1px solid #dce5dd;border-radius:7px;background:#fff}.theme-custom-grid input[type=number]{width:100%;box-sizing:border-box;padding:8px;border:1px solid #dce5dd;border-radius:7px}.theme-custom-settings button{width:100%}.theme-live-preview{display:block;margin:0 0 12px;overflow:hidden;border:1px solid #e4eae5;border-radius:12px;background:#f4f5ef}.theme-live-preview .mock-top{height:25px;padding:0 9px;display:flex;align-items:center;justify-content:space-between;font-size:9px;font-weight:800}.theme-live-preview .mock-hero{margin:8px;height:88px;border-radius:9px;padding:12px;display:flex;flex-direction:column;justify-content:end;color:white;font-size:12px;font-weight:800}.theme-live-preview .mock-hero small{font-size:8px;font-weight:500}.theme-live-preview .mock-cards{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;padding:0 8px 9px}.theme-live-preview .mock-cards i{height:42px;border-radius:6px;background:linear-gradient(140deg,#d8ded5,#a9b9a7)}.theme-demo{margin:13px 0;padding:12px;border:1px solid #e5ece6;border-radius:10px;background:#f8fbf8}.theme-demo strong{display:block;font-size:12px;color:#275a40}.theme-demo p{min-height:0;margin:5px 0 10px;font-size:11px;color:#758078}.theme-demo-actions{display:flex;gap:7px;flex-wrap:wrap}.theme-demo-actions form{flex:1;min-width:110px}.theme-demo-actions button{width:100%;border:0;border-radius:8px;padding:9px 10px;background:#176b50;color:#fff;font-size:11px;font-weight:800;cursor:pointer}.theme-demo-actions .secondary{background:#edf3ee;color:#176b50}
-</style></head><body><main class="theme-page">
-<h1>Tema yönetimi</h1><p class="theme-lead">Sitenizin görünümünü değiştirin veya yeni tema paketleri yükleyin. Tema değişikliği ilan, kullanıcı ve rezervasyon verilerinizi etkilemez.</p><p class="theme-lead" style="font-size:12px;margin-top:-16px">Kartlardaki küçük tasarım görünümü hızlı renk önizlemesidir. “Canlı önizle” seçilen temayı gerçek ana sayfada yeni sekmede açar.</p>
-<?php if(!empty($themeMessage)): ?><div class="theme-notice"><?= e($themeMessage) ?></div><?php endif; ?>
-<section class="theme-demo" style="margin:0 0 18px;padding:15px">
-<strong>Varsayılan tasarım ve demo hazırlığı</strong>
-<p>Önce tüm temaların demo düzenlerini sıfırlayıp ortak Akdeniz varsayılan görünümüne dönebilirsiniz. Kullanıcı, ilan ve rezervasyon kayıtları etkilenmez; elle değiştirilmiş demo sayfaları veri kaybını önlemek için korunur.</p>
-<form method="post" action="<?= e(app_url('/admin/themes/demo/reset-all')) ?>" onsubmit="return confirm('Tüm temaların demo düzenleri sıfırlansın ve önceki düzenler geri yüklensin mi? Elle değiştirilmiş sayfalar korunacaktır.')"><?= csrf_field() ?><button type="submit" style="border:0;border-radius:8px;padding:10px 14px;background:#176b50;color:#fff;font-weight:800">Tüm temaların demolarını sıfırla</button></form>
-</section>
-<section class="theme-upload" style="margin:0 0 22px">
-<h2>Üst bilgi ayarları</h2>
-<p style="font-size:13px;color:#77827b">Bu gruptaki ayarlar bütün temaların üst bilgi şeridinde geçerlidir. Bir alana değer girildiğinde otomatik gösterilir; boş bırakılan alanlar ziyaretçiye gösterilmez.</p>
+*{box-sizing:border-box}.top-settings{max-width:980px;margin:0 auto;color:#26352e}.top-settings h1{font-size:25px;margin:0 0 8px}.top-settings>p{color:#738078;margin:0 0 22px}.notice{padding:12px 14px;border-radius:9px;background:#eff7f1;color:#176b50;margin:0 0 16px;font-size:13px}.panel{background:#fff;border:1px solid #e5ebe7;border-radius:13px;padding:18px;margin:0 0 16px}.panel h2{font-size:16px;margin:0 0 5px}.panel>p{font-size:12px;color:#78847c;margin:0 0 14px}.fields{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}.field label{display:block;font-size:12px;font-weight:700;color:#68766d;margin:0 0 5px}.field input,.field select{width:100%;padding:10px;border:1px solid #dce5dd;border-radius:8px;background:#fff;color:#26352e;font-size:13px}.social-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:10px}.social{padding:12px;border:1px solid #e5ebe7;border-radius:10px;background:#fbfcfa}.social strong{display:block;font-size:13px;margin-bottom:9px}.social .fields{grid-template-columns:1fr 90px}.save{border:0;border-radius:9px;background:#176b50;color:#fff;padding:12px 18px;font-weight:800;cursor:pointer}.save:hover{background:#12583f}@media(max-width:600px){.fields{grid-template-columns:1fr}.panel{padding:14px}.social .fields{grid-template-columns:1fr 80px}}
+</style></head><body><main class="top-settings">
+<h1>Üst Bilgi Ayarları</h1><p>Bu alan tüm temalarda ortaktır. Boş bıraktığınız bilgiler sitede gösterilmez.</p>
+<?php if(($themeMessage??'')!==''): ?><div class="notice"><?= e($themeMessage) ?></div><?php endif; ?>
 <form method="post" action="<?= e(app_url('/admin/themes/social-icons')) ?>">
 <?= csrf_field() ?>
-<div class="social-address-admin">
-<strong>Üst şerit orta alanı – adres bilgisi</strong>
-<label>Adres metni<input type="text" name="social[_address][text]" maxlength="180" value="<?= e((string)($socialSettings['_address']['text']??'')) ?>" placeholder="Örn. Ölüdeniz, Fethiye / Muğla"></label>
-</div>
-<div class="social-address-admin">
-<strong>Üst şerit üçüncü kolon – Başlık ve telefon</strong>
-<label>Başlık<input type="text" name="social[_call_center][title]" maxlength="60" value="<?= e((string)($socialSettings['_call_center']['title']??'Çağrı Merkezi')) ?>" placeholder="Örn. Çağrı Merkezi, İletişim"></label>
-<label>Telefon numarası<input type="text" name="social[_call_center][phone]" maxlength="40" value="<?= e((string)($socialSettings['_call_center']['phone']??'')) ?>" placeholder="+90 5XX XXX XX XX" inputmode="tel"></label>
-</div>
-<div class="social-address-admin">
-<strong>Üst şerit dördüncü kolon – TÜRSAB lisans bilgisi</strong>
-<label>Başlık<input type="text" name="social[_license][title]" maxlength="60" value="<?= e((string)($socialSettings['_license']['title']??'')) ?>" placeholder="Örn. TÜRSAB Lisans"></label>
-<label>Lisans numarası<input type="text" name="social[_license][number]" maxlength="40" value="<?= e((string)($socialSettings['_license']['number']??'')) ?>" placeholder="Örn. 1172"></label>
-</div>
-<div class="social-admin-grid">
-<?php foreach(['instagram'=>'Instagram','facebook'=>'Facebook','youtube'=>'YouTube','tiktok'=>'TikTok','x'=>'X','whatsapp'=>'WhatsApp','pinterest'=>'Pinterest','telegram'=>'Telegram','linkedin'=>'LinkedIn'] as $network=>$networkLabel): $social=$socialSettings[$network]??['url'=>'','family'=>'brand','size'=>20]; ?>
-<div class="social-admin-card">
-<strong><?= e($networkLabel) ?></strong>
-<label>Profil bağlantısı<input type="url" name="social[<?= e($network) ?>][url]" value="<?= e((string)($social['url']??'')) ?>" placeholder="https://..." inputmode="url"></label>
-<div class="social-admin-fields">
-<label>İkon ailesi<select name="social[<?= e($network) ?>][family]"><option value="brand" <?= ($social['family']??'brand')==='brand'?'selected':'' ?>>Marka çizgisi</option><option value="circle" <?= ($social['family']??'brand')==='circle'?'selected':'' ?>>Daireli</option></select></label>
-<label>İkon boyutu<select name="social[<?= e($network) ?>][size]"><?php foreach([16,18,20,22,24,28,32,36] as $px): ?><option value="<?= $px ?>" <?= (int)($social['size']??20)===$px?'selected':'' ?>><?= $px ?> px</option><?php endforeach; ?></select></label>
-</div>
-</div>
+<section class="panel"><h2>Adres, çağrı merkezi ve TÜRSAB lisansı</h2><p>Her bilgi kendi alanı dolu olduğunda görüntülenir.</p>
+<div class="fields">
+<div class="field"><label for="topAddress">Adres</label><input id="topAddress" type="text" name="social[_address][text]" maxlength="180" value="<?= e((string)($settings['_address']['text']??'')) ?>"></div>
+<div class="field"><label for="callTitle">Çağrı merkezi başlığı</label><input id="callTitle" type="text" name="social[_call_center][title]" maxlength="60" value="<?= e((string)($settings['_call_center']['title']??'')) ?>"></div>
+<div class="field"><label for="callPhone">Çağrı merkezi telefonu</label><input id="callPhone" type="text" name="social[_call_center][phone]" maxlength="40" value="<?= e((string)($settings['_call_center']['phone']??'')) ?>"></div>
+<div class="field"><label for="licenseTitle">TÜRSAB lisans başlığı</label><input id="licenseTitle" type="text" name="social[_license][title]" maxlength="60" value="<?= e((string)($settings['_license']['title']??'')) ?>"></div>
+<div class="field"><label for="licenseNumber">TÜRSAB lisans numarası</label><input id="licenseNumber" type="text" name="social[_license][number]" maxlength="40" value="<?= e((string)($settings['_license']['number']??'')) ?>"></div>
+</div></section>
+<section class="panel"><h2>Sosyal medya bağlantıları</h2><p>Bağlantı adresi girilen platformlar otomatik görüntülenir.</p><div class="social-grid">
+<?php foreach($platforms as $key=>$label): $item=$settings[$key]??[]; ?>
+<div class="social"><strong><?= e($label) ?></strong><div class="field"><label for="social-<?= e($key) ?>">Profil bağlantısı</label><input id="social-<?= e($key) ?>" type="url" name="social[<?= e($key) ?>][url]" placeholder="https://" value="<?= e((string)($item['url']??'')) ?>"></div><div class="fields" style="margin-top:9px"><div class="field"><label>İkon biçimi</label><select name="social[<?= e($key) ?>][family]"><option value="brand" <?= ($item['family']??'brand')==='brand'?'selected':'' ?>>Marka</option><option value="circle" <?= ($item['family']??'brand')==='circle'?'selected':'' ?>>Çizgisel</option></select></div><div class="field"><label>Boyut (px)</label><input type="number" min="14" max="36" name="social[<?= e($key) ?>][size]" value="<?= (int)($item['size']??20) ?>"></div></div></div>
 <?php endforeach; ?>
-</div>
-<button type="submit" style="margin-top:14px;border:0;border-radius:8px;padding:11px 16px;background:#176b50;color:#fff;font-weight:800;cursor:pointer">Üst bilgi ayarlarını kaydet</button>
-</form>
-</section>
-<div class="theme-grid">
-<?php foreach($themes as $theme): $slug=$theme['slug']; $colors=['mediterranean'=>['#f3ead8','#8d9b70','#fffaf0'],'modern'=>['#f2f3f5','#242a32','#ffffff'],'prestige'=>['#101d31','#c5a56b','#f8f4eb'],'boutique'=>['#e7eee7','#718778','#fcfbf7'],'riviera'=>['#f5eee2','#1e7778','#fffdf8'],'alpine'=>['#e9e8df','#29463d','#f8f7f1'],'nocturne'=>['#111316','#b99560','#202329'],'kyoto'=>['#f1eee5','#383b36','#fffdf7'],'loft'=>['#e8e9eb','#20252d','#ffffff'],'bohem'=>['#f2e8d8','#a9543c','#fff8ed']]; $palette=$colors[$slug]??['#e8eee9','#176b50','#ffffff']; ?>
-<article class="theme-card"><div class="theme-live-preview"><div class="mock-top" style="background:<?= e($themeSettings[$slug]['surface']??$palette[2]) ?>;color:<?= e($themeSettings[$slug]['text']??'#26352e') ?>"><span><?= e($theme['name']) ?></span><span>MENÜ　☰</span></div><div class="mock-hero" style="background:linear-gradient(120deg,<?= e($themeSettings[$slug]['primary']??$palette[1]) ?>,<?= e($themeSettings[$slug]['accent']??$palette[1]) ?>)"><small>VİLLA TATİLİNİZ</small>Hayalinizdeki konaklama</div><div class="mock-cards"><i></i><i></i><i></i></div></div><div class="theme-info">
-<?php if($activeTheme===$slug): ?><div class="theme-status">● ETKİN TEMA</div><?php endif; ?>
-<h2><?= e($theme['name']) ?></h2><p><?= e($theme['description']) ?></p><small style="display:block;color:#89938d;margin-bottom:13px">Sürüm <?= e($theme['version']) ?> · <?= e($theme['author']) ?></small>
-<?php $demoStatus=$themeDemoStatuses[$slug]??[]; $hasDemo=!empty($themeDemoAvailable[$slug]); $demoVersion=(string)($themeDemoVersions[$slug]??'1.0.0'); $needsDemoUpdate=$demoStatus && version_compare((string)($demoStatus['package_version']??'0'),$demoVersion,'<'); ?>
-<?php if($hasDemo): ?><div class="theme-demo">
-<strong><?= $needsDemoUpdate ? '↻ Yeni demo sürümü hazır' : ($demoStatus ? '✓ Demo içeriği yüklü' : 'Tema demo içeriği hazır') ?></strong>
-<p><?= $demoStatus ? 'Yüklü sürüm: '.e((string)$demoStatus['package_version']).' · Güncel sürüm: '.e($demoVersion).' · '.e((string)$demoStatus['created_layouts']).' sayfa düzeni' : 'Bu temaya özel ana sayfa ve içerik sayfası düzenlerini tek tıklamayla yükleyin.' ?></p>
-<div class="theme-demo-actions">
-<form method="post" action="<?= e(app_url('/admin/themes/demo/preview')) ?>" target="_blank"><?= csrf_field() ?><input type="hidden" name="slug" value="<?= e($slug) ?>"><button class="secondary" type="submit">Demo önizlemesi</button></form>
-<?php if(!$demoStatus || $needsDemoUpdate): ?><form method="post" action="<?= e(app_url('/admin/themes/demo/import')) ?>"><?= csrf_field() ?><input type="hidden" name="slug" value="<?= e($slug) ?>"><button type="submit"><?= $needsDemoUpdate ? 'Demo içeriğini güncelle' : 'Demo içeriğini yükle' ?></button></form>
-<?php else: ?><form method="post" action="<?= e(app_url('/admin/themes/demo/reset')) ?>" onsubmit="return confirm('Demo tarafından eklenen ve hiç değiştirilmemiş sayfa düzenleri kaldırılsın mı? Önceki tema düzenleri geri yüklenecek; sizin sonradan değiştirdiğiniz sayfalar korunacaktır.')"><?= csrf_field() ?><input type="hidden" name="slug" value="<?= e($slug) ?>"><button class="secondary" type="submit">Demo içeriğini güvenle sıfırla</button></form><?php endif; ?>
-</div></div><?php else: ?><div class="theme-demo"><strong>Demo paketi bulunmuyor</strong><p>Bu tema için henüz tek tıklamalı demo içeriği eklenmemiş.</p></div><?php endif; ?>
-<div class="theme-actions">
-<form method="post" action="<?= e(app_url('/admin/themes/activate')) ?>"><?= csrf_field() ?><input type="hidden" name="slug" value="<?= e($slug) ?>"><button type="submit" <?= $activeTheme===$slug?'disabled':'' ?>><?= $activeTheme===$slug?'Etkin':'Temayı etkinleştir' ?></button></form>
-<form method="post" action="<?= e(app_url('/admin/themes/preview')) ?>" target="_blank"><?= csrf_field() ?><input type="hidden" name="slug" value="<?= e($slug) ?>"><button class="secondary" type="submit">Canlı önizle</button></form>
-<?php if(!$theme['builtin'] && $activeTheme!==$slug): ?><form method="post" action="<?= e(app_url('/admin/themes/delete')) ?>" onsubmit="return confirm('Bu tema paketi silinsin mi?')"><?= csrf_field() ?><input type="hidden" name="slug" value="<?= e($slug) ?>"><button class="secondary" type="submit">Sil</button></form><?php endif; ?>
-</div><details class="theme-custom-settings"><summary>Görünümü özelleştir</summary><form method="post" action="<?= e(app_url('/admin/themes/settings')) ?>"><?= csrf_field() ?><input type="hidden" name="slug" value="<?= e($slug) ?>"><div class="theme-custom-grid">
-<label>Ana renk<input type="color" name="primary" value="<?= e($themeSettings[$slug]['primary']??$palette[1]) ?>"></label>
-<label>Vurgu rengi<input type="color" name="accent" value="<?= e($themeSettings[$slug]['accent']??'#c5a56b') ?>"></label>
-<label>Sayfa zemini<input type="color" name="background" value="<?= e($themeSettings[$slug]['background']??$palette[0]) ?>"></label>
-<label>Panel rengi<input type="color" name="surface" value="<?= e($themeSettings[$slug]['surface']??$palette[2]) ?>"></label>
-<label>Yazı rengi<input type="color" name="text" value="<?= e($themeSettings[$slug]['text']??'#26352e') ?>"></label>
-<label>Buton rengi<input type="color" name="button_color" value="<?= e($themeSettings[$slug]['button_color']??($themeSettings[$slug]['primary']??$palette[1])) ?>"></label>
-<label>Köşe yuvarlaklığı (px)<input type="number" name="radius" min="0" max="32" value="<?= e((string)($themeSettings[$slug]['radius']??18)) ?>"></label>
-</div><button type="submit">Görünüm ayarlarını kaydet</button></form></details></div></article>
-<?php endforeach; ?>
-</div>
-<section class="theme-upload"><h2>Yeni tema yükle</h2><p style="font-size:13px;color:#77827b">Tema ZIP paketi; kök dizinde theme.json ve style.css, isteğe bağlı templates/ ve assets/ klasörleri içermelidir.</p><form method="post" enctype="multipart/form-data" action="<?= e(app_url('/admin/themes/upload')) ?>"><?= csrf_field() ?><input type="file" name="theme_zip" accept=".zip,application/zip" required><button type="submit">Tema paketini yükle</button></form>
-<div class="theme-warning">Güvenlik: PHP şablonları çalıştırılabilir kod içerir. Yalnızca kaynağına güvendiğiniz tema paketlerini yükleyin. ZIP yükleme için sunucuda PHP ZipArchive eklentisi etkin olmalıdır.</div></section>
-</main></body></html>
+</div></section>
+<button class="save" type="submit">Üst bilgi ayarlarını kaydet</button>
+</form></main></body></html>
