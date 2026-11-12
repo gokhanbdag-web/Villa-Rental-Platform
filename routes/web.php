@@ -1216,8 +1216,13 @@ $router->post('/admin/header-settings/social-icons', static function (): void {
     Auth::requireRole(['super_admin','admin']);verify_csrf();
     try {
         ThemeManager::saveSocialSettings((array)($_POST['social']??[]));
-        $_SESSION['villa_theme_message']='Üst bilgi ayarları kaydedildi.';
-    } catch(Throwable $e) { $_SESSION['villa_theme_message']=$e->getMessage(); }
+        $_SESSION['villa_theme_message']='Üst bilgi ayarları başarıyla veritabanına kaydedildi.';
+        $_SESSION['villa_theme_message_type']='success';
+    } catch(Throwable $e) {
+        error_log('Shared header settings save failed: '.$e->getMessage());
+        $_SESSION['villa_theme_message']='Kayıt başarısız: '.$e->getMessage();
+        $_SESSION['villa_theme_message_type']='error';
+    }
     redirect('/admin/header-settings');
 });
 
