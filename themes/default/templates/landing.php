@@ -206,12 +206,7 @@ if($hostTitle!==''||$hostSubtitle!==''||$hostCta!==''){
         return '<div class="host-copy"><h2>'.e($hostTitle).'</h2><p>'.e($hostSubtitle).'</p><a href="'.e(app_url('/vendor/register')).'">'.e($hostCta!==''?$hostCta:'Ev sahibi olarak katılın').' ↗</a></div>';
     },$html,1)??$html;
 }
-$footerColumns = '<div class="med-footer-columns"><div><strong>'.e((string)($content['home_footer_regions_title']??'Popüler Bölgeler')).'</strong><ul>';
-foreach(array_slice($destinations??[],0,6) as $destination){$footerColumns.='<li><a href="'.e(app_url('/konaklamalar?location_id='.(int)$destination['location_id'])).'">'.e($destination['city']).'</a></li>';}
-$footerColumns.='</ul></div><div><strong>'.e((string)($content['home_footer_categories_title']??'Villa Konseptleri')).'</strong><ul>';
-foreach(array_slice($categories??[],0,6) as $category){$footerColumns.='<li><a href="'.e(app_url('/konaklamalar?category='.(int)$category['id'])).'">'.e($category['name']).'</a></li>';}
-$footerColumns.='</ul></div><div><strong>'.e((string)($content['home_footer_contact_title']??'İletişim')).'</strong><ul><li>'.e((string)($content['home_support_phone']??'')).'</li></ul></div></div>';
-$html = str_replace('</nav></div></footer>', '</nav>'.$footerColumns.'</div></footer>', $html);
+// Footer content is rendered only by the shared six-slot footer partial.
 $regionTitle=trim((string)($content['home_regions_title']??''));
 $regionSubtitle=trim((string)($content['home_regions_subtitle']??''));
 $regionEyebrow=trim((string)($content['home_regions_eyebrow']??'KEŞFETMEYE BAŞLA'));
