@@ -691,7 +691,7 @@ final class ThemeManager
             . $themeScope . ' h5{font-size:' . max(16, (int)round($headingBaseSize * .39)) . 'px!important}'
             . $themeScope . ' h6{font-size:' . max(15, (int)round($headingBaseSize * .35)) . 'px!important}';
         $typographyCss = $themeScope . ' .villa-social-inner{min-height:' . (int)$typography['topbar_height'] . 'px}'
-            . $themeScope . ' body,' . $themeScope . '{font-family:' . json_encode($paragraph['family']) . ',system-ui,sans-serif;-webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility}'
+            . $themeScope . '{font-family:' . json_encode($paragraph['family']) . ',system-ui,sans-serif;-webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility}'
             . $headingRules
             . $themeScope . ' p{font-family:' . json_encode($paragraph['family']) . '!important;font-size:' . (int)$paragraph['size'] . 'px!important;color:' . $paragraph['color'] . '!important;font-weight:' . (int)$paragraph['weight'] . '!important;font-style:' . $paragraph['style'] . '!important;line-height:1.75!important;letter-spacing:0!important}'
             . $themeScope . ' .villa-eyebrow,' . $themeScope . ' .eyebrow:not(.villa-hero-eyebrow),' . $themeScope . ' .section-eyebrow,' . $themeScope . ' .pill,' . $themeScope . ' .section-head .eyebrow,' . $themeScope . ' .med-faq-intro .eyebrow{font-family:' . json_encode($span['family']) . '!important;font-size:' . (int)$span['size'] . 'px!important;font-weight:' . (int)$span['weight'] . '!important;font-style:' . $span['style'] . '!important;letter-spacing:.075em!important;line-height:1.2!important}'
