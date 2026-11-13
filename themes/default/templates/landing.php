@@ -73,7 +73,7 @@ $medBlocks = '';
     $bannerFontQuery = implode('&', array_map(static fn(string $font): string => 'family=' . str_replace('%20','+',rawurlencode($font)) . ':wght@400;500;600;700;800', $bannerFontFamilies));
     ?>
     <section class="section med-family-banner" style="order:6" aria-label="Ana sayfa banner">
-      <?php if($bannerFontQuery!==''): ?><style>@import url('https://fonts.googleapis.com/css2?<?= e($bannerFontQuery) ?>&display=swap');</style><?php endif; ?>
+      <?php if($bannerFontQuery!==''): ?><style>@import url('https://fonts.googleapis.com/css2?<?= $bannerFontQuery ?>&display=swap');</style><?php endif; ?>
       <?php if(!empty($familyBannerAsset['family_banner_url'])): ?><img class="med-family-banner-image" src="<?= e($familyBannerAsset['family_banner_url']) ?>" alt="" loading="lazy"><?php endif; ?>
       <?php if(trim((string)$familyBannerText['eyebrow'])!=='' || trim((string)$familyBannerText['title'])!=='' || trim((string)$familyBannerText['description'])!==''): ?>
       <div class="med-family-banner-inner" style="--family-banner-text-color:<?= e($familyBannerText['color']) ?>">
