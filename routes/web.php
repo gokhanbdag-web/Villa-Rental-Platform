@@ -128,6 +128,16 @@ $router->get('/admin/updates', static function (): void {
             foreach(array_reverse($logLines) as $line)if(str_contains($line,'BAŞARILI:')||str_contains($line,'SUCCESS:')){$lastSuccess=$line;break;}
         }fclose($handle);
     }
+    $deploymentHistory=[];
+    $historyFile=$root.'/storage/deploy-history.jsonl';
+    if(is_file($historyFile)&&is_readable($historyFile)){
+        $historyLines=@file($historyFile,FILE_IGNORE_NEW_LINES|FILE_SKIP_EMPTY_LINES)?:[];
+        foreach(array_slice($historyLines,-20) as $historyLine){
+            $historyItem=json_decode($historyLine,true);
+            if(is_array($historyItem))$deploymentHistory[]=$historyItem;
+        }
+        $deploymentHistory=array_reverse($deploymentHistory);
+    }
     ThemeManager::renderTemplate('templates/pages/admin/updates.php',get_defined_vars());
 });
 
