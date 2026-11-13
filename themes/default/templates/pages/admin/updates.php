@@ -19,7 +19,7 @@ $commitDate = !empty($githubUpdate['commit_date']) ? date('d.m.Y H:i', strtotime
 <article class="vu-card"><span class="vu-label">Dağıtım günlüğü</span><strong class="vu-value" style="font-size:18px"><?= $logReadable ? 'Erişilebilir' : 'Bağlı değil' ?></strong><span class="vu-muted"><?= $logReadable ? 'Sunucu günlüğü okunabildi' : 'Sunucu günlük yolu henüz tanımlı değil' ?></span></article>
 </section>
 <section class="vu-panel"><h2>GitHub güncelleme kontrolü</h2>
-<?php if(!$githubConnected): ?><div class="vu-empty">GitHub deposuna şu anda erişilemiyor. Sunucuda dış HTTPS erişimi, DNS ve PHP cURL / allow_url_fopen ayarları kontrol edilmelidir. Bu nedenle güncelleme durumu tahmin edilmiyor.</div>
+<?php if(!$githubConnected): ?><div class="vu-empty">GitHub deposuna şu anda erişilemiyor. Depo özel olduğu için sunucuda VILLA_GITHUB_TOKEN ortam değişkeniyle yalnızca okuma yetkili bir GitHub token tanımlanmalı; ayrıca dış HTTPS erişimi ve PHP cURL / allow_url_fopen ayarları açık olmalıdır. Token sayfada gösterilmez ve depoya yazma yetkisi gerekmez. Bu nedenle bağlantı kurulana kadar güncelleme durumu tahmin edilmiyor.</div>
 <?php else: ?>
 <div class="vu-row"><span>En son GitHub commit</span><b><?= e(substr($githubCommit,0,12)) ?></b></div>
 <div class="vu-row"><span>Commit tarihi</span><b><?= e($commitDate) ?></b></div>
