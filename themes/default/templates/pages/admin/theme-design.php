@@ -62,18 +62,7 @@ $labels = [
 <?php if($key!=='span'): ?><div class="design-field"><label>Yazı rengi</label><input type="color" name="typography[<?= e($key) ?>][color]" value="<?= e((string)($item['color']??'#344039')) ?>"></div><?php endif; ?>
 <div class="design-field"><label>Font kalınlığı</label><select name="typography[<?= e($key) ?>][weight]"><?php foreach([300=>'Light',400=>'Normal',500=>'Medium',600=>'Semi Bold',700=>'Bold',800=>'Extra Bold',900=>'Black'] as $weight=>$weightLabel): ?><option value="<?= $weight ?>" <?= (int)($item['weight']??400)===$weight?'selected':'' ?>><?= e($weightLabel) ?></option><?php endforeach; ?></select></div>
 <div class="design-field"><label>Yazı biçimi</label><select name="typography[<?= e($key) ?>][style]"><option value="normal" <?= ($item['style']??'normal')==='normal'?'selected':'' ?>>Normal</option><option value="italic" <?= ($item['style']??'normal')==='italic'?'selected':'' ?>>İtalik</option></select></div>
-<section class="design-panel" data-design-tab-panel="family-banner">
-<h2>Tatil tarzı sonrası görsel arka planı</h2>
-<p>“Tatil tarzınızı seçin” bölümünün hemen altındaki tam genişlikte alana yatay bir fotoğraf yükleyin. Görsel alanın yüksekliğini aşmaz; masaüstünde en fazla 280 px, mobilde en fazla 190 px yüksekliğe kırpılarak yerleşir. JPG, PNG veya WebP; en fazla 8 MB.</p>
-<?php if(!empty($themeBrandSettings['family_banner_url'])): ?>
-<div style="margin:12px 0"><img src="<?= e($themeBrandSettings['family_banner_url']) ?>" alt="Ana sayfa banner görseli" style="display:block;width:min(100%,720px);height:160px;object-fit:cover;border-radius:10px;border:1px solid #e5ebe7">
-<form method="post" action="<?= e(app_url('/admin/theme-design/brand-asset/remove')) ?>" style="margin-top:10px"><?= csrf_field() ?><input type="hidden" name="asset_type" value="family_banner"><button class="design-save" type="submit" style="background:#a43e35">Banner görselini kaldır</button></form></div>
-<?php endif; ?>
-<form method="post" enctype="multipart/form-data" action="<?= e(app_url('/admin/theme-design/brand-asset')) ?>">
-<?= csrf_field() ?><input type="hidden" name="asset_type" value="family_banner">
-<div class="design-actions"><input type="file" name="family_banner" accept="image/jpeg,image/png,image/webp" required><button class="design-save" type="submit">Arka plan görselini yükle</button></div>
-</form>
-</section>
+
 </div></div><?php endforeach; ?>
 </section>
 <section class="design-panel" data-design-tab-panel="general"><h2>Renk paleti</h2><p>Renk seçicilerden değerleri değiştirin. Önizleme kaydetmeden önce anında güncellenir.</p>
@@ -107,6 +96,18 @@ $labels = [
 </section>
 
 </form>
+<section class="design-panel" data-design-tab-panel="family-banner">
+<h2>Tatil tarzı sonrası görsel arka planı</h2>
+<p>“Tatil tarzınızı seçin” bölümünün hemen altındaki tam genişlikte alana yatay bir fotoğraf yükleyin. Görsel alanın yüksekliğini aşmaz; masaüstünde en fazla 280 px, mobilde en fazla 190 px yüksekliğe kırpılarak yerleşir. JPG, PNG veya WebP; en fazla 8 MB.</p>
+<?php if(!empty($themeBrandSettings['family_banner_url'])): ?>
+<div style="margin:12px 0"><img src="<?= e($themeBrandSettings['family_banner_url']) ?>" alt="Ana sayfa banner görseli" style="display:block;width:min(100%,720px);height:160px;object-fit:cover;border-radius:10px;border:1px solid #e5ebe7">
+<form method="post" action="<?= e(app_url('/admin/theme-design/brand-asset/remove')) ?>" style="margin-top:10px"><?= csrf_field() ?><input type="hidden" name="asset_type" value="family_banner"><button class="design-save" type="submit" style="background:#a43e35">Banner görselini kaldır</button></form></div>
+<?php endif; ?>
+<form method="post" enctype="multipart/form-data" action="<?= e(app_url('/admin/theme-design/brand-asset')) ?>">
+<?= csrf_field() ?><input type="hidden" name="asset_type" value="family_banner">
+<div class="design-actions"><input type="file" name="family_banner" accept="image/jpeg,image/png,image/webp" required><button class="design-save" type="submit">Arka plan görselini yükle</button></div>
+</form>
+</section>
 
 <?php if(($themeBrandMessage??'')!==''): ?><div class="design-notice <?= ($themeBrandMessageType??'')==='error'?'error':'' ?>" role="status"><?= e($themeBrandMessage) ?></div><?php endif; ?>
 <section class="design-panel" data-design-tab-panel="header">
