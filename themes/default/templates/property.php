@@ -18,4 +18,9 @@ body.villa-property-mediterranean{background:#f7f7f1;color:var(--villa-text);fon
 body.villa-property-mediterranean .property-layout{align-items:start}body.villa-property-mediterranean .property-main{min-width:0}body.villa-property-mediterranean .property-amenities-title{margin:34px 0 16px;font:inherit;color:var(--villa-text);}body.villa-property-mediterranean .property-amenities{list-style:none;padding:0;margin:0;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:11px}body.villa-property-mediterranean .property-amenities li{padding:14px 16px;border:1px solid #e0e8dd;border-radius:13px;background:#fff;font:inherit;color:var(--villa-text);}body.villa-property-mediterranean .property-reviews{margin-top:48px!important;padding-top:28px;border-top:1px solid #dfe7dc}body.villa-property-mediterranean .property-review{padding:18px 0;border-top:1px solid #e5ebe2}body.villa-property-mediterranean .property-booking p{font-size:var(--villa-body-size);} @media(max-width:760px){body.villa-property-mediterranean .property-amenities{grid-template-columns:1fr 1fr}}
 CSS;
 $html = str_replace('</head>', '<style>' . $themePropertyCss . '</style></head>', $html);
+ob_start();
+require __DIR__ . '/partials/footer.php';
+$footerMarkup = (string) ob_get_clean();
+$html = preg_replace('~</body>~i', $footerMarkup . '</body>', $html, 1) ?? $html;
+
 echo $html;
