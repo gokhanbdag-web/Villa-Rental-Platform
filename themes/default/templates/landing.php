@@ -117,6 +117,12 @@ $medBlocks = '';
     <?php endif;
     $medBlocks = (string)ob_get_clean();
     if ($medBlocks !== '') $html = preg_replace('~</main>~i', $medBlocks . '</main>', $html, 1) ?? $html;
+
+    // Keep the destination directory as the final full-width section, immediately above the footer.
+    if (preg_match('~<section class="section" style="order:[^"]*"><div class="wrap"><div class="section-head">.*?<div class="destination-editorial-grid">.*?</div></div></section>~s', $html, $destinationSection)) {
+        $html = str_replace($destinationSection[0], '', $html);
+        $html = preg_replace('~</main>~i', $destinationSection[0] . '</main>', $html, 1) ?? $html;
+    }
 }
 $hostTitle=trim((string)($content['home_host_title']??''));
 $hostSubtitle=trim((string)($content['home_host_subtitle']??''));
@@ -181,14 +187,15 @@ body.villa-home-mediterranean .section:has(.styles),body.villa-home-mediterranea
 .med-property-price{margin-top:12px;color:var(--villa-text);font-size:var(--villa-body-size);}
 .med-property-price strong{color:var(--villa-text);font-size:var(--villa-body-size);}
 .med-concepts{background:#f0f2e9}
-body.villa-home-mediterranean .destination-editorial-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));column-gap:56px;border-top:1px solid #dce3d8}
-body.villa-home-mediterranean .destination-editorial-item{position:relative;display:grid;grid-template-columns:54px minmax(0,1fr) 34px;align-items:center;gap:18px;min-width:0;padding:25px 4px;border-bottom:1px solid #dce3d8;color:var(--villa-text);transition:padding .22s ease,color .22s ease}
+body.villa-home-mediterranean .destination-section{width:100vw;margin-left:calc(50% - 50vw);margin-right:calc(50% - 50vw);padding:58px 0!important;background:#f3f4f2!important}
+body.villa-home-mediterranean .destination-editorial-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));column-gap:56px;border-top:1px solid #e8eae7}
+body.villa-home-mediterranean .destination-editorial-item{position:relative;display:grid;grid-template-columns:54px minmax(0,1fr) 34px;align-items:center;gap:18px;min-width:0;padding:25px 4px;border-bottom:1px solid #e8eae7;color:var(--villa-text);transition:padding .22s ease,color .22s ease}
 body.villa-home-mediterranean .destination-editorial-item:hover{padding-left:12px;color:var(--villa-primary)}
 body.villa-home-mediterranean .destination-editorial-index{font-size:13px;letter-spacing:.12em;color:var(--villa-muted);font-variant-numeric:tabular-nums}
 body.villa-home-mediterranean .destination-editorial-copy{display:flex;flex-direction:column;gap:5px;min-width:0}
 body.villa-home-mediterranean .destination-editorial-copy strong{font-family:var(--villa-font-heading,var(--villa-font-body));font-size:clamp(21px,2.2vw,30px);font-weight:650;letter-spacing:-.045em;line-height:1.12}
 body.villa-home-mediterranean .destination-editorial-copy small{font-size:13px;color:var(--villa-muted);letter-spacing:.02em}
-body.villa-home-mediterranean .destination-editorial-arrow{display:grid;place-items:center;width:34px;height:34px;border:1px solid #dce3d8;border-radius:50%;font-size:17px;transition:transform .22s ease,background .22s ease,color .22s ease}
+body.villa-home-mediterranean .destination-editorial-arrow{display:grid;place-items:center;width:34px;height:34px;border:1px solid #e8eae7;border-radius:50%;font-size:17px;transition:transform .22s ease,background .22s ease,color .22s ease}
 body.villa-home-mediterranean .destination-editorial-item:hover .destination-editorial-arrow{transform:translate(2px,-2px);background:var(--villa-primary);border-color:var(--villa-primary);color:#fff}
 .med-concept-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:18px}
 .med-concept-card{position:relative;display:block;height:245px;overflow:hidden;border-radius:19px;background:#dfe6d9}
