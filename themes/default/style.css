@@ -930,4 +930,12 @@ body[data-villa-theme] .premium-stay-card .card-bottom-row .rating-line .rating-
     justify-content:flex-start!important;gap:12px!important;
     width:auto!important;padding:12px 0!important;
   }
+  body.villa-home-mediterranean:has(.theme-header .nav.is-open) .villa-social-left .villa-social-link{
+    color:#79c8eb!important;background:transparent!important;border:0!important;
+    box-shadow:none!important;border-radius:0!important;
+  }
+  body.villa-home-mediterranean:has(.theme-header .nav.is-open) .villa-social-left .villa-social-link svg,
+  body.villa-home-mediterranean:has(.theme-header .nav.is-open) .villa-social-left .villa-social-link svg *{
+    color:#79c8eb!important;fill:currentColor!important;stroke:currentColor!important;
+  }
 }
