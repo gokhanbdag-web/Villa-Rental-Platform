@@ -67,7 +67,7 @@ $medBlocks = '';
     <?php endif;
     if ($medSectionActive('latest') && !empty($latestProperties)): ?>
     <section class="section med-latest" style="order:<?= $medSectionOrder('latest',3) ?>"><div class="wrap">
-      <div class="section-head"><div><span class="pill"><?= e($content['home_latest_eyebrow'] ?? 'YENİ EKLENENLER') ?></span><h2><?= e($content['home_latest_title'] ?? 'Son Eklenen Villalar') ?></h2><p><?= e($content['home_latest_subtitle'] ?? '') ?></p></div><a class="more" href="<?= e(app_url('/konaklamalar?sort=newest')) ?>"><?= e($content['home_latest_link'] ?? 'Tüm villaları gör ↗') ?></a></div>
+      <div class="section-head"><div><span class="pill villa-eyebrow"><?= e($content['home_latest_eyebrow'] ?? 'YENİ EKLENENLER') ?></span><h2><?= e($content['home_latest_title'] ?? 'Son Eklenen Villalar') ?></h2><p><?= e($content['home_latest_subtitle'] ?? '') ?></p></div><a class="more" href="<?= e(app_url('/konaklamalar?sort=newest')) ?>"><?= e($content['home_latest_link'] ?? 'Tüm villaları gör ↗') ?></a></div>
       <div class="med-property-grid">
       <?php foreach ($latestProperties as $p):
             $cardImages=$homeCardImages[(int)$p['id']]??[];
@@ -81,7 +81,7 @@ $medBlocks = '';
     <?php endif;
     if ($medSectionActive('concepts') && !empty($categories)): ?>
     <section class="section med-concepts" style="order:<?= $medSectionOrder('concepts',5) ?>"><div class="wrap">
-      <div class="section-head"><div><span class="pill"><?= e($content['home_concepts_eyebrow'] ?? 'TATİLİNİZİ KEŞFEDİN') ?></span><h2><?= e($content['home_concepts_title'] ?? 'Size Uygun Tatil Konseptini Seçin') ?></h2><p><?= e($content['home_concepts_subtitle'] ?? '') ?></p></div></div>
+      <div class="section-head"><div><span class="pill villa-eyebrow"><?= e($content['home_concepts_eyebrow'] ?? 'TATİLİNİZİ KEŞFEDİN') ?></span><h2><?= e($content['home_concepts_title'] ?? 'Size Uygun Tatil Konseptini Seçin') ?></h2><p><?= e($content['home_concepts_subtitle'] ?? '') ?></p></div></div>
       <div class="med-concept-grid"><?php foreach ($categories as $i=>$category): $img=$medImage($category); if($img==='')$img=$stylePhotos[$i%count($stylePhotos)]??''; ?>
         <a class="med-concept-card" href="<?= e(app_url('/konaklamalar?category='.(int)$category['id'])) ?>"><?php if($img): ?><img src="<?= e($img) ?>" alt="<?= e($category['name']) ?>" loading="lazy"><?php endif; ?><span class="med-concept-overlay"></span><span class="med-concept-copy"><strong><?= e($category['name']) ?></strong><small><?= (int)($category['property_count'] ?? 0) ?> <?= e($content['home_concepts_count_label'] ?? 'villa seçeneği') ?></small></span></a>
       <?php endforeach; ?></div>
@@ -89,7 +89,7 @@ $medBlocks = '';
     <?php endif;
     if ($medSectionActive('collections') && !empty($homeCategoryCollections)): ?>
     <section class="section med-collections" style="order:<?= $medSectionOrder('collections',7) ?>"><div class="wrap">
-      <div class="section-head"><div><span class="pill"><?= e($content['home_collections_eyebrow'] ?? 'ÖZENLE HAZIRLANDI') ?></span><h2><?= e($content['home_collections_title'] ?? 'Size Özel Villa Koleksiyonları') ?></h2><p><?= e($content['home_collections_subtitle'] ?? '') ?></p></div></div>
+      <div class="section-head"><div><span class="pill villa-eyebrow"><?= e($content['home_collections_eyebrow'] ?? 'ÖZENLE HAZIRLANDI') ?></span><h2><?= e($content['home_collections_title'] ?? 'Size Özel Villa Koleksiyonları') ?></h2><p><?= e($content['home_collections_subtitle'] ?? '') ?></p></div></div>
       <?php foreach ($homeCategoryCollections as $collection): ?>
       <div class="med-collection-row"><div class="med-collection-heading"><div><h3><?= e($collection['category']['name']) ?></h3><p><?= (int)$collection['category']['property_count'] ?> <?= e($content['home_collection_count_suffix'] ?? 'yayındaki villa arasından seçtiklerimiz') ?></p></div><a href="<?= e(app_url('/konaklamalar?category='.(int)$collection['category']['id'])) ?>"><?= e($content['home_collection_link'] ?? 'Tümünü gör ↗') ?></a></div><div class="med-property-grid">
       <?php foreach ($collection['properties'] as $p):
@@ -104,16 +104,16 @@ $medBlocks = '';
     <?php endif;
     if ($medSectionActive('reviews') && !empty($homeReviews)): ?>
     <section class="section med-reviews" style="order:<?= $medSectionOrder('reviews',8) ?>"><div class="wrap">
-      <div class="section-head"><div><span class="pill"><?= e($content['home_reviews_eyebrow'] ?? 'MİSAFİR DENEYİMLERİ') ?></span><h2><?= e($content['home_reviews_title'] ?? 'Misafirlerimizin Deneyimleri') ?></h2><p><?= e($content['home_reviews_subtitle'] ?? '') ?></p></div></div>
+      <div class="section-head"><div><span class="pill villa-eyebrow"><?= e($content['home_reviews_eyebrow'] ?? 'MİSAFİR DENEYİMLERİ') ?></span><h2><?= e($content['home_reviews_title'] ?? 'Misafirlerimizin Deneyimleri') ?></h2><p><?= e($content['home_reviews_subtitle'] ?? '') ?></p></div></div>
       <div class="med-review-grid"><?php foreach ($homeReviews as $review): ?><article class="med-review-card"><div class="med-review-stars" aria-label="<?= (int)$review['rating'] ?> üzerinden 10 puan">★★★★★</div><p><?= e((string)$review['body']) ?></p><div class="med-review-author"><strong><?= e($review['username']) ?></strong><span><?= e($review['property_title']) ?></span><small><?= e($content['home_review_verified_label'] ?? 'Doğrulanmış konaklama yorumu') ?> · <?= number_format((float)$review['rating'],1,',','.') ?>/10</small></div></article><?php endforeach; ?></div>
     </div></section>
     <?php endif;
     $faqItems=[]; for($i=1;$i<=5;$i++){ $q=trim((string)($content['home_faq_'.$i.'_question']??''));$a=trim((string)($content['home_faq_'.$i.'_answer']??''));if($q!==''&&$a!=='')$faqItems[]=[$q,$a];}
     if ($medSectionActive('faq') && $faqItems): ?>
-    <section class="section med-faq" style="order:<?= $medSectionOrder('faq',9) ?>"><div class="wrap med-faq-layout"><div class="med-faq-intro"><span class="pill"><?= e($content['home_faq_eyebrow'] ?? 'YARDIM MERKEZİ') ?></span><h2><?= e($content['home_faq_title'] ?? 'Sıkça Sorulan Sorular') ?></h2><p><?= e($content['home_faq_subtitle'] ?? '') ?></p></div><div class="med-faq-list"><?php foreach($faqItems as $i=>$faq): ?><details class="med-faq-item" <?= $i===0?'open':'' ?>><summary><?= e($faq[0]) ?><span>＋</span></summary><p><?= e($faq[1]) ?></p></details><?php endforeach; ?></div></div></section>
+    <section class="section med-faq" style="order:<?= $medSectionOrder('faq',9) ?>"><div class="wrap med-faq-layout"><div class="med-faq-intro"><span class="pill villa-eyebrow"><?= e($content['home_faq_eyebrow'] ?? 'YARDIM MERKEZİ') ?></span><h2><?= e($content['home_faq_title'] ?? 'Sıkça Sorulan Sorular') ?></h2><p><?= e($content['home_faq_subtitle'] ?? '') ?></p></div><div class="med-faq-list"><?php foreach($faqItems as $i=>$faq): ?><details class="med-faq-item" <?= $i===0?'open':'' ?>><summary><?= e($faq[0]) ?><span>＋</span></summary><p><?= e($faq[1]) ?></p></details><?php endforeach; ?></div></div></section>
     <?php endif;
     if ($medSectionActive('support')): $phone=trim((string)($content['home_support_phone']??''));$wa=trim((string)($content['home_support_whatsapp']??$phone));$phoneDigits=preg_replace('/\D+/','',$phone);$waDigits=preg_replace('/\D+/','',$wa); ?>
-    <section class="section med-support" style="order:<?= $medSectionOrder('support',10) ?>"><div class="wrap"><div class="med-support-panel"><div><span class="pill"><?= e($content['home_support_eyebrow'] ?? 'CANLI DESTEK') ?></span><h2><?= e($content['home_support_title'] ?? 'Tatilinizi birlikte planlayalım') ?></h2><p><?= e($content['home_support_subtitle'] ?? '') ?></p></div><div class="med-support-actions"><?php if($phoneDigits): ?><a class="med-support-phone" href="tel:<?= e($phoneDigits) ?>">☎ <?= e($phone) ?></a><?php endif; ?><?php if($waDigits): ?><a class="med-support-whatsapp" href="https://wa.me/<?= e($waDigits) ?>" target="_blank" rel="noopener noreferrer"><?= e($content['home_support_whatsapp_label'] ?? 'WhatsApp ile yazın ↗') ?></a><?php endif; ?></div></div></div></section>
+    <section class="section med-support" style="order:<?= $medSectionOrder('support',10) ?>"><div class="wrap"><div class="med-support-panel"><div><span class="pill villa-eyebrow"><?= e($content['home_support_eyebrow'] ?? 'CANLI DESTEK') ?></span><h2><?= e($content['home_support_title'] ?? 'Tatilinizi birlikte planlayalım') ?></h2><p><?= e($content['home_support_subtitle'] ?? '') ?></p></div><div class="med-support-actions"><?php if($phoneDigits): ?><a class="med-support-phone" href="tel:<?= e($phoneDigits) ?>">☎ <?= e($phone) ?></a><?php endif; ?><?php if($waDigits): ?><a class="med-support-whatsapp" href="https://wa.me/<?= e($waDigits) ?>" target="_blank" rel="noopener noreferrer"><?= e($content['home_support_whatsapp_label'] ?? 'WhatsApp ile yazın ↗') ?></a><?php endif; ?></div></div></div></section>
     <?php endif;
     $medBlocks = (string)ob_get_clean();
     if ($medBlocks !== '') $html = preg_replace('~</main>~i', $medBlocks . '</main>', $html, 1) ?? $html;
@@ -136,12 +136,12 @@ $regionTitle=trim((string)($content['home_regions_title']??''));
 $regionSubtitle=trim((string)($content['home_regions_subtitle']??''));
 $regionEyebrow=trim((string)($content['home_regions_eyebrow']??'KEŞFETMEYE BAŞLA'));
 if($medSectionActive('destinations') && ($regionTitle!==''||$regionSubtitle!==''||$regionEyebrow!=='')){
-    $html=preg_replace_callback('~(<span class="pill">).*?(</span><h2>).*?(</h2><p>).*?(</p>)~s',static function(array $m)use($regionTitle,$regionSubtitle,$regionEyebrow):string{
+    $html=preg_replace_callback('~(<span class="pill villa-eyebrow">).*?(</span><h2>).*?(</h2><p>).*?(</p>)~s',static function(array $m)use($regionTitle,$regionSubtitle,$regionEyebrow):string{
         return $m[1].e($regionEyebrow).$m[2].e($regionTitle!==''?$regionTitle:'Bölgeleri keşfedin').$m[3].e($regionSubtitle).$m[4];
     },$html,1)??$html;
 }
-$html=preg_replace('~<section class="section" style="[^"]*"><div class="wrap"><div class="section-head"><div><span class="pill">TATİL TARZINI SEÇ</span>.*?</section>~s','',$html,1)??$html;
-$html=preg_replace('~<section class="section" style="[^"]*"><div class="wrap"><div class="section-head"><div><span class="pill">TATİL İLHAMIN</span>.*?</section>~s','',$html,1)??$html;
+$html=preg_replace('~<section class="section" style="[^"]*"><div class="wrap"><div class="section-head"><div><span class="pill villa-eyebrow">TATİL TARZINI SEÇ</span>.*?</section>~s','',$html,1)??$html;
+$html=preg_replace('~<section class="section" style="[^"]*"><div class="wrap"><div class="section-head"><div><span class="pill villa-eyebrow">TATİL İLHAMIN</span>.*?</section>~s','',$html,1)??$html;
 
 $menuIconCss = '.theme-menu-toggle .menu-open-mark{display:inline!important}.theme-menu-toggle .menu-close-mark,.theme-menu-toggle .menu-close-mark[hidden]{display:none!important}.theme-menu-toggle[aria-expanded="true"] .menu-open-mark{display:none!important}.theme-menu-toggle[aria-expanded="true"] .menu-close-mark{display:inline!important}.theme-menu-toggle[aria-expanded="true"] .menu-close-mark[hidden]{display:inline!important}';
 
