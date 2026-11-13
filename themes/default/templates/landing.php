@@ -74,7 +74,7 @@ $medBlocks = '';
             if(!$cardImages && !empty($p['cover_image']))$cardImages=[$medImage($p)];
             $isCardFavorite=in_array((int)$p['id'],$favoritePropertyIds??[],true);
             $filters=[];
-            \\App\\Core\\ThemeManager::renderPartial('components/cards/villa-card.php',get_defined_vars());
+            \App\Core\ThemeManager::renderPartial('components/cards/villa-card.php',get_defined_vars());
         endforeach; ?>
       </div>
     </div></section>
@@ -97,7 +97,7 @@ $medBlocks = '';
             if(!$cardImages && !empty($p['cover_image']))$cardImages=[$medImage($p)];
             $isCardFavorite=in_array((int)$p['id'],$favoritePropertyIds??[],true);
             $filters=[];
-            \\App\\Core\\ThemeManager::renderPartial('components/cards/villa-card.php',get_defined_vars());
+            \App\Core\ThemeManager::renderPartial('components/cards/villa-card.php',get_defined_vars());
         endforeach; ?></div></div>
       <?php endforeach; ?>
     </div></section>
