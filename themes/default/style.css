@@ -1274,3 +1274,8 @@ body[data-villa-theme] .theme-menu-toggle{display:none}
  body[data-villa-theme] .drawer-overlay.is-open{opacity:1!important;visibility:visible!important;pointer-events:auto!important}
  body[data-villa-theme].menu-open{overflow:hidden!important}
 }
+
+@media(min-width:761px){
+ body[data-villa-theme] .theme-header .nav{display:flex!important;align-items:center!important;justify-content:flex-end!important;gap:8px!important;flex-wrap:wrap!important}
+ body[data-villa-theme] .theme-header .nav a{display:inline-flex;align-items:center}
+}
