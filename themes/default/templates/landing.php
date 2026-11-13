@@ -296,7 +296,7 @@ $villaMapScript = <<<'JS'
  function wait(ms){return new Promise(function(resolve){setTimeout(resolve,ms)})}
  var cache={};try{cache=JSON.parse(localStorage.getItem('villaMapGeocodeCacheV2')||'{}')}catch(e){}
  var unique=[],seen={};
- properties.forEach(function(p){var key=String(p.location||'').trim();if(key&&!seen[key]){seen[key]=1;unique.push(key)}});
+ properties.forEach(function(p){var hasCoords=p.latitude!==null&&p.latitude!==''&&p.longitude!==null&&p.longitude!==''&&Number.isFinite(Number(p.latitude))&&Number.isFinite(Number(p.longitude));var key=String(p.location||'').trim();if(!hasCoords&&key&&!seen[key]){seen[key]=1;unique.push(key)}});
  var locations={};
  async function geocode(location){
   if(cache[location]&&Number.isFinite(Number(cache[location].lat))&&Number.isFinite(Number(cache[location].lon)))return cache[location];
@@ -317,6 +317,17 @@ $villaMapScript = <<<'JS'
    }catch(e){}
    if(i<candidates.length-1)await wait(250);
   }
+  try{
+   var fallback=await fetch('https://nominatim.openstreetmap.org/search?format=jsonv2&limit=1&q='+encodeURIComponent(location),{headers:{'Accept':'application/json'}});
+   if(fallback.ok){
+    var rows=await fallback.json();
+    if(rows&&rows[0]&&Number.isFinite(Number(rows[0].lat))&&Number.isFinite(Number(rows[0].lon))){
+     var fallbackPoint={lat:Number(rows[0].lat),lon:Number(rows[0].lon)};
+     cache[location]=fallbackPoint;try{localStorage.setItem('villaMapGeocodeCacheV2',JSON.stringify(cache))}catch(e){}
+     return fallbackPoint;
+    }
+   }
+  }catch(e){}
   return null;
  }
  async function run(){
