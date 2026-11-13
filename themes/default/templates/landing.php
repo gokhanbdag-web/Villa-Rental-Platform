@@ -194,7 +194,7 @@ body.villa-home-mediterranean .section:has(.styles),body.villa-home-mediterranea
 .med-property-meta{color:var(--villa-text);font-size:var(--villa-body-size);}
 .med-property-price{margin-top:12px;color:var(--villa-text);font-size:var(--villa-body-size);}
 .med-property-price strong{color:var(--villa-text);font-size:var(--villa-body-size);}
-.med-concepts{background:#f0f2e9}
+
 body.villa-home-mediterranean .destination-section{width:100vw;margin-left:calc(50% - 50vw);margin-right:calc(50% - 50vw);padding:58px 0!important;background:#f3f4f2!important}
 body.villa-home-mediterranean .destination-editorial-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));column-gap:56px;border-top:1px solid #e8eae7}
 body.villa-home-mediterranean .destination-editorial-item{position:relative;display:grid;grid-template-columns:54px minmax(0,1fr) 34px;align-items:center;gap:18px;min-width:0;padding:25px 4px;border-bottom:1px solid #e8eae7;color:var(--villa-text);transition:padding .22s ease,color .22s ease}
