@@ -1630,6 +1630,42 @@ $router->post('/admin/bookings/status', static function (): void {
     }catch(Throwable $e){if($pdo->inTransaction())$pdo->rollBack();error_log('Booking status update failed: '.$e->getMessage());http_response_code(500);exit('Rezervasyon güncellenemedi.');}
 });
 
+$router->get('/admin/finance', static function (): void {
+    Auth::requireRole(['super_admin','admin']);
+    $pdo = Database::connection();
+
+    // Keep totals separated by currency; never combine unlike currencies.
+    $financialSummary = $pdo->query("SELECT currency, COUNT(*) AS booking_count,
+        COALESCE(SUM(gross_amount),0) AS gross_amount,
+        COALESCE(SUM(platform_fee),0) AS platform_fee,
+        COALESCE(SUM(vendor_net_amount),0) AS vendor_net_amount
+        FROM booking_financials GROUP BY currency ORDER BY currency")->fetchAll();
+
+    $payoutSummary = $pdo->query("SELECT currency, status, COUNT(*) AS payout_count,
+        COALESCE(SUM(amount),0) AS payout_amount
+        FROM vendor_payouts GROUP BY currency,status ORDER BY currency,status")->fetchAll();
+
+    $recentFinancials = $pdo->query("SELECT bf.booking_id,bf.gross_amount,bf.platform_fee,
+        bf.vendor_net_amount,bf.currency,bf.payout_status,b.created_at,b.booking_code,
+        b.status AS booking_status,b.check_in,b.check_out,p.title AS property_title
+        FROM booking_financials bf
+        JOIN bookings b ON b.id=bf.booking_id
+        JOIN properties p ON p.id=b.property_id
+        ORDER BY b.created_at DESC,b.id DESC LIMIT 30")->fetchAll();
+
+    $recentTransactions = $pdo->query("SELECT pt.id,pt.provider,pt.provider_reference,pt.amount,
+        pt.currency,pt.status,pt.paid_at,pt.created_at,b.booking_code,p.title AS property_title
+        FROM payment_transactions pt
+        JOIN bookings b ON b.id=pt.booking_id
+        JOIN properties p ON p.id=b.property_id
+        ORDER BY pt.created_at DESC,pt.id DESC LIMIT 20")->fetchAll();
+
+    $paymentProvider = (string)($pdo->query("SELECT setting_value FROM settings WHERE setting_key='payments.provider'")->fetchColumn() ?: 'none');
+    $paymentsEnabled = (string)($pdo->query("SELECT setting_value FROM settings WHERE setting_key='payments.enabled'")->fetchColumn() ?: '0') === '1';
+
+    ThemeManager::renderTemplate('templates/pages/admin/finance.php', get_defined_vars());
+});
+
 $router->get('/admin', static function (): void {
     Auth::requireRole(['super_admin', 'admin']);
     $pdo = Database::connection();
