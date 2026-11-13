@@ -354,7 +354,6 @@ body[data-villa-theme] .pagination a{
 
 /* Homepage trust row: equal cards, fixed icon geometry and a shared text rhythm. */
 body[data-villa-theme] .med-trust{
-  padding:28px 0!important;
   background:var(--villa-surface,#fff)!important;
 }
 body[data-villa-theme] .med-trust-grid{
