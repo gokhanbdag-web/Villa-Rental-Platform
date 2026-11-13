@@ -1492,7 +1492,7 @@ body[data-villa-theme] .villa-social-drawer{display:none!important}
 /* Cinematic, scroll-synchronised site-wide back-to-top control. */
 body[data-villa-theme] .villa-back-to-top{
   --villa-scroll-drift:0px;
-  position:fixed!important;right:clamp(18px,3vw,34px)!important;bottom:clamp(20px,3vh,30px)!important;
+  position:fixed!important;right:clamp(18px,3vw,34px)!important;top:clamp(104px,15vh,142px)!important;bottom:auto!important;
   z-index:10050!important;width:62px!important;height:62px!important;
   display:grid!important;place-items:center!important;overflow:hidden!important;
   border:1px solid rgba(255,255,255,.72)!important;border-radius:50%!important;
@@ -1528,7 +1528,7 @@ body[data-villa-theme] .villa-back-to-top.is-at-lower-edge{filter:saturate(1.12)
 body[data-villa-theme] .villa-back-to-top.is-returning svg{animation:villa-back-top-pulse .65s ease-in-out infinite alternate}
 @keyframes villa-back-top-pulse{from{transform:translateY(1px)}to{transform:translateY(-4px)}}
 @media(max-width:760px){
-  body[data-villa-theme] .villa-back-to-top{width:54px!important;height:54px!important;right:16px!important;bottom:18px!important}
+  body[data-villa-theme] .villa-back-to-top{width:54px!important;height:54px!important;right:16px!important;top:104px!important;bottom:auto!important}
 }
 @media(prefers-reduced-motion:reduce){
   body[data-villa-theme] .villa-back-to-top,body[data-villa-theme] .villa-back-to-top *{transition:none!important;animation:none!important}
