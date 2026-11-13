@@ -1342,6 +1342,39 @@ $router->post('/admin/users/status', static function (): void {
 });
 
 
+$router->get('/brand-assets/{slug}/{filename}', static function (array $params): void {
+    $slug = (string)($params['slug'] ?? '');
+    $filename = (string)($params['filename'] ?? '');
+    if (!preg_match('/^[a-z0-9_-]{1,60}$/', $slug) ||
+        !preg_match('/^[a-z0-9_-]+\\.(?:png|jpe?g|webp|mp4|webm)$/i', $filename) ||
+        !isset(ThemeManager::installed()[$slug])) {
+        http_response_code(404); exit;
+    }
+    $directory = APP_ROOT . '/public/uploads/themes/' . $slug . '/branding';
+    $path = $directory . '/' . $filename;
+    $realDirectory = realpath($directory);
+    $realPath = realpath($path);
+    if ($realDirectory === false || $realPath === false ||
+        !str_starts_with($realPath, rtrim($realDirectory, DIRECTORY_SEPARATOR) . DIRECTORY_SEPARATOR) ||
+        !is_file($realPath) || !is_readable($realPath)) {
+        http_response_code(404); exit;
+    }
+    $types = [
+        'png'=>'image/png','jpg'=>'image/jpeg','jpeg'=>'image/jpeg','webp'=>'image/webp',
+        'mp4'=>'video/mp4','webm'=>'video/webm'
+    ];
+    $extension = strtolower(pathinfo($realPath, PATHINFO_EXTENSION));
+    if (!isset($types[$extension])) { http_response_code(404); exit; }
+    $mime = (new \\finfo(FILEINFO_MIME_TYPE))->file($realPath);
+    if (!is_string($mime) || $mime !== $types[$extension]) { http_response_code(404); exit; }
+    header('Content-Type: ' . $mime);
+    header('X-Content-Type-Options: nosniff');
+    header('Cache-Control: public, max-age=3600');
+    header('Content-Length: ' . (string)filesize($realPath));
+    readfile($realPath);
+    exit;
+});
+
 $router->get('/theme-assets/{slug}/{file*}', static function (array $params): void {
     $slug = (string)($params['slug'] ?? '');
     $relative = str_replace('\\', '/', (string)($params['file'] ?? ''));
