@@ -16,8 +16,8 @@ $backup = trim((string)($argv[3] ?? ''));
 $message = trim((string)($argv[4] ?? ''));
 
 $allowed = ['deploying', 'success', 'failed', 'rolled_back'];
-if (!in_array($status, $allowed, true) || !preg_match('/^[a-f0-9]{40,64}$/', $commit)) {
-    fwrite(STDERR, "Usage: php scripts/deploy-status.php <deploying|success|failed|rolled_back> <40-64-char-commit-sha> [backup-id] [message]\n");
+if (!in_array($status, $allowed, true) || ($status === 'deploying' && !preg_match('/^[a-f0-9]{40,64}$/', $commit)) || ($commit !== '' && !preg_match('/^[a-f0-9]{40,64}$/', $commit))) {
+    fwrite(STDERR, "Usage: php scripts/deploy-status.php <deploying|success|failed|rolled_back> <commit-sha-or-empty-for-final-state> [backup-id] [message]\n");
     exit(2);
 }
 

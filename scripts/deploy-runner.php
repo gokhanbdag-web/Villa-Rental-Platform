@@ -60,6 +60,39 @@ function villa_runner_status(string $writer, string $state, string $sha, string 
     return $code === 0;
 }
 
+function villa_previous_deployed_commit(string $live): string
+{
+    $file = $live . '/storage/deploy-status.json';
+    if (!is_file($file) || !is_readable($file)) {
+        return '';
+    }
+    $data = json_decode((string)@file_get_contents($file), true);
+    if (!is_array($data) || !in_array(($data['status'] ?? ''), ['success', 'rolled_back'], true)) {
+        return '';
+    }
+    $sha = strtolower((string)($data['commit'] ?? ''));
+    return preg_match('/^[a-f0-9]{40,64}$/', $sha) ? $sha : '';
+}
+
+function villa_staging_commit(string $staging): string
+{
+    $pipes = [];
+    $process = proc_open(['git', '-C', $staging, 'rev-parse', 'HEAD'],
+        [0 => ['pipe', 'r'], 1 => ['pipe', 'w'], 2 => ['pipe', 'w']], $pipes);
+    if (!is_resource($process)) {
+        return '';
+    }
+    fclose($pipes[0]);
+    $output = trim((string)stream_get_contents($pipes[1]));
+    fclose($pipes[1]);
+    stream_get_contents($pipes[2]);
+    fclose($pipes[2]);
+    $code = proc_close($process);
+    return $code === 0 && preg_match('/^[a-f0-9]{40,64}$/i', $output)
+        ? strtolower($output)
+        : '';
+}
+
 function villa_latest_backup(string $directory): ?string
 {
     $files = glob($directory . '/backups/villa-*.tar.gz') ?: [];
@@ -133,6 +166,8 @@ function villa_restore_backup(string $archive, string $base, string $live): bool
     }
 }
 
+$previousCommit = villa_previous_deployed_commit($live);
+
 if (!villa_runner_status($statusWriter, 'deploying', $commit, 'GitHub dağıtımı başladı')) {
     fwrite(STDERR, "Could not record deployment start\n");
     exit(4);
@@ -142,7 +177,7 @@ $backupBefore = villa_latest_backup($base);
 $descriptors = [0 => ['pipe', 'r'], 1 => STDOUT, 2 => STDERR];
 $process = proc_open(['/bin/bash', $deployScript], $descriptors, $pipes, $base);
 if (!is_resource($process)) {
-    villa_runner_status($statusWriter, 'failed', $commit, 'Dağıtım betiği başlatılamadı');
+    villa_runner_status($statusWriter, 'failed', $previousCommit, 'Dağıtım betiği başlatılamadı');
     exit(5);
 }
 fclose($pipes[0]);
@@ -154,7 +189,8 @@ $statusLine = '';
 $healthy = ($deployExit === 0) && villa_health_check($healthUrl, $statusLine);
 
 if ($healthy) {
-    if (!villa_runner_status($statusWriter, 'success', $commit, 'Dağıtım ve HTTP sağlık kontrolü başarılı: ' . $statusLine, $newBackup !== null ? basename($newBackup) : '-')) {
+    $deployedCommit = villa_staging_commit('/opt/villa-staging');
+    if (!villa_runner_status($statusWriter, 'success', $deployedCommit, 'Dağıtım ve HTTP sağlık kontrolü başarılı: ' . $statusLine, $newBackup !== null ? basename($newBackup) : '-')) {
         fwrite(STDERR, "Deployment succeeded but status could not be recorded\n");
         exit(8);
     }
@@ -169,18 +205,18 @@ $reason = $deployExit !== 0
 if ($newBackup !== null && villa_restore_backup($newBackup, $base, $live)) {
     $restoreStatus = '';
     if (villa_health_check($healthUrl, $restoreStatus)) {
-        villa_runner_status($statusWriter, 'rolled_back', $commit,
+        villa_runner_status($statusWriter, 'rolled_back', $previousCommit,
             $reason . '; önceki yedek geri yüklendi ve sağlık kontrolü başarılı: ' . $restoreStatus, basename($newBackup));
         fwrite(STDERR, "Deployment failed; previous version restored and healthy\n");
         exit(10);
     }
-    villa_runner_status($statusWriter, 'failed', $commit,
+    villa_runner_status($statusWriter, 'failed', '',
         $reason . '; yedek geri yüklendi ancak eski sürüm sağlık kontrolünden geçmedi: ' . $restoreStatus, basename($newBackup));
     fwrite(STDERR, "Rollback was applied but restored site health check failed\n");
     exit(11);
 }
 
-villa_runner_status($statusWriter, 'failed', $commit,
+villa_runner_status($statusWriter, 'failed', '',
     $reason . '; otomatik geri alma yapılamadı: yeni ve doğrulanmış yedek bulunamadı veya geri yükleme başarısız', $newBackup !== null ? basename($newBackup) : '-');
 fwrite(STDERR, "Deployment failed and automatic rollback could not be completed\n");
 exit(12);
