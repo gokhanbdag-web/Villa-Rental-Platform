@@ -920,3 +920,14 @@ body[data-villa-theme] .premium-stay-card .card-bottom-row .rating-line .rating-
  body.villa-home-mediterranean .theme-menu-toggle .menu-open-mark::before,
  body.villa-home-mediterranean .theme-menu-toggle .menu-open-mark::after{transition:none!important;animation:none!important}
 }
+
+/* Mobile drawer social links: keep icons at the bottom of the open drawer. */
+@media(max-width:760px){
+  body.villa-home-mediterranean .villa-social-left{display:none!important}
+  body.villa-home-mediterranean:has(.theme-header .nav.is-open) .villa-social-left{
+    position:fixed!important;right:22px!important;bottom:24px!important;
+    z-index:10025!important;display:flex!important;align-items:center!important;
+    justify-content:flex-start!important;gap:12px!important;
+    width:auto!important;padding:12px 0!important;
+  }
+}
