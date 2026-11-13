@@ -350,3 +350,8 @@ body[data-villa-theme] .premium-stay-card .stay-content .price strong{;;"Segoe U
     body[data-villa-theme] .premium-stay-card .stay-content .rating-line{;}
     body[data-villa-theme] .premium-stay-card .stay-content .price strong{;}
 }
+
+/* Align eyebrow label text with its heading and supporting copy across every section. */
+body[data-villa-theme] .pill.villa-eyebrow{
+    padding-left:0;
+}
