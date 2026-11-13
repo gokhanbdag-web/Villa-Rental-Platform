@@ -28,6 +28,14 @@ $groups = [
 <p>Üst bilgi çubuğunun dikey yüksekliği. Değer piksel cinsindendir.</p>
 <div class="type-field topbar-height"><label for="topbarHeight">Minimum yükseklik (px)</label><input id="topbarHeight" type="number" name="typography[topbar_height]" min="52" max="100" value="<?= (int)($settings['topbar_height']??64) ?>"></div>
 </section>
+<section class="type-panel">
+<h2>Sayfa içi eyebrow rengi</h2>
+<p>Sayfa ve bölüm başlıklarının üzerindeki küçük etiketlerin rengini belirler. Ana sayfa hero ve aile/banner eyebrow alanları bu ayardan bağımsızdır.</p>
+<div class="type-fields">
+<div class="type-field"><label for="eyebrowColor">Yazı rengi</label><input id="eyebrowColor" type="color" name="typography[eyebrow_color]" value="<?= e((string)($settings['eyebrow_color']??'#263b31')) ?>"></div>
+</div>
+<div class="type-preview"><strong>Canlı önizleme</strong><span id="eyebrowColorPreview" style="display:inline-block;padding:7px 12px;border-radius:20px;background:#e8eee2;color:<?= e((string)($settings['eyebrow_color']??'#263b31')) ?>;font-size:12px;font-weight:800;letter-spacing:1px">SAYFA İÇİ EYEBROW</span></div>
+</section>
 <?php foreach($groups as $key=>$meta): $item=$settings[$key]??[]; ?>
 <section class="type-panel">
 <h2><?= e($meta[0]) ?></h2><p><?= e($meta[1]) ?></p>
@@ -94,6 +102,11 @@ $groups = [
         });
         applyGroup(group);
     });
+    const eyebrowColorInput = document.getElementById('eyebrowColor');
+    const eyebrowColorPreview = document.getElementById('eyebrowColorPreview');
+    if (eyebrowColorInput && eyebrowColorPreview) {
+        eyebrowColorInput.addEventListener('input', function () { eyebrowColorPreview.style.color = eyebrowColorInput.value; });
+    }
     const heightInput = document.getElementById('topbarHeight');
     if (heightInput) {
         const preview = document.createElement('div');
