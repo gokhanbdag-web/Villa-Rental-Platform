@@ -1642,6 +1642,24 @@ $router->post('/admin/bookings/status', static function (): void {
     }catch(Throwable $e){if($pdo->inTransaction())$pdo->rollBack();error_log('Booking status update failed: '.$e->getMessage());http_response_code(500);exit('Rezervasyon güncellenemedi.');}
 });
 
+$router->get('/admin/payment-tests', static function (): void {
+    Auth::requireRole(['super_admin','admin']);
+    $simulationResult = null;
+    ThemeManager::renderTemplate('templates/pages/admin/payment-tests.php', get_defined_vars());
+});
+$router->post('/admin/payment-tests', static function (): void {
+    Auth::requireRole(['super_admin','admin']);verify_csrf();
+    $provider=(string)($_POST['provider']??'');
+    $scenario=(string)($_POST['scenario']??'success');
+    try {
+        $simulationResult=\App\Core\PaymentSandboxSimulator::run($provider,$scenario);
+    } catch (InvalidArgumentException $e) {
+        http_response_code(422);
+        $simulationResult=['error'=>$e->getMessage(),'real_charge'=>false,'network_requests'=>0];
+    }
+    ThemeManager::renderTemplate('templates/pages/admin/payment-tests.php', get_defined_vars());
+});
+
 $router->get('/admin/finance', static function (): void {
     Auth::requireRole(['super_admin','admin']);
     $pdo = Database::connection();

@@ -31,7 +31,7 @@ th{color:#829087;font-size:10px;text-transform:uppercase;letter-spacing:.5px}td 
 </style>
 </head>
 <body><main class="wrap">
-<header class="heading"><div><h1>Finans ve Ödemeler</h1><p class="muted">Rezervasyon gelirlerini, platform komisyonunu, ev sahibi alacaklarını ve ödeme hareketlerini görüntüleyin.</p></div></header>
+<header class="heading"><div><h1>Finans ve Ödemeler</h1><p class="muted">Rezervasyon gelirlerini, platform komisyonunu, ev sahibi alacaklarını ve ödeme hareketlerini görüntüleyin.</p></div><a href="/admin/payment-tests" style="display:inline-block;padding:11px 15px;background:#176b50;color:#fff;border-radius:9px;text-decoration:none;font-weight:700;font-size:13px">Ödeme test merkezi</a></header>
 <?php if (!$paymentsEnabled || $paymentProvider === 'none'): ?>
 <div class="notice"><strong>Online ödeme kapalı.</strong> Bu ekranda mevcut rezervasyon finans kayıtları ve varsa ödeme hareketleri listelenir. Kart tahsilatı yapılmaz; ödeme sağlayıcısı etkinleştirilmemiştir.</div>
 <?php endif; ?>
