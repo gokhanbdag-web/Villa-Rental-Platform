@@ -47,34 +47,84 @@ function villa_resolve_location(PDO $pdo): array {
     if(!$country||!$city||($ids['district']&&!$district)||($ids['neighborhood']&&!$neighborhood)||($neighborhood&&!$district))throw new InvalidArgumentException('Lütfen ülke ve şehir seçin; alt konum seçimlerini kontrol edin.');
     return ['location_country_id'=>$ids['country'],'location_city_id'=>$ids['city'],'location_district_id'=>$district?$ids['district']:null,'location_neighborhood_id'=>$neighborhood?$ids['neighborhood']:null,'country'=>$country['name'],'city'=>$city['name'],'district'=>$district['name']??'','neighborhood'=>$neighborhood['name']??''];
 }
+function villa_update_http_get(string $url, bool $json = true): ?array {
+    $headers = "User-Agent: VillaRentalPlatform-Updater/1.0\\r\\nAccept: " . ($json ? "application/vnd.github+json" : "text/plain") . "\\r\\n";
+    if (function_exists('curl_init')) {
+        $ch = curl_init($url);
+        curl_setopt_array($ch, [CURLOPT_RETURNTRANSFER=>true,CURLOPT_FOLLOWLOCATION=>false,CURLOPT_CONNECTTIMEOUT=>2,CURLOPT_TIMEOUT=>4,CURLOPT_HTTPHEADER=>explode("\\r\\n",trim($headers))]);
+        $body = curl_exec($ch); $code = (int)curl_getinfo($ch, CURLINFO_RESPONSE_CODE); curl_close($ch);
+    } else {
+        $context = stream_context_create(['http'=>['method'=>'GET','header'=>$headers,'timeout'=>4,'ignore_errors'=>true]]);
+        $body = @file_get_contents($url, false, $context); $code = 0;
+        foreach (($http_response_header ?? []) as $header) if (preg_match('/^HTTP\\/\\S+\\s+(\\d+)/',$header,$m)) $code=(int)$m[1];
+    }
+    if (!is_string($body) || $code < 200 || $code >= 300) return null;
+    if (!$json) return ['text'=>trim($body)];
+    $decoded=json_decode($body,true);
+    return is_array($decoded)?$decoded:null;
+}
+
+function villa_github_update_info(string $root): array {
+    $cacheDir=$root.'/storage/cache';
+    if(!is_dir($cacheDir)) @mkdir($cacheDir,0750,true);
+    $cacheFile=$cacheDir.'/github-update-check.json';
+    if(is_file($cacheFile) && (time()-(int)filemtime($cacheFile))<300){
+        $cached=json_decode((string)@file_get_contents($cacheFile),true);
+        if(is_array($cached)) return $cached;
+    }
+    $base='https://api.github.com/repos/gokhanbdag-web/Villa-Rental-Platform';
+    $commit=villa_update_http_get($base.'/commits/main');
+    $version=villa_update_http_get('https://raw.githubusercontent.com/gokhanbdag-web/Villa-Rental-Platform/main/VERSION',false);
+    $release=villa_update_http_get($base.'/releases/latest');
+    $info=[
+        'checked_at'=>date(DATE_ATOM),
+        'available'=>false,
+        'connected'=>is_array($commit),
+        'version'=>is_array($version)?(string)($version['text']??''):'',
+        'commit'=>is_array($commit)?(string)($commit['sha']??''):'',
+        'commit_url'=>is_array($commit)?(string)($commit['html_url']??''):'',
+        'commit_message'=>is_array($commit)?(string)($commit['commit']['message']??''):'',
+        'commit_date'=>is_array($commit)?(string)($commit['commit']['committer']['date']??''):'',
+        'release_name'=>is_array($release)?(string)($release['name']??$release['tag_name']??''):'',
+        'release_notes'=>is_array($release)?(string)($release['body']??''):'',
+        'release_url'=>is_array($release)?(string)($release['html_url']??''):'',
+    ];
+    if($info['commit']!==''){
+        $statusFile=$root.'/storage/deploy-status.json';
+        $deployed=[];
+        if(is_file($statusFile)){$raw=@file_get_contents($statusFile);$parsed=is_string($raw)?json_decode($raw,true):null;if(is_array($parsed))$deployed=$parsed;}
+        $deployedCommit=(string)($deployed['commit']??getenv('VILLA_DEPLOY_COMMIT')?:'');
+        $info['deployed_commit']=$deployedCommit;
+        $info['deployment_status']=(string)($deployed['status']??'unknown');
+        $info['deployment_updated_at']=(string)($deployed['updated_at']??'');
+        $info['available']=$deployedCommit!=='' ? !hash_equals($deployedCommit,$info['commit']) : true;
+    }
+    if(is_dir($cacheDir)) @file_put_contents($cacheFile,json_encode($info,JSON_UNESCAPED_UNICODE|JSON_UNESCAPED_SLASHES),LOCK_EX);
+    return $info;
+}
+
 $router->get('/admin/updates', static function (): void {
     Auth::requireRole(['super_admin','admin']);
-    $root = dirname(__DIR__);
-    $versionFile = $root . '/VERSION';
-    $installedVersion = is_file($versionFile) ? trim((string)file_get_contents($versionFile)) : 'Sürüm bilgisi yok';
-    $migrationTotal = count(glob($root . '/database/migrations/*.sql') ?: []);
-    $appliedMigrations = 0;
-    $migrationError = '';
-    try { $appliedMigrations = (int)Database::connection()->query('SELECT COUNT(*) FROM schema_migrations')->fetchColumn(); }
-    catch (Throwable $e) { $migrationError = 'Migration kayıt tablosu henüz okunamadı.'; }
-    $logFile = trim((string)(getenv('VILLA_DEPLOY_LOG') ?: ''));
-    $logReadable = $logFile !== '' && is_file($logFile) && is_readable($logFile);
-    $logLines = []; $lastSuccess = null;
-    if ($logReadable && ($handle = @fopen($logFile, 'rb'))) {
-        $size = filesize($logFile);
-        if ($size !== false) {
-            fseek($handle, max(0, $size - 16384));
-            $chunk = stream_get_contents($handle);
-            if (is_string($chunk)) foreach (preg_split('/\\r?\\n/', $chunk) ?: [] as $line) {
-                $line = trim($line);
-                if ($line !== '' && preg_match('/^(=== DEPLOY |BAŞARILI:|SUCCESS:|PHP dosyaları kontrol ediliyor|Canlı kod yedekleniyor|Yeni sürüm aktarılıyor|Canlı PHP kontrolü|ERROR:|HATA:)/iu', $line)) $logLines[] = mb_substr($line, 0, 240);
-            }
-            $logLines = array_slice($logLines, -25);
-            foreach (array_reverse($logLines) as $line) if (str_contains($line, 'BAŞARILI:') || str_contains($line, 'SUCCESS:')) { $lastSuccess = $line; break; }
-        }
-        fclose($handle);
+    $root=dirname(__DIR__);
+    $versionFile=$root.'/VERSION';
+    $installedVersion=is_file($versionFile)?trim((string)file_get_contents($versionFile)):'Sürüm bilgisi yok';
+    $migrationTotal=count(glob($root.'/database/migrations/*.sql')?:[]);
+    $appliedMigrations=0;$migrationError='';
+    try{$appliedMigrations=(int)Database::connection()->query('SELECT COUNT(*) FROM schema_migrations')->fetchColumn();}
+    catch(Throwable $e){$migrationError='Migration kayıt tablosu henüz okunamadı.';}
+    $githubUpdate=villa_github_update_info($root);
+    $logFile=trim((string)(getenv('VILLA_DEPLOY_LOG')?:''));
+    $logReadable=$logFile!==''&&is_file($logFile)&&is_readable($logFile);
+    $logLines=[];$lastSuccess=null;
+    if($logReadable&&($handle=@fopen($logFile,'rb'))){
+        $size=filesize($logFile);
+        if($size!==false){fseek($handle,max(0,$size-16384));$chunk=stream_get_contents($handle);
+            if(is_string($chunk))foreach(preg_split('/\\r?\\n/',$chunk)?:[] as $line){$line=trim($line);if($line!==''&&preg_match('/^(=== DEPLOY |BAŞARILI:|SUCCESS:|PHP dosyaları kontrol ediliyor|Canlı kod yedekleniyor|Yeni sürüm aktarılıyor|Canlı PHP kontrolü|ERROR:|HATA:)/iu',$line))$logLines[]=mb_substr($line,0,240);}
+            $logLines=array_slice($logLines,-25);
+            foreach(array_reverse($logLines) as $line)if(str_contains($line,'BAŞARILI:')||str_contains($line,'SUCCESS:')){$lastSuccess=$line;break;}
+        }fclose($handle);
     }
-    ThemeManager::renderTemplate('templates/pages/admin/updates.php', get_defined_vars());
+    ThemeManager::renderTemplate('templates/pages/admin/updates.php',get_defined_vars());
 });
 
 $router->get('/admin/homepage', static function (): void {
