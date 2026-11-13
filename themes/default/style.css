@@ -1422,3 +1422,18 @@ body[data-villa-theme] .villa-social-drawer{display:none!important}
   border-top:1px solid var(--villa-border,#e5ebe6)!important;
  }
 }
+
+/* Desktop navigation stays visible while scrolling; the info strip scrolls away. */
+@media (min-width:761px){
+  body[data-villa-theme] .med-topbar{
+    position:relative!important;
+    top:auto!important;
+  }
+  body[data-villa-theme] .site-header{
+    position:sticky!important;
+    top:0!important;
+    z-index:10010!important;
+    border-top:3px solid var(--villa-primary,#315a43)!important;
+    box-sizing:border-box!important;
+  }
+}
