@@ -8,7 +8,6 @@ INNER JOIN properties p ON p.id = pm.property_id
 SET
     pm.file_path = CONCAT(
         'https://picsum.photos/seed/villa-',
-        'https://picsum.photos/seed/villa-',
         p.slug,
         '-',
         pm.sort_order,
