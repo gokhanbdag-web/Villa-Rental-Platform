@@ -231,6 +231,34 @@ body.villa-home-mediterranean .section:has(.styles),body.villa-home-mediterranea
 @media(max-width:600px){body.villa-home-mediterranean .hero-card{min-height:560px;border-radius:20px}.med-trust-grid{grid-template-columns:1fr 1fr;gap:18px 12px}.med-trust-item{align-items:flex-start;gap:9px}.med-trust-icon{flex-basis:36px;width:36px;height:36px;font-size:18px}.med-trust-item h3{font-size:12px}.med-trust-item p{font-size:11px}.med-property-grid,.med-property-grid--compact{grid-template-columns:1fr;gap:15px}.med-property-photo,.med-property-grid--compact .med-property-photo{height:225px}.med-concept-grid{grid-template-columns:1fr 1fr;gap:10px}.med-concept-card{height:170px;border-radius:14px}.med-concept-copy{left:11px;bottom:12px}.med-concept-copy strong{font-size:16px}.med-collection-heading h3{font-size:22px}.med-review-grid{grid-template-columns:1fr}.med-review-card>p{min-height:0}.med-faq-intro h2{font-size:33px}.med-faq-item summary{font-size:14px}.med-support-panel{display:block;padding:27px 22px;border-radius:19px}.med-support h2{font-size:29px}.med-support-actions{margin-top:22px}.med-footer-columns{grid-template-columns:1fr 1fr;gap:22px}.med-footer-columns>div:last-child{grid-column:1/-1}}
 CSS;
 
+$homeCss .= <<<'CSS'
+
+/* Keep the mobile burger button anchored inside the main menu bar, below the info bar. */
+@media(max-width:760px){
+ body.villa-home-mediterranean .med-topbar{position:relative;z-index:1}
+ body.villa-home-mediterranean .theme-header{position:relative!important;z-index:10010!important;width:100%;height:auto!important;min-height:0!important;overflow:visible!important}
+ body.villa-home-mediterranean .theme-header-inner{
+  position:relative!important;display:flex!important;flex-flow:row nowrap!important;
+  align-items:center!important;justify-content:space-between!important;
+  width:calc(100% - 30px)!important;min-height:74px!important;height:auto!important;
+  margin:0 auto!important;gap:12px!important;box-sizing:border-box!important
+ }
+ body.villa-home-mediterranean .theme-brand{flex:0 1 auto!important;min-width:0!important;max-width:calc(100% - 60px)!important}
+ body.villa-home-mediterranean .theme-menu-toggle{
+  display:inline-flex!important;position:relative!important;inset:auto!important;
+  top:auto!important;right:auto!important;bottom:auto!important;left:auto!important;
+  transform:none!important;order:2!important;flex:0 0 44px!important;
+  width:44px!important;height:44px!important;margin:0 0 0 auto!important;
+  align-self:center!important;z-index:10030!important
+ }
+ body.villa-home-mediterranean .theme-header .nav{
+  position:fixed!important;top:0!important;right:0!important;bottom:0!important;left:auto!important;
+  width:min(84vw,360px)!important;height:100dvh!important;z-index:10020!important
+ }
+}
+
+CSS;
+
 $html = str_replace('</head>', '<style id="villa-menu-icon-state">' . $menuIconCss . '</style><style>' . $homeCss . '</style></head>', $html);
 $cardGalleryScript = <<<'JS'
 <script>(function(){document.querySelectorAll('[data-card-gallery]').forEach(function(card){if(card.dataset.galleryReady)return;card.dataset.galleryReady='1';var data=card.querySelector('.card-gallery-data'),image=card.querySelector('.card-gallery-image'),count=card.querySelector('.card-gallery-count');if(!data||!image)return;var images=[];try{images=JSON.parse(data.textContent||'[]')}catch(e){}var index=0;card.querySelectorAll('[data-gallery-step]').forEach(function(button){button.addEventListener('click',function(event){event.preventDefault();event.stopPropagation();if(images.length<2)return;index=(index+Number(button.dataset.galleryStep)+images.length)%images.length;image.src=images[index];if(count)count.textContent=(index+1)+' / '+images.length})})})})();</script>
