@@ -26,7 +26,7 @@ $commitDate = !empty($githubUpdate['commit_date']) ? date('d.m.Y H:i', strtotime
 <div class="vu-row"><span>Commit tarihi</span><b><?= e($commitDate) ?></b></div>
 <div class="vu-row"><span>Sunucuya dağıtılan commit</span><b><?= $deployedCommit !== '' ? e(substr($deployedCommit,0,12)) : 'Henüz kayıtlı değil' ?></b></div>
 <div class="vu-row"><span>Durum</span><b><?= $updateAvailable ? 'Dağıtılmamış yeni commit var' : ($deployedCommit !== '' ? 'Sunucu GitHub ile eşleşiyor' : 'Dağıtım commit kaydı bekleniyor') ?></b></div>
-<div class="vu-row"><span>Son dağıtım yedeği</span><b><?= $deploymentBackup !== '' && $deploymentBackup !== '-' ? e($deploymentBackup) : 'Henüz kayıtlı değil' ?></b></div>
+<div class="vu-row"><span>Son dağıtım yedeği</span><b id="vu-live-backup"><?= $deploymentBackup !== '' && $deploymentBackup !== '-' ? e($deploymentBackup) : 'Henüz kayıtlı değil' ?></b></div>
 <?php if(!empty($githubUpdate['commit_url'])): ?><p><a class="vu-link" href="<?= e($githubUpdate['commit_url']) ?>" target="_blank" rel="noopener noreferrer">GitHub commit ayrıntısını aç</a></p><?php endif; ?>
 <?php endif; ?>
 <p class="vu-muted">Son kontrol: <?= e((string)($githubUpdate['checked_at'] ?? '—')) ?>. Sonuçlar sunucu yükünü azaltmak için 5 dakika önbelleğe alınır.</p></section>
@@ -38,13 +38,90 @@ $commitDate = !empty($githubUpdate['commit_date']) ? date('d.m.Y H:i', strtotime
 <?php elseif(!$logLines): ?><div class="vu-empty">Günlük okunabildi ancak tanınan dağıtım kaydı bulunamadı.</div>
 <?php else: ?><?php foreach($logLines as $line): ?><div class="vu-row vu-log"><?= e($line) ?></div><?php endforeach; ?><?php endif; ?>
 <?php if($lastSuccess): ?><p class="vu-muted">Son başarılı dağıtım kaydı: <?= e($lastSuccess) ?></p><?php endif; ?>
-<?php if(!empty($deploymentHistory)): ?><h2 style="margin-top:18px">Yapılandırılmış dağıtım geçmişi</h2>
+<h2 style="margin-top:18px">Yapılandırılmış dağıtım geçmişi</h2>
+<div id="vu-history-list">
+<?php if(!empty($deploymentHistory)): ?>
 <?php foreach($deploymentHistory as $event): ?>
 <div class="vu-row"><span><b><?= e((string)($event['status']??'unknown')) ?></b> · <?= e((string)($event['updated_at']??'')) ?><br><span class="vu-muted"><?= e((string)($event['message']??'')) ?></span></span><span class="vu-log"><?= e(substr((string)($event['commit']??''),0,12)) ?><?= !empty($event['backup']) ? ' · Yedek: '.e((string)$event['backup']) : '' ?></span></div>
 <?php endforeach; ?>
-<?php else: ?><div class="vu-empty">Yapılandırılmış dağıtım geçmişi henüz oluşmadı. Sunucu betiği scripts/deploy-status.php aracını çağırmaya başladığında burada listelenir.</div><?php endif; ?>
+<?php else: ?><div class="vu-empty">Henüz yapılandırılmış dağıtım kaydı yok.</div><?php endif; ?>
+</div>
 </section>
 <section class="vu-panel"><h2>Dağıtım ve geri alma güvenliği</h2>
-<div class="vu-row"><span>Sunucu otomasyon durumu</span><b><?= e($deploymentStatus==='unknown'?'Henüz durum bildirimi yok':$deploymentStatus) ?></b></div>
+<div class="vu-row"><span>Sunucu otomasyon durumu</span><b id="vu-live-status"><?= e($deploymentStatus==='unknown'?'Henüz durum bildirimi yok':$deploymentStatus) ?></b></div>
 <div class="vu-note">GitHub main dalına gönderilen imzalı commit, sunucudaki webhook tarafından dağıtım yöneticisine aktarılır. Yönetici dağıtım kilidini alır, canlı dosyaları yedekler, PHP kontrollerini çalıştırır ve aktarım sonrasında HTTP sağlık kontrolü yapar. Dağıtım veya sağlık kontrolü başarısız olursa yeni oluşturulan dosya yedeği geri yüklenir ve eski sürüm yeniden kontrol edilir. Sonuç, commit ve yedek arşivi bu panelde listelenir. Config, storage ve kullanıcı yüklemeleri normal dosya aktarımında korunur. Veritabanı şema değişiklikleri dosya yedeğiyle geri alınmaz; migration işlemleri ayrıca güvenli ve geriye uyumlu tasarlanmalıdır.</div>
-</section></main></body></html>
+</section></main>
+<script>
+(() => {
+    const statusNode = document.getElementById('vu-live-status');
+    const backupNode = document.getElementById('vu-live-backup');
+    const historyNode = document.getElementById('vu-history-list');
+    if (!statusNode || !historyNode) return;
+    const endpoint = window.location.pathname.replace(/\/+$/, '') + '/status';
+    const labels = {
+        deploying: 'Dağıtım sürüyor',
+        success: 'Başarılı',
+        failed: 'Başarısız',
+        rolled_back: 'Önceki sürüme geri dönüldü'
+    };
+    let busy = false;
+    async function refreshDeploymentStatus() {
+        if (busy || document.visibilityState === 'hidden') return;
+        busy = true;
+        try {
+            const response = await fetch(endpoint, {
+                credentials: 'same-origin',
+                cache: 'no-store',
+                headers: { 'Accept': 'application/json' }
+            });
+            if (!response.ok) return;
+            const data = await response.json();
+            const state = data.status || {};
+            statusNode.textContent = labels[state.status] || state.status || 'Henüz durum bildirimi yok';
+            if (backupNode) {
+                backupNode.textContent = state.backup && state.backup !== '-'
+                    ? state.backup
+                    : 'Henüz kayıtlı değil';
+            }
+            if (Array.isArray(data.history)) {
+                historyNode.replaceChildren();
+                if (data.history.length === 0) {
+                    const empty = document.createElement('div');
+                    empty.className = 'vu-empty';
+                    empty.textContent = 'Henüz yapılandırılmış dağıtım kaydı yok.';
+                    historyNode.appendChild(empty);
+                }
+                data.history.forEach((event) => {
+                    const row = document.createElement('div');
+                    row.className = 'vu-row';
+                    const left = document.createElement('span');
+                    const title = document.createElement('b');
+                    title.textContent = labels[event.status] || event.status || 'Bilinmiyor';
+                    left.appendChild(title);
+                    left.appendChild(document.createTextNode(' · ' + (event.updated_at || '')));
+                    const message = document.createElement('span');
+                    message.className = 'vu-muted';
+                    message.textContent = event.message || '';
+                    left.appendChild(document.createElement('br'));
+                    left.appendChild(message);
+                    const right = document.createElement('span');
+                    right.className = 'vu-log';
+                    const details = [];
+                    if (event.commit) details.push(String(event.commit).slice(0, 12));
+                    if (event.backup && event.backup !== '-') details.push('Yedek: ' + event.backup);
+                    right.textContent = details.join(' · ');
+                    row.append(left, right);
+                    historyNode.appendChild(row);
+                });
+            }
+        } catch (error) {
+            // Keep the last successful status visible when a temporary poll fails.
+        } finally {
+            busy = false;
+        }
+    }
+    refreshDeploymentStatus();
+    window.setInterval(refreshDeploymentStatus, 5000);
+})();
+</script>
+</body></html>

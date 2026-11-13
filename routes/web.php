@@ -142,6 +142,30 @@ $router->get('/admin/updates', static function (): void {
     ThemeManager::renderTemplate('templates/pages/admin/updates.php',get_defined_vars());
 });
 
+$router->get('/admin/updates/status', static function (): void {
+    Auth::requireRole(['super_admin','admin']);
+    header('Content-Type: application/json; charset=utf-8');
+    header('Cache-Control: no-store, private');
+    $root = dirname(__DIR__);
+    $status = [];
+    $statusFile = $root . '/storage/deploy-status.json';
+    if (is_file($statusFile) && is_readable($statusFile)) {
+        $decoded = json_decode((string)@file_get_contents($statusFile), true);
+        if (is_array($decoded)) $status = $decoded;
+    }
+    $history = [];
+    $historyFile = $root . '/storage/deploy-history.jsonl';
+    if (is_file($historyFile) && is_readable($historyFile)) {
+        $lines = @file($historyFile, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES) ?: [];
+        foreach (array_slice($lines, -20) as $line) {
+            $event = json_decode($line, true);
+            if (is_array($event)) $history[] = $event;
+        }
+        $history = array_reverse($history);
+    }
+    echo json_encode(['status' => $status, 'history' => $history], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+});
+
 $router->get('/admin/homepage', static function (): void {
     Auth::requireRole(['super_admin','admin']);$pdo=Database::connection();
     $sections=$pdo->query('SELECT * FROM homepage_sections ORDER BY sort_order,id')->fetchAll();
