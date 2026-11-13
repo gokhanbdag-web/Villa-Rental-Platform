@@ -263,7 +263,7 @@ final class ThemeManager
             $stmt->execute(['theme.' . $slug . '.design']);
             $saved = json_decode((string)($stmt->fetchColumn() ?: '{}'), true);
             return self::normalizeDesign(is_array($saved) ? $saved : []);
-        } catch (\\Throwable $e) {
+        } catch (\Throwable $e) {
             error_log('Theme design settings read failed: ' . $e->getMessage());
             return self::designDefaults();
         }
