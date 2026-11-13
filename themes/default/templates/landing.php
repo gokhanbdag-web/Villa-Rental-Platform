@@ -147,9 +147,9 @@ $html=preg_replace('~<section class="section" style="[^"]*"><div class="wrap"><d
 
 
 
-$homeCssPath = \App\Core\\ThemeManager::resolveFile('home.css', 'default');
+$homeCssPath = \App\Core\ThemeManager::resolveFile('home.css', 'default');
 if ($homeCssPath !== null) {
-    $homeCssLink = '<link rel="stylesheet" href="' . e(\App\Core\\ThemeManager::assetUrl('home.css', 'default')) . '?v=' . rawurlencode((string)filemtime($homeCssPath)) . '">';
+    $homeCssLink = '<link rel="stylesheet" href="' . e(\App\Core\ThemeManager::assetUrl('home.css', 'default')) . '?v=' . rawurlencode((string)filemtime($homeCssPath)) . '">';
     $html = str_replace('</head>', $homeCssLink . '</head>', $html);
 }
 $cardGalleryScript = <<<'JS'
