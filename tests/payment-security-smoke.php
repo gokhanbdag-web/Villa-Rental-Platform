@@ -17,8 +17,6 @@ foreach ([
     paymentAssert(!PaymentTransactionGuard::matches($transaction,array_merge($callback,$change)), 'Mismatched payment callback was accepted.');
 }
 
-use App\Core\PaymentCallbackProcessor;
-
 paymentAssert(PaymentCallbackProcessor::targetStatus('success') === 'paid', 'Success callback status mapping failed.');
 paymentAssert(PaymentCallbackProcessor::targetStatus('failure') === 'failed', 'Failure callback status mapping failed.');
 paymentAssert(PaymentCallbackProcessor::targetStatus('cancelled') === 'cancelled', 'Cancelled callback status mapping failed.');
