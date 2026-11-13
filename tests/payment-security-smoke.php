@@ -5,6 +5,7 @@ require_once dirname(__DIR__) . '/app/bootstrap.php';
 
 use App\Core\PaymentSecretVault;
 use App\Core\PaymentSignatureVerifier;
+use App\Core\PaymentSandboxSimulator;
 
 function paymentAssert(bool $ok, string $message): void
 {
@@ -41,4 +42,12 @@ paymentAssert(PaymentSignatureVerifier::verifyIyzicoV3($iyzicoPayload, $signatur
 $iyzicoPayload['status'] = 'FAILURE';
 paymentAssert(!PaymentSignatureVerifier::verifyIyzicoV3($iyzicoPayload, $signature, $secret), 'Tampered iyzico callback was accepted.');
 
+foreach (['iyzico','paytr'] as $provider) {
+    $success=PaymentSandboxSimulator::run($provider,'success');
+    paymentAssert($success['signature_valid']&&$success['payment_success']&&$success['network_requests']===0&&!$success['real_charge'],$provider.' success simulation failed.');
+    $failure=PaymentSandboxSimulator::run($provider,'failure');
+    paymentAssert($failure['signature_valid']&&!$failure['payment_success'],$provider.' failure simulation failed.');
+    $tampered=PaymentSandboxSimulator::run($provider,'tampered');
+    paymentAssert(!$tampered['signature_valid']&&!$tampered['payment_success'],$provider.' tampered simulation was accepted.');
+}
 echo "Payment security smoke tests passed. No gateway API requests were made.\n";
