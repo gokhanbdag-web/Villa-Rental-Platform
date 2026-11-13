@@ -89,7 +89,8 @@ $medBlocks = '';
       <?php endforeach; ?></div>
     </div></section>
     <?php endif;
-    <section class="section med-family-banner" style="order:6" aria-hidden="true"></section>
+    <?php $familyBannerAsset = \\App\\Core\\ThemeManager::brandSettings(); ?>
+    <section class="section med-family-banner" style="order:6" aria-label="Tatil görseli"><?php if(!empty($familyBannerAsset['family_banner_url'])): ?><img class="med-family-banner-image" src="<?= e($familyBannerAsset['family_banner_url']) ?>" alt="" loading="lazy"><?php endif; ?></section>
     <?php
     if ($medSectionActive('collections') && !empty($homeCategoryCollections)): ?>
     <section class="section med-collections" style="order:<?= $medSectionOrder('collections',7) ?>"><div class="wrap">
