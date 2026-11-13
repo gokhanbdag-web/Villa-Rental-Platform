@@ -40,7 +40,7 @@
 </div>
 <?php require APP_ROOT . '/views/site/partials/logout-button.php'; ?>
 </main>
-<footer><div class="footer-inner"><div><strong><?= e($siteName??'VillaStay') ?></strong><p><?= e($content['footer_text']??'') ?></p></div><nav><?php foreach(($footerNavigation??[]) as $item): ?><a href="<?= e($item['url']) ?>"><?= e($item['label']) ?></a><?php endforeach; ?><a href="<?= e(app_url('/konaklamalar')) ?>">Konaklamalar</a><a href="<?= e(app_url('/destinasyonlar')) ?>">Destinasyonlar</a></nav></div></footer>
+
 <script>
 (function(){
 var form=document.getElementById('bookingForm'),checkIn=document.getElementById('bookingCheckIn'),checkOut=document.getElementById('bookingCheckOut'),guests=document.getElementById('bookingGuests'),message=document.getElementById('availabilityMessage'),lines=document.getElementById('priceLines'),submit=document.getElementById('bookingSubmit'),timer=null,requestId=0,unavailable=false;
