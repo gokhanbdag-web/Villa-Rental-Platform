@@ -1437,3 +1437,42 @@ body[data-villa-theme] .villa-social-drawer{display:none!important}
     box-sizing:border-box!important;
   }
 }
+
+/* Mobile top strip: keep call centre as a single prominent row; move address and TÜRSAB into the drawer. */
+@media(max-width:760px){
+  body[data-villa-theme] .villa-social-inner{
+    display:grid!important;
+    grid-template-columns:minmax(0,1fr)!important;
+    grid-template-rows:auto!important;
+    min-height:58px!important;
+    padding:10px 16px!important;
+    gap:0!important;
+  }
+  body[data-villa-theme] .villa-social-bar .villa-social-left,
+  body[data-villa-theme] .villa-social-bar .villa-social-address,
+  body[data-villa-theme] .villa-social-bar .villa-social-license{display:none!important}
+  body[data-villa-theme] .villa-social-bar .villa-social-call-center{
+    grid-column:1!important;grid-row:1!important;
+    display:flex!important;flex-direction:column!important;align-items:center!important;
+    justify-content:center!important;gap:3px!important;text-align:center!important;
+    width:100%!important;min-width:0!important;margin:0!important;
+    font-size:clamp(16px,4.2vw,19px)!important;line-height:1.35!important;
+  }
+  body[data-villa-theme] .villa-social-bar .villa-social-call-label{
+    display:block!important;font-size:13px!important;line-height:1.25!important;font-weight:700!important;
+  }
+  body[data-villa-theme] .villa-social-bar .villa-social-call-center a{
+    display:block!important;font-size:clamp(17px,4.5vw,20px)!important;
+    line-height:1.3!important;font-weight:800!important;white-space:normal!important;
+  }
+  body[data-villa-theme] .villa-social-drawer .villa-social-address,
+  body[data-villa-theme] .villa-social-drawer .villa-social-license{
+    display:block!important;grid-column:auto!important;grid-row:auto!important;
+    flex:1 1 100%!important;width:100%!important;min-width:0!important;
+    margin:4px 0 0!important;padding:12px 4px 0!important;
+    border-top:1px solid var(--villa-border,#e5ebe6)!important;
+    text-align:left!important;justify-content:flex-start!important;
+    overflow-wrap:anywhere!important;font-size:14px!important;line-height:1.5!important;
+  }
+  body[data-villa-theme] .villa-social-drawer .villa-social-license{display:flex!important;flex-wrap:wrap!important;gap:5px!important}
+}
