@@ -282,10 +282,14 @@ final class ThemeManager
     {
         return [
             'topbar_height'=>64,
-            'headings'=>['family'=>'Manrope','size'=>46,'color'=>'#263b31','weight'=>700,'style'=>'normal'],
-            'span'=>['family'=>'Inter','size'=>11,'color'=>'#344039','weight'=>700,'style'=>'normal'],
-            'paragraph'=>['family'=>'Inter','size'=>16,'color'=>'#56635b','weight'=>400,'style'=>'normal'],
-            'paragraph_links'=>['family'=>'Inter','size'=>16,'color'=>'#176b50','weight'=>600,'style'=>'normal'],
+            'headings'=>[
+                'family'=>'Manrope','size'=>46,'sizes'=>['h1'=>46,'h2'=>34,'h3'=>26,'h4'=>22,'h5'=>19,'h6'=>17],
+                'line_heights'=>['h1'=>1.12,'h2'=>1.16,'h3'=>1.22,'h4'=>1.25,'h5'=>1.3,'h6'=>1.35],
+                'color'=>'#263b31','weight'=>700,'style'=>'normal'
+            ],
+            'span'=>['family'=>'Inter','size'=>11,'line_height'=>1.2,'color'=>'#344039','weight'=>700,'style'=>'normal'],
+            'paragraph'=>['family'=>'Inter','size'=>16,'line_height'=>1.7,'color'=>'#56635b','weight'=>400,'style'=>'normal'],
+            'paragraph_links'=>['family'=>'Inter','size'=>16,'line_height'=>1.7,'color'=>'#176b50','weight'=>600,'style'=>'normal'],
         ];
     }
 
@@ -300,13 +304,23 @@ final class ThemeManager
             $family = (string)($row['family'] ?? $clean[$group]['family']);
             if (isset(self::typographyFonts()[$family])) $clean[$group]['family'] = $family;
             $size = filter_var($row['size'] ?? $clean[$group]['size'], FILTER_VALIDATE_INT);
-            if ($size !== false) $clean[$group]['size'] = max(10, min(64, $size));
+            if ($size !== false) $clean[$group]['size'] = max(10, min(96, $size));
+            $lineHeight = filter_var($row['line_height'] ?? $clean[$group]['line_height'], FILTER_VALIDATE_FLOAT);
+            if ($lineHeight !== false) $clean[$group]['line_height'] = max(0.9, min(2.5, (float)$lineHeight));
             $color = strtolower(trim((string)($row['color'] ?? $clean[$group]['color'])));
             if (preg_match('/^#[0-9a-f]{6}$/', $color)) $clean[$group]['color'] = $color;
             $weight = filter_var($row['weight'] ?? $clean[$group]['weight'], FILTER_VALIDATE_INT);
             if ($weight !== false && in_array($weight, $weights, true)) $clean[$group]['weight'] = $weight;
             $style = (string)($row['style'] ?? $clean[$group]['style']);
             if (in_array($style, ['normal','italic'], true)) $clean[$group]['style'] = $style;
+        }
+        // Keep existing theme settings compatible while allowing independent H1-H6 scales.
+        $headingRow = is_array($input['headings'] ?? null) ? $input['headings'] : [];
+        foreach (['h1','h2','h3','h4','h5','h6'] as $level) {
+            $size = filter_var($headingRow['sizes'][$level] ?? $clean['headings']['sizes'][$level], FILTER_VALIDATE_INT);
+            if ($size !== false) $clean['headings']['sizes'][$level] = max(12, min(120, $size));
+            $lineHeight = filter_var($headingRow['line_heights'][$level] ?? $clean['headings']['line_heights'][$level], FILTER_VALIDATE_FLOAT);
+            if ($lineHeight !== false) $clean['headings']['line_heights'][$level] = max(0.9, min(2.5, (float)$lineHeight));
         }
         return $clean;
     }
@@ -681,21 +695,20 @@ final class ThemeManager
         $span = $typography['span'];
         $paragraph = $typography['paragraph'];
         $paragraphLinks = $typography['paragraph_links'];
-        $headingBaseSize = (int)$heading['size'];
-        $headingBaseRule = '{font-family:' . json_encode($heading['family']) . '!important;color:' . $heading['color'] . '!important;font-weight:' . (int)$heading['weight'] . '!important;font-style:' . $heading['style'] . '!important;line-height:1.14!important;letter-spacing:-.035em!important;text-wrap:balance}';
-        $headingRules = $themeScope . ' h1,' . $themeScope . ' h2,' . $themeScope . ' h3,' . $themeScope . ' h4,' . $themeScope . ' h5,' . $themeScope . ' h6' . $headingBaseRule
-            . $themeScope . ' h1{font-size:clamp(' . min(30, max(24, (int)round($headingBaseSize * .68))) . 'px,4.2vw,' . $headingBaseSize . 'px)!important}'
-            . $themeScope . ' h2{font-size:clamp(' . min(23, max(19, (int)round($headingBaseSize * .5))) . 'px,3vw,' . max(26, (int)round($headingBaseSize * .70)) . 'px)!important}'
-            . $themeScope . ' h3{font-size:clamp(' . min(19, max(17, (int)round($headingBaseSize * .42))) . 'px,2.2vw,' . max(21, (int)round($headingBaseSize * .52)) . 'px)!important}'
-            . $themeScope . ' h4{font-size:' . max(18, (int)round($headingBaseSize * .44)) . 'px!important}'
-            . $themeScope . ' h5{font-size:' . max(16, (int)round($headingBaseSize * .39)) . 'px!important}'
-            . $themeScope . ' h6{font-size:' . max(15, (int)round($headingBaseSize * .35)) . 'px!important}';
+        $headingBaseRule = '{font-family:' . json_encode($heading['family']) . '!important;color:' . $heading['color'] . '!important;font-weight:' . (int)$heading['weight'] . '!important;font-style:' . $heading['style'] . '!important;letter-spacing:-.035em!important;text-wrap:balance}';
+        $headingRules = '';
+        foreach (['h1','h2','h3','h4','h5','h6'] as $level) {
+            $levelSize = (int)$heading['sizes'][$level];
+            $levelLineHeight = (float)$heading['line_heights'][$level];
+            $headingRules .= $themeScope . ' ' . $level . $headingBaseRule
+                . '{font-size:' . $levelSize . 'px!important;line-height:' . rtrim(rtrim(number_format($levelLineHeight, 2, '.', ''), '0'), '.') . '!important}';
+        }
         $typographyCss = $themeScope . ' .villa-social-inner{min-height:' . (int)$typography['topbar_height'] . 'px}'
-            . $themeScope . '{font-family:' . json_encode($paragraph['family']) . ',system-ui,sans-serif;-webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility}'
+            . $themeScope . '{font-family:' . json_encode($paragraph['family']) . ',system-ui,sans-serif;font-size:' . (int)$paragraph['size'] . 'px!important;line-height:' . $paragraph['line_height'] . '!important;-webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility}'
             . $headingRules
-            . $themeScope . ' p{font-family:' . json_encode($paragraph['family']) . '!important;font-size:' . (int)$paragraph['size'] . 'px!important;color:' . $paragraph['color'] . '!important;font-weight:' . (int)$paragraph['weight'] . '!important;font-style:' . $paragraph['style'] . '!important;line-height:1.75!important;letter-spacing:0!important}'
-            . $themeScope . ' .villa-eyebrow,' . $themeScope . ' .eyebrow:not(.villa-hero-eyebrow),' . $themeScope . ' .section-eyebrow,' . $themeScope . ' .pill,' . $themeScope . ' .section-head .eyebrow,' . $themeScope . ' .med-faq-intro .eyebrow{font-family:' . json_encode($span['family']) . '!important;font-size:' . (int)$span['size'] . 'px!important;font-weight:' . (int)$span['weight'] . '!important;font-style:' . $span['style'] . '!important;letter-spacing:.075em!important;line-height:1.2!important}'
-            . $themeScope . ' p a:not(.button):not(.btn):not([class*="button"]):not([class*="btn"]):not([class*="cta"]):not(.search-submit):not([role="button"]){font-family:' . json_encode($paragraphLinks['family']) . '!important;font-size:inherit!important;color:' . $paragraphLinks['color'] . '!important;font-weight:' . (int)$paragraphLinks['weight'] . '!important;font-style:' . $paragraphLinks['style'] . '!important;text-decoration-thickness:1px;text-underline-offset:3px}';
+            . $themeScope . ' p{font-family:' . json_encode($paragraph['family']) . '!important;font-size:' . (int)$paragraph['size'] . 'px!important;color:' . $paragraph['color'] . '!important;font-weight:' . (int)$paragraph['weight'] . '!important;font-style:' . $paragraph['style'] . '!important;line-height:' . $paragraph['line_height'] . '!important;letter-spacing:0!important}'
+            . $themeScope . ' .villa-eyebrow,' . $themeScope . ' .eyebrow:not(.villa-hero-eyebrow),' . $themeScope . ' .section-eyebrow,' . $themeScope . ' .pill,' . $themeScope . ' .section-head .eyebrow,' . $themeScope . ' .med-faq-intro .eyebrow{font-family:' . json_encode($span['family']) . '!important;font-size:' . (int)$span['size'] . 'px!important;font-weight:' . (int)$span['weight'] . '!important;font-style:' . $span['style'] . '!important;letter-spacing:.075em!important;line-height:' . $span['line_height'] . '!important}'
+            . $themeScope . ' p a:not(.button):not(.btn):not([class*="button"]):not([class*="btn"]):not([class*="cta"]):not(.search-submit):not([role="button"]){font-family:' . json_encode($paragraphLinks['family']) . '!important;font-size:inherit!important;line-height:' . $paragraphLinks['line_height'] . '!important;color:' . $paragraphLinks['color'] . '!important;font-weight:' . (int)$paragraphLinks['weight'] . '!important;font-style:' . $paragraphLinks['style'] . '!important;text-decoration-thickness:1px;text-underline-offset:3px}';
         $heroTypography = self::heroTypographySettings($renderSlug);
         $heroFontQuery = [];
         foreach (['eyebrow','title','description','button'] as $heroGroup) {
