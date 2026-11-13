@@ -1591,8 +1591,13 @@ $router->post('/admin/bookings/status', static function (): void {
         $pdo->beginTransaction();
         $s=$pdo->prepare('SELECT property_id,guest_user_id,check_in,check_out,status FROM bookings WHERE id=? FOR UPDATE');$s->execute([$id]);$booking=$s->fetch();
         if(!$booking){$pdo->rollBack();http_response_code(404);exit('Rezervasyon bulunamadı.');}
+        // Serialize all status changes for the same property. This prevents two
+        // administrators from confirming overlapping bookings at the same time.
+        $propertyLock=$pdo->prepare('SELECT id FROM properties WHERE id=? FOR UPDATE');
+        $propertyLock->execute([(int)$booking['property_id']]);
+        if(!$propertyLock->fetchColumn()){$pdo->rollBack();http_response_code(404);exit('Konaklama bulunamadı.');}
         if($status==='confirmed'){
-            $conflict=$pdo->prepare("SELECT id FROM bookings WHERE property_id=? AND id<>? AND status='confirmed' AND check_in < ? AND check_out > ? LIMIT 1");
+            $conflict=$pdo->prepare("SELECT id FROM bookings WHERE property_id=? AND id<>? AND status IN ('pending','confirmed') AND check_in < ? AND check_out > ? LIMIT 1");
             $conflict->execute([(int)$booking['property_id'],$id,$booking['check_out'],$booking['check_in']]);
             if($conflict->fetchColumn()){$pdo->rollBack();http_response_code(409);exit('Bu tarihlerde onaylanmış başka bir rezervasyon var.');}
             $blocked=$pdo->prepare("SELECT id FROM availability WHERE property_id=? AND status<>'available' AND date_from < ? AND date_to > ? LIMIT 1");
