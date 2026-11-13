@@ -1430,13 +1430,25 @@ $router->post('/admin/typography', static function (): void {
 });
 
 $router->get('/admin/settings', static function (): void {
-    Auth::requireRole(['super_admin','admin']);$settings=Database::connection()->query("SELECT setting_key,setting_value FROM settings WHERE setting_key IN ('platform.commission_percent','app.currency','app.timezone')")->fetchAll(PDO::FETCH_KEY_PAIR);ThemeManager::renderTemplate('templates/pages/admin/settings.php', get_defined_vars());
+    Auth::requireRole(['super_admin','admin']);
+    $settings=Database::connection()->query("SELECT setting_key,setting_value FROM settings WHERE setting_key IN ('platform.commission_percent','app.currency','app.timezone','payments.iyzico.environment','payments.paytr.environment','payments.iyzico.api_key','payments.iyzico.secret_key','payments.paytr.merchant_id','payments.paytr.merchant_key','payments.paytr.merchant_salt')")->fetchAll(PDO::FETCH_KEY_PAIR);
+    $iyzicoConfigured=!empty($settings['payments.iyzico.api_key'])&&!empty($settings['payments.iyzico.secret_key']);
+    $paytrConfigured=!empty($settings['payments.paytr.merchant_id'])&&!empty($settings['payments.paytr.merchant_key'])&&!empty($settings['payments.paytr.merchant_salt']);
+    unset($settings['payments.iyzico.api_key'],$settings['payments.iyzico.secret_key'],$settings['payments.paytr.merchant_id'],$settings['payments.paytr.merchant_key'],$settings['payments.paytr.merchant_salt']);
+    ThemeManager::renderTemplate('templates/pages/admin/settings.php',get_defined_vars());
 });
 $router->post('/admin/settings', static function (): void {
-    Auth::requireRole(['super_admin','admin']);verify_csrf();$commission=(float)($_POST['commission']??12);$currency=strtoupper(trim((string)($_POST['currency']??'TRY')));$timezone=trim((string)($_POST['timezone']??'Europe/Istanbul'));
-    if($commission<0||$commission>50||!preg_match('/^[A-Z]{3}$/',$currency)||!in_array($timezone,DateTimeZone::listIdentifiers(),true)){http_response_code(422);exit('Ayar değerlerini kontrol edin.');}
-    $s=Database::connection()->prepare('INSERT INTO settings(setting_key,setting_value,autoload) VALUES(?,?,1) ON DUPLICATE KEY UPDATE setting_value=VALUES(setting_value),autoload=1');
-    $s->execute(['platform.commission_percent',(string)$commission]);$s->execute(['app.currency',$currency]);$s->execute(['app.timezone',$timezone]);redirect('/admin/settings');
+    Auth::requireRole(['super_admin','admin']);verify_csrf();
+    $commission=(float)($_POST['commission']??12);$currency=strtoupper(trim((string)($_POST['currency']??'TRY')));$timezone=trim((string)($_POST['timezone']??'Europe/Istanbul'));
+    $iyzicoEnvironment=(string)($_POST['iyzico_environment']??'sandbox');$paytrEnvironment=(string)($_POST['paytr_environment']??'sandbox');
+    if($commission<0||$commission>50||!preg_match('/^[A-Z]{3}$/',$currency)||!in_array($timezone,DateTimeZone::listIdentifiers(),true)||!in_array($iyzicoEnvironment,['sandbox','production'],true)||!in_array($paytrEnvironment,['sandbox','production'],true)){http_response_code(422);exit('Ayar değerlerini kontrol edin.');}
+    $pdo=Database::connection();$save=$pdo->prepare('INSERT INTO settings(setting_key,setting_value,autoload) VALUES(?,?,1) ON DUPLICATE KEY UPDATE setting_value=VALUES(setting_value),autoload=1');
+    foreach(['platform.commission_percent'=>(string)$commission,'app.currency'=>$currency,'app.timezone'=>$timezone,'payments.iyzico.environment'=>$iyzicoEnvironment,'payments.paytr.environment'=>$paytrEnvironment,'payments.enabled'=>'0','payments.provider'=>'multiple'] as $key=>$value)$save->execute([$key,$value]);
+    $secrets=['payments.iyzico.api_key'=>'iyzico_api_key','payments.iyzico.secret_key'=>'iyzico_secret_key','payments.paytr.merchant_id'=>'paytr_merchant_id','payments.paytr.merchant_key'=>'paytr_merchant_key','payments.paytr.merchant_salt'=>'paytr_merchant_salt'];
+    foreach($secrets as $key=>$field){$value=trim((string)($_POST[$field]??''));if($value!=='')$save->execute([$key,\\App\\Core\\PaymentSecretVault::encrypt($value)]);}
+    $clear=[];if(!empty($_POST['clear_iyzico']))$clear=array_merge($clear,['payments.iyzico.api_key','payments.iyzico.secret_key']);if(!empty($_POST['clear_paytr']))$clear=array_merge($clear,['payments.paytr.merchant_id','payments.paytr.merchant_key','payments.paytr.merchant_salt']);
+    if($clear){$delete=$pdo->prepare('DELETE FROM settings WHERE setting_key=?');foreach($clear as $key)$delete->execute([$key]);}
+    redirect('/admin/settings');
 });
 
 $router->get('/admin/content', static function (): void {
