@@ -127,6 +127,8 @@ $medBlocks = '';
             $destinationSection[0],
             1
         ) ?? $destinationSection[0];
+        // Keep the moved section last in the flex layout, regardless of its original admin sort order.
+        $destinationMarkup = preg_replace('~style="order:[^"]*"~', 'style="order:2147483647"', $destinationMarkup, 1) ?? $destinationMarkup;
         $html = str_replace($destinationSection[0], '', $html);
         // The directory is the final content section, directly before the footer.
         $html = preg_replace('~</main>~i', $destinationMarkup . '</main>', $html, 1) ?? $html;
