@@ -294,6 +294,7 @@ final class ThemeManager
     {
         return [
             'topbar_height'=>64,
+            'eyebrow_color'=>'#263b31',
             'headings'=>[
                 'family'=>'Manrope','size'=>46,'sizes'=>['h1'=>46,'h2'=>34,'h3'=>26,'h4'=>22,'h5'=>19,'h6'=>17],
                 'line_heights'=>['h1'=>1.12,'h2'=>1.16,'h3'=>1.22,'h4'=>1.25,'h5'=>1.3,'h6'=>1.35],
@@ -310,6 +311,8 @@ final class ThemeManager
         $clean = self::typographyDefaults();
         $height = filter_var($input['topbar_height'] ?? $clean['topbar_height'], FILTER_VALIDATE_INT);
         if ($height !== false) $clean['topbar_height'] = max(52, min(100, $height));
+        $eyebrowColor = strtolower(trim((string)($input['eyebrow_color'] ?? $clean['eyebrow_color'])));
+        if (preg_match('/^#[0-9a-f]{6}$/', $eyebrowColor)) $clean['eyebrow_color'] = $eyebrowColor;
         $weights = [300,400,500,600,700,800,900];
         foreach (['headings','span','paragraph','paragraph_links'] as $group) {
             $row = is_array($input[$group] ?? null) ? $input[$group] : [];
