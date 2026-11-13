@@ -97,15 +97,9 @@ $medBlocks = '';
     </div></section>
     <?php endif;
     if ($medSectionActive('latest')): ?>
-    <section class="villa-map-section" style="order:4" aria-label="<?= e($content['home_map_title'] ?? 'Villaları haritada keşfedin') ?>">
-      <div class="wrap villa-map-heading">
-        <span class="pill villa-eyebrow"><?= e($content['home_map_eyebrow'] ?? 'KONUMUNA GÖRE KEŞFET') ?></span>
-        <h2><?= e($content['home_map_title'] ?? 'Villaları Haritada Keşfedin') ?></h2>
-        <p><?= e($content['home_map_subtitle'] ?? 'Size en uygun konaklamayı harita üzerinden bulun.') ?></p>
-      </div>
+    <section class="villa-map-section" aria-label="Villa konum haritası">
       <div id="villa-open-map" class="villa-open-map" role="application" aria-label="OpenStreetMap üzerinde villa konumları"></div>
       <script type="application/json" id="villa-map-data"><?= json_encode($mapItems, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?></script>
-      <p class="villa-map-empty" id="villa-map-status"><?= e($content['home_map_loading'] ?? 'Villa konumları haritaya yükleniyor…') ?></p>
     </section>
     <?php endif;
     if ($medSectionActive('concepts') && !empty($categories)): ?>
@@ -291,36 +285,44 @@ JS;
 $villaMapScript = <<<'JS'
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script>(function(){
- var mapElement=document.getElementById('villa-open-map'),dataElement=document.getElementById('villa-map-data'),status=document.getElementById('villa-map-status');
+ var mapElement=document.getElementById('villa-open-map'),dataElement=document.getElementById('villa-map-data');
  if(!mapElement||!dataElement||!window.L)return;
  var properties=[];try{properties=JSON.parse(dataElement.textContent||'[]')}catch(error){}
  var map=L.map(mapElement,{scrollWheelZoom:false}).setView([39.0,35.0],6);
  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19,attribution:'&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a> contributors'}).addTo(map);
  function esc(value){return String(value==null?'':value).replace(/[&<>"']/g,function(ch){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]})}
  function wait(ms){return new Promise(function(resolve){setTimeout(resolve,ms)})}
- var cache={};try{cache=JSON.parse(localStorage.getItem('villaMapGeocodeCache')||'{}')}catch(e){}
+ var cache={};try{cache=JSON.parse(localStorage.getItem('villaMapGeocodeCacheV2')||'{}')}catch(e){}
  var unique=[],seen={};
  properties.forEach(function(p){var key=String(p.location||'').trim();if(key&&!seen[key]){seen[key]=1;unique.push(key)}});
- var locations={},resolved=0,failed=0;
+ var locations={};
  async function geocode(location){
   if(cache[location]&&Number.isFinite(Number(cache[location].lat))&&Number.isFinite(Number(cache[location].lon)))return cache[location];
-  var url='https://nominatim.openstreetmap.org/search?format=jsonv2&limit=1&q='+encodeURIComponent(location);
-  try{
-   var response=await fetch(url,{headers:{'Accept':'application/json'}});
-   if(!response.ok)throw new Error('Geocoding HTTP '+response.status);
-   var rows=await response.json();
-   if(rows&&rows.length){var point={lat:Number(rows[0].lat),lon:Number(rows[0].lon)};if(Number.isFinite(point.lat)&&Number.isFinite(point.lon)){cache[location]=point;try{localStorage.setItem('villaMapGeocodeCache',JSON.stringify(cache))}catch(e){}return point}}
-  }catch(e){}
+  var parts=location.split(',').map(function(x){return x.trim()}).filter(Boolean);
+  var candidates=[location];
+  if(parts.length>2)candidates.push(parts.slice(-3).join(', '));
+  if(parts.length>1)candidates.push(parts.slice(-2).join(', '));
+  for(var i=0;i<candidates.length;i++){
+   try{
+    var response=await fetch('https://photon.komoot.io/api/?limit=1&lang=tr&q='+encodeURIComponent(candidates[i]),{headers:{'Accept':'application/json'}});
+    if(!response.ok)continue;
+    var result=await response.json(),feature=result&&result.features&&result.features[0],coords=feature&&feature.geometry&&feature.geometry.coordinates;
+    if(coords&&Number.isFinite(Number(coords[0]))&&Number.isFinite(Number(coords[1]))){
+     var point={lat:Number(coords[1]),lon:Number(coords[0])};
+     cache[location]=point;try{localStorage.setItem('villaMapGeocodeCacheV2',JSON.stringify(cache))}catch(e){}
+     return point;
+    }
+   }catch(e){}
+   if(i<candidates.length-1)await wait(250);
+  }
   return null;
  }
  async function run(){
+  var bounds=[];
   for(var i=0;i<unique.length;i++){
-   var location=unique[i];
-   if(i>0)await wait(1100);
-   locations[location]=await geocode(location);
-   if(locations[location])resolved++;else failed++;
+   locations[unique[i]]=await geocode(unique[i]);
+   if(i<unique.length-1)await wait(350);
   }
-  var bounds=[],count=0;
   properties.forEach(function(property){
    var point=locations[String(property.location||'').trim()];if(!point)return;
    var image=property.image?'<img src="'+esc(property.image)+'" alt="" loading="lazy">':'<span class="villa-map-preview-placeholder">Villa</span>';
@@ -328,13 +330,12 @@ $villaMapScript = <<<'JS'
    var html='<div class="villa-map-marker-wrap"><span class="villa-map-marker-pin"></span><a class="villa-map-preview" href="'+esc(property.url)+'">'+image+'<span class="villa-map-preview-copy"><strong>'+esc(property.title)+'</strong><small>'+esc(property.city||property.location)+'</small><b>'+price+'</b></span></a></div>';
    var icon=L.divIcon({className:'villa-map-div-icon',html:html,iconSize:[44,44],iconAnchor:[22,42]});
    L.marker([point.lat,point.lon],{icon:icon,keyboard:true,title:property.title}).addTo(map);
-   bounds.push([point.lat,point.lon]);count++;
+   bounds.push([point.lat,point.lon]);
   });
-  if(bounds.length)map.fitBounds(bounds,{padding:[55,55],maxZoom:12});
-  if(status)status.textContent=count?count+' villa haritada gösteriliyor'+(failed?' · '+failed+' lokasyon eşleştirilemedi':''):'Villa lokasyonları haritaya dönüştürülemedi. Lütfen daha sonra tekrar deneyin.';
-  setTimeout(function(){map.invalidateSize()},120);
+  if(bounds.length)map.fitBounds(bounds,{padding:[40,40],maxZoom:12});
+  setTimeout(function(){map.invalidateSize()},150);
  }
- if(unique.length){run()}else if(status){status.textContent='Haritada gösterilecek villa lokasyonu bulunamadı.'}
+ if(unique.length)run();
  window.addEventListener('resize',function(){map.invalidateSize()});
 })();</script>
 JS;
