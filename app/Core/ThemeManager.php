@@ -702,7 +702,12 @@ final class ThemeManager
         foreach (['h1','h2','h3','h4','h5','h6'] as $level) {
             $levelSize = (int)$heading['sizes'][$level];
             $levelLineHeight = (float)$heading['line_heights'][$level];
-            $headingRules .= $themeScope . ' ' . $level . $headingBaseRule
+            // Give saved heading controls enough specificity to override theme-level
+            // selectors such as ".section-head h2" that also use !important.
+            // The hero H1 is intentionally excluded because it has its own controls.
+            $headingSelector = 'html ' . $themeScope . ' :not(script):not(style) ' . $level
+                . ($level === 'h1' ? ':not(.hero-copy h1)' : '');
+            $headingRules .= $headingSelector . $headingBaseRule
                 . '{font-size:' . $levelSize . 'px!important;line-height:' . rtrim(rtrim(number_format($levelLineHeight, 2, '.', ''), '0'), '.') . '!important}';
         }
         $typographyCss = $themeScope . '{--villa-font-body:' . json_encode($paragraph['family']) . ';--villa-body-size:' . (int)$paragraph['size'] . 'px;--villa-body-line-height:' . $paragraph['line_height'] . ';--villa-body-weight:' . (int)$paragraph['weight'] . ';--villa-body-style:' . $paragraph['style'] . ';--villa-font-heading:' . json_encode($heading['family']) . ';--villa-text-color:' . $design['text'] . ';}'
