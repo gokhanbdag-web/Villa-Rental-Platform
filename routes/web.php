@@ -1586,26 +1586,40 @@ $router->post('/admin/bookings/manual', static function (): void {
 $router->post('/admin/bookings/status', static function (): void {
     Auth::requireRole(['super_admin','admin']);verify_csrf();
     $pdo=Database::connection();$id=(int)($_POST['id']??0);$status=(string)($_POST['status']??'');
-    if(!in_array($status,['pending','confirmed','cancelled','completed'],true)){http_response_code(422);exit('Rezervasyon durumu geçersiz.');}
+    if($id<1||!in_array($status,['pending','confirmed','cancelled','completed'],true)){http_response_code(422);exit('Rezervasyon durumu geçersiz.');}
     try{
         $pdo->beginTransaction();
-        $s=$pdo->prepare('SELECT property_id,guest_user_id,check_in,check_out,status FROM bookings WHERE id=? FOR UPDATE');$s->execute([$id]);$booking=$s->fetch();
-        if(!$booking){$pdo->rollBack();http_response_code(404);exit('Rezervasyon bulunamadı.');}
-        // Serialize all status changes for the same property. This prevents two
-        // administrators from confirming overlapping bookings at the same time.
+
+        // Determine the property first, then always lock property before booking.
+        // This consistent lock order serializes all writes for a property and
+        // avoids booking-row/property-row lock inversions between admin actions.
+        $lookup=$pdo->prepare('SELECT property_id FROM bookings WHERE id=?');
+        $lookup->execute([$id]);$propertyId=(int)($lookup->fetchColumn()?:0);
+        if($propertyId<1){$pdo->rollBack();http_response_code(404);exit('Rezervasyon bulunamadı.');}
+
         $propertyLock=$pdo->prepare('SELECT id FROM properties WHERE id=? FOR UPDATE');
-        $propertyLock->execute([(int)$booking['property_id']]);
+        $propertyLock->execute([$propertyId]);
         if(!$propertyLock->fetchColumn()){$pdo->rollBack();http_response_code(404);exit('Konaklama bulunamadı.');}
+
+        $s=$pdo->prepare('SELECT property_id,guest_user_id,check_in,check_out,status FROM bookings WHERE id=? FOR UPDATE');
+        $s->execute([$id]);$booking=$s->fetch();
+        if(!$booking){$pdo->rollBack();http_response_code(404);exit('Rezervasyon bulunamadı.');}
+        if((int)$booking['property_id']!==$propertyId){$pdo->rollBack();http_response_code(409);exit('Rezervasyon kaydı işlem sırasında değişti. Lütfen tekrar deneyin.');}
+
         if($status==='confirmed'){
-            $conflict=$pdo->prepare("SELECT id FROM bookings WHERE property_id=? AND id<>? AND status IN ('pending','confirmed') AND check_in < ? AND check_out > ? LIMIT 1");
-            $conflict->execute([(int)$booking['property_id'],$id,$booking['check_out'],$booking['check_in']]);
-            if($conflict->fetchColumn()){$pdo->rollBack();http_response_code(409);exit('Bu tarihlerde onaylanmış başka bir rezervasyon var.');}
-            $blocked=$pdo->prepare("SELECT id FROM availability WHERE property_id=? AND status<>'available' AND date_from < ? AND date_to > ? LIMIT 1");
-            $blocked->execute([(int)$booking['property_id'],$booking['check_out'],$booking['check_in']]);
+            // Locking reads see the latest committed rows after waiting for the
+            // property lock; a snapshot read could otherwise miss a concurrent change.
+            $conflict=$pdo->prepare("SELECT id FROM bookings WHERE property_id=? AND id<>? AND status IN ('pending','confirmed') AND check_in < ? AND check_out > ? LIMIT 1 FOR UPDATE");
+            $conflict->execute([$propertyId,$id,$booking['check_out'],$booking['check_in']]);
+            if($conflict->fetchColumn()){$pdo->rollBack();http_response_code(409);exit('Bu tarihlerde bekleyen veya onaylanmış başka bir rezervasyon var.');}
+
+            $blocked=$pdo->prepare("SELECT id FROM availability WHERE property_id=? AND status<>'available' AND date_from < ? AND date_to > ? LIMIT 1 FOR UPDATE");
+            $blocked->execute([$propertyId,$booking['check_out'],$booking['check_in']]);
             if($blocked->fetchColumn()){$pdo->rollBack();http_response_code(409);exit('Bu rezervasyon tarihleri takvimde kapatılmış.');}
         }
+
         $update=$pdo->prepare('UPDATE bookings SET status=? WHERE id=?');$update->execute([$status,$id]);
-        $statusTitle = ['pending'=>'Rezervasyon talebiniz beklemede','confirmed'=>'Rezervasyonunuz onaylandı','cancelled'=>'Rezervasyonunuz iptal edildi','completed'=>'Konaklamanız tamamlandı'][$status];
+        $statusTitle=['pending'=>'Rezervasyon talebiniz beklemede','confirmed'=>'Rezervasyonunuz onaylandı','cancelled'=>'Rezervasyonunuz iptal edildi','completed'=>'Konaklamanız tamamlandı'][$status];
         if(!empty($booking['guest_user_id'])){
             $notice=$pdo->prepare('INSERT INTO notifications(user_id,notification_type,title,body,created_at) VALUES(?,?,?,?,NOW())');
             $notice->execute([(int)$booking['guest_user_id'],'booking.status_changed',$statusTitle,'Rezervasyon durumunuz güncellendi. Rezervasyon kodunuzu hesabınızdan görüntüleyebilirsiniz.']);
