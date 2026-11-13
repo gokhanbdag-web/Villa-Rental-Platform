@@ -69,12 +69,13 @@ $medBlocks = '';
     <section class="section med-latest" style="order:<?= $medSectionOrder('latest',3) ?>"><div class="wrap">
       <div class="section-head"><div><span class="pill"><?= e($content['home_latest_eyebrow'] ?? 'YENİ EKLENENLER') ?></span><h2><?= e($content['home_latest_title'] ?? 'Son Eklenen Villalar') ?></h2><p><?= e($content['home_latest_subtitle'] ?? '') ?></p></div><a class="more" href="<?= e(app_url('/konaklamalar?sort=newest')) ?>"><?= e($content['home_latest_link'] ?? 'Tüm villaları gör ↗') ?></a></div>
       <div class="med-property-grid">
-      <?php foreach ($latestProperties as $p): $img=$medImage($p); ?>
-        <a class="med-property-card" href="<?= e(app_url('/villa/' . rawurlencode((string)$p['slug']))) ?>">
-          <div class="med-property-photo"><?php if($img): ?><img src="<?= e($img) ?>" alt="<?= e($p['title']) ?>" loading="lazy"><?php else: ?><span><?= e($content['home_empty_photo'] ?? 'Villa fotoğrafı') ?></span><?php endif; ?></div>
-          <div class="med-property-body"><span class="med-property-place"><?= e(trim((string)($p['district'] ?? '') . ((string)($p['district'] ?? '') !== '' && (string)($p['city'] ?? '') !== '' ? ', ' : '') . (string)($p['city'] ?? ''))) ?></span><h3><?= e($p['title']) ?></h3><div class="med-property-meta"><?= (int)$p['max_guests'] ?> <?= e($content['home_guest_unit'] ?? 'misafir') ?> · <?= (int)$p['bedrooms'] ?> <?= e($content['home_bedroom_unit'] ?? 'yatak odası') ?></div><div class="med-property-price"><strong><?= e(number_format((float)$p['base_nightly_price'],0,',','.')) ?> <?= e($p['currency']) ?></strong> / <?= e($content['home_night_unit'] ?? 'gece') ?></div></div>
-        </a>
-      <?php endforeach; ?>
+      <?php foreach ($latestProperties as $p):
+            $cardImages=$homeCardImages[(int)$p['id']]??[];
+            if(!$cardImages && !empty($p['cover_image']))$cardImages=[$medImage($p)];
+            $isCardFavorite=in_array((int)$p['id'],$favoritePropertyIds??[],true);
+            $filters=[];
+            \\App\\Core\\ThemeManager::renderPartial('components/cards/villa-card.php',get_defined_vars());
+        endforeach; ?>
       </div>
     </div></section>
     <?php endif;
@@ -90,10 +91,14 @@ $medBlocks = '';
     <section class="section med-collections" style="order:<?= $medSectionOrder('collections',7) ?>"><div class="wrap">
       <div class="section-head"><div><span class="pill"><?= e($content['home_collections_eyebrow'] ?? 'ÖZENLE HAZIRLANDI') ?></span><h2><?= e($content['home_collections_title'] ?? 'Size Özel Villa Koleksiyonları') ?></h2><p><?= e($content['home_collections_subtitle'] ?? '') ?></p></div></div>
       <?php foreach ($homeCategoryCollections as $collection): ?>
-      <div class="med-collection-row"><div class="med-collection-heading"><div><h3><?= e($collection['category']['name']) ?></h3><p><?= (int)$collection['category']['property_count'] ?> <?= e($content['home_collection_count_suffix'] ?? 'yayındaki villa arasından seçtiklerimiz') ?></p></div><a href="<?= e(app_url('/konaklamalar?category='.(int)$collection['category']['id'])) ?>"><?= e($content['home_collection_link'] ?? 'Tümünü gör ↗') ?></a></div><div class="med-property-grid med-property-grid--compact">
-      <?php foreach ($collection['properties'] as $p): $img=$medImage($p); ?>
-        <a class="med-property-card" href="<?= e(app_url('/villa/'.rawurlencode((string)$p['slug']))) ?>"><div class="med-property-photo"><?php if($img): ?><img src="<?= e($img) ?>" alt="<?= e($p['title']) ?>" loading="lazy"><?php endif; ?></div><div class="med-property-body"><span class="med-property-place"><?= e(trim((string)($p['district'] ?? '').((string)($p['district'] ?? '')!=='' && (string)($p['city'] ?? '')!==''?', ':'').(string)($p['city'] ?? ''))) ?></span><h3><?= e($p['title']) ?></h3><div class="med-property-meta"><?= (int)$p['max_guests'] ?> <?= e($content['home_guest_unit'] ?? 'misafir') ?></div><div class="med-property-price"><strong><?= e(number_format((float)$p['base_nightly_price'],0,',','.')) ?> <?= e($p['currency']) ?></strong> / <?= e($content['home_night_unit'] ?? 'gece') ?></div></div></a>
-      <?php endforeach; ?></div></div>
+      <div class="med-collection-row"><div class="med-collection-heading"><div><h3><?= e($collection['category']['name']) ?></h3><p><?= (int)$collection['category']['property_count'] ?> <?= e($content['home_collection_count_suffix'] ?? 'yayındaki villa arasından seçtiklerimiz') ?></p></div><a href="<?= e(app_url('/konaklamalar?category='.(int)$collection['category']['id'])) ?>"><?= e($content['home_collection_link'] ?? 'Tümünü gör ↗') ?></a></div><div class="med-property-grid">
+      <?php foreach ($collection['properties'] as $p):
+            $cardImages=$homeCardImages[(int)$p['id']]??[];
+            if(!$cardImages && !empty($p['cover_image']))$cardImages=[$medImage($p)];
+            $isCardFavorite=in_array((int)$p['id'],$favoritePropertyIds??[],true);
+            $filters=[];
+            \\App\\Core\\ThemeManager::renderPartial('components/cards/villa-card.php',get_defined_vars());
+        endforeach; ?></div></div>
       <?php endforeach; ?>
     </div></section>
     <?php endif;
