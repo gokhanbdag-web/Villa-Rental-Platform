@@ -1384,6 +1384,31 @@ $router->post('/admin/themes/activate', static function (): void {
     redirect('/admin/themes');
 });
 
+
+$router->get('/admin/theme-design', static function (): void {
+    Auth::requireRole(['super_admin','admin']);
+    $themeDesignSlug = ThemeManager::activeSlug();
+    $themeDesignSettings = ThemeManager::designSettings($themeDesignSlug);
+    $themeDesignMessage = (string)($_SESSION['villa_theme_design_message'] ?? '');
+    $themeDesignMessageType = (string)($_SESSION['villa_theme_design_message_type'] ?? 'success');
+    unset($_SESSION['villa_theme_design_message'], $_SESSION['villa_theme_design_message_type']);
+    ThemeManager::renderTemplate('templates/pages/admin/theme-design.php', get_defined_vars());
+});
+$router->post('/admin/theme-design', static function (): void {
+    Auth::requireRole(['super_admin','admin']);
+    verify_csrf();
+    try {
+        ThemeManager::saveDesignSettings((array)($_POST['design'] ?? []), ThemeManager::activeSlug());
+        $_SESSION['villa_theme_design_message'] = 'Tema renk paleti başarıyla kaydedildi.';
+        $_SESSION['villa_theme_design_message_type'] = 'success';
+    } catch (Throwable $e) {
+        error_log('Theme design save failed: ' . $e->getMessage());
+        $_SESSION['villa_theme_design_message'] = 'Kayıt başarısız: ' . $e->getMessage();
+        $_SESSION['villa_theme_design_message_type'] = 'error';
+    }
+    redirect('/admin/theme-design');
+});
+
 $router->get('/admin/header-settings', static function (): void {
     Auth::requireRole(['super_admin','admin']);
     $socialSettings=ThemeManager::socialSettings();

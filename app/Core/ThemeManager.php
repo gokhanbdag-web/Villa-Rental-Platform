@@ -234,6 +234,58 @@ final class ThemeManager
         }
     }
 
+
+    /** Theme-scoped design palette stored in the database, never in editable CMS content. */
+    private static function designDefaults(): array
+    {
+        return ['primary'=>'#176b50','accent'=>'#ef8069','surface'=>'#ffffff','background'=>'#f5f8f6','text'=>'#20352f','muted'=>'#71817a','border'=>'#e2eae5'];
+    }
+
+    private static function normalizeDesign(array $input): array
+    {
+        $clean = self::designDefaults();
+        foreach ($clean as $key => $default) {
+            $value = strtolower(trim((string)($input[$key] ?? $default)));
+            if (!preg_match('/^#[0-9a-f]{6}$/', $value)) {
+                throw new RuntimeException('Renk değerleri 6 haneli HEX formatında olmalıdır.');
+            }
+            $clean[$key] = $value;
+        }
+        return $clean;
+    }
+
+    public static function designSettings(?string $slug = null): array
+    {
+        $slug = $slug ?: self::activeSlug();
+        if (!preg_match('/^[a-z0-9_-]{1,60}$/', $slug)) $slug = 'default';
+        try {
+            $stmt = Database::connection()->prepare('SELECT setting_value FROM settings WHERE setting_key=? LIMIT 1');
+            $stmt->execute(['theme.' . $slug . '.design']);
+            $saved = json_decode((string)($stmt->fetchColumn() ?: '{}'), true);
+            return self::normalizeDesign(is_array($saved) ? $saved : []);
+        } catch (\\Throwable $e) {
+            error_log('Theme design settings read failed: ' . $e->getMessage());
+            return self::designDefaults();
+        }
+    }
+
+    public static function saveDesignSettings(array $input, ?string $slug = null): void
+    {
+        $slug = $slug ?: self::activeSlug();
+        if (!preg_match('/^[a-z0-9_-]{1,60}$/', $slug) || !isset(self::installed()[$slug])) {
+            throw new RuntimeException('Tema kodu geçersiz veya kurulu değil.');
+        }
+        $clean = self::normalizeDesign($input);
+        $key = 'theme.' . $slug . '.design';
+        $json = json_encode($clean, JSON_UNESCAPED_UNICODE | JSON_THROW_ON_ERROR);
+        $pdo = Database::connection();
+        $stmt = $pdo->prepare('INSERT INTO settings(setting_key,setting_value,autoload) VALUES(?,?,1) ON DUPLICATE KEY UPDATE setting_value=VALUES(setting_value),autoload=1');
+        $stmt->execute([$key, $json]);
+        $verify = $pdo->prepare('SELECT setting_value FROM settings WHERE setting_key=? LIMIT 1');
+        $verify->execute([$key]);
+        if ((string)$verify->fetchColumn() !== $json) throw new RuntimeException('Tema tasarım ayarları veritabanına kaydedilemedi.');
+    }
+
     public static function saveActiveTheme(string $slug): void
     {
         if (!preg_match('/^[a-z0-9_-]{1,60}$/', $slug)) {
@@ -366,6 +418,17 @@ final class ThemeManager
             $html = preg_replace('/<\/head>/i', $styleTags . '</head>', $html, 1) ?? $html;
         }
         $html = preg_replace('/<body\b/i', '<body data-villa-theme="' . e($renderSlug) . '"', $html, 1) ?? $html;
+        $design = self::designSettings($renderSlug);
+        $designCss = '<style id="villa-theme-design-vars">body[data-villa-theme="' . e($renderSlug) . '"]{'
+            . '--villa-primary:' . $design['primary'] . ';--villa-accent:' . $design['accent']
+            . ';--villa-surface:' . $design['surface'] . ';--villa-background:' . $design['background']
+            . ';--villa-text:' . $design['text'] . ';--villa-muted:' . $design['muted'] . ';--villa-border:' . $design['border'] . ';'
+            . '--coastal-primary:' . $design['primary'] . ';--coastal-primary-dark:' . $design['primary']
+            . ';--coastal-accent:' . $design['accent'] . ';--coastal-paper:' . $design['background']
+            . ';--coastal-ink:' . $design['text'] . ';--coastal-muted:' . $design['muted'] . ';--coastal-line:' . $design['border'] . ';'
+            . '}body[data-villa-theme="' . e($renderSlug) . '"] .submit,body[data-villa-theme="' . e($renderSlug) . '"] .search-submit{background:var(--villa-primary)}'
+            . '</style>';
+        if (stripos($html, '</head>') !== false) $html = preg_replace('/<\\/head>/i', $designCss . '</head>', $html, 1) ?? $html;
         $typography = self::typographySettings($renderSlug);
         $fontFamilies = [];
         foreach (['headings','span','paragraph','paragraph_links'] as $group) {
