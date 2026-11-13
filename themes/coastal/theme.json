@@ -1,0 +1,9 @@
+{
+  "slug": "coastal",
+  "name": "Coastal",
+  "version": "1.0.0",
+  "author": "VillaStay",
+  "description": "Aydınlık, modern ve sahil esintili alternatif arayüz. Eksik şablon ve bileşenlerde Default temasına güvenli biçimde geri döner.",
+  "builtin": false,
+  "templates": {}
+}
