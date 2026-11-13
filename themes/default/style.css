@@ -1221,16 +1221,18 @@ body.villa-home-mediterranean .med-family-banner-inner{
   position:relative;z-index:2;width:min(1200px,calc(100% - 40px));max-width:1200px;
   margin:0 auto;padding:28px 0;color:var(--family-banner-text-color,#fff);
 }
+body.villa-home-mediterranean .med-family-banner-inner :is(.med-family-banner-eyebrow,.med-family-banner-title,.med-family-banner-description){
+  display:block!important;width:fit-content;max-width:100%;color:var(--family-banner-text-color,#fff)!important;
+  -webkit-text-fill-color:var(--family-banner-text-color,#fff)!important;text-decoration:none!important;
+}
 body.villa-home-mediterranean .med-family-banner-eyebrow{
-  display:inline-block;margin:0 0 12px;font-weight:800;letter-spacing:.12em;
-  text-transform:uppercase;color:var(--family-banner-text-color,#fff);
+  margin:0 0 12px;font-weight:800;letter-spacing:.12em;text-transform:uppercase;
 }
 body.villa-home-mediterranean .med-family-banner-title{
   max-width:760px;margin:0 0 12px;font-weight:700;letter-spacing:-.035em;
-  color:var(--family-banner-text-color,#fff);
 }
 body.villa-home-mediterranean .med-family-banner-description{
-  max-width:680px;margin:0;font-weight:400;color:var(--family-banner-text-color,#fff);
+  max-width:680px;margin:0;font-weight:400;
 }
 @media(max-width:600px){
   body.villa-home-mediterranean .med-family-banner{height:auto;min-height:240px;}
