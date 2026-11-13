@@ -1524,7 +1524,7 @@ body[data-villa-theme] .villa-back-to-top__shine{
   transform:translateX(-220%) rotate(24deg);transition:transform .75s ease;pointer-events:none;
 }
 body[data-villa-theme] .villa-back-to-top:hover .villa-back-to-top__shine{transform:translateX(650%) rotate(24deg)}
-body[data-villa-theme] .villa-back-to-top.is-at-upper-edge{filter:saturate(1.12);box-shadow:0 10px 32px rgba(5,28,20,.25),0 0 24px color-mix(in srgb,var(--villa-primary,#176b50) 35%,transparent)!important}
+body[data-villa-theme] .villa-back-to-top.is-at-lower-edge{filter:saturate(1.12);box-shadow:0 10px 32px rgba(5,28,20,.25),0 0 24px color-mix(in srgb,var(--villa-primary,#176b50) 35%,transparent)!important}
 body[data-villa-theme] .villa-back-to-top.is-returning svg{animation:villa-back-top-pulse .65s ease-in-out infinite alternate}
 @keyframes villa-back-top-pulse{from{transform:translateY(1px)}to{transform:translateY(-4px)}}
 @media(max-width:760px){
