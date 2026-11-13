@@ -310,3 +310,70 @@ body[data-villa-theme] .premium-stay-card .stay-content h3{min-height:2.7em;disp
 body[data-villa-theme] .premium-stay-card .stay-content .price{margin-top:auto;padding-top:13px}
 @media(max-width:760px){body[data-villa-theme] .premium-stay-card .card-gallery{height:185px;min-height:185px;flex-basis:185px}body[data-villa-theme] .premium-stay-card .stay-content h3{min-height:2.6em}}
 @media(max-width:420px){body[data-villa-theme] .premium-stay-card .card-gallery{height:160px;min-height:160px;flex-basis:160px}}
+
+
+/* Villa card typography and image-to-title rhythm: keep listing names visually prominent. */
+body[data-villa-theme] .premium-stay-card .stay-content{
+    display:flex!important;
+    flex:1 1 auto!important;
+    flex-direction:column!important;
+    gap:0!important;
+    padding:20px 19px 21px!important;
+    min-width:0!important;
+}
+body[data-villa-theme] .premium-stay-card .stay-content h3{
+    display:-webkit-box!important;
+    -webkit-box-orient:vertical!important;
+    -webkit-line-clamp:2!important;
+    overflow:hidden!important;
+    min-height:0!important;
+    margin:0 0 12px!important;
+    color:var(--villa-text,#20352f)!important;
+    font-family:Manrope,"Segoe UI",sans-serif!important;
+    font-size:21px!important;
+    font-style:normal!important;
+    font-weight:800!important;
+    line-height:1.28!important;
+    letter-spacing:-.035em!important;
+    text-wrap:pretty;
+}
+body[data-villa-theme] .premium-stay-card .stay-content .meta{
+    display:block;
+    margin:0 0 10px!important;
+    color:var(--villa-muted,#71817a)!important;
+    font-family:Inter,"Segoe UI",sans-serif!important;
+    font-size:12px!important;
+    font-weight:500!important;
+    line-height:1.5!important;
+}
+body[data-villa-theme] .premium-stay-card .stay-content .rating-line{
+    margin:0 0 12px!important;
+    color:var(--villa-muted,#71817a)!important;
+    font-size:12px!important;
+    line-height:1.45!important;
+}
+body[data-villa-theme] .premium-stay-card .stay-content .price{
+    margin: auto 0 0!important;
+    padding-top:13px!important;
+    color:var(--villa-muted,#71817a)!important;
+    font-size:12px!important;
+    line-height:1.5!important;
+}
+body[data-villa-theme] .premium-stay-card .stay-content .price strong{
+    color:var(--villa-primary,#176b50)!important;
+    font-family:Manrope,"Segoe UI",sans-serif!important;
+    font-size:19px!important;
+    font-weight:800!important;
+    letter-spacing:-.025em!important;
+}
+@media(max-width:760px){
+    body[data-villa-theme] .premium-stay-card .stay-content{padding:16px 14px 18px!important}
+    body[data-villa-theme] .premium-stay-card .stay-content h3{
+        margin-bottom:10px!important;
+        font-size:17px!important;
+        line-height:1.3!important;
+    }
+    body[data-villa-theme] .premium-stay-card .stay-content .meta{font-size:11px!important}
+    body[data-villa-theme] .premium-stay-card .stay-content .rating-line{font-size:11px!important}
+    body[data-villa-theme] .premium-stay-card .stay-content .price strong{font-size:17px!important}
+}
