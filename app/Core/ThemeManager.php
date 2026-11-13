@@ -499,6 +499,68 @@ final class ThemeManager
         if((string)$verify->fetchColumn()!==$json)throw new RuntimeException('Hero yazı ayarları kaydedilemedi.');
     }
 
+    /** Theme-scoped text content and typography for the homepage family banner. */
+    private static function familyBannerTextDefaults(): array
+    {
+        return [
+            'eyebrow' => '', 'title' => '', 'description' => '', 'color' => '#ffffff',
+            'eyebrow_typography' => ['family'=>'Inter','size'=>13,'line_height'=>1.3],
+            'title_typography' => ['family'=>'Playfair Display','size'=>42,'line_height'=>1.12],
+            'description_typography' => ['family'=>'Inter','size'=>17,'line_height'=>1.65],
+        ];
+    }
+
+    private static function normalizeFamilyBannerText(array $input): array
+    {
+        $clean = self::familyBannerTextDefaults();
+        foreach (['eyebrow','title','description'] as $key) {
+            $value = trim((string)($input[$key] ?? $clean[$key]));
+            $clean[$key] = mb_substr($value, 0, $key === 'description' ? 1200 : 190);
+            $row = is_array($input[$key . '_typography'] ?? null) ? $input[$key . '_typography'] : [];
+            $family = (string)($row['family'] ?? $clean[$key . '_typography']['family']);
+            if (isset(self::typographyFonts()[$family])) $clean[$key . '_typography']['family'] = $family;
+            $size = filter_var($row['size'] ?? $clean[$key . '_typography']['size'], FILTER_VALIDATE_INT);
+            if ($size !== false) $clean[$key . '_typography']['size'] = max(10, min(100, $size));
+            $lineHeight = filter_var($row['line_height'] ?? $clean[$key . '_typography']['line_height'], FILTER_VALIDATE_FLOAT);
+            if ($lineHeight !== false) $clean[$key . '_typography']['line_height'] = max(0.9, min(2.5, (float)$lineHeight));
+        }
+        $color = strtolower(trim((string)($input['color'] ?? $clean['color'])));
+        if (preg_match('/^#[0-9a-f]{6}$/', $color)) $clean['color'] = $color;
+        return $clean;
+    }
+
+    public static function familyBannerTextSettings(?string $slug = null): array
+    {
+        $slug = $slug ?: self::activeSlug();
+        if (!preg_match('/^[a-z0-9_-]{1,60}$/', $slug)) $slug = 'default';
+        try {
+            $stmt = Database::connection()->prepare('SELECT setting_value FROM settings WHERE setting_key=? LIMIT 1');
+            $stmt->execute(['theme.' . $slug . '.family_banner_text']);
+            $saved = json_decode((string)($stmt->fetchColumn() ?: '{}'), true);
+            return self::normalizeFamilyBannerText(is_array($saved) ? $saved : []);
+        } catch (\Throwable $e) {
+            error_log('Family banner text settings read failed: ' . $e->getMessage());
+            return self::familyBannerTextDefaults();
+        }
+    }
+
+    public static function saveFamilyBannerTextSettings(array $input, ?string $slug = null): void
+    {
+        $slug = $slug ?: self::activeSlug();
+        if (!preg_match('/^[a-z0-9_-]{1,60}$/', $slug) || !isset(self::installed()[$slug])) {
+            throw new RuntimeException('Tema kodu geçersiz veya kurulu değil.');
+        }
+        $clean = self::normalizeFamilyBannerText($input);
+        $key = 'theme.' . $slug . '.family_banner_text';
+        $json = json_encode($clean, JSON_UNESCAPED_UNICODE | JSON_THROW_ON_ERROR);
+        $pdo = Database::connection();
+        $stmt = $pdo->prepare('INSERT INTO settings(setting_key,setting_value,autoload) VALUES(?,?,1) ON DUPLICATE KEY UPDATE setting_value=VALUES(setting_value),autoload=1');
+        $stmt->execute([$key, $json]);
+        $verify = $pdo->prepare('SELECT setting_value FROM settings WHERE setting_key=? LIMIT 1');
+        $verify->execute([$key]);
+        if ((string)$verify->fetchColumn() !== $json) throw new RuntimeException('Ana sayfa banner metin ayarları kaydedilemedi.');
+    }
+
     /** Theme-scoped design palette stored in the database, never in editable CMS content. */
     private static function designDefaults(): array
     {
