@@ -359,6 +359,41 @@ final class ThemeManager
     }
 
 
+    /** Theme-scoped footer layout and appearance settings. */
+    private static function footerSettingsDefaults(): array
+    {
+        return ['background'=>'#20352e','text'=>'#ffffff','padding_top'=>42,'padding_bottom'=>42,'margin_top'=>55,'content_width'=>1180];
+    }
+
+    private static function normalizeFooterSettings(array $input): array
+    {
+        $clean = self::footerSettingsDefaults();
+        foreach (['background','text'] as $key) {
+            $value = strtolower(trim((string)($input[$key] ?? $clean[$key])));
+            if (preg_match('/^#[0-9a-f]{6}$/', $value)) $clean[$key] = $value;
+        }
+        foreach (['padding_top'=>[0,160],'padding_bottom'=>[0,160],'margin_top'=>[0,160],'content_width'=>[760,1600]] as $key=>$bounds) {
+            $value = filter_var($input[$key] ?? $clean[$key], FILTER_VALIDATE_INT);
+            if ($value !== false) $clean[$key] = max($bounds[0], min($bounds[1], $value));
+        }
+        return $clean;
+    }
+
+    public static function footerSettings(?string $slug = null): array
+    {
+        $slug = $slug ?: self::activeSlug();
+        if (!preg_match('/^[a-z0-9_-]{1,60}$/', $slug)) $slug = 'default';
+        try {
+            $stmt = Database::connection()->prepare('SELECT setting_value FROM settings WHERE setting_key=? LIMIT 1');
+            $stmt->execute(['theme.' . $slug . '.footer']);
+            $saved = json_decode((string)($stmt->fetchColumn() ?: '{}'), true);
+            return self::normalizeFooterSettings(is_array($saved) ? $saved : []);
+        } catch (\\Throwable $e) {
+            error_log('Theme footer settings read failed: ' . $e->getMessage());
+            return self::footerSettingsDefaults();
+        }
+    }
+
     /** Theme-scoped villa card layout and typography settings. */
     private static function cardSettingsDefaults(): array
     {
@@ -657,6 +692,21 @@ final class ThemeManager
         $verify = $pdo->prepare('SELECT setting_value FROM settings WHERE setting_key=? LIMIT 1');
         $verify->execute([$key]);
         if ((string)$verify->fetchColumn() !== $json) throw new RuntimeException('Tema tipografi ayarları veritabanına kaydedilemedi.');
+    }
+
+    public static function saveFooterSettings(array $input, ?string $slug = null): void
+    {
+        $slug = $slug ?: self::activeSlug();
+        if (!preg_match('/^[a-z0-9_-]{1,60}$/', $slug)) throw new RuntimeException('Tema kodu geçersiz.');
+        $clean = self::normalizeFooterSettings($input);
+        $key = 'theme.' . $slug . '.footer';
+        $json = json_encode($clean, JSON_UNESCAPED_UNICODE | JSON_THROW_ON_ERROR);
+        $pdo = Database::connection();
+        $stmt = $pdo->prepare('INSERT INTO settings(setting_key,setting_value,autoload) VALUES(?,?,1) ON DUPLICATE KEY UPDATE setting_value=VALUES(setting_value),autoload=1');
+        $stmt->execute([$key, $json]);
+        $verify = $pdo->prepare('SELECT setting_value FROM settings WHERE setting_key=? LIMIT 1');
+        $verify->execute([$key]);
+        if ((string)$verify->fetchColumn() !== $json) throw new RuntimeException('Footer ayarları veritabanına kaydedilemedi.');
     }
 
     public static function saveCardSettings(array $input, ?string $slug = null): void
