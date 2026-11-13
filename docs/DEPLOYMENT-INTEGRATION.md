@@ -1,47 +1,43 @@
 # Sunucu dağıtım entegrasyonu
 
-Güncelleme Merkezi, canlı sunucudaki dağıtım bilgisini şu dosyalardan okur:
+## Otomatik dağıtım akışı
 
-- `storage/deploy-status.json`: son dağıtımın durumu ve commit SHA bilgisi
+GitHub `main` dalına gelen push, canlı dizindeki `deploy-hook.php` tarafından HMAC imzası ve depo/branch kontrolünden geçirilir. Hook, CLI üzerinden `scripts/deploy-runner.php` dosyasını arka planda başlatır.
+
+Runner şu işlemleri tek dağıtım kilidi altında yürütür:
+
+1. Dağıtım başlangıcını `storage/deploy-status.json` ve geçmiş dosyasına yazar.
+2. Sunucudaki `/opt/villa-deploy/deploy.sh` betiğini çalıştırır.
+3. Betiğin oluşturduğu yeni `/opt/villa-deploy/backups/villa-*.tar.gz` yedeğini tespit eder.
+4. Dağıtım başarılıysa canlı URL'nin HTTP 2xx yanıtını doğrular ve `success` kaydeder.
+5. Betik hata verirse veya sağlık kontrolü başarısız olursa, bu dağıtımda oluşturulan tam yedeği `rsync --delete` ile geri yükler.
+6. Geri yüklenen eski sürüm de HTTP 2xx sağlık kontrolünden geçerse `rolled_back`; aksi halde `failed` kaydeder.
+
+Runner kilidi, sağlık kontrolü ve olası geri yükleme tamamlanana kadar ikinci bir webhook dağıtımının başlamasını engeller. Sunucu betiğindeki kendi `deploy.lock` kilidi de korunur.
+
+## Sunucu betiği için gerekli koşullar
+
+Mevcut `/opt/villa-deploy/deploy.sh` betiği aşağıdaki sözleşmeye uymalıdır:
+
+- Başarılı yedekleme, `/opt/villa-deploy/backups/villa-YYYYMMDD-HHMMSS.tar.gz` biçiminde yeni bir arşiv üretmelidir.
+- Arşiv canlı dizinin tamamını içermelidir. Böylece kodla birlikte `config/`, `storage/` ve `public/uploads/` da geri yüklenebilir.
+- Arşiv oluşturulduktan sonra betik hata verirse sıfırdan farklı çıkış kodu döndürmelidir.
+- Betik `success` durumunu kendisi yazmamalıdır; bu kararı runner yalnızca canlı sağlık kontrolünden sonra verir.
+
+Mevcut sunucu betiği bu arşiv biçimini ve tam canlı dizin yedeğini zaten üretmektedir. Bu nedenle sunucudaki `deploy.sh` dosyasını her uygulama güncellemesinde değiştirmeniz gerekmez.
+
+## Kalıcı verilerin korunması
+
+Normal dağıtım sırasında `config/`, `storage/` ve `public/uploads/` rsync dışında tutulur. Otomatik rollback sırasında ise dağıtım öncesi alınan tam arşiv geri yüklenir. Veritabanı dosya yedeğinin parçası değildir; veritabanı migration işlemleri ayrıca ve kontrollü yönetilmelidir. Otomatik rollback veritabanını geriye sarmaya çalışmaz.
+
+## Güncelleme Merkezi
+
+- `storage/deploy-status.json`: son durum ve commit SHA
 - `storage/deploy-history.jsonl`: dağıtım olay geçmişi
-- `VILLA_DEPLOY_LOG`: mevcut dağıtım betiğinin metin günlüğü (opsiyonel)
+- `VILLA_DEPLOY_LOG`: sunucu dağıtım günlüğü (opsiyonel)
 
-Bu dosyalar web üzerinden erişime kapalı olan `storage/` dizininde tutulur. Durum yazıcısı yalnızca CLI üzerinden çalışır; HTTP isteğiyle çağrılamaz.
-
-## Mevcut deploy betiğine bağlama
-
-Sunucu tarafındaki dağıtım betiği, hedef commit SHA değerini aldıktan sonra aşağıdaki çağrıları yapmalıdır. PHP CLI yolunu sunucuda kurulu PHP binary yoluyla değiştirin.
-
-```sh
-PHP_BIN="/usr/local/lsws/lsphp85/bin/php"
-STATUS_WRITER="/home/kodva7153/public_html/villa/scripts/deploy-status.php"
-
-"$PHP_BIN" "$STATUS_WRITER" deploying "$TARGET_COMMIT" "$BACKUP_ID" "Dağıtım başladı"
-
-# Dosyalar yedekten korunarak aktarılır ve PHP/health kontrolleri yapılır.
-
-# Tüm kontroller başarılıysa:
-"$PHP_BIN" "$STATUS_WRITER" success "$TARGET_COMMIT" "$BACKUP_ID" "Dağıtım ve sağlık kontrolleri başarılı"
-
-# Dağıtım başarısızsa, önce doğrulanmış yedek geri yüklenir.
-# Geri yükleme başarılıysa:
-"$PHP_BIN" "$STATUS_WRITER" rolled_back "$TARGET_COMMIT" "$BACKUP_ID" "Dağıtım başarısız; önceki sürüm geri yüklendi"
-
-# Geri yükleme de başarısızsa:
-"$PHP_BIN" "$STATUS_WRITER" failed "$TARGET_COMMIT" "$BACKUP_ID" "Dağıtım ve geri yükleme başarısız"
-```
-
-Betik, durum yazıcısının başarısız dönüş kodunu da kontrol etmelidir. `success` kaydı yalnızca dosya aktarımı, PHP lint ve uygulama sağlık kontrolü tamamlandıktan sonra yazılmalıdır. `rolled_back` yalnızca önceki dosyalar gerçekten geri yüklenip sağlık kontrolü geçtikten sonra yazılmalıdır.
+Durum yazıcısı yalnızca CLI üzerinden çalışır. Durum ve geçmiş dosyaları web üzerinden yayımlanmamalıdır.
 
 ## GitHub erişimi
 
 Depo özeldir. Yönetim panelindeki GitHub sürüm kontrolü için sunucu PHP sürecine `VILLA_GITHUB_TOKEN` ortam değişkeni tanımlanmalıdır. Token yalnızca bu depoda **Contents: Read-only** iznine sahip olmalıdır. Token kaynak koda, veritabanına veya web üzerinden erişilebilir dosyalara yazılmamalıdır.
-
-## Güvenlik ve veri koruma
-
-- `config/`, `storage/`, veritabanı ve kullanıcı yüklemeleri kod senkronizasyonunun dışında tutulmalıdır.
-- Geri alma yalnızca mevcut ve doğrulanmış yedekle yapılmalıdır.
-- Veritabanı migration işlemleri kod geri almasından bağımsız değerlendirilmelidir; yıkıcı migration otomatik olarak tersine çevrilmemelidir.
-- Dağıtım geçmişi ve durum dosyaları web üzerinden yayımlanmamalıdır.
-
-**Not:** Bu belge ve CLI durum yazıcısı depoya eklidir. Sunucunun dışında duran mevcut `/opt/villa-deploy/deploy.sh` dosyasına henüz bağlanmış değildir; entegrasyon yapılmadan panelde gerçek dağıtım/geri alma sonucu görünmez.
