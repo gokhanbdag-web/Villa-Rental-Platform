@@ -929,24 +929,7 @@ body[data-villa-theme] .premium-stay-card .card-bottom-row .rating-line .rating-
  body.villa-home-mediterranean .theme-menu-toggle .menu-open-mark::after{transition:none!important;animation:none!important}
 }
 
-/* Mobile drawer social links: keep icons at the bottom of the open drawer. */
-@media(max-width:760px){
-  body.villa-home-mediterranean .villa-social-left{display:none!important}
-  body.villa-home-mediterranean:has(.theme-header .nav.is-open) .villa-social-left{
-    position:fixed!important;right:22px!important;bottom:24px!important;
-    z-index:10025!important;display:flex!important;align-items:center!important;
-    justify-content:flex-start!important;gap:12px!important;
-    width:auto!important;padding:12px 0!important;
-  }
-  body.villa-home-mediterranean:has(.theme-header .nav.is-open) .villa-social-left .villa-social-link{
-    color:#79c8eb!important;background:transparent!important;border:0!important;
-    box-shadow:none!important;border-radius:0!important;
-  }
-  body.villa-home-mediterranean:has(.theme-header .nav.is-open) .villa-social-left .villa-social-link svg,
-  body.villa-home-mediterranean:has(.theme-header .nav.is-open) .villa-social-left .villa-social-link svg *{
-    color:#79c8eb!important;fill:currentColor!important;stroke:currentColor!important;
-  }
-}
+/* Desktop social icons stay in the first topbar column; mobile uses the drawer copy. */
 
 
 /* Mobile hero: separate the search bar from the video and keep the copy balanced. */
@@ -1387,9 +1370,11 @@ body[data-villa-theme] header a{
 }
 
 
-/* Social networks live inside the navigation drawer only. */
+/* Desktop: social icons remain in the leftmost quarter of the top strip. */
+body[data-villa-theme] .villa-social-left{grid-column:1;display:flex!important;align-items:center;justify-content:flex-start;gap:10px;min-width:0}
 body[data-villa-theme] .villa-social-drawer{display:none!important}
 @media(max-width:760px){
+ body[data-villa-theme] .villa-social-left{display:none!important}
  body[data-villa-theme] .villa-social-drawer{display:flex!important;flex-wrap:wrap!important;align-items:center!important;gap:12px!important;margin:22px 0 8px!important;padding:18px 4px 4px!important;border-top:1px solid var(--villa-border,#e5ebe6)!important}
  body[data-villa-theme] .villa-social-drawer .villa-social-link{display:inline-flex!important;align-items:center!important;justify-content:center!important;gap:6px!important;min-width:42px!important;min-height:42px!important;padding:8px!important;border-radius:12px!important;background:var(--villa-surface,#f5f7f5)!important;color:var(--villa-primary,#315a43)!important;text-decoration:none!important}
  body[data-villa-theme] .villa-social-drawer .villa-social-link svg{width:var(--social-icon-size,20px)!important;height:var(--social-icon-size,20px)!important;flex:0 0 auto!important}
