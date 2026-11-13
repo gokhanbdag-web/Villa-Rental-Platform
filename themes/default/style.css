@@ -1433,7 +1433,7 @@ body[data-villa-theme] .villa-social-drawer{display:none!important}
     position:sticky!important;
     top:0!important;
     z-index:10010!important;
-    border-top:3px solid var(--villa-primary,#315a43)!important;
+    border-top:1px solid var(--villa-primary,#315a43)!important;
     box-sizing:border-box!important;
   }
 }
@@ -1483,7 +1483,7 @@ body[data-villa-theme] .villa-social-drawer{display:none!important}
     position:sticky!important;
     top:0!important;
     z-index:10010!important;
-    border-top:3px solid var(--villa-primary,#315a43)!important;
+    border-top:1px solid var(--villa-primary,#315a43)!important;
     box-sizing:border-box!important;
   }
 }
