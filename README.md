@@ -45,3 +45,19 @@ Requirements: PHP 8.2+, MySQL 8+ (or compatible MariaDB), PDO MySQL, Fileinfo, a
 The application detects its base URL automatically and supports installation either at the domain root or inside a subdirectory (for example, `https://example.com/villas/`). Root-relative links, form actions, redirects, routing, and session cookie paths are adjusted to the detected installation path.
 
 The installer runs `database/schema.sql` and every `database/migrations/*.sql` file in lexical order. Keep the `config/` and `storage/` directories outside the public document root. Review host-specific Apache/PHP permissions before deployment.
+
+
+## Automatic shared-hosting deployment
+
+The `Production deployment` GitHub Actions workflow is triggered by pushes to `main`. It uploads application files over explicit FTPS after the repository's PHP checks and installer smoke test pass.
+
+Configure these repository Actions secrets before enabling live deployment:
+
+- `FTP_SERVER`: hosting FTP hostname (not a URL).
+- `FTP_USERNAME`: dedicated deployment FTP username.
+- `FTP_PASSWORD`: that FTP account's password.
+- `FTP_SERVER_DIR`: exact target directory for this application, including its trailing slash (for example, `public_html/villas/`).
+
+The deployment intentionally does not delete remote files. It excludes runtime configuration, storage, uploaded villa images, tests, and GitHub metadata so that database credentials, installed data, and user uploads are not overwritten by code releases. Use a dedicated FTP account restricted to the application directory. Configure and verify a backup before the first production deployment.
+
+If any required secret is missing, the deployment step is skipped; a successful CI run alone does not mean that files were deployed. The workflow requires a hosting provider that supports explicit FTPS on port 21.
