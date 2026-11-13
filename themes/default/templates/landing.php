@@ -168,7 +168,7 @@ body.villa-home-mediterranean .section:has(.styles),body.villa-home-mediterranea
 .med-trust-icon{display:grid;place-items:center;flex:0 0 44px;width:44px;height:44px;border-radius:50%;background:#edf1e7;color:#426448;font:22px Arial,sans-serif}
 .med-trust-item h3{margin:0 0 5px;color:#314d38;font:700 14px Arial,sans-serif}
 .med-trust-item p{margin:0;color:#7a857a;font:12px/1.55 Arial,sans-serif}
-.med-property-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:22px}
+.med-property-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:22px}
 .med-property-card{display:block;min-width:0;overflow:hidden;border:1px solid #e7e9df;border-radius:19px;background:#fff;box-shadow:0 10px 30px #273c2c0c;transition:transform .25s,box-shadow .25s}
 .med-property-card:hover{transform:translateY(-4px);box-shadow:0 18px 38px #273c2c18}
 .med-property-photo{height:215px;overflow:hidden;background:#e8ece3}
@@ -232,4 +232,11 @@ body.villa-home-mediterranean .section:has(.styles),body.villa-home-mediterranea
 CSS;
 
 $html = str_replace('</head>', '<style id="villa-menu-icon-state">' . $menuIconCss . '</style><style>' . $homeCss . '</style></head>', $html);
+$cardGalleryScript = <<<'JS'
+<script>(function(){document.querySelectorAll('[data-card-gallery]').forEach(function(card){if(card.dataset.galleryReady)return;card.dataset.galleryReady='1';var data=card.querySelector('.card-gallery-data'),image=card.querySelector('.card-gallery-image'),count=card.querySelector('.card-gallery-count');if(!data||!image)return;var images=[];try{images=JSON.parse(data.textContent||'[]')}catch(e){}var index=0;card.querySelectorAll('[data-gallery-step]').forEach(function(button){button.addEventListener('click',function(event){event.preventDefault();event.stopPropagation();if(images.length<2)return;index=(index+Number(button.dataset.galleryStep)+images.length)%images.length;image.src=images[index];if(count)count.textContent=(index+1)+' / '+images.length})})})})();</script>
+JS;
+if (stripos($html, '</body>') !== false) {
+    $html = preg_replace('~</body>~i', $cardGalleryScript . '</body>', $html, 1) ?? $html;
+}
+
 echo $html;
