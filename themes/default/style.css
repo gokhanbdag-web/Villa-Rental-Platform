@@ -1337,3 +1337,11 @@ body[data-villa-theme] .drawer-overlay{display:none}
  body[data-villa-theme] .drawer-overlay.is-open{opacity:1!important;visibility:visible!important;pointer-events:auto!important}
  body[data-villa-theme].menu-open{overflow:hidden!important}
 }
+
+@media(max-width:760px){
+ body[data-villa-theme] .site-header .theme-menu-toggle{
+  border:0!important;border-radius:0!important;background:transparent!important;
+  box-shadow:none!important;color:transparent!important;padding:0!important;
+  -webkit-appearance:none!important;appearance:none!important
+ }
+}
