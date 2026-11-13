@@ -679,7 +679,20 @@ final class ThemeManager
             . $themeScope . ' .theme-header .nav a:hover,' . $themeScope . ' .theme-header .nav a[aria-current="page"],' . $themeScope . ' .pill,' . $themeScope . ' .med-trust-icon,' . $themeScope . ' .rating-score{background:var(--villa-accent)!important;color:var(--villa-text)!important}'
             . $themeScope . ' input,' . $themeScope . ' select,' . $themeScope . ' textarea,' . $themeScope . ' .search-enhanced,' . $themeScope . ' .search-field,' . $themeScope . ' .med-faq-item{border-color:var(--villa-border)!important}'
             . $themeScope . ' footer,' . $themeScope . ' .site-footer{background:var(--villa-primary)!important;border-color:var(--villa-primary)!important;color:#fff!important}'
-            . $themeScope . ' footer a,' . $themeScope . ' .site-footer a{color:#fff!important}';
+            . $themeScope . ' footer a,' . $themeScope . ' .site-footer a{color:#fff!important}'
+
+            . $themeScope . ' .theme-header .nav a,' . $themeScope . ' .theme-header .nav-submenu-toggle{color:var(--villa-primary)!important}'
+            . $themeScope . ' .theme-header .nav a:hover,' . $themeScope . ' .theme-header .nav a:focus-visible,' . $themeScope . ' .theme-header .nav a[aria-current="page"],' . $themeScope . ' .theme-header .nav-entry.is-open>.nav-entry-top>a{background:var(--villa-primary)!important;color:#fff!important}'
+            . $themeScope . ' .theme-header .nav-dropdown{border-color:var(--villa-primary)!important}'
+            . $themeScope . ' .theme-header .nav-dropdown a:hover,' . $themeScope . ' .theme-header .nav-dropdown a:focus-visible{background:var(--villa-primary)!important;color:#fff!important}'
+            . $themeScope . ' .search-submit,' . $themeScope . ' .submit,' . $themeScope . ' .button-primary,' . $themeScope . ' .button,' . $themeScope . ' .btn,' . $themeScope . ' .btn-primary,' . $themeScope . ' .cta,' . $themeScope . ' button[type="submit"],' . $themeScope . ' input[type="submit"],' . $themeScope . ' .med-support-whatsapp,' . $themeScope . ' .pagination .current,' . $themeScope . ' .premium-stay-card .card-gallery-arrow{background:var(--villa-primary)!important;border:1px solid var(--villa-primary)!important;color:#fff!important}'
+            . $themeScope . ' .med-trust-icon,' . $themeScope . ' .trust-icon,' . $themeScope . ' .feature-icon,' . $themeScope . ' .icon-circle{background:var(--villa-primary)!important;border-color:var(--villa-primary)!important;color:#fff!important}'
+            . $themeScope . ' .premium-stay-card .card-gallery-arrow:hover,' . $themeScope . ' .premium-stay-card .card-gallery-arrow:focus-visible{background:var(--villa-primary)!important;color:#fff!important;filter:brightness(.92)}'
+            . $themeScope . ' .theme-menu-toggle{background:var(--villa-primary)!important;border-color:var(--villa-primary)!important;color:#fff!important}'
+            . $themeScope . ' input:focus,' . $themeScope . ' select:focus,' . $themeScope . ' textarea:focus,' . $themeScope . ' .search-enhanced:focus-within{border-color:var(--villa-primary)!important;outline-color:var(--villa-primary)!important;box-shadow:0 0 0 3px color-mix(in srgb,var(--villa-primary) 16%,transparent)!important}'
+            . $themeScope . ' .stay:hover,' . $themeScope . ' .premium-stay-card:hover,' . $themeScope . ' .card:hover{border-color:color-mix(in srgb,var(--villa-primary) 48%,var(--villa-border))!important}'
+            . $themeScope . ' .pagination a{border-color:var(--villa-primary)!important;color:var(--villa-primary)!important}'
+            . $themeScope . ' .pagination a:hover{background:var(--villa-primary)!important;color:#fff!important}';
         if (stripos($html, '</head>') !== false) {
             $html = preg_replace('/<\\/head>/i', '<style id="villa-theme-palette-application">' . $paletteCss . '</style></head>', $html, 1) ?? $html;
         }
