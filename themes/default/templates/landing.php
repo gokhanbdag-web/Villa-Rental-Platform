@@ -8,33 +8,11 @@ if ($pageTemplate === null) throw new RuntimeException('Tema sayfa bileşeni bul
 require $pageTemplate;
 $html = (string) ob_get_clean();
 
-$navHtml = '';
-if (preg_match('~<nav\\b[^>]*>.*?</nav>~s', $html, $navMatch)) {
-    $navHtml = preg_replace('~<nav\\b[^>]*>~', '<nav class="nav" id="siteNavigation">', $navMatch[0], 1) ?? $navMatch[0];
-}
-if ($navHtml === '') {
-    ob_start();
-    $navItems = $navigation ?? [];
-    $navAllowAuth = true;
-    \App\Core\ThemeManager::renderPartial('partials/navigation-items.php', get_defined_vars());
-    $navHtml = '<nav class="nav" id="siteNavigation">' . (string) ob_get_clean() . '</nav>';
-}
-
-$themeSiteName = (string) ($content['site_name'] ?? $siteName ?? 'VillaStay');
-$brand = '<a class="theme-brand theme-brand--coastal" href="' . e(app_url('/')) . '"><span class="theme-brand-name">' . e($themeSiteName) . '</span></a>';
-$toggle = '<button class="mobile-menu-toggle theme-menu-toggle" id="menuToggle" type="button" aria-label="Menüyü aç" aria-controls="siteNavigation" aria-expanded="false"><span class="menu-open-mark">☰</span><span class="menu-close-mark" hidden>×</span></button>';
-$header = '<header class="theme-header theme-header--coastal"><div class="theme-header-inner">' . $brand . $toggle . $navHtml . '</div></header><div class="drawer-overlay" id="menuOverlay"></div>';
-
-$html = preg_replace('~<header\\b[^>]*>.*?</header>(?:\\s*<div class="drawer-overlay" id="menuOverlay"></div>)?~s', $header, $html, 1) ?? $html;
+ob_start();
+require __DIR__ . '/partials/header.php';
+$header = (string) ob_get_clean();
+$html = preg_replace('~<header\\b[^>]*>.*?</header>(?:\\s*<div class="drawer-overlay" id="(?:menuOverlay|siteMenuOverlay)"[^>]*></div>)?~s', $header, $html, 1) ?? $html;
 $html = preg_replace('~<body\\b~i', '<body class="villa-home-mediterranean"', $html, 1) ?? $html;
-$topPhone=trim((string)($content['home_support_phone']??''));
-$topPhoneDigits=preg_replace('/\\D+/','',$topPhone);
-if($topPhoneDigits!==''){
-    $topbar='<div class="med-topbar"><div class="wrap"><a href="tel:'.e($topPhoneDigits).'">☎ '.e($topPhone).'</a>';
-    if(($user['role']??'')==='customer')$topbar.='<a href="'.e(app_url('/favorites')).'">♡ Favorilerim</a>';
-    $topbar.='</div></div>';
-    $html=preg_replace('~<header\\b~i',$topbar.'<header',$html,1)??$html;
-}
 $homeCss = <<<'CSS'
 body.villa-home-mediterranean{background:#f8f8f1;color:var(--villa-text);}body.villa-home-mediterranean .site-header{background:#fbfcf7;border-color:#e4e9dc}body.villa-home-mediterranean .hero{padding:24px 0 54px;background:#eef2e7}body.villa-home-mediterranean .hero-card{min-height:530px;background-position:center 55%;box-shadow:0 22px 55px #344c3518}body.villa-home-mediterranean .hero-copy{max-width:850px}body.villa-home-mediterranean .hero h1{font:inherit;letter-spacing:-2px}body.villa-home-mediterranean .section{padding:66px 0}body.villa-home-mediterranean .section-head h2{font:inherit;color:var(--villa-text);}body.villa-home-mediterranean .destination-grid{grid-template-columns:repeat(4,minmax(0,1fr));gap:20px}body.villa-home-mediterranean .destination{height:250px;border-radius:22px}body.villa-home-mediterranean .cards{grid-template-columns:repeat(3,minmax(0,1fr));gap:25px}body.villa-home-mediterranean .stay-photo{height:250px;border-radius:22px}body.villa-home-mediterranean .stay h3{font:inherit;}body.villa-home-mediterranean .gallery-strip{grid-template-columns:1.5fr 1fr 1fr;grid-template-rows:210px 210px;gap:15px}body.villa-home-mediterranean .gallery-strip img{border-radius:22px}body.villa-home-mediterranean .host-banner{border-radius:30px}@media(max-width:700px){body.villa-home-mediterranean .hero-card{min-height:560px;}body.villa-home-mediterranean .cards{grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}body.villa-home-mediterranean .stay-photo{height:155px}body.villa-home-mediterranean .destination{height:165px}body.villa-home-mediterranean .section{padding:38px 0}}
 CSS;
