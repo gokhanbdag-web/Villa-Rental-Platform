@@ -1533,3 +1533,13 @@ body[data-villa-theme] .villa-back-to-top.is-returning svg{animation:villa-back-
 @media(prefers-reduced-motion:reduce){
   body[data-villa-theme] .villa-back-to-top,body[data-villa-theme] .villa-back-to-top *{transition:none!important;animation:none!important}
 }
+
+
+/* Shared site footer */
+.site-footer{background:#20352e;color:#fff;padding:36px 0;margin-top:55px}
+.site-footer p{color:#c3d2ca;line-height:1.65}
+.site-footer .footer-inner{width:min(1180px,calc(100% - 36px));margin:auto;display:grid;grid-template-columns:minmax(0,1fr) minmax(0,2fr);gap:26px;align-items:start}
+.site-footer .footer-copy{min-width:0}
+.site-footer .footer-links{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:11px 16px;font-size:13px}
+.site-footer .footer-links a{color:inherit;overflow-wrap:anywhere}
+@media(max-width:600px){.site-footer .footer-inner{grid-template-columns:1fr;gap:16px}.site-footer .footer-links{grid-template-columns:repeat(2,minmax(0,1fr))}}
