@@ -1215,3 +1215,22 @@ body.villa-home-mediterranean .hero-filter-panel{
   body.villa-home-mediterranean .mobile-hero-search-form input,
   body.villa-home-mediterranean .mobile-hero-search-form select{font-size:9px!important}
 }
+
+/* Full-bleed family holiday image band, image will be assigned separately. */
+body.villa-home-mediterranean .med-family-banner{
+  display:block;
+  width:100vw;
+  height:280px;
+  min-height:0;
+  margin:0 calc(50% - 50vw)!important;
+  padding:0!important;
+  box-sizing:border-box;
+  overflow:hidden;
+  position:relative;
+  background:#dce9e8;
+}
+@media(max-width:600px){
+  body.villa-home-mediterranean .med-family-banner{
+    height:190px;
+  }
+}
