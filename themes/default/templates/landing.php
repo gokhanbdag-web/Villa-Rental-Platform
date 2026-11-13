@@ -213,7 +213,7 @@ body.villa-home-mediterranean .destination-editorial-item:hover .destination-edi
 .med-concept-copy{position:absolute;left:18px;right:15px;bottom:17px;color:var(--villa-text);}
 .med-concept-copy strong{display:block;font:inherit;}
 .med-concept-copy small{display:block;margin-top:5px;color:var(--villa-text);font:inherit;}
-.med-collections{background:#fbfbf6}
+
 .med-collection-row{margin-top:30px}
 .med-collection-heading{display:flex;align-items:end;justify-content:space-between;gap:18px;margin-bottom:16px}
 .med-collection-heading h3{margin:0;color:var(--villa-text);font:inherit;}
