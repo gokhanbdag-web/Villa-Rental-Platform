@@ -100,6 +100,7 @@ function villa_github_update_info(string $root): array {
         $info['deployed_commit']=$deployedCommit;
         $info['deployment_status']=(string)($deployed['status']??'unknown');
         $info['deployment_updated_at']=(string)($deployed['updated_at']??'');
+        $info['deployment_backup']=(string)($deployed['backup']??'');
         $info['deployment_known']=$deployedCommit!=='';
         $info['available']=$deployedCommit!=='' ? !hash_equals($deployedCommit,$info['commit']) : false;
     }

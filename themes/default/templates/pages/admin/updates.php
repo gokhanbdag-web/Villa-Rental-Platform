@@ -5,6 +5,7 @@ $githubCommit = (string)($githubUpdate['commit'] ?? '');
 $deployedCommit = (string)($githubUpdate['deployed_commit'] ?? '');
 $updateAvailable = !empty($githubUpdate['available']);
 $deploymentStatus = (string)($githubUpdate['deployment_status'] ?? 'unknown');
+$deploymentBackup = (string)($githubUpdate['deployment_backup'] ?? '');
 $releaseNotes = trim((string)($githubUpdate['release_notes'] ?? ''));
 $changeSummary = $releaseNotes !== '' ? $releaseNotes : (string)($githubUpdate['commit_message'] ?? '');
 $commitDate = !empty($githubUpdate['commit_date']) ? date('d.m.Y H:i', strtotime((string)$githubUpdate['commit_date'])) : '—';
@@ -25,6 +26,7 @@ $commitDate = !empty($githubUpdate['commit_date']) ? date('d.m.Y H:i', strtotime
 <div class="vu-row"><span>Commit tarihi</span><b><?= e($commitDate) ?></b></div>
 <div class="vu-row"><span>Sunucuya dağıtılan commit</span><b><?= $deployedCommit !== '' ? e(substr($deployedCommit,0,12)) : 'Henüz kayıtlı değil' ?></b></div>
 <div class="vu-row"><span>Durum</span><b><?= $updateAvailable ? 'Dağıtılmamış yeni commit var' : ($deployedCommit !== '' ? 'Sunucu GitHub ile eşleşiyor' : 'Dağıtım commit kaydı bekleniyor') ?></b></div>
+<div class="vu-row"><span>Son dağıtım yedeği</span><b><?= $deploymentBackup !== '' && $deploymentBackup !== '-' ? e($deploymentBackup) : 'Henüz kayıtlı değil' ?></b></div>
 <?php if(!empty($githubUpdate['commit_url'])): ?><p><a class="vu-link" href="<?= e($githubUpdate['commit_url']) ?>" target="_blank" rel="noopener noreferrer">GitHub commit ayrıntısını aç</a></p><?php endif; ?>
 <?php endif; ?>
 <p class="vu-muted">Son kontrol: <?= e((string)($githubUpdate['checked_at'] ?? '—')) ?>. Sonuçlar sunucu yükünü azaltmak için 5 dakika önbelleğe alınır.</p></section>
@@ -44,5 +46,5 @@ $commitDate = !empty($githubUpdate['commit_date']) ? date('d.m.Y H:i', strtotime
 </section>
 <section class="vu-panel"><h2>Dağıtım ve geri alma güvenliği</h2>
 <div class="vu-row"><span>Sunucu otomasyon durumu</span><b><?= e($deploymentStatus==='unknown'?'Henüz durum bildirimi yok':$deploymentStatus) ?></b></div>
-<div class="vu-note">GitHub'daki yeni commit artık otomatik olarak tespit edilebilir. Ancak panel henüz sunucuda güncelleme başlatmaz veya geri alma yapmaz. Bunun güvenli biçimde açılması için sunucudaki deploy betiğinin storage/deploy-status.json dosyasına işlem başlangıcı, başarılı/başarısız sonuç, commit ve yedek bilgisini yazması; başarısızlıkta doğrulanmış yedeği geri yüklemesi gerekir. Bu bağlantı kurulana kadar canlı dağıtım sonucu kesinleşmiş sayılmaz. Config, veritabanı ve kullanıcı yüklemeleri güncelleme dışında tutulmalıdır.</div>
+<div class="vu-note">GitHub main dalına gönderilen imzalı commit, sunucudaki webhook tarafından dağıtım yöneticisine aktarılır. Yönetici dağıtım kilidini alır, canlı dosyaları yedekler, PHP kontrollerini çalıştırır ve aktarım sonrasında HTTP sağlık kontrolü yapar. Dağıtım veya sağlık kontrolü başarısız olursa yeni oluşturulan dosya yedeği geri yüklenir ve eski sürüm yeniden kontrol edilir. Sonuç, commit ve yedek arşivi bu panelde listelenir. Config, storage ve kullanıcı yüklemeleri normal dosya aktarımında korunur. Veritabanı şema değişiklikleri dosya yedeğiyle geri alınmaz; migration işlemleri ayrıca güvenli ve geriye uyumlu tasarlanmalıdır.</div>
 </section></main></body></html>
