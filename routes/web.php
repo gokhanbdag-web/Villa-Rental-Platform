@@ -1436,10 +1436,10 @@ $router->post('/admin/theme-design/brand-asset', static function (): void {
     Auth::requireRole(['super_admin','admin']); verify_csrf();
     try {
         $type = (string)($_POST['asset_type'] ?? '');
-        $field = $type === 'logo' ? 'brand_logo' : ($type === 'hero_video' ? 'hero_video' : '');
+        $field = $type === 'logo' ? 'brand_logo' : ($type === 'hero_video' ? 'hero_video' : ($type === 'family_banner' ? 'family_banner' : ''));
         if ($field === '') throw new RuntimeException('Dosya türü geçersiz.');
         ThemeManager::saveBrandAsset($type, (array)($_FILES[$field] ?? []), ThemeManager::activeSlug());
-        $_SESSION['villa_theme_brand_message'] = $type === 'logo' ? 'Aktif tema logosu başarıyla güncellendi.' : 'Aktif tema hero videosu başarıyla güncellendi.';
+        $_SESSION['villa_theme_brand_message'] = ['logo'=>'Aktif tema logosu başarıyla güncellendi.','hero_video'=>'Aktif tema hero videosu başarıyla güncellendi.','family_banner'=>'Ana sayfa aile banner görseli başarıyla güncellendi.'][$type] ?? 'Tema görseli güncellendi.';
         $_SESSION['villa_theme_brand_message_type'] = 'success';
     } catch (Throwable $e) {
         error_log('Theme visual asset upload failed: ' . $e->getMessage());
