@@ -1,7 +1,7 @@
 <?php
 declare(strict_types=1);
 
-use App\\Core\\Translator;
+use App\Core\Translator;
 
 $translate = static fn(string $key): string => Translator::get($key);
 $activeSlug = strtolower(trim((string)($activeTheme ?? 'default')));
