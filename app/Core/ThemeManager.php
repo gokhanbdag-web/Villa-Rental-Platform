@@ -282,9 +282,9 @@ final class ThemeManager
     {
         return [
             'topbar_height'=>64,
-            'headings'=>['family'=>'Playfair Display','size'=>36,'color'=>'#263b31','weight'=>700,'style'=>'normal'],
-            'span'=>['family'=>'Inter','size'=>14,'color'=>'#344039','weight'=>400,'style'=>'normal'],
-            'paragraph'=>['family'=>'Inter','size'=>16,'color'=>'#4b574f','weight'=>400,'style'=>'normal'],
+            'headings'=>['family'=>'Manrope','size'=>46,'color'=>'#263b31','weight'=>700,'style'=>'normal'],
+            'span'=>['family'=>'Inter','size'=>11,'color'=>'#344039','weight'=>700,'style'=>'normal'],
+            'paragraph'=>['family'=>'Inter','size'=>16,'color'=>'#56635b','weight'=>400,'style'=>'normal'],
             'paragraph_links'=>['family'=>'Inter','size'=>16,'color'=>'#176b50','weight'=>600,'style'=>'normal'],
         ];
     }
@@ -442,7 +442,7 @@ final class ThemeManager
     /** Theme-scoped design palette stored in the database, never in editable CMS content. */
     private static function designDefaults(): array
     {
-        return ['primary'=>'#176b50','accent'=>'#ef8069','surface'=>'#ffffff','background'=>'#f5f8f6','text'=>'#20352f','muted'=>'#71817a','border'=>'#e2eae5','eyebrow_background'=>'#ffffff','eyebrow_text'=>'#26352e','image_overlay_text'=>'#ffffff'];
+        return ['primary'=>'#176b50','accent'=>'#ef8069','surface'=>'#ffffff','background'=>'#f5f8f6','text'=>'#20352f','muted'=>'#71817a','border'=>'#e2eae5','eyebrow_background'=>'#ffffff','eyebrow_text'=>'#26352e','image_overlay_text'=>'#ffffff','image_overlay_muted'=>'#e8edf2'];
     }
 
     private static function normalizeDesign(array $input): array
@@ -657,7 +657,7 @@ final class ThemeManager
         $designCss = '<style id="villa-theme-design-vars">body[data-villa-theme="' . e($renderSlug) . '"]{'
             . '--villa-primary:' . $design['primary'] . ';--villa-accent:' . $design['accent']
             . ';--villa-surface:' . $design['surface'] . ';--villa-background:' . $design['background']
-            . ';--villa-text:' . $design['text'] . ';--villa-muted:' . $design['muted'] . ';--villa-border:' . $design['border'] . ';--villa-eyebrow_background:' . $design['eyebrow_background'] . ';--villa-eyebrow_text:' . $design['eyebrow_text'] . ';--villa-image_overlay_text:' . $design['image_overlay_text'] . ';'
+            . ';--villa-text:' . $design['text'] . ';--villa-muted:' . $design['muted'] . ';--villa-border:' . $design['border'] . ';--villa-eyebrow_background:' . $design['eyebrow_background'] . ';--villa-eyebrow_text:' . $design['eyebrow_text'] . ';--villa-image_overlay_text:' . $design['image_overlay_text'] . ';--villa-image_overlay_muted:' . $design['image_overlay_muted'] . ';'
             . '--coastal-primary:' . $design['primary'] . ';--coastal-primary-dark:' . $design['primary']
             . ';--coastal-accent:' . $design['accent'] . ';--coastal-paper:' . $design['background']
             . ';--coastal-ink:' . $design['text'] . ';--coastal-muted:' . $design['muted'] . ';--coastal-line:' . $design['border'] . ';'
@@ -682,19 +682,20 @@ final class ThemeManager
         $paragraph = $typography['paragraph'];
         $paragraphLinks = $typography['paragraph_links'];
         $headingBaseSize = (int)$heading['size'];
-        $headingBaseRule = '{font-family:' . json_encode($heading['family']) . '!important;color:' . $heading['color'] . '!important;font-weight:' . (int)$heading['weight'] . '!important;font-style:' . $heading['style'] . '!important}';
+        $headingBaseRule = '{font-family:' . json_encode($heading['family']) . '!important;color:' . $heading['color'] . '!important;font-weight:' . (int)$heading['weight'] . '!important;font-style:' . $heading['style'] . '!important;line-height:1.14!important;letter-spacing:-.035em!important;text-wrap:balance}';
         $headingRules = $themeScope . ' h1,' . $themeScope . ' h2,' . $themeScope . ' h3,' . $themeScope . ' h4,' . $themeScope . ' h5,' . $themeScope . ' h6' . $headingBaseRule
-            . $themeScope . ' h1{font-size:' . $headingBaseSize . 'px!important}'
-            . $themeScope . ' h2{font-size:' . max(18, (int)round($headingBaseSize * .78)) . 'px!important}'
-            . $themeScope . ' h3{font-size:' . max(16, (int)round($headingBaseSize * .64)) . 'px!important}'
-            . $themeScope . ' h4{font-size:' . max(15, (int)round($headingBaseSize * .55)) . 'px!important}'
-            . $themeScope . ' h5{font-size:' . max(14, (int)round($headingBaseSize * .48)) . 'px!important}'
-            . $themeScope . ' h6{font-size:' . max(13, (int)round($headingBaseSize * .44)) . 'px!important}';
+            . $themeScope . ' h1{font-size:clamp(' . min(30, max(24, (int)round($headingBaseSize * .68))) . 'px,4.2vw,' . $headingBaseSize . 'px)!important}'
+            . $themeScope . ' h2{font-size:clamp(' . min(23, max(19, (int)round($headingBaseSize * .5))) . 'px,3vw,' . max(26, (int)round($headingBaseSize * .70)) . 'px)!important}'
+            . $themeScope . ' h3{font-size:clamp(' . min(19, max(17, (int)round($headingBaseSize * .42))) . 'px,2.2vw,' . max(21, (int)round($headingBaseSize * .52)) . 'px)!important}'
+            . $themeScope . ' h4{font-size:' . max(18, (int)round($headingBaseSize * .44)) . 'px!important}'
+            . $themeScope . ' h5{font-size:' . max(16, (int)round($headingBaseSize * .39)) . 'px!important}'
+            . $themeScope . ' h6{font-size:' . max(15, (int)round($headingBaseSize * .35)) . 'px!important}';
         $typographyCss = $themeScope . ' .villa-social-inner{min-height:' . (int)$typography['topbar_height'] . 'px}'
+            . $themeScope . ' body,' . $themeScope . '{font-family:' . json_encode($paragraph['family']) . ',system-ui,sans-serif;-webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility}'
             . $headingRules
-            . $themeScope . ' span{font-family:' . json_encode($span['family']) . '!important;font-size:' . (int)$span['size'] . 'px!important;color:' . $span['color'] . '!important;font-weight:' . (int)$span['weight'] . '!important;font-style:' . $span['style'] . '!important}'
-            . $themeScope . ' p{font-family:' . json_encode($paragraph['family']) . '!important;font-size:' . (int)$paragraph['size'] . 'px!important;color:' . $paragraph['color'] . '!important;font-weight:' . (int)$paragraph['weight'] . '!important;font-style:' . $paragraph['style'] . '!important}'
-            . $themeScope . ' p a:not(.button):not(.btn):not([class*="button"]):not([class*="btn"]):not([class*="cta"]):not(.search-submit):not([role="button"]){font-family:' . json_encode($paragraphLinks['family']) . '!important;font-size:' . (int)$paragraphLinks['size'] . 'px!important;color:' . $paragraphLinks['color'] . '!important;font-weight:' . (int)$paragraphLinks['weight'] . '!important;font-style:' . $paragraphLinks['style'] . '!important}';
+            . $themeScope . ' p{font-family:' . json_encode($paragraph['family']) . '!important;font-size:' . (int)$paragraph['size'] . 'px!important;color:' . $paragraph['color'] . '!important;font-weight:' . (int)$paragraph['weight'] . '!important;font-style:' . $paragraph['style'] . '!important;line-height:1.75!important;letter-spacing:0!important}'
+            . $themeScope . ' .villa-eyebrow,' . $themeScope . ' .eyebrow:not(.villa-hero-eyebrow),' . $themeScope . ' .section-eyebrow,' . $themeScope . ' .pill,' . $themeScope . ' .section-head .eyebrow,' . $themeScope . ' .med-faq-intro .eyebrow{font-family:' . json_encode($span['family']) . '!important;font-size:' . (int)$span['size'] . 'px!important;font-weight:' . (int)$span['weight'] . '!important;font-style:' . $span['style'] . '!important;letter-spacing:.075em!important;line-height:1.2!important}'
+            . $themeScope . ' p a:not(.button):not(.btn):not([class*="button"]):not([class*="btn"]):not([class*="cta"]):not(.search-submit):not([role="button"]){font-family:' . json_encode($paragraphLinks['family']) . '!important;font-size:inherit!important;color:' . $paragraphLinks['color'] . '!important;font-weight:' . (int)$paragraphLinks['weight'] . '!important;font-style:' . $paragraphLinks['style'] . '!important;text-decoration-thickness:1px;text-underline-offset:3px}';
         $heroTypography = self::heroTypographySettings($renderSlug);
         $heroFontQuery = [];
         foreach (['eyebrow','title','description','button'] as $heroGroup) {
@@ -760,7 +761,11 @@ final class ThemeManager
             . $themeScope . ' .villa-eyebrow,' . $themeScope . ' .pill,' . $themeScope . ' .eyebrow,' . $themeScope . ' .section-eyebrow,' . $themeScope . ' .section-head .eyebrow,' . $themeScope . ' .med-faq-intro .eyebrow{display:inline-flex;align-items:center;width:fit-content;padding:7px 13px;border-radius:999px;background:var(--villa-eyebrow_background)!important;border:1px solid var(--villa-eyebrow_background)!important;color:var(--villa-eyebrow_text)!important;font-size:11px;font-weight:700;line-height:1.2;letter-spacing:.08em;text-transform:uppercase}'
             . $themeScope . ' .premium-stay-card .card-gallery-count,' . $themeScope . ' .premium-stay-card .stay-badge{color:var(--villa-image_overlay_text)!important}'
             . $themeScope . ' .premium-stay-card .card-gallery-count,' . $themeScope . ' .premium-stay-card .stay-badge{background:rgba(8,29,25,.72)!important;border-color:rgba(255,255,255,.25)!important}'
-            . $themeScope . ' .pagination a:hover{background:var(--villa-primary)!important;color:#fff!important}';
+            . $themeScope . ' .pagination a:hover{background:var(--villa-primary)!important;color:#fff!important}'
+            . $themeScope . ' .destination-label,' . $themeScope . ' .destination-label :is(h1,h2,h3,h4,h5,h6,p,span,strong,small,a),' . $themeScope . ' .style-card,' . $themeScope . ' .style-card :is(h1,h2,h3,h4,h5,h6,p,span,strong,small,a),' . $themeScope . ' .media-overlay,' . $themeScope . ' .media-overlay :is(h1,h2,h3,h4,h5,h6,p,span,strong,small,a),' . $themeScope . ' .image-overlay,' . $themeScope . ' .image-overlay :is(h1,h2,h3,h4,h5,h6,p,span,strong,small,a),' . $themeScope . ' .gallery-overlay,' . $themeScope . ' .gallery-overlay :is(h1,h2,h3,h4,h5,h6,p,span,strong,small,a),' . $themeScope . ' [data-text-on-media],' . $themeScope . ' [data-text-on-media] :is(h1,h2,h3,h4,h5,h6,p,span,strong,small,a){color:var(--villa-image_overlay_text)!important}'
+            . $themeScope . ' .destination-label small,' . $themeScope . ' .media-overlay p,' . $themeScope . ' .image-overlay p,' . $themeScope . ' .gallery-overlay p,' . $themeScope . ' [data-text-on-media] p{color:var(--villa-image_overlay_muted)!important}'
+            . $themeScope . ' .premium-stay-card .card-gallery-count,' . $themeScope . ' .premium-stay-card .stay-badge{color:var(--villa-image_overlay_text)!important}'
+            . $themeScope . ' .premium-stay-card .card-gallery-count small,' . $themeScope . ' .premium-stay-card .stay-badge small{color:var(--villa-image_overlay_muted)!important}';
         if (stripos($html, '</head>') !== false) {
             $html = preg_replace('/<\\/head>/i', '<style id="villa-theme-palette-application">' . $paletteCss . '</style></head>', $html, 1) ?? $html;
         }
