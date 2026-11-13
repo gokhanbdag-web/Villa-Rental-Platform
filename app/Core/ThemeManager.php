@@ -389,6 +389,56 @@ final class ThemeManager
         return '<i class="' . $prefix . e($icon) . '" aria-hidden="true"></i>';
     }
 
+    /** Independent typography and color controls for the homepage hero. */
+    private static function heroTypographyDefaults(): array
+    {
+        return [
+            'eyebrow'=>['family'=>'Inter','size'=>12,'color'=>'#ffffff','weight'=>800,'style'=>'normal'],
+            'title'=>['family'=>'Playfair Display','size'=>68,'color'=>'#ffffff','weight'=>600,'style'=>'normal'],
+            'description'=>['family'=>'Inter','size'=>18,'color'=>'#f4f7f4','weight'=>400,'style'=>'normal'],
+            'button'=>['family'=>'Inter','size'=>15,'color'=>'#ffffff','weight'=>700,'style'=>'normal'],
+            'eyebrow_background'=>'#176b50','button_background'=>'#176b50',
+        ];
+    }
+    private static function normalizeHeroTypography(array $input): array
+    {
+        $clean=self::heroTypographyDefaults(); $weights=[300,400,500,600,700,800,900];
+        foreach(['eyebrow','title','description','button'] as $group){
+            $row=is_array($input[$group]??null)?$input[$group]:[];
+            $family=(string)($row['family']??$clean[$group]['family']);
+            if(isset(self::typographyFonts()[$family]))$clean[$group]['family']=$family;
+            $size=filter_var($row['size']??$clean[$group]['size'],FILTER_VALIDATE_INT);
+            if($size!==false)$clean[$group]['size']=max(10,min(96,$size));
+            $color=strtolower(trim((string)($row['color']??$clean[$group]['color'])));
+            if(preg_match('/^#[0-9a-f]{6}$/',$color))$clean[$group]['color']=$color;
+            $weight=filter_var($row['weight']??$clean[$group]['weight'],FILTER_VALIDATE_INT);
+            if($weight!==false&&in_array($weight,$weights,true))$clean[$group]['weight']=$weight;
+            $style=(string)($row['style']??$clean[$group]['style']);
+            if(in_array($style,['normal','italic'],true))$clean[$group]['style']=$style;
+        }
+        foreach(['eyebrow_background','button_background'] as $key){
+            $color=strtolower(trim((string)($input[$key]??$clean[$key])));
+            if(preg_match('/^#[0-9a-f]{6}$/',$color))$clean[$key]=$color;
+        }
+        return $clean;
+    }
+    public static function heroTypographySettings(?string $slug=null): array
+    {
+        $slug=$slug?:self::activeSlug();
+        if(!preg_match('/^[a-z0-9_-]{1,60}$/',$slug))$slug='default';
+        try{$stmt=Database::connection()->prepare('SELECT setting_value FROM settings WHERE setting_key=? LIMIT 1');$stmt->execute(['theme.'.$slug.'.hero_typography']);$saved=json_decode((string)($stmt->fetchColumn()?:'{}'),true);return self::normalizeHeroTypography(is_array($saved)?$saved:[]);}
+        catch (\Throwable $e){error_log('Hero typography settings read failed: '.$e->getMessage());return self::heroTypographyDefaults();}
+    }
+    public static function saveHeroTypographySettings(array $input,?string $slug=null): void
+    {
+        $slug=$slug?:self::activeSlug();
+        if(!preg_match('/^[a-z0-9_-]{1,60}$/',$slug)||!isset(self::installed()[$slug]))throw new RuntimeException('Tema kodu geçersiz veya kurulu değil.');
+        $clean=self::normalizeHeroTypography($input);$key='theme.'.$slug.'.hero_typography';$json=json_encode($clean,JSON_UNESCAPED_UNICODE|JSON_THROW_ON_ERROR);$pdo=Database::connection();
+        $stmt=$pdo->prepare('INSERT INTO settings(setting_key,setting_value,autoload) VALUES(?,?,1) ON DUPLICATE KEY UPDATE setting_value=VALUES(setting_value),autoload=1');$stmt->execute([$key,$json]);
+        $verify=$pdo->prepare('SELECT setting_value FROM settings WHERE setting_key=? LIMIT 1');$verify->execute([$key]);
+        if((string)$verify->fetchColumn()!==$json)throw new RuntimeException('Hero yazı ayarları kaydedilemedi.');
+    }
+
     /** Theme-scoped design palette stored in the database, never in editable CMS content. */
     private static function designDefaults(): array
     {
@@ -645,9 +695,24 @@ final class ThemeManager
             . $themeScope . ' span{font-family:' . json_encode($span['family']) . '!important;font-size:' . (int)$span['size'] . 'px!important;color:' . $span['color'] . '!important;font-weight:' . (int)$span['weight'] . '!important;font-style:' . $span['style'] . '!important}'
             . $themeScope . ' p{font-family:' . json_encode($paragraph['family']) . '!important;font-size:' . (int)$paragraph['size'] . 'px!important;color:' . $paragraph['color'] . '!important;font-weight:' . (int)$paragraph['weight'] . '!important;font-style:' . $paragraph['style'] . '!important}'
             . $themeScope . ' p a:not(.button):not(.btn):not([class*="button"]):not([class*="btn"]):not([class*="cta"]):not(.search-submit):not([role="button"]){font-family:' . json_encode($paragraphLinks['family']) . '!important;font-size:' . (int)$paragraphLinks['size'] . 'px!important;color:' . $paragraphLinks['color'] . '!important;font-weight:' . (int)$paragraphLinks['weight'] . '!important;font-style:' . $paragraphLinks['style'] . '!important}';
-        $typographyAssets = $fontAssets . '<style id="villa-theme-typography">' . $typographyCss . '</style>';
+        $heroTypography = self::heroTypographySettings($renderSlug);
+        $heroFontQuery = [];
+        foreach (['eyebrow','title','description','button'] as $heroGroup) {
+            $family = (string)$heroTypography[$heroGroup]['family'];
+            if (!isset($fontFamilies[$family])) {
+                $fontFamilies[$family] = true;
+                $encodedFamily = str_replace('%20', '+', rawurlencode($family));
+                $heroFontQuery[] = 'family=' . $encodedFamily . ':ital,wght@0,300;0,400;0,500;0,600;0,700;0,800;0,900;1,300;1,400;1,500;1,600;1,700;1,800;1,900';
+            }
+        }
+        $heroTypographyCss = $themeScope . ' .hero-copy .villa-hero-eyebrow{font-family:' . json_encode($heroTypography['eyebrow']['family']) . '!important;font-size:' . (int)$heroTypography['eyebrow']['size'] . 'px!important;color:' . $heroTypography['eyebrow']['color'] . '!important;font-weight:' . (int)$heroTypography['eyebrow']['weight'] . '!important;font-style:' . $heroTypography['eyebrow']['style'] . '!important;background:' . $heroTypography['eyebrow_background'] . '!important;border-color:' . $heroTypography['eyebrow_background'] . '!important}'
+            . $themeScope . ' .hero-copy h1{font-family:' . json_encode($heroTypography['title']['family']) . '!important;font-size:clamp(38px,5.4vw,' . (int)$heroTypography['title']['size'] . 'px)!important;color:' . $heroTypography['title']['color'] . '!important;font-weight:' . (int)$heroTypography['title']['weight'] . '!important;font-style:' . $heroTypography['title']['style'] . '!important}'
+            . $themeScope . ' .hero-copy p{font-family:' . json_encode($heroTypography['description']['family']) . '!important;font-size:' . (int)$heroTypography['description']['size'] . 'px!important;color:' . $heroTypography['description']['color'] . '!important;font-weight:' . (int)$heroTypography['description']['weight'] . '!important;font-style:' . $heroTypography['description']['style'] . '!important}'
+            . $themeScope . ' .hero .search-submit,' . $themeScope . ' .hero button[type="submit"]{font-family:' . json_encode($heroTypography['button']['family']) . '!important;font-size:' . (int)$heroTypography['button']['size'] . 'px!important;color:' . $heroTypography['button']['color'] . '!important;font-weight:' . (int)$heroTypography['button']['weight'] . '!important;font-style:' . $heroTypography['button']['style'] . '!important;background:' . $heroTypography['button_background'] . '!important;border-color:' . $heroTypography['button_background'] . '!important}';
+        $heroFontAssets = ($heroFontQuery ? '<link rel="stylesheet" href="https://fonts.googleapis.com/css2?' . e(implode('&', $heroFontQuery)) . '&amp;display=swap">' : '') . '<style id="villa-theme-hero-typography">' . $heroTypographyCss . '</style>';
+                $typographyAssets = $fontAssets . '<style id="villa-theme-typography">' . $typographyCss . '</style>';
         if (stripos($html, '</head>') !== false) {
-            $html = preg_replace('/<\/head>/i', $typographyAssets . '</head>', $html, 1) ?? $html;
+            $html = preg_replace('/<\/head>/i', $typographyAssets . $heroFontAssets . '</head>', $html, 1) ?? $html;
         }
 
         $iconLibrary = (string)($trustIconSettings['library'] ?? 'unicode');
@@ -693,7 +758,7 @@ final class ThemeManager
             . $themeScope . ' .stay:hover,' . $themeScope . ' .premium-stay-card:hover,' . $themeScope . ' .card:hover{border-color:color-mix(in srgb,var(--villa-primary) 48%,var(--villa-border))!important}'
             . $themeScope . ' .pagination a{border-color:var(--villa-primary)!important;color:var(--villa-primary)!important}'
             . $themeScope . ' .villa-eyebrow,' . $themeScope . ' .pill,' . $themeScope . ' .eyebrow,' . $themeScope . ' .section-eyebrow,' . $themeScope . ' .section-head .eyebrow,' . $themeScope . ' .med-faq-intro .eyebrow{display:inline-flex;align-items:center;width:fit-content;padding:7px 13px;border-radius:999px;background:var(--villa-eyebrow_background)!important;border:1px solid var(--villa-eyebrow_background)!important;color:var(--villa-eyebrow_text)!important;font-size:11px;font-weight:700;line-height:1.2;letter-spacing:.08em;text-transform:uppercase}'
-            . $themeScope . ' .hero-copy,' . $themeScope . ' .hero-copy h1,' . $themeScope . ' .hero-copy p,' . $themeScope . ' .hero-copy span,' . $themeScope . ' .premium-stay-card .card-gallery-count,' . $themeScope . ' .premium-stay-card .stay-badge{color:var(--villa-image_overlay_text)!important}'
+            . $themeScope . ' .premium-stay-card .card-gallery-count,' . $themeScope . ' .premium-stay-card .stay-badge{color:var(--villa-image_overlay_text)!important}'
             . $themeScope . ' .premium-stay-card .card-gallery-count,' . $themeScope . ' .premium-stay-card .stay-badge{background:rgba(8,29,25,.72)!important;border-color:rgba(255,255,255,.25)!important}'
             . $themeScope . ' .pagination a:hover{background:var(--villa-primary)!important;color:#fff!important}';
         if (stripos($html, '</head>') !== false) {
