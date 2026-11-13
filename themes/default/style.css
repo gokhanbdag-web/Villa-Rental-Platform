@@ -905,9 +905,13 @@ body[data-villa-theme] .premium-stay-card .card-bottom-row .rating-line .rating-
   font-weight:var(--villa-body-weight,500)!important
  }
  body[data-villa-theme] .drawer-overlay{
-  display:none!important;visibility:hidden!important;opacity:0!important;
-  pointer-events:none!important
- }
+   display:block!important;position:fixed!important;inset:0!important;z-index:10000!important;
+   background:rgba(18,34,26,.58)!important;opacity:0!important;visibility:hidden!important;
+   pointer-events:none!important;transition:opacity .28s ease,visibility .28s ease!important
+  }
+  body[data-villa-theme] .drawer-overlay.is-open{
+   opacity:1!important;visibility:visible!important;pointer-events:auto!important
+  }
 }
 @keyframes villa-burger-top-fold{
  0%{transform:translate3d(0,0,0) rotate(0) scaleX(1)}
@@ -1238,4 +1242,35 @@ body.villa-home-mediterranean .med-family-banner-image{
     height:190px;
   }
   body.villa-home-mediterranean .med-family-banner-image{max-height:190px;}
+}
+
+
+/* One shared header and mobile drawer for every public/account page. */
+body[data-villa-theme] .med-topbar{position:relative;z-index:10011;background:#304b37;color:#fff}
+body[data-villa-theme] .med-topbar>.wrap{width:min(1320px,calc(100% - 44px));min-height:34px;margin:0 auto;display:flex;justify-content:flex-end;align-items:center;gap:22px}
+body[data-villa-theme] .med-topbar a{color:#fff;text-decoration:none;font-size:12px;font-weight:650}
+body[data-villa-theme] .theme-header{position:relative;z-index:10010;background:#fffaf0;border-bottom:1px solid #e7ddc9;box-shadow:0 5px 22px #645b4510}
+body[data-villa-theme] .theme-header-inner{width:min(1320px,calc(100% - 44px));min-height:88px;margin:0 auto;display:flex;align-items:center;justify-content:space-between;gap:24px}
+body[data-villa-theme] .theme-brand{display:flex;align-items:center;min-width:190px;text-decoration:none}
+body[data-villa-theme] .theme-brand-name{font-weight:800;color:var(--villa-text,#294536)}
+body[data-villa-theme] .theme-menu-toggle{display:none}
+@media(max-width:760px){
+ body[data-villa-theme] .med-topbar>.wrap{width:calc(100% - 30px);min-height:32px}
+ body[data-villa-theme] .theme-header{position:relative!important;z-index:10010!important}
+ body[data-villa-theme] .theme-header-inner{width:calc(100% - 30px)!important;min-height:74px!important}
+ body[data-villa-theme] .theme-menu-toggle{display:inline-flex!important}
+ body[data-villa-theme] .theme-header .nav{
+  position:fixed!important;top:0!important;right:0!important;bottom:0!important;left:auto!important;
+  width:min(84vw,360px)!important;height:100dvh!important;max-height:100dvh!important;
+  padding:90px 22px 30px!important;overflow-y:auto!important;z-index:10020!important;
+  display:flex!important;flex-direction:column!important;align-items:stretch!important;
+  justify-content:flex-start!important;gap:7px!important;background:#fffaf0!important;
+  box-shadow:-15px 0 45px #0002!important;transform:translateX(110%)!important;
+  visibility:hidden!important;transition:transform .32s cubic-bezier(.22,1,.36,1),visibility .32s!important
+ }
+ body[data-villa-theme] .theme-header .nav.is-open{transform:translateX(0)!important;visibility:visible!important}
+ body[data-villa-theme] .theme-header .nav a{display:flex!important;justify-content:flex-start!important;padding:15px!important;border-radius:12px!important;background:#f4eee1!important;white-space:normal!important}
+ body[data-villa-theme] .drawer-overlay{display:block!important}
+ body[data-villa-theme] .drawer-overlay.is-open{opacity:1!important;visibility:visible!important;pointer-events:auto!important}
+ body[data-villa-theme].menu-open{overflow:hidden!important}
 }
