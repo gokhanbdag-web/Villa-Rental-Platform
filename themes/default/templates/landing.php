@@ -120,8 +120,16 @@ $medBlocks = '';
 
     // Keep the destination directory as the final full-width section, immediately above the footer.
     if (preg_match('~<section class="section" style="order:[^"]*"><div class="wrap"><div class="section-head">.*?<div class="destination-editorial-grid">.*?</div></div></section>~s', $html, $destinationSection)) {
+        // Add the class targeted by the full-bleed destination-band styles before moving it.
+        $destinationMarkup = preg_replace(
+            '~<section class="section"~',
+            '<section class="section destination-section"',
+            $destinationSection[0],
+            1
+        ) ?? $destinationSection[0];
         $html = str_replace($destinationSection[0], '', $html);
-        $html = preg_replace('~</main>~i', $destinationSection[0] . '</main>', $html, 1) ?? $html;
+        // The directory is the final content section, directly before the footer.
+        $html = preg_replace('~</main>~i', $destinationMarkup . '</main>', $html, 1) ?? $html;
     }
 }
 $hostTitle=trim((string)($content['home_host_title']??''));
@@ -168,7 +176,7 @@ body.villa-home-mediterranean .section-head p{font-family:var(--villa-font-body)
 body.villa-home-mediterranean .pill{background:#e8eee2;color:var(--villa-text);letter-spacing:1px}
 body.villa-home-mediterranean .more{color:var(--villa-text);}
 body.villa-home-mediterranean .section:has(.styles),body.villa-home-mediterranean .section:has(.gallery-strip){display:none!important}
-.med-trust{padding:36px 0!important;background:#fff}
+.med-trust{padding:48px 0!important;margin:0!important;background:#fff;box-sizing:border-box}.med-trust-grid{min-height:64px;align-items:center}
 .med-trust-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:22px}
 .med-trust-item{display:flex;align-items:center;gap:13px;min-width:0}
 .med-trust-icon{display:grid;place-items:center;flex:0 0 44px;width:44px;height:44px;border-radius:50%;background:#edf1e7;color:var(--villa-text);font:inherit;}
