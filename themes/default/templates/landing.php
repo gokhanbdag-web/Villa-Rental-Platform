@@ -50,6 +50,23 @@ $medImage = static function (array $row): string {
     $value = (string)($row['cover_image'] ?? '');
     return $value === '' ? '' : (preg_match('~^https?://~i', $value) ? $value : app_url('/' . ltrim($value, '/')));
 };
+$mapItems = [];
+foreach (($mapProperties ?? []) as $mapProperty) {
+    $latitude=(float)($mapProperty['latitude']??0);$longitude=(float)($mapProperty['longitude']??0);
+    if(!is_finite($latitude)||!is_finite($longitude)||$latitude < -90||$latitude > 90||$longitude < -180||$longitude > 180) continue;
+    $mapItems[]=[
+        'id'=>(int)$mapProperty['id'],
+        'title'=>(string)$mapProperty['title'],
+        'url'=>app_url('/villa/'.rawurlencode((string)$mapProperty['slug'])),
+        'city'=>trim((string)($mapProperty['district']??'').', '.(string)($mapProperty['city']??''),', '),
+        'image'=>$medImage($mapProperty),
+        'latitude'=>$latitude,
+        'longitude'=>$longitude,
+        'price'=>number_format((float)($mapProperty['base_nightly_price']??0),0,',','.'),
+        'currency'=>(string)($mapProperty['currency']??'TRY'),
+        'guests'=>(int)($mapProperty['max_guests']??0)
+    ];
+}
 $medBlocks = '';
 {
     ob_start();
@@ -78,6 +95,18 @@ $medBlocks = '';
         endforeach; ?>
       </div>
     </div></section>
+    <?php endif;
+    if ($medSectionActive('latest')): ?>
+    <section class="villa-map-section" aria-label="<?= e($content['home_map_title'] ?? 'Villaları haritada keşfedin') ?>">
+      <div class="wrap villa-map-heading">
+        <span class="pill villa-eyebrow"><?= e($content['home_map_eyebrow'] ?? 'KONUMUNA GÖRE KEŞFET') ?></span>
+        <h2><?= e($content['home_map_title'] ?? 'Villaları Haritada Keşfedin') ?></h2>
+        <p><?= e($content['home_map_subtitle'] ?? 'Size en uygun konaklamayı harita üzerinden bulun.') ?></p>
+      </div>
+      <div id="villa-open-map" class="villa-open-map" role="application" aria-label="OpenStreetMap üzerinde villa konumları"></div>
+      <script type="application/json" id="villa-map-data"><?= json_encode($mapItems, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?></script>
+      <?php if (!$mapItems): ?><p class="villa-map-empty"><?= e($content['home_map_empty'] ?? 'Haritada gösterilecek villa konumu henüz eklenmemiş. İlan düzenleme ekranından enlem ve boylam bilgilerini ekleyebilirsiniz.') ?></p><?php endif; ?>
+    </section>
     <?php endif;
     if ($medSectionActive('concepts') && !empty($categories)): ?>
     <section class="section med-concepts" style="order:<?= $medSectionOrder('concepts',5) ?>"><div class="wrap">
@@ -255,12 +284,37 @@ body.villa-home-mediterranean .destination-editorial-item:hover .destination-edi
 @media(max-width:600px){body.villa-home-mediterranean .hero-card{min-height:560px;}.med-trust{padding:24px 0!important}.destination-editorial-grid{grid-template-columns:1fr;column-gap:0}.destination-editorial-item{grid-template-columns:38px minmax(0,1fr) 32px;padding:19px 2px}.destination-editorial-copy strong{font-size:22px}.med-trust-grid{grid-template-columns:1fr 1fr;gap:18px 12px}.med-trust-item{align-items:flex-start;gap:9px}.med-trust-icon{flex-basis:36px;width:36px;height:36px;font-size:var(--villa-body-size);}.med-trust-item h3{font-size:var(--villa-body-size);}.med-trust-item p{font-size:var(--villa-body-size);}.med-property-grid,.med-property-grid--compact{grid-template-columns:1fr;gap:15px}.med-property-photo,.med-property-grid--compact .med-property-photo{height:225px}.med-concept-grid{grid-template-columns:1fr 1fr;gap:10px}.med-concept-card{height:170px;border-radius:14px}.med-concept-copy{left:11px;bottom:12px}.med-concept-copy strong{font-size:var(--villa-body-size);}.med-collection-heading h3{font-size:var(--villa-body-size);}.med-review-grid{grid-template-columns:1fr}.med-review-card>p{min-height:0}.med-faq-intro h2{font-size:var(--villa-body-size);}.med-faq-item summary{font-size:var(--villa-body-size);}.med-support-panel{display:block;padding:27px 22px;border-radius:19px}.med-support h2{font-size:var(--villa-body-size);}.med-support-actions{margin-top:22px}.med-footer-columns{grid-template-columns:1fr 1fr;gap:22px}.med-footer-columns>div:last-child{grid-column:1/-1}}
 CSS;
 
-$html = str_replace('</head>', '<style>' . $homeCss . '</style></head>', $html);
+$html = str_replace('</head>', '<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"><style>' . $homeCss . '</style></head>', $html);
 $cardGalleryScript = <<<'JS'
 <script>(function(){document.querySelectorAll('[data-card-gallery]').forEach(function(card){if(card.dataset.galleryReady)return;card.dataset.galleryReady='1';var data=card.querySelector('.card-gallery-data'),image=card.querySelector('.card-gallery-image'),count=card.querySelector('.card-gallery-count');if(!data||!image)return;var images=[];try{images=JSON.parse(data.textContent||'[]')}catch(e){}var index=0;card.querySelectorAll('[data-gallery-step]').forEach(function(button){button.addEventListener('click',function(event){event.preventDefault();event.stopPropagation();if(images.length<2)return;index=(index+Number(button.dataset.galleryStep)+images.length)%images.length;image.src=images[index];if(count)count.textContent=(index+1)+' / '+images.length})})})})();</script>
 JS;
+$villaMapScript = <<<'JS'
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>(function(){
+ var mapElement=document.getElementById('villa-open-map'),dataElement=document.getElementById('villa-map-data');
+ if(!mapElement||!dataElement||!window.L)return;
+ var properties=[];try{properties=JSON.parse(dataElement.textContent||'[]')}catch(error){}
+ var map=L.map(mapElement,{scrollWheelZoom:false}).setView([39.0,35.0],6);
+ L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19,attribution:'&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a> contributors'}).addTo(map);
+ function esc(value){return String(value==null?'':value).replace(/[&<>"']/g,function(ch){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]})}
+ var bounds=[];
+ properties.forEach(function(property){
+  var image=property.image?'<img src="'+esc(property.image)+'" alt="" loading="lazy">':'<span class="villa-map-preview-placeholder">Villa</span>';
+  var location=[property.city].filter(Boolean).join('');
+  var price=esc(property.price)+' '+esc(property.currency)+' <small>/ gece</small>';
+  var html='<div class="villa-map-marker-wrap"><span class="villa-map-marker-pin"></span><a class="villa-map-preview" href="'+esc(property.url)+'">'+image+'<span class="villa-map-preview-copy"><strong>'+esc(property.title)+'</strong><small>'+esc(location)+'</small><b>'+price+'</b></span></a></div>';
+  var icon=L.divIcon({className:'villa-map-div-icon',html:html,iconSize:[44,44],iconAnchor:[22,42]});
+  var marker=L.marker([Number(property.latitude),Number(property.longitude)],{icon:icon,keyboard:true,title:property.title}).addTo(map);
+  marker.on('click',function(){var node=marker.getElement();if(node)node.classList.toggle('is-active')});
+  bounds.push([Number(property.latitude),Number(property.longitude)]);
+ });
+ if(bounds.length){map.fitBounds(bounds,{padding:[55,55],maxZoom:12});}
+ setTimeout(function(){map.invalidateSize()},120);
+ window.addEventListener('resize',function(){map.invalidateSize()});
+})();</script>
+JS;
 if (stripos($html, '</body>') !== false) {
-    $html = preg_replace('~</body>~i', $cardGalleryScript . '</body>', $html, 1) ?? $html;
+    $html = preg_replace('~</body>~i', $cardGalleryScript . $villaMapScript . '</body>', $html, 1) ?? $html;
 }
 
 echo $html;
