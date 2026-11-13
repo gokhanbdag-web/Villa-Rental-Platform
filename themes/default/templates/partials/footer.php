@@ -29,7 +29,7 @@ $footerSettings = \App\Core\ThemeManager::footerSettings();
                 <div class="footer-payment-logos" aria-label="Kabul edilen ödeme kartları">
                     <?php foreach (array_slice($paymentOrder, 0, 5) as $payment): if (!isset($paymentNames[$payment])) continue; ?>
                         <span class="footer-payment-logo" title="<?= e($paymentNames[$payment]) ?>">
-                            <img src="<?= e(\\App\\Core\\ThemeManager::assetUrl('payment-logos/' . $payment . '.svg')) ?>" alt="<?= e($paymentNames[$payment]) ?>" loading="lazy" decoding="async">
+                            <img src="<?= e(\App\Core\ThemeManager::assetUrl('payment-logos/' . $payment . '.svg')) ?>" alt="<?= e($paymentNames[$payment]) ?>" loading="lazy" decoding="async">
                         </span>
                     <?php endforeach; ?>
                 </div>
