@@ -61,6 +61,8 @@ foreach (($mapProperties ?? []) as $mapProperty) {
         'url'=>app_url('/villa/'.rawurlencode((string)$mapProperty['slug'])),
         'city'=>trim((string)($mapProperty['map_district']??$mapProperty['district']??'').', '.(string)($mapProperty['map_city']??$mapProperty['city']??''),', '),
         'location'=>$location,
+        'latitude'=>isset($mapProperty['latitude'])&&$mapProperty['latitude']!==''?(float)$mapProperty['latitude']:null,
+        'longitude'=>isset($mapProperty['longitude'])&&$mapProperty['longitude']!==''?(float)$mapProperty['longitude']:null,
         'image'=>$medImage($mapProperty),
         'price'=>number_format((float)($mapProperty['base_nightly_price']??0),0,',','.'),
         'currency'=>(string)($mapProperty['currency']??'TRY'),
@@ -96,12 +98,12 @@ $medBlocks = '';
       </div>
     </div></section>
     <?php endif;
-    if ($medSectionActive('latest')): ?>
+    ?>
     <section class="villa-map-section" aria-label="Villa konum haritası">
       <div id="villa-open-map" class="villa-open-map" role="application" aria-label="OpenStreetMap üzerinde villa konumları"></div>
       <script type="application/json" id="villa-map-data"><?= json_encode($mapItems, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?></script>
     </section>
-    <?php endif;
+    <?php
     if ($medSectionActive('concepts') && !empty($categories)): ?>
     <section class="section med-concepts" style="order:<?= $medSectionOrder('concepts',5) ?>"><div class="wrap">
       <div class="section-head"><div><span class="pill villa-eyebrow"><?= e($content['home_concepts_eyebrow'] ?? 'TATİLİNİZİ KEŞFEDİN') ?></span><h2><?= e($content['home_concepts_title'] ?? 'Size Uygun Tatil Konseptini Seçin') ?></h2><p><?= e($content['home_concepts_subtitle'] ?? '') ?></p></div></div>
@@ -318,19 +320,39 @@ $villaMapScript = <<<'JS'
   return null;
  }
  async function run(){
-  var bounds=[];
+  var bounds=[],resolved=[];
   for(var i=0;i<unique.length;i++){
    locations[unique[i]]=await geocode(unique[i]);
    if(i<unique.length-1)await wait(350);
   }
   properties.forEach(function(property){
-   var point=locations[String(property.location||'').trim()];if(!point)return;
-   var image=property.image?'<img src="'+esc(property.image)+'" alt="" loading="lazy">':'<span class="villa-map-preview-placeholder">Villa</span>';
-   var price=esc(property.price)+' '+esc(property.currency)+' <small>/ gece</small>';
-   var html='<div class="villa-map-marker-wrap"><span class="villa-map-marker-pin"></span><a class="villa-map-preview" href="'+esc(property.url)+'">'+image+'<span class="villa-map-preview-copy"><strong>'+esc(property.title)+'</strong><small>'+esc(property.city||property.location)+'</small><b>'+price+'</b></span></a></div>';
-   var icon=L.divIcon({className:'villa-map-div-icon',html:html,iconSize:[44,44],iconAnchor:[22,42]});
-   L.marker([point.lat,point.lon],{icon:icon,keyboard:true,title:property.title}).addTo(map);
-   bounds.push([point.lat,point.lon]);
+   var hasCoords=Number.isFinite(Number(property.latitude))&&property.latitude!==null&&property.latitude!==''&&Number.isFinite(Number(property.longitude))&&property.longitude!==null&&property.longitude!=='';
+   var point=hasCoords?{lat:Number(property.latitude),lon:Number(property.longitude)}:locations[String(property.location||'').trim()];
+   if(!point)return;
+   resolved.push({property:property,point:point});
+  });
+  var groups={};
+  resolved.forEach(function(item){
+   var key=item.point.lat.toFixed(5)+','+item.point.lon.toFixed(5);
+   (groups[key]||(groups[key]=[])).push(item);
+  });
+  Object.keys(groups).forEach(function(key){
+   var group=groups[key],count=group.length;
+   group.forEach(function(item,index){
+    var point=item.point;
+    if(count>1){
+     var angle=(2*Math.PI*index/count)-Math.PI/2;
+     var radius=count>12?0.0025:0.0012;
+     point={lat:point.lat+Math.sin(angle)*radius,lon:point.lon+Math.cos(angle)*radius};
+    }
+    var property=item.property;
+    var image=property.image?'<img src="'+esc(property.image)+'" alt="" loading="lazy">':'<span class="villa-map-preview-placeholder">Villa</span>';
+    var price=esc(property.price)+' '+esc(property.currency)+' <small>/ gece</small>';
+    var html='<div class="villa-map-marker-wrap"><span class="villa-map-marker-pin"></span><a class="villa-map-preview" href="'+esc(property.url)+'">'+image+'<span class="villa-map-preview-copy"><strong>'+esc(property.title)+'</strong><small>'+esc(property.city||property.location)+'</small><b>'+price+'</b></span></a></div>';
+    var icon=L.divIcon({className:'villa-map-div-icon',html:html,iconSize:[44,44],iconAnchor:[22,42]});
+    L.marker([point.lat,point.lon],{icon:icon,keyboard:true,title:property.title}).addTo(map);
+    bounds.push([point.lat,point.lon]);
+   });
   });
   if(bounds.length)map.fitBounds(bounds,{padding:[40,40],maxZoom:12});
   setTimeout(function(){map.invalidateSize()},150);
