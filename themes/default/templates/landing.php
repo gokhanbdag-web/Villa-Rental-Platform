@@ -100,9 +100,18 @@ $medBlocks = '';
             <p><?= e($content['home_support_subtitle'] ?? 'Giriş ve çıkış tarihlerinizi seçin, size uygun villaları hemen listeleyelim.') ?></p>
           </div>
           <form class="med-support-date-form" id="homeAvailabilitySearch" action="<?= e(app_url('/konaklamalar')) ?>" method="get">
-            <div class="med-support-date-field"><label for="homeCheckIn">Giriş tarihi</label><input type="date" id="homeCheckIn" name="check_in" min="<?= e(date('Y-m-d')) ?>" required></div>
-            <div class="med-support-date-field"><label for="homeCheckOut">Çıkış tarihi</label><input type="date" id="homeCheckOut" name="check_out" min="<?= e(date('Y-m-d',strtotime('+1 day'))) ?>" required></div>
-            <p class="med-support-date-hint" id="homeAvailabilityHint" aria-live="polite">İki tarihi de seçtiğinizde müsait villalar otomatik listelenir.</p>
+            <input type="hidden" id="homeCheckIn" name="check_in" required>
+            <input type="hidden" id="homeCheckOut" name="check_out" required>
+            <div class="med-calendar-toolbar">
+              <button type="button" class="med-calendar-nav med-calendar-prev" aria-label="Önceki ay">‹</button>
+              <div class="med-calendar-selection"><span>GİRİŞ</span><strong id="homeCheckInLabel">Tarih seçin</strong><i></i><span>ÇIKIŞ</span><strong id="homeCheckOutLabel">Tarih seçin</strong></div>
+              <button type="button" class="med-calendar-nav med-calendar-next" aria-label="Sonraki ay">›</button>
+            </div>
+            <div class="med-calendar-months" id="homeCalendarMonths" aria-label="Konaklama tarihleri takvimi">
+              <div class="med-calendar-month" data-calendar-month="0"></div>
+              <div class="med-calendar-month med-calendar-month-next" data-calendar-month="1"></div>
+            </div>
+            <p class="med-support-date-hint" id="homeAvailabilityHint" aria-live="polite">Önce giriş, ardından çıkış tarihinizi seçin.</p>
           </form>
           <?php if($phoneDigits || $waDigits): ?><div class="med-support-actions"><?php if($phoneDigits): ?><a class="med-support-phone" href="tel:<?= e($phoneDigits) ?>">☎ <?= e($phone) ?></a><?php endif; ?><?php if($waDigits): ?><a class="med-support-whatsapp" href="https://wa.me/<?= e($waDigits) ?>" target="_blank" rel="noopener noreferrer"><?= e($content['home_support_whatsapp_label'] ?? 'WhatsApp ile yazın ↗') ?></a><?php endif; ?></div><?php endif; ?>
         </div>
@@ -111,15 +120,61 @@ $medBlocks = '';
       (function(){
         var form=document.getElementById('homeAvailabilitySearch');
         if(!form)return;
-        var checkIn=document.getElementById('homeCheckIn'),checkOut=document.getElementById('homeCheckOut'),hint=document.getElementById('homeAvailabilityHint');
-        function nextDay(value){var p=value.split('-'),d=new Date(Number(p[0]),Number(p[1])-1,Number(p[2]),12);d.setDate(d.getDate()+1);return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');}
-        function search(){if(checkIn.value){var min=nextDay(checkIn.value);checkOut.min=min;if(checkOut.value&&checkOut.value<min)checkOut.value='';}
-          if(!checkIn.value||!checkOut.value){hint.textContent='İki tarihi de seçtiğinizde müsait villalar otomatik listelenir.';return;}
-          if(checkOut.value<=checkIn.value){hint.textContent='Çıkış tarihi, giriş tarihinden sonra olmalıdır.';return;}
+        var checkIn=document.getElementById('homeCheckIn'),checkOut=document.getElementById('homeCheckOut');
+        var hint=document.getElementById('homeAvailabilityHint'),months=Array.prototype.slice.call(form.querySelectorAll('[data-calendar-month]'));
+        var today=new Date();today.setHours(0,0,0,0);
+        var firstMonth=new Date(today.getFullYear(),today.getMonth(),1);
+        var mobileMonth=new Date(firstMonth);
+        var start=null,end=null,monthNames=['Ocak','Şubat','Mart','Nisan','Mayıs','Haziran','Temmuz','Ağustos','Eylül','Ekim','Kasım','Aralık'];
+        function iso(d){return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');}
+        function parse(value){var p=value.split('-');return new Date(Number(p[0]),Number(p[1])-1,Number(p[2]));}
+        function label(d){return d.toLocaleDateString('tr-TR',{day:'numeric',month:'long',year:'numeric'});}
+        function same(a,b){return a&&b&&iso(a)===iso(b);}
+        function renderMonth(container,date){
+          var year=date.getFullYear(),month=date.getMonth(),first=new Date(year,month,1),days=new Date(year,month+1,0).getDate();
+          var offset=(first.getDay()+6)%7;
+          var html='<div class="med-calendar-month-title">'+monthNames[month]+' '+year+'</div><div class="med-calendar-weekdays"><span>Pzt</span><span>Sal</span><span>Çar</span><span>Per</span><span>Cum</span><span>Cmt</span><span>Paz</span></div><div class="med-calendar-days">';
+          for(var blank=0;blank<offset;blank++)html+='<span class="med-calendar-empty"></span>';
+          for(var n=1;n<=days;n++){
+            var day=new Date(year,month,n),key=iso(day),past=day<today,selectedStart=same(day,start),selectedEnd=same(day,end),inside=start&&end&&day>start&&day<end;
+            var cls='med-calendar-day'+(past?' is-past':'')+(selectedStart?' is-start':'')+(selectedEnd?' is-end':'')+(inside?' is-between':'')+(same(day,today)?' is-today':'');
+            html+='<button type="button" class="'+cls+'" data-date="'+key+'" '+(past?'disabled':'')+' aria-label="'+label(day)+'">'+n+'</button>';
+          }
+          html+='</div>';container.innerHTML=html;
+        }
+        function render(){
+          renderMonth(months[0],window.matchMedia('(max-width:600px)').matches?mobileMonth:firstMonth);
+          renderMonth(months[1],new Date(firstMonth.getFullYear(),firstMonth.getMonth()+1,1));
+          var mobile=window.matchMedia('(max-width:600px)').matches;
+          months[0].style.display='';months[1].style.display=mobile?'none':'';
+          form.querySelector('.med-calendar-prev').disabled=mobile?mobileMonth<=firstMonth:firstMonth<=new Date(today.getFullYear(),today.getMonth(),1);
+          form.querySelector('.med-calendar-next').disabled=mobile?false:false;
+          document.getElementById('homeCheckInLabel').textContent=start?label(start):'Tarih seçin';
+          document.getElementById('homeCheckOutLabel').textContent=end?label(end):'Tarih seçin';
+        }
+        function selectDate(value){
+          var chosen=parse(value);
+          if(!start||end||chosen<=start){start=chosen;end=null;checkIn.value=iso(start);checkOut.value='';hint.textContent='Şimdi çıkış tarihinizi seçin.';render();return;}
+          end=chosen;checkOut.value=iso(end);render();
           hint.textContent='Müsait villalar listeleniyor…';
           window.location.assign(form.action+'?'+new URLSearchParams({check_in:checkIn.value,check_out:checkOut.value}).toString());
         }
-        checkIn.addEventListener('change',search);checkOut.addEventListener('change',search);
+        form.addEventListener('click',function(event){
+          var button=event.target.closest('[data-date]');
+          if(button&&!button.disabled){selectDate(button.getAttribute('data-date'));return;}
+          if(event.target.closest('.med-calendar-prev')){
+            if(window.matchMedia('(max-width:600px)').matches){if(mobileMonth>firstMonth)mobileMonth=new Date(mobileMonth.getFullYear(),mobileMonth.getMonth()-1,1);}
+            else if(firstMonth>new Date(today.getFullYear(),today.getMonth(),1))firstMonth=new Date(firstMonth.getFullYear(),firstMonth.getMonth()-1,1);
+            render();
+          }
+          if(event.target.closest('.med-calendar-next')){
+            if(window.matchMedia('(max-width:600px)').matches)mobileMonth=new Date(mobileMonth.getFullYear(),mobileMonth.getMonth()+1,1);
+            else firstMonth=new Date(firstMonth.getFullYear(),firstMonth.getMonth()+1,1);
+            render();
+          }
+        });
+        window.addEventListener('resize',render);
+        render();
       })();
       </script>
     </section>
@@ -252,16 +307,34 @@ body.villa-home-mediterranean .destination-editorial-item:hover .destination-edi
 .med-support-panel{max-width:1080px;margin:0 auto;display:grid;grid-template-columns:minmax(0,1fr);gap:24px;padding:38px 42px;border-radius:22px;background:#fff;border:1px solid var(--villa-primary,#315a43);box-shadow:0 12px 34px rgba(20,45,30,.07);color:var(--villa-primary,#315a43)}
 .med-support-heading h2{margin:10px 0;color:var(--villa-primary,#315a43);font-size:var(--villa-body-size);}
 .med-support-heading p{max-width:720px;margin:0;color:var(--villa-primary,#315a43);font:inherit;}
-.med-support-date-form{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}
-.med-support-date-field{display:grid;gap:8px}
-.med-support-date-field label{color:var(--villa-primary,#315a43);font-weight:700}
-.med-support-date-field input{width:100%;min-height:54px;padding:12px 14px;border:1px solid var(--villa-primary,#315a43);border-radius:10px;background:#fff;color:var(--villa-primary,#315a43);font:inherit;accent-color:var(--villa-primary,#315a43);color-scheme:light}
+.med-support-date-form{display:grid;grid-template-columns:minmax(0,1fr);gap:14px}
+.med-calendar-toolbar{display:flex;align-items:center;justify-content:space-between;gap:14px}
+.med-calendar-nav{width:42px;height:42px;flex:0 0 42px;border:1px solid var(--villa-primary,#315a43);border-radius:50%;background:#fff;color:var(--villa-primary,#315a43);font-size:27px;line-height:1;cursor:pointer}
+.med-calendar-nav:disabled{opacity:.35;cursor:default}
+.med-calendar-selection{display:flex;align-items:center;justify-content:center;gap:10px;flex-wrap:wrap;color:var(--villa-primary,#315a43)}
+.med-calendar-selection span{font-size:10px;font-weight:800;letter-spacing:.08em}
+.med-calendar-selection strong{font-size:13px}
+.med-calendar-selection i{height:22px;border-left:1px solid var(--villa-primary,#315a43);opacity:.35}
+.med-calendar-months{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:28px}
+.med-calendar-month{min-width:0}
+.med-calendar-month-title{margin:0 0 15px;text-align:center;color:var(--villa-primary,#315a43);font-size:17px;font-weight:800}
+.med-calendar-weekdays,.med-calendar-days{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));text-align:center}
+.med-calendar-weekdays{margin-bottom:7px}
+.med-calendar-weekdays span{padding:7px 0;color:var(--villa-primary,#315a43);font-size:11px;font-weight:800}
+.med-calendar-days{row-gap:5px}
+.med-calendar-day,.med-calendar-empty{width:100%;min-width:0;aspect-ratio:1/1;display:grid;place-items:center}
+.med-calendar-day{padding:0;border:0;border-radius:50%;background:transparent;color:var(--villa-primary,#315a43);font:inherit;font-size:13px;cursor:pointer}
+.med-calendar-day:not(:disabled):hover{background:color-mix(in srgb,var(--villa-primary,#315a43) 13%,white)}
+.med-calendar-day.is-today{outline:1px solid var(--villa-primary,#315a43);outline-offset:-3px}
+.med-calendar-day.is-between{border-radius:0;background:color-mix(in srgb,var(--villa-primary,#315a43) 13%,white)}
+.med-calendar-day.is-start,.med-calendar-day.is-end{border-radius:50%;background:var(--villa-primary,#315a43);color:#fff;font-weight:800}
+.med-calendar-day.is-past{color:#c6c9c4;cursor:not-allowed;text-decoration:line-through}
 .med-support-date-hint{grid-column:1/-1;margin:0;color:var(--villa-primary,#315a43);font-size:13px}
 .med-support-actions{display:flex;flex-wrap:wrap;gap:10px;min-width:0}
 .med-support-actions a{display:block;padding:12px 18px;border-radius:10px;text-align:center;font:inherit}
 .med-support-phone{background:#fff;color:var(--villa-primary,#315a43);border:1px solid var(--villa-primary,#315a43)}
 .med-support-whatsapp{background:var(--villa-primary,#315a43);color:#fff}
-@media(max-width:600px){.med-support-panel{padding:25px 18px;gap:19px}.med-support-date-form{grid-template-columns:1fr}.med-support-date-hint{grid-column:auto}.med-support-actions{flex-direction:column}}
+@media(max-width:600px){.med-support-panel{padding:25px 18px;gap:19px}.med-calendar-months{grid-template-columns:minmax(0,1fr)}.med-calendar-month-next{display:none}.med-calendar-day{font-size:14px}.med-calendar-toolbar{gap:7px}.med-calendar-selection{gap:7px}.med-calendar-selection strong{font-size:11px}.med-support-date-hint{grid-column:auto}.med-support-actions{flex-direction:column}}
 .med-footer-columns{display:grid;grid-column:1/-1;grid-template-columns:repeat(3,minmax(0,1fr));gap:24px;min-width:0}
 .med-footer-columns strong{display:block;margin-bottom:12px;color:var(--villa-text);font:inherit;}
 .med-footer-columns ul{margin:0;padding:0;list-style:none;display:grid;gap:9px}
