@@ -16,7 +16,7 @@ $footerExtraColumns = (string) ($footerColumns ?? '');
       <?php
       $navItems = $footerNavItems;
       $navAllowAuth = false;
-      \\App\\Core\\ThemeManager::renderPartial('partials/navigation-items.php', get_defined_vars());
+      \App\Core\ThemeManager::renderPartial('partials/navigation-items.php', get_defined_vars());
       ?>
     </nav>
     <?= $footerExtraColumns ?>
