@@ -1365,7 +1365,7 @@ $router->get('/brand-assets/{slug}/{filename}', static function (array $params):
     ];
     $extension = strtolower(pathinfo($realPath, PATHINFO_EXTENSION));
     if (!isset($types[$extension])) { http_response_code(404); exit; }
-    $mime = (new \\finfo(FILEINFO_MIME_TYPE))->file($realPath);
+    $mime = (new \finfo(FILEINFO_MIME_TYPE))->file($realPath);
     if (!is_string($mime) || $mime !== $types[$extension]) { http_response_code(404); exit; }
     header('Content-Type: ' . $mime);
     header('X-Content-Type-Options: nosniff');
