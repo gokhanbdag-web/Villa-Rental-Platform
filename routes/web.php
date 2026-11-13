@@ -1412,6 +1412,7 @@ $router->post('/admin/theme-design', static function (): void {
 $router->get('/admin/header-settings', static function (): void {
     Auth::requireRole(['super_admin','admin']);
     $socialSettings=ThemeManager::socialSettings();
+    $brandSettings=ThemeManager::brandSettings();
     $themeMessage=(string)($_SESSION['villa_theme_message']??'');
     $themeMessageType=(string)($_SESSION['villa_theme_message_type']??'success');
     unset($_SESSION['villa_theme_message'],$_SESSION['villa_theme_message_type']);
@@ -1428,6 +1429,19 @@ $router->post('/admin/header-settings/social-icons', static function (): void {
         $_SESSION['villa_theme_message']='Kayıt başarısız: '.$e->getMessage();
         $_SESSION['villa_theme_message_type']='error';
     }
+    redirect('/admin/header-settings');
+});
+
+$router->post('/admin/header-settings/brand-asset', static function (): void {
+    Auth::requireRole(['super_admin','admin']);verify_csrf();
+    try { $type=(string)($_POST['asset_type']??''); $field=$type==='logo'?'brand_logo':($type==='hero_video'?'hero_video':''); if($field==='') throw new RuntimeException('Dosya türü geçersiz.'); ThemeManager::saveBrandAsset($type,(array)($_FILES[$field]??[])); $_SESSION['villa_theme_message']=$type==='logo'?'Logo başarıyla yüklendi.':'Hero videosu başarıyla yüklendi.'; $_SESSION['villa_theme_message_type']='success'; }
+    catch(Throwable $e) { error_log('Brand asset upload failed: '.$e->getMessage()); $_SESSION['villa_theme_message']='Yükleme başarısız: '.$e->getMessage(); $_SESSION['villa_theme_message_type']='error'; }
+    redirect('/admin/header-settings');
+});
+$router->post('/admin/header-settings/brand-asset/remove', static function (): void {
+    Auth::requireRole(['super_admin','admin']);verify_csrf();
+    try { ThemeManager::removeBrandAsset((string)($_POST['asset_type']??'')); $_SESSION['villa_theme_message']='Dosya kaldırıldı.'; $_SESSION['villa_theme_message_type']='success'; }
+    catch(Throwable $e) { error_log('Brand asset removal failed: '.$e->getMessage()); $_SESSION['villa_theme_message']='Dosya kaldırılamadı.'; $_SESSION['villa_theme_message_type']='error'; }
     redirect('/admin/header-settings');
 });
 
