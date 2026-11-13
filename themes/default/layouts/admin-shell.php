@@ -45,8 +45,12 @@ return static function (string $html, string $requestPath, string $platformMode)
 
         // Dashboard and sub-pages are reduced to content only; the shell below is the single admin layout.
         $bodyContent = '';
-        if (preg_match('/<body\b[^>]*>(.*?)<\/body>/is', $html, $bodyMatch)) {
+        $hasDocumentBody = preg_match('/<body\\b[^>]*>(.*?)<\\/body>/is', $html, $bodyMatch) === 1;
+        if ($hasDocumentBody) {
             $bodyContent = $bodyMatch[1];
+        } else {
+            // Fragment-based admin pages must still render inside the shared shell.
+            $bodyContent = $html;
         }
         // Preserve page-specific CSS from the original document head.
         if (preg_match('/<head\b[^>]*>(.*?)<\/head>/is', $html, $headMatch)) {
@@ -211,7 +215,12 @@ return static function (string $html, string $requestPath, string $platformMode)
             activate(location.pathname);
         })();
         </script>';
-        return preg_replace_callback('/<body\b[^>]*>.*?<\/body>/is', static function (array $matches) use ($shell): string {
-            return '<body>' . $shell . '</body>';
-        }, $html, 1) ?? $html;
+        if ($hasDocumentBody) {
+            return preg_replace_callback('/<body\\b[^>]*>.*?<\\/body>/is', static function (array $matches) use ($shell): string {
+                return '<body>' . $shell . '</body>';
+            }, $html, 1) ?? $html;
+        }
+
+        // The original page was a fragment, so create a valid document around it.
+        return '<!doctype html><html lang="tr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Yönetim Paneli</title></head><body>' . $shell . '</body></html>';
 };
