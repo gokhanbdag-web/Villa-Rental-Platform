@@ -327,6 +327,68 @@ final class ThemeManager
     }
 
 
+    /** Theme-scoped homepage trust-strip icon library and icon choices. */
+    public static function iconSettings(?string $slug = null): array
+    {
+        $slug = $slug ?: self::activeSlug();
+        if (!preg_match('/^[a-z0-9_-]{1,60}$/', $slug)) $slug = 'default';
+        $clean = ['library'=>'fontawesome','icons'=>['fa-star','fa-house','fa-heart','fa-shield-halved']];
+        try {
+            $stmt = Database::connection()->prepare('SELECT setting_value FROM settings WHERE setting_key=? LIMIT 1');
+            $stmt->execute(['theme.' . $slug . '.icons']);
+            $saved = json_decode((string)($stmt->fetchColumn() ?: '{}'), true);
+            if (is_array($saved)) {
+                $library = (string)($saved['library'] ?? $clean['library']);
+                if (in_array($library, ['fontawesome','bootstrap','material','lucide','unicode'], true)) $clean['library'] = $library;
+                $icons = is_array($saved['icons'] ?? null) ? $saved['icons'] : [];
+                foreach (range(0, 3) as $i) {
+                    $value = trim((string)($icons[$i] ?? $clean['icons'][$i]));
+                    $pattern = $clean['library'] === 'material' ? '/^[a-z0-9_]{1,50}$/' : ($clean['library'] === 'unicode' ? '/^.{1,8}$/u' : '/^[a-z0-9-]{1,60}$/');
+                    if (preg_match($pattern, $value)) $clean['icons'][$i] = $value;
+                }
+            }
+        } catch (\\Throwable $e) {
+            error_log('Theme icon settings read failed: ' . $e->getMessage());
+        }
+        return $clean;
+    }
+
+    public static function saveIconSettings(array $input, ?string $slug = null): void
+    {
+        $slug = $slug ?: self::activeSlug();
+        if (!preg_match('/^[a-z0-9_-]{1,60}$/', $slug) || !isset(self::installed()[$slug])) throw new RuntimeException('Tema kodu geçersiz veya kurulu değil.');
+        $library = (string)($input['library'] ?? 'fontawesome');
+        if (!in_array($library, ['fontawesome','bootstrap','material','lucide','unicode'], true)) throw new RuntimeException('İkon kütüphanesi seçimi geçersiz.');
+        $defaults = ['fontawesome'=>['fa-star','fa-house','fa-heart','fa-shield-halved'],'bootstrap'=>['bi-star-fill','bi-house-door-fill','bi-heart-fill','bi-shield-check'],'material'=>['star','home','favorite','verified_user'],'lucide'=>['star','house','heart','shield-check'],'unicode'=>['✦','⌂','♡','✓']];
+        $submitted = is_array($input['icons'] ?? null) ? $input['icons'] : [];
+        $icons = [];
+        foreach (range(0, 3) as $i) {
+            $value = trim((string)($submitted[$i] ?? $defaults[$library][$i]));
+            $pattern = $library === 'material' ? '/^[a-z0-9_]{1,50}$/' : ($library === 'unicode' ? '/^.{1,8}$/u' : '/^[a-z0-9-]{1,60}$/');
+            if (!preg_match($pattern, $value)) throw new RuntimeException('İkon adı geçersiz. Seçilen ikon kütüphanesinin adlandırmasını kullanın.');
+            $icons[] = $value;
+        }
+        $json = json_encode(['library'=>$library,'icons'=>$icons], JSON_UNESCAPED_UNICODE | JSON_THROW_ON_ERROR);
+        $key = 'theme.' . $slug . '.icons';
+        $pdo = Database::connection();
+        $stmt = $pdo->prepare('INSERT INTO settings(setting_key,setting_value,autoload) VALUES(?,?,1) ON DUPLICATE KEY UPDATE setting_value=VALUES(setting_value),autoload=1');
+        $stmt->execute([$key, $json]);
+        $verify = $pdo->prepare('SELECT setting_value FROM settings WHERE setting_key=? LIMIT 1');
+        $verify->execute([$key]);
+        if ((string)$verify->fetchColumn() !== $json) throw new RuntimeException('Tema ikon ayarları veritabanına kaydedilemedi.');
+    }
+
+    public static function renderTrustIcon(int $index, array $settings): string
+    {
+        $library = (string)($settings['library'] ?? 'unicode');
+        $icon = (string)($settings['icons'][$index] ?? '');
+        if ($library === 'material') return '<span class="material-symbols-rounded" aria-hidden="true">' . e($icon) . '</span>';
+        if ($library === 'unicode') return e($icon);
+        if ($library === 'lucide') return '<i data-lucide="' . e($icon) . '" aria-hidden="true"></i>';
+        $prefix = $library === 'bootstrap' ? 'bi ' : 'fa-solid ';
+        return '<i class="' . $prefix . e($icon) . '" aria-hidden="true"></i>';
+    }
+
     /** Theme-scoped design palette stored in the database, never in editable CMS content. */
     private static function designDefaults(): array
     {
@@ -474,6 +536,7 @@ final class ThemeManager
         if (!is_file($template)) throw new RuntimeException('Tema şablonu bulunamadı: ' . $view);
 
         $variables['brandSettings'] = self::brandSettings($renderSlug);
+        $variables['trustIconSettings'] = self::iconSettings($renderSlug);
         extract($variables, EXTR_SKIP);
         ob_start();
         require $template;
@@ -585,6 +648,21 @@ final class ThemeManager
         $typographyAssets = $fontAssets . '<style id="villa-theme-typography">' . $typographyCss . '</style>';
         if (stripos($html, '</head>') !== false) {
             $html = preg_replace('/<\/head>/i', $typographyAssets . '</head>', $html, 1) ?? $html;
+        }
+
+        $iconLibrary = (string)($trustIconSettings['library'] ?? 'unicode');
+        $iconAssets = '';
+        if ($iconLibrary === 'fontawesome') {
+            $iconAssets = '<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css">';
+        } elseif ($iconLibrary === 'bootstrap') {
+            $iconAssets = '<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">';
+        } elseif ($iconLibrary === 'material') {
+            $iconAssets = '<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@20..48,400,0,0">';
+        } elseif ($iconLibrary === 'lucide') {
+            $iconAssets = '<script src="https://unpkg.com/lucide@0.468.0/dist/umd/lucide.min.js" defer></script><script>window.addEventListener("DOMContentLoaded",function(){if(window.lucide){window.lucide.createIcons();}});</script>';
+        }
+        if ($iconAssets !== '' && stripos($html, '</head>') !== false) {
+            $html = preg_replace('/<\\/head>/i', $iconAssets . '</head>', $html, 1) ?? $html;
         }
 
         // Apply the saved palette after theme and typography CSS so fixed theme colors cannot override it.

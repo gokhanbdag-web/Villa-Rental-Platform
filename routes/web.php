@@ -1389,6 +1389,7 @@ $router->get('/admin/theme-design', static function (): void {
     Auth::requireRole(['super_admin','admin']);
     $themeDesignSlug = ThemeManager::activeSlug();
     $themeDesignSettings = ThemeManager::designSettings($themeDesignSlug);
+    $themeIconSettings = ThemeManager::iconSettings($themeDesignSlug);
     $themeBrandSettings = ThemeManager::brandSettings($themeDesignSlug);
     $themeBrandMessage = (string)($_SESSION['villa_theme_brand_message'] ?? '');
     $themeBrandMessageType = (string)($_SESSION['villa_theme_brand_message_type'] ?? 'success');
@@ -1402,8 +1403,10 @@ $router->post('/admin/theme-design', static function (): void {
     Auth::requireRole(['super_admin','admin']);
     verify_csrf();
     try {
-        ThemeManager::saveDesignSettings((array)($_POST['design'] ?? []), ThemeManager::activeSlug());
-        $_SESSION['villa_theme_design_message'] = 'Tema renk paleti başarıyla kaydedildi.';
+        $activeThemeSlug = ThemeManager::activeSlug();
+        ThemeManager::saveDesignSettings((array)($_POST['design'] ?? []), $activeThemeSlug);
+        ThemeManager::saveIconSettings((array)($_POST['icons'] ?? []), $activeThemeSlug);
+        $_SESSION['villa_theme_design_message'] = 'Tema renk paleti ve ana sayfa ikon ayarları başarıyla kaydedildi.';
         $_SESSION['villa_theme_design_message_type'] = 'success';
     } catch (Throwable $e) {
         error_log('Theme design save failed: ' . $e->getMessage());

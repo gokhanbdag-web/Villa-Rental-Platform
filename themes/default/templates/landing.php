@@ -56,12 +56,12 @@ $medBlocks = '';
     if ($medSectionActive('trust')): ?>
     <section class="section med-trust" style="order:<?= $medSectionOrder('trust',2) ?>"><div class="wrap med-trust-grid">
       <?php $trustItems = [
-        ['title'=>'home_trust_1_title','text'=>'home_trust_1_text','icon'=>'✦'],
-        ['title'=>'home_trust_2_title','text'=>'home_trust_2_text','icon'=>'⌂'],
-        ['title'=>'home_trust_3_title','text'=>'home_trust_3_text','icon'=>'♡'],
-        ['title'=>'home_trust_4_title','text'=>'home_trust_4_text','icon'=>'✓']
-      ]; foreach ($trustItems as $item): ?>
-      <article class="med-trust-item"><span class="med-trust-icon" aria-hidden="true"><?= e($item['icon']) ?></span><div><h3><?= e($content[$item['title']] ?? '') ?></h3><p><?= e($content[$item['text']] ?? '') ?></p></div></article>
+        ['title'=>'home_trust_1_title','text'=>'home_trust_1_text'],
+        ['title'=>'home_trust_2_title','text'=>'home_trust_2_text'],
+        ['title'=>'home_trust_3_title','text'=>'home_trust_3_text'],
+        ['title'=>'home_trust_4_title','text'=>'home_trust_4_text']
+      ]; foreach ($trustItems as $i=>$item): ?>
+      <article class="med-trust-item"><span class="med-trust-icon" aria-hidden="true"><?= \App\Core\ThemeManager::renderTrustIcon($i, $trustIconSettings ?? []) ?></span><div><h3><?= e($content[$item['title']] ?? '') ?></h3><p><?= e($content[$item['text']] ?? '') ?></p></div></article>
       <?php endforeach; ?>
     </div></section>
     <?php endif;

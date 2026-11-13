@@ -1,6 +1,9 @@
 <?php
 declare(strict_types=1);
 $settings = is_array($themeDesignSettings ?? null) ? $themeDesignSettings : [];
+$iconSettings = is_array($themeIconSettings ?? null) ? $themeIconSettings : ['library'=>'fontawesome','icons'=>['fa-star','fa-house','fa-heart','fa-shield-halved']];
+$iconLibraries = ['fontawesome'=>'Font Awesome 6 Free','bootstrap'=>'Bootstrap Icons','material'=>'Google Material Symbols Rounded','lucide'=>'Lucide','unicode'=>'Unicode / Emoji'];
+$iconLabels = ['1. Güven avantajı','2. Konaklama avantajı','3. Misafir deneyimi','4. Güvenlik avantajı'];
 $labels = [
     'primary'=>'Ana renk',
     'accent'=>'Vurgu rengi',
@@ -24,6 +27,11 @@ $labels = [
 <div class="design-grid">
 <?php foreach($labels as $key=>$label): ?><div class="design-field"><label for="design-<?= e($key) ?>"><?= e($label) ?><br><code><?= e((string)($settings[$key]??'#000000')) ?></code></label><input id="design-<?= e($key) ?>" type="color" name="design[<?= e($key) ?>]" value="<?= e((string)($settings[$key]??'#000000')) ?>" data-design-color="<?= e($key) ?>"></div><?php endforeach; ?>
 </div></section>
+<section class="design-panel"><h2>Ana sayfa ikon seti</h2><p>Hero alanının hemen altındaki dört avantaj kartında kullanılacak ikon kütüphanesini ve her ikonun adını seçin. Seçilen kütüphane yalnızca gerektiğinde sayfaya eklenir; ikon dairelerinin mevcut tasarımı korunur.</p>
+<div class="design-grid">
+<div class="design-field"><label for="iconLibrary">İkon kütüphanesi</label><select id="iconLibrary" name="icons[library]" style="min-width:220px;height:42px;border:1px solid #dce5df;border-radius:8px;padding:6px;background:#fff"><?php foreach($iconLibraries as $value=>$label): ?><option value="<?= e($value) ?>" <?= ($iconSettings['library']??'fontawesome')===$value?'selected':'' ?>><?= e($label) ?></option><?php endforeach; ?></select></div>
+<?php foreach($iconLabels as $i=>$label): ?><div class="design-field"><label for="trustIcon<?= $i ?>"><?= e($label) ?><br><code><?= e((string)($iconSettings['icons'][$i]??'')) ?></code></label><input id="trustIcon<?= $i ?>" type="text" name="icons[icons][<?= $i ?>]" value="<?= e((string)($iconSettings['icons'][$i]??'')) ?>" maxlength="60" style="width:190px;height:42px;padding:6px;border:1px solid #dce5df;border-radius:8px"></div><?php endforeach; ?>
+</div><p style="margin-top:12px">Örnekler: Font Awesome için <code>fa-star</code>, Bootstrap Icons için <code>bi-star-fill</code>, Material Symbols için <code>home</code>, Lucide için <code>house</code>. Kütüphane CDN üzerinden sayfaya dahil edilir.</p></section>
 <section class="design-panel"><h2>Canlı önizleme</h2><p>Burada yönetim paneli değil, ziyaretçilerin gördüğü gerçek frontend ana sayfası açılır. Renk değişiklikleri kaydetmeden önce bu önizlemeye anında uygulanır.</p>
 <div class="frontend-preview-frame"><iframe id="frontendThemePreview" title="Gerçek site tasarımı canlı önizlemesi" src="<?= e(app_url('/')) ?>" loading="eager"></iframe></div>
 </section>
