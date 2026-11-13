@@ -48,10 +48,12 @@ function villa_resolve_location(PDO $pdo): array {
     return ['location_country_id'=>$ids['country'],'location_city_id'=>$ids['city'],'location_district_id'=>$district?$ids['district']:null,'location_neighborhood_id'=>$neighborhood?$ids['neighborhood']:null,'country'=>$country['name'],'city'=>$city['name'],'district'=>$district['name']??'','neighborhood'=>$neighborhood['name']??''];
 }
 function villa_update_http_get(string $url, bool $json = true): ?array {
-    $headers = "User-Agent: VillaRentalPlatform-Updater/1.0\\r\\nAccept: " . ($json ? "application/vnd.github+json" : "text/plain") . "\\r\\n";
+    $headers = "User-Agent: VillaRentalPlatform-Updater/1.0\r\nAccept: " . ($json ? "application/vnd.github+json" : "text/plain") . "\r\n";
+    $token = trim((string)(getenv('VILLA_GITHUB_TOKEN') ?: ''));
+    if ($token !== '') $headers .= "Authorization: Bearer " . $token . "\r\n";
     if (function_exists('curl_init')) {
         $ch = curl_init($url);
-        curl_setopt_array($ch, [CURLOPT_RETURNTRANSFER=>true,CURLOPT_FOLLOWLOCATION=>false,CURLOPT_CONNECTTIMEOUT=>2,CURLOPT_TIMEOUT=>4,CURLOPT_HTTPHEADER=>explode("\\r\\n",trim($headers))]);
+        curl_setopt_array($ch, [CURLOPT_RETURNTRANSFER=>true,CURLOPT_FOLLOWLOCATION=>false,CURLOPT_CONNECTTIMEOUT=>2,CURLOPT_TIMEOUT=>4,CURLOPT_HTTPHEADER=>explode("\r\n",trim($headers))]);
         $body = curl_exec($ch); $code = (int)curl_getinfo($ch, CURLINFO_RESPONSE_CODE); curl_close($ch);
     } else {
         $context = stream_context_create(['http'=>['method'=>'GET','header'=>$headers,'timeout'=>4,'ignore_errors'=>true]]);
@@ -80,6 +82,7 @@ function villa_github_update_info(string $root): array {
         'checked_at'=>date(DATE_ATOM),
         'available'=>false,
         'connected'=>is_array($commit),
+        'auth_configured'=>trim((string)(getenv('VILLA_GITHUB_TOKEN') ?: '')) !== '',
         'version'=>is_array($version)?(string)($version['text']??''):'',
         'commit'=>is_array($commit)?(string)($commit['sha']??''):'',
         'commit_url'=>is_array($commit)?(string)($commit['html_url']??''):'',
@@ -93,7 +96,7 @@ function villa_github_update_info(string $root): array {
         $statusFile=$root.'/storage/deploy-status.json';
         $deployed=[];
         if(is_file($statusFile)){$raw=@file_get_contents($statusFile);$parsed=is_string($raw)?json_decode($raw,true):null;if(is_array($parsed))$deployed=$parsed;}
-        $deployedCommit=(string)($deployed['commit']??getenv('VILLA_DEPLOY_COMMIT')?:'');
+        $deployedCommit=(string)($deployed['commit'] ?? (getenv('VILLA_DEPLOY_COMMIT') ?: ''));
         $info['deployed_commit']=$deployedCommit;
         $info['deployment_status']=(string)($deployed['status']??'unknown');
         $info['deployment_updated_at']=(string)($deployed['updated_at']??'');
@@ -711,7 +714,7 @@ $router->post('/favorites/toggle', static function (): void {
     else{$add=$pdo->prepare('INSERT INTO favorites(user_id,property_id,created_at) VALUES(?,?,NOW())');$add->execute([(int)$user['id'],$pid]);$active=true;}
     if($isAjax){header('Content-Type: application/json; charset=utf-8');header('Cache-Control: no-store');echo json_encode(['ok'=>true,'active'=>$active,'message'=>$active?'Favorilerinize eklendi.':'Favorilerinizden çıkarıldı.'],JSON_UNESCAPED_UNICODE|JSON_THROW_ON_ERROR);return;}
     $return=trim((string)($_POST['return_to']??'/favorites'));$parsed=parse_url($return);
-    if(!str_starts_with($return,'/')||str_starts_with($return,'//')||isset($parsed['host'])||preg_match('/[\\r\\n]/',$return))$return='/favorites';
+    if(!str_starts_with($return,'/')||str_starts_with($return,'//')||isset($parsed['host'])||preg_match('/[\r\n]/',$return))$return='/favorites';
     redirect($return);
 });
 
@@ -1125,7 +1128,7 @@ $router->post('/admin/navigation/save', static function (): void {
     $target=($_POST['target']??'')==='_blank'?'_blank':'_self';
     $sort=max(0,min(9999,(int)($_POST['sort_order']??10)));$active=isset($_POST['is_active'])?1:0;$parentId=max(0,(int)($_POST['parent_id']??0));
     if($id>0){$current=$pdo->prepare('SELECT location,parent_id FROM navigation_items WHERE id=? LIMIT 1');$current->execute([$id]);$currentRow=$current->fetch();if($currentRow&&(int)($currentRow['parent_id']??0)===0&&(string)$currentRow['location']!==$location){$has=$pdo->prepare('SELECT 1 FROM navigation_items WHERE parent_id=? LIMIT 1');$has->execute([$id]);if($has->fetchColumn()){http_response_code(422);exit('Alt menüleri bulunan ana öğenin konumunu değiştirmeden önce alt öğelerini taşıyın.');}}}if($parentId>0){$p=$pdo->prepare('SELECT id,parent_id,location FROM navigation_items WHERE id=? LIMIT 1');$p->execute([$parentId]);$parent=$p->fetch();if(!$parent||(int)$parent['id']===$id||(string)$parent['location']!==$location||(int)($parent['parent_id']??0)>0){http_response_code(422);exit('Alt menü yalnızca aynı konumdaki bir ana menüye bağlanabilir.');}$hasChildren=$pdo->prepare('SELECT 1 FROM navigation_items WHERE parent_id=? LIMIT 1');$hasChildren->execute([$id]);if($id>0&&$hasChildren->fetchColumn()){http_response_code(422);exit('Alt menüsü bulunan bir öğeyi başka bir öğenin altına taşıyamazsınız. Önce alt öğelerini taşıyın.');}}
-    $validUrl=$url!==''&&!preg_match('/[\\r\\n\\x00-\\x1F]/',$url)&&!str_starts_with($url,'//')&&(str_starts_with($url,'/')||preg_match('#^https?://#i',$url));
+    $validUrl=$url!==''&&!preg_match('/[\r\n\\x00-\\x1F]/',$url)&&!str_starts_with($url,'//')&&(str_starts_with($url,'/')||preg_match('#^https?://#i',$url));
     if($label===''||mb_strlen($label)>120||!$validUrl){http_response_code(422);exit('Menü adı veya bağlantı adresi geçersiz.');}
     if($id>0){
         $s=$pdo->prepare('UPDATE navigation_items SET location=?,parent_id=?,label=?,url=?,target=?,sort_order=?,is_active=? WHERE id=?');
