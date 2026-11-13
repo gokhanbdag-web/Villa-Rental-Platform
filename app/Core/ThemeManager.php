@@ -305,8 +305,11 @@ final class ThemeManager
             if (isset(self::typographyFonts()[$family])) $clean[$group]['family'] = $family;
             $size = filter_var($row['size'] ?? $clean[$group]['size'], FILTER_VALIDATE_INT);
             if ($size !== false) $clean[$group]['size'] = max(10, min(96, $size));
-            $lineHeight = filter_var($row['line_height'] ?? $clean[$group]['line_height'], FILTER_VALIDATE_FLOAT);
-            if ($lineHeight !== false) $clean[$group]['line_height'] = max(0.9, min(2.5, (float)$lineHeight));
+            // H1-H6 line heights are normalized independently below.
+            if (array_key_exists('line_height', $clean[$group])) {
+                $lineHeight = filter_var($row['line_height'] ?? $clean[$group]['line_height'], FILTER_VALIDATE_FLOAT);
+                if ($lineHeight !== false) $clean[$group]['line_height'] = max(0.9, min(2.5, (float)$lineHeight));
+            }
             $color = strtolower(trim((string)($row['color'] ?? $clean[$group]['color'])));
             if (preg_match('/^#[0-9a-f]{6}$/', $color)) $clean[$group]['color'] = $color;
             $weight = filter_var($row['weight'] ?? $clean[$group]['weight'], FILTER_VALIDATE_INT);
