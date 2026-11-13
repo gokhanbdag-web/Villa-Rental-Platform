@@ -98,7 +98,7 @@ return static function (string $html, string $requestPath, string $platformMode)
                 $active = ($url === '/admin') ? ($requestPath === '/admin' || $requestPath === '/admin/') : ($requestPath === $url || str_starts_with($requestPath, $url . '/'));
                 $icon = $icons[$url] ?? '•';
                 $nav .= '<a class="vr-admin-link' . ($active ? ' is-active' : '') . '" href="' . e(app_url($url)) . '" data-admin-link>'
-                    '<span class="vr-admin-icon" aria-hidden="true">' . e($icon) . '</span><span class="vr-admin-link-label">' . e($label) . '</span></a>';
+                    . '<span class="vr-admin-icon" aria-hidden="true">' . e($icon) . '</span><span class="vr-admin-link-label">' . e($label) . '</span></a>';
             }
         }
         $adminRootUrl = json_encode(app_url('/admin'), JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_AMP | JSON_HEX_QUOT);
