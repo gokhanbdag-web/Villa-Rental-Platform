@@ -1219,7 +1219,7 @@ body.villa-home-mediterranean .hero-filter-panel{
 
 /* Full-width OpenStreetMap villa discovery section */
 body.villa-home-mediterranean .villa-map-section{
- width:100%;padding:58px 0 0;margin:0;background:#f7f5ef;overflow:hidden
+ position:relative;order:4;width:100%;padding:58px 0 0;margin:0;background:#f7f5ef;overflow:hidden
 }
 body.villa-home-mediterranean .villa-map-heading{padding-bottom:25px}
 body.villa-home-mediterranean .villa-map-heading h2{margin:10px 0 8px}
