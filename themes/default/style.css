@@ -1370,13 +1370,32 @@ body[data-villa-theme] header a{
 }
 
 
-/* Desktop: social icons remain in the leftmost quarter of the top strip. */
-body[data-villa-theme] .villa-social-left{grid-column:1;display:flex!important;align-items:center;justify-content:flex-start;gap:10px;min-width:0}
+/* Social links are icon-only; labels remain available to assistive technology via aria-label/title. */
+body[data-villa-theme] .villa-social-left{grid-column:1;display:flex!important;align-items:center;justify-content:flex-start;gap:9px;min-width:0}
+body[data-villa-theme] .villa-social-left .villa-social-link,
+body[data-villa-theme] .villa-social-drawer .villa-social-link{
+ display:inline-flex!important;flex:0 0 36px!important;align-items:center!important;justify-content:center!important;
+ width:36px!important;min-width:36px!important;height:36px!important;min-height:36px!important;
+ margin:0!important;padding:0!important;box-sizing:border-box!important;border-radius:50%!important;
+ background:var(--villa-surface,#fff)!important;border:1px solid var(--villa-border,#dce5dd)!important;
+ color:var(--villa-primary,#315a43)!important;text-decoration:none!important;line-height:1!important;
+}
+body[data-villa-theme] .villa-social-link span{display:none!important}
+body[data-villa-theme] .villa-social-left .villa-social-link svg,
+body[data-villa-theme] .villa-social-drawer .villa-social-link svg{
+ display:block!important;width:var(--social-icon-size,20px)!important;height:var(--social-icon-size,20px)!important;
+ max-width:22px!important;max-height:22px!important;flex:0 0 auto!important;
+}
+body[data-villa-theme] .villa-social-left .villa-social-link:hover,
+body[data-villa-theme] .villa-social-drawer .villa-social-link:hover{
+ background:var(--villa-primary,#315a43)!important;border-color:var(--villa-primary,#315a43)!important;color:#fff!important;
+}
 body[data-villa-theme] .villa-social-drawer{display:none!important}
 @media(max-width:760px){
  body[data-villa-theme] .villa-social-left{display:none!important}
- body[data-villa-theme] .villa-social-drawer{display:flex!important;flex-wrap:wrap!important;align-items:center!important;gap:12px!important;margin:22px 0 8px!important;padding:18px 4px 4px!important;border-top:1px solid var(--villa-border,#e5ebe6)!important}
- body[data-villa-theme] .villa-social-drawer .villa-social-link{display:inline-flex!important;align-items:center!important;justify-content:center!important;gap:6px!important;min-width:42px!important;min-height:42px!important;padding:8px!important;border-radius:12px!important;background:var(--villa-surface,#f5f7f5)!important;color:var(--villa-primary,#315a43)!important;text-decoration:none!important}
- body[data-villa-theme] .villa-social-drawer .villa-social-link svg{width:var(--social-icon-size,20px)!important;height:var(--social-icon-size,20px)!important;flex:0 0 auto!important}
- body[data-villa-theme] .villa-social-drawer .villa-social-link span{font-size:13px!important;line-height:1.2!important}
+ body[data-villa-theme] .villa-social-drawer{
+  display:flex!important;flex-wrap:wrap!important;align-items:center!important;gap:10px!important;
+  margin:22px 0 8px!important;padding:18px 4px 4px!important;
+  border-top:1px solid var(--villa-border,#e5ebe6)!important;
+ }
 }
