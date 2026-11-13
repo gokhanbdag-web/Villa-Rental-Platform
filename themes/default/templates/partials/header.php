@@ -26,3 +26,25 @@ if ($topPhoneDigits !== ''): ?>
   </div>
 </header>
 <div class="drawer-overlay" id="menuOverlay"></div>
+
+<script>
+(function(){
+  var button=document.getElementById('menuToggle');
+  var menu=document.getElementById('siteNavigation');
+  var overlay=document.getElementById('menuOverlay');
+  if(!button||!menu||!overlay||button.dataset.menuReady==='1')return;
+  button.dataset.menuReady='1';
+  function setOpen(open){
+    menu.classList.toggle('is-open',open);
+    overlay.classList.toggle('is-open',open);
+    document.body.classList.toggle('menu-open',open);
+    button.setAttribute('aria-expanded',open?'true':'false');
+    button.setAttribute('aria-label',open?'Menüyü kapat':'Menüyü aç');
+  }
+  button.addEventListener('click',function(){setOpen(button.getAttribute('aria-expanded')!=='true');});
+  overlay.addEventListener('click',function(){setOpen(false);});
+  menu.addEventListener('click',function(event){if(event.target.closest('a'))setOpen(false);});
+  document.addEventListener('keydown',function(event){if(event.key==='Escape')setOpen(false);});
+  window.addEventListener('resize',function(){if(window.innerWidth>760)setOpen(false);});
+})();
+</script>
