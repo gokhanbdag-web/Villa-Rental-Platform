@@ -35,8 +35,8 @@ if (!is_file($deployScript) || !is_executable($deployScript)) {
 
 // Keep the complete deployment, health check and possible restore in one lock.
 $lock = @fopen($base . '/runner.lock', 'c');
-if (!is_resource($lock) || !flock($lock, LOCK_EX | LOCK_NB)) {
-    fwrite(STDERR, "Another Villa deployment is already running\n");
+if (!is_resource($lock) || !flock($lock, LOCK_EX)) {
+    fwrite(STDERR, "Could not acquire the Villa deployment lock\n");
     exit(9);
 }
 
@@ -93,14 +93,16 @@ function villa_staging_commit(string $staging): string
         : '';
 }
 
-function villa_latest_backup(string $directory): ?string
+function villa_latest_backup(string $directory): ?array
 {
     $files = glob($directory . '/backups/villa-*.tar.gz') ?: [];
     if ($files === []) {
         return null;
     }
     usort($files, static fn(string $a, string $b): int => filemtime($b) <=> filemtime($a));
-    return $files[0];
+    $path = $files[0];
+    $hash = hash_file('sha256', $path);
+    return is_string($hash) ? ['path' => $path, 'hash' => $hash] : null;
 }
 
 function villa_health_check(string $url, string &$statusLine): bool
@@ -184,7 +186,12 @@ fclose($pipes[0]);
 $deployExit = proc_close($process);
 
 $backupAfter = villa_latest_backup($base);
-$newBackup = ($backupAfter !== null && $backupAfter !== $backupBefore) ? $backupAfter : null;
+$newBackup = null;
+if ($backupAfter !== null && ($backupBefore === null
+    || $backupAfter['path'] !== $backupBefore['path']
+    || !hash_equals($backupBefore['hash'], $backupAfter['hash']))) {
+    $newBackup = $backupAfter['path'];
+}
 $statusLine = '';
 $healthy = ($deployExit === 0) && villa_health_check($healthUrl, $statusLine);
 
