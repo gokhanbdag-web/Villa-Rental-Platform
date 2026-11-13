@@ -84,21 +84,6 @@ $medBlocks = '';
       <?php endif; ?>
     </section>
     <?php
-    if ($medSectionActive('collections') && !empty($homeCategoryCollections)): ?>
-    <section class="section med-collections" style="order:<?= $medSectionOrder('collections',7) ?>"><div class="wrap">
-      <div class="section-head"><div><span class="pill villa-eyebrow"><?= e($content['home_collections_eyebrow'] ?? 'ÖZENLE HAZIRLANDI') ?></span><h2><?= e($content['home_collections_title'] ?? 'Size Özel Villa Koleksiyonları') ?></h2><p><?= e($content['home_collections_subtitle'] ?? '') ?></p></div></div>
-      <?php foreach ($homeCategoryCollections as $collection): ?>
-      <div class="med-collection-row"><div class="med-collection-heading"><div><h3><?= e($collection['category']['name']) ?></h3><p><?= (int)$collection['category']['property_count'] ?> <?= e($content['home_collection_count_suffix'] ?? 'yayındaki villa arasından seçtiklerimiz') ?></p></div><a href="<?= e(app_url('/konaklamalar?category='.(int)$collection['category']['id'])) ?>"><?= e($content['home_collection_link'] ?? 'Tümünü gör ↗') ?></a></div><div class="med-property-grid">
-      <?php foreach ($collection['properties'] as $p):
-            $cardImages=$homeCardImages[(int)$p['id']]??[];
-            if(!$cardImages && !empty($p['cover_image']))$cardImages=[$medImage($p)];
-            $isCardFavorite=in_array((int)$p['id'],$favoritePropertyIds??[],true);
-            $filters=[];
-            \App\Core\ThemeManager::renderPartial('components/cards/villa-card.php',get_defined_vars());
-        endforeach; ?></div></div>
-      <?php endforeach; ?>
-    </div></section>
-    <?php endif;
     if ($medSectionActive('reviews') && !empty($homeReviews)): ?>
     <section class="section med-reviews" style="order:<?= $medSectionOrder('reviews',8) ?>"><div class="wrap">
       <div class="section-head"><div><span class="pill villa-eyebrow"><?= e($content['home_reviews_eyebrow'] ?? 'MİSAFİR DENEYİMLERİ') ?></span><h2><?= e($content['home_reviews_title'] ?? 'Misafirlerimizin Deneyimleri') ?></h2><p><?= e($content['home_reviews_subtitle'] ?? '') ?></p></div></div>
