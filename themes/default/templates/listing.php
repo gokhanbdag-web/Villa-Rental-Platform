@@ -32,4 +32,9 @@ body .filter-panel .submit{grid-column:span 1;width:100%;min-width:0;min-height:
 @media(max-width:600px){body .filter-panel{padding:14px}body .filter-panel .filters{grid-template-columns:minmax(0,1fr);gap:13px}body .filter-panel .field input:not([type=hidden]),body .filter-panel .field select{height:48px;min-height:48px}body .filter-panel .price-filter,body .filter-panel .submit{grid-column:1/-1}}
 CSS
  . '</style></head>', $html);
+ob_start();
+require __DIR__ . '/partials/footer.php';
+$footerMarkup = (string) ob_get_clean();
+$html = preg_replace('~</body>~i', $footerMarkup . '</body>', $html, 1) ?? $html;
+
 echo $html;
