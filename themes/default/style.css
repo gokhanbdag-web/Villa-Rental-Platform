@@ -1476,3 +1476,14 @@ body[data-villa-theme] .villa-social-drawer{display:none!important}
   }
   body[data-villa-theme] .villa-social-drawer .villa-social-license{display:flex!important;flex-wrap:wrap!important;gap:5px!important}
 }
+
+/* Keep the shared logo/navigation bar sticky on every device, including the mobile burger layout. */
+@media(max-width:760px){
+  body[data-villa-theme] .site-header{
+    position:sticky!important;
+    top:0!important;
+    z-index:10010!important;
+    border-top:3px solid var(--villa-primary,#315a43)!important;
+    box-sizing:border-box!important;
+  }
+}
