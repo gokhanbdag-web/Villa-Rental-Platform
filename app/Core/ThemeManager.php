@@ -1035,18 +1035,19 @@ final class ThemeManager
     function onScroll(){if(!frame) frame=window.requestAnimationFrame(paint);}
     window.addEventListener('scroll',onScroll,{passive:true});
     window.addEventListener('resize',onScroll,{passive:true});
-    button.addEventListener('click',function(){
-        button.classList.add('is-returning');
-        window.scrollTo({top:0,behavior:reduced?'auto':'smooth'});
-    });
-    window.addEventListener('scroll',function(){
+    function finishReturn(){
         if((window.scrollY||0)<2 && button.classList.contains('is-returning')){
             button.classList.remove('is-returning');
             button.classList.remove('is-visible');
             travel=0;
             button.style.setProperty('--villa-scroll-drift','0px');
         }
-    },{passive:true});
+    }
+    button.addEventListener('click',function(){
+        button.classList.add('is-returning');
+        window.scrollTo({top:0,behavior:reduced?'auto':'smooth'});
+    });
+    window.addEventListener('scroll',finishReturn,{passive:true});
     paint();
 })();
 </script>
