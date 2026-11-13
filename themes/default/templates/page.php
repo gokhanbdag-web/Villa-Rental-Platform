@@ -30,7 +30,7 @@ $menuScript = '<script>(function(){var b=document.getElementById("menuToggle"),n
 $html = preg_replace('~</body>~i', $menuScript . '</body>', $html, 1) ?? $html;
 $html = preg_replace('~<body\\b~i', '<body class="villa-page-mediterranean"', $html, 1) ?? $html;
 $themePageCss = <<<'CSS'
-body.villa-page-mediterranean{background:#f7f7f1;color:var(--villa-text);}body.villa-page-mediterranean .wrap{max-width:1080px;margin:55px auto}body.villa-page-mediterranean main.wrap{padding:0 28px}body.villa-page-mediterranean main h1{font:inherit;color:var(--villa-text);max-width:820px;margin:55px 0 25px}body.villa-page-mediterranean main article{font:inherit;color:var(--villa-text);max-width:820px;border-left:3px solid #b7c8ae;padding:12px 0 12px 28px}body.villa-page-mediterranean .site-footer{background:#294536}
+body.villa-page-mediterranean{background:#f7f7f1;color:#304235}body.villa-page-mediterranean .wrap{max-width:1080px;margin:55px auto}body.villa-page-mediterranean main.wrap{padding:0 28px}body.villa-page-mediterranean main h1{font:500 clamp(38px,5vw,62px) Georgia,serif;color:#2c4b36;max-width:820px;margin:55px 0 25px}body.villa-page-mediterranean main article{font:16px/2 Inter,system-ui,sans-serif;color:#5d6b5f;max-width:820px;border-left:3px solid #b7c8ae;padding:12px 0 12px 28px}body.villa-page-mediterranean .site-footer{background:#294536}
 CSS;
 $html = str_replace('</head>', '<style>' . $themePageCss . '</style></head>', $html);
 echo $html;

@@ -8,9 +8,9 @@ body[data-villa-theme="coastal"] {
   --coastal-paper: #f5f8f6;
   --coastal-line: #e2eae5;
   background: var(--coastal-paper);
-  color:var(--villa-text);
+  color: var(--coastal-ink);
 }
-body[data-villa-theme="coastal"] a { color:var(--villa-text); }
+body[data-villa-theme="coastal"] a { color: inherit; }
 body[data-villa-theme="coastal"] .theme-header {
   background: rgba(255,255,255,.96);
   border-bottom: 1px solid var(--coastal-line);
@@ -21,18 +21,18 @@ body[data-villa-theme="coastal"] .theme-header-inner {
   min-height: 82px;
 }
 body[data-villa-theme="coastal"] .theme-brand,
-body[data-villa-theme="coastal"] .theme-brand-name { color:var(--villa-text); }
-body[data-villa-theme="coastal"] .theme-brand-name { font:inherit; letter-spacing: -1.1px; }
+body[data-villa-theme="coastal"] .theme-brand-name { color: var(--coastal-primary); }
+body[data-villa-theme="coastal"] .theme-brand-name { font: 800 27px/1.05 Inter,system-ui,sans-serif; letter-spacing: -1.1px; }
 body[data-villa-theme="coastal"] .theme-header .nav { gap: 5px; }
 body[data-villa-theme="coastal"] .theme-header .nav a {
   border-radius: 10px;
   padding: 11px 13px;
-  color:var(--villa-text);
-  font-weight:var(--villa-body-weight);
+  color: #43564e;
+  font-weight: 650;
 }
 body[data-villa-theme="coastal"] .theme-header .nav a:hover {
   background: #eaf4f0;
-  color:var(--villa-text);
+  color: var(--coastal-primary);
 }
 body[data-villa-theme="coastal"] .hero {
   background: linear-gradient(135deg,#edf5f1,#f7f8f5);
@@ -44,8 +44,8 @@ body[data-villa-theme="coastal"] .hero-card {
   box-shadow: 0 24px 65px rgba(23,54,43,.16);
 }
 body[data-villa-theme="coastal"] .hero h1 {
-  font-family:var(--villa-font-body);
-  font-weight:var(--villa-body-weight);
+  font-family: Inter,system-ui,sans-serif;
+  font-weight: 800;
   letter-spacing: -2.6px;
 }
 body[data-villa-theme="coastal"] .search-enhanced,
@@ -67,9 +67,9 @@ body[data-villa-theme="coastal"] .submit:hover {
 body[data-villa-theme="coastal"] .section-head h2,
 body[data-villa-theme="coastal"] .intro h1,
 body[data-villa-theme="coastal"] .body h2 {
-  color:var(--villa-text);
-  font-family:var(--villa-font-body);
-  font-weight:var(--villa-body-weight);
+  color: var(--coastal-ink);
+  font-family: Inter,system-ui,sans-serif;
+  font-weight: 750;
   letter-spacing: -1px;
 }
 body[data-villa-theme="coastal"] .stay {
@@ -84,15 +84,15 @@ body[data-villa-theme="coastal"] .photo {
   border-radius: 12px;
 }
 body[data-villa-theme="coastal"] .stay h3 {
-  color:var(--villa-text);
-  font-family:var(--villa-font-body);
-  font-weight:var(--villa-body-weight);
+  color: var(--coastal-ink);
+  font-family: Inter,system-ui,sans-serif;
+  font-weight: 700;
 }
 body[data-villa-theme="coastal"] .rating-line .rating-score,
-body[data-villa-theme="coastal"] .more { color:var(--villa-text); }
+body[data-villa-theme="coastal"] .more { color: var(--coastal-primary); }
 body[data-villa-theme="coastal"] .pill {
   background: #eaf4f0;
-  color:var(--villa-text);
+  color: var(--coastal-primary);
 }
 body[data-villa-theme="coastal"] .intro {
   background: linear-gradient(135deg,#edf5f1,#f7f8f5);
@@ -109,17 +109,17 @@ body[data-villa-theme="coastal"] .booking {
 body[data-villa-theme="coastal"] .booking a,
 body[data-villa-theme="coastal"] .host-copy a {
   background: var(--coastal-primary);
-  color:var(--villa-text);
+  color: #fff;
   border-radius: 11px;
 }
 body[data-villa-theme="coastal"] footer {
   background: #203b34;
-  color:var(--villa-text);
+  color: #f4faf6;
 }
 body[data-villa-theme="coastal"] .host-banner { border-radius: 20px; }
 @media (max-width: 760px) {
   body[data-villa-theme="coastal"] .theme-header-inner { width: calc(100% - 28px); min-height: 68px; }
-  body[data-villa-theme="coastal"] .theme-brand-name { font-size:var(--villa-body-size); }
+  body[data-villa-theme="coastal"] .theme-brand-name { font-size: 23px; }
   body[data-villa-theme="coastal"] .hero { padding: 14px 0 30px; }
   body[data-villa-theme="coastal"] .hero-card { min-height: 570px; border-radius: 18px; }
   body[data-villa-theme="coastal"] .hero h1 { letter-spacing: -1.5px; }
