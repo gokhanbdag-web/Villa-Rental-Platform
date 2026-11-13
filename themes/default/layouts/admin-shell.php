@@ -35,7 +35,6 @@ return static function (string $html, string $requestPath, string $platformMode)
                 '/admin/updates' => 'Güncelleme Merkezi',
                 '/admin/header-settings' => 'Üst Bilgi Ayarları',
                 '/admin/translations' => 'Çeviriler',
-                '#' => 'Cleopatra Ink',
             ],
         ];
         if ($platformMode === 'multi_vendor') {
@@ -82,7 +81,6 @@ return static function (string $html, string $requestPath, string $platformMode)
             '/admin/updates' => '↻',
             '/admin/header-settings' => '☷',
             '/admin/translations' => '文',
-            '#' => '✦',
             '/admin/vendors' => '♧',
         ];
         $nav = '';
@@ -91,9 +89,7 @@ return static function (string $html, string $requestPath, string $platformMode)
             foreach ($groupLinks as $url => $label) {
                 $active = ($url === '/admin') ? ($requestPath === '/admin' || $requestPath === '/admin/') : ($requestPath === $url || str_starts_with($requestPath, $url . '/'));
                 $icon = $icons[$url] ?? '•';
-                $placeholder = ($url === '#');
-                $href = $placeholder ? '#' : app_url($url);
-                $nav .= '<a class="vr-admin-link' . ($active ? ' is-active' : '') . '" href="' . e($href) . '"' . ($placeholder ? ' data-admin-placeholder aria-disabled="true"' : ' data-admin-link') . '>' .
+                $nav .= '<a class="vr-admin-link' . ($active ? ' is-active' : '') . '" href="' . e(app_url($url)) . '" data-admin-link>' .
                     '<span class="vr-admin-icon" aria-hidden="true">' . e($icon) . '</span><span class="vr-admin-link-label">' . e($label) . '</span></a>';
             }
         }
@@ -199,7 +195,6 @@ return static function (string $html, string $requestPath, string $platformMode)
             window.addEventListener("click",function(event){
                 const origin=event.target instanceof Element?event.target:event.target&&event.target.parentElement;
                 const link=origin&&origin.closest("a[href]");if(!link)return;
-                if(link.hasAttribute("data-admin-placeholder")){event.preventDefault();return;}
                 if(event.button!==0||event.metaKey||event.ctrlKey||event.shiftKey||event.altKey)return;
                 if(link.target&&link.target!=="_self")return;
                 const target=new URL(link.href,location.href);
