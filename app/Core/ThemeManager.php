@@ -686,13 +686,12 @@ final class ThemeManager
         if (trim($socialBar) !== '') {
             // Contact/address metadata stays above the header; social links belong
             // to the shared navigation drawer on every page, including homepage.
-            if (preg_match('~<div class="villa-social-bar"[^>]*>.*?</div>~s', $socialBar, $metaMatch)) {
+            if (preg_match('~<div class="villa-social-bar"[^>]*>.*?</div>\\s*</div>~s', $socialBar, $metaMatch)) {
                 $metadata = $metaMatch[0];
                 $html = preg_replace('~<header\\b~i', $metadata . '<header', $html, 1) ?? $html;
             }
             if (preg_match('~<div class="villa-social-drawer"[^>]*>.*?</div>~s', $socialBar, $drawerMatch)) {
                 $drawer = $drawerMatch[0];
-                $html = preg_replace('~(<nav\\b[^>]*>)(.*?)(</nav>)~is', '$1$2' . preg_quote('', '~') . '$3', $html, 1) ?? $html;
                 $html = preg_replace_callback('~(<nav\\b[^>]*>)(.*?)(</nav>)~is', static function(array $m) use ($drawer): string {
                     return $m[1] . $m[2] . $drawer . $m[3];
                 }, $html, 1) ?? $html;
