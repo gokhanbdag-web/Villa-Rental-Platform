@@ -32,6 +32,7 @@ return static function (string $html, string $requestPath, string $platformMode)
             ],
             'Sistem' => [
                 '/admin/settings' => 'Ayarlar',
+                '/admin/updates' => 'Güncelleme Merkezi',
                 '/admin/header-settings' => 'Üst Bilgi Ayarları',
                 '/admin/translations' => 'Çeviriler',
             ],
@@ -77,6 +78,7 @@ return static function (string $html, string $requestPath, string $platformMode)
             '/admin/typography' => 'Aa',
             '/admin/themes' => '◈',
             '/admin/settings' => '⚙',
+            '/admin/updates' => '↻',
             '/admin/header-settings' => '☷',
             '/admin/translations' => '文',
             '/admin/vendors' => '♧',
