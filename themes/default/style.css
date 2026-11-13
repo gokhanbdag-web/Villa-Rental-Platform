@@ -781,3 +781,39 @@ body[data-villa-theme] .premium-stay-card:focus-within{outline:2px solid color-m
   body[data-villa-theme] .premium-stay-card *::before,
   body[data-villa-theme] .premium-stay-card *::after{transition:none!important;animation:none!important}
 }
+
+
+/* Villa card footer: price left, rating right; preserve typography colors and font family settings. */
+body[data-villa-theme] .premium-stay-card .card-bottom-row{
+  display:flex;align-items:center;justify-content:space-between;gap:10px;
+  margin:14px 18px 0;padding-top:12px;
+  border-top:1px solid var(--villa-border,#e3e9e4);
+}
+body[data-villa-theme] .premium-stay-card .card-bottom-row .price{
+  display:flex;align-items:baseline;gap:5px;min-width:0;
+  margin:0!important;padding:0!important;border:0!important;
+  white-space:nowrap;
+}
+body[data-villa-theme] .premium-stay-card .card-bottom-row .rating-line{
+  display:flex;align-items:center;justify-content:flex-end;gap:4px;
+  min-width:0;margin:0!important;padding:0!important;
+  border:0!important;text-align:right;
+  font-size:.78em;line-height:1.25;
+}
+body[data-villa-theme] .premium-stay-card .card-bottom-row .rating-line>span{
+  font-size:inherit;line-height:inherit;
+}
+body[data-villa-theme] .premium-stay-card .card-bottom-row .rating-line .rating-score{
+  white-space:nowrap;
+}
+body[data-villa-theme] .premium-stay-card .card-bottom-row .rating-line>span:last-child{
+  overflow-wrap:anywhere;
+}
+@media(max-width:600px){
+  body[data-villa-theme] .premium-stay-card .card-bottom-row{
+    gap:7px;margin:12px 12px 0;padding-top:10px;
+  }
+  body[data-villa-theme] .premium-stay-card .card-bottom-row .rating-line{
+    font-size:.72em;gap:3px;
+  }
+}
