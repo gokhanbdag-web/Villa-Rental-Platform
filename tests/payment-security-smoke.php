@@ -3,6 +3,26 @@ declare(strict_types=1);
 
 require_once dirname(__DIR__) . '/app/bootstrap.php';
 
+
+use App\Core\PaymentTransactionGuard;
+
+$transaction = ['id'=>51,'booking_id'=>9001,'provider'=>'paytr','provider_reference'=>'VILLA-ORDER-9001','amount'=>'1250.00','currency'=>'TRY','status'=>'pending'];
+$callback = ['booking_id'=>9001,'provider'=>'paytr','provider_reference'=>'VILLA-ORDER-9001','amount'=>'1250','currency'=>'try'];
+paymentAssert(PaymentTransactionGuard::matches($transaction,$callback), 'Matching payment callback was rejected.');
+foreach ([
+    ['amount'=>'1249.99'], ['currency'=>'EUR'], ['booking_id'=>9002],
+    ['provider'=>'iyzico'], ['provider_reference'=>'OTHER-ORDER'], ['amount'=>'1e3'],
+] as $change) {
+    paymentAssert(!PaymentTransactionGuard::matches($transaction,array_merge($callback,$change)), 'Mismatched payment callback was accepted.');
+}
+paymentAssert(PaymentTransactionGuard::canTransition('pending','processing'), 'Pending to processing transition was rejected.');
+paymentAssert(PaymentTransactionGuard::canTransition('processing','paid'), 'Processing to paid transition was rejected.');
+paymentAssert(PaymentTransactionGuard::canTransition('paid','refunded'), 'Paid to refunded transition was rejected.');
+paymentAssert(!PaymentTransactionGuard::canTransition('paid','failed'), 'Paid payment was allowed to regress to failed.');
+paymentAssert(!PaymentTransactionGuard::canTransition('failed','paid'), 'Failed payment was allowed to become paid without a new transaction.');
+paymentAssert(!PaymentTransactionGuard::canTransition('refunded','paid'), 'Refunded payment was allowed to become paid.');
+
+
 use App\Core\PaymentSecretVault;
 use App\Core\PaymentSignatureVerifier;
 use App\Core\PaymentSandboxSimulator;
