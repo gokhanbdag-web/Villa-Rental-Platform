@@ -11,7 +11,6 @@ return static function (string $html, string $requestPath, string $platformMode)
         // Keep the same three navigation groups on the first load and every AJAX page.
         $groups = [
             'Yönetim' => [
-                '/admin/hattap' => 'Hattap',
                 '/admin' => 'Genel Bakış',
                 '/admin/properties' => 'Konaklamalar',
                 '/admin/bookings' => 'Rezervasyonlar',
@@ -96,10 +95,9 @@ return static function (string $html, string $requestPath, string $platformMode)
         foreach ($groups as $groupLabel => $groupLinks) {
             $nav .= '<div class="vr-admin-nav-title">' . e($groupLabel) . '</div>';
             foreach ($groupLinks as $url => $label) {
-                $active = ($url === '/admin') ? ($requestPath === '/admin' || $requestPath === '/admin/') : ($url !== '/admin/hattap' && ($requestPath === $url || str_starts_with($requestPath, $url . '/')));
+                $active = ($url === '/admin') ? ($requestPath === '/admin' || $requestPath === '/admin/') : ($requestPath === $url || str_starts_with($requestPath, $url . '/'));
                 $icon = $icons[$url] ?? '•';
-                $href = $url === '/admin/hattap' ? '#' : app_url($url);
-                $nav .= '<a class="vr-admin-link' . ($active ? ' is-active' : '') . '" href="' . e($href) . '"' . ($url === '/admin/hattap' ? ' aria-disabled="true"' : ' data-admin-link') . '>' .
+                $nav .= '<a class="vr-admin-link' . ($active ? ' is-active' : '') . '" href="' . e(app_url($url)) . '" data-admin-link>'
                     '<span class="vr-admin-icon" aria-hidden="true">' . e($icon) . '</span><span class="vr-admin-link-label">' . e($label) . '</span></a>';
             }
         }
