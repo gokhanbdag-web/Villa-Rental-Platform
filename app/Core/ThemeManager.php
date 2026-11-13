@@ -362,7 +362,7 @@ final class ThemeManager
     /** Theme-scoped footer layout and appearance settings. */
     private static function footerSettingsDefaults(): array
     {
-        return ['background'=>'#20352e','text'=>'#ffffff','padding_top'=>42,'padding_bottom'=>42,'margin_top'=>55,'content_width'=>1180,'about_title'=>'','about_description'=>''];
+        return ['background'=>'#20352e','text'=>'#ffffff','padding_top'=>42,'padding_bottom'=>42,'margin_top'=>55,'content_width'=>1180,'about_title'=>'','about_description'=>'','payment_order'=>['mastercard','visa','troy','diners_club','american_express']];
     }
 
     private static function normalizeFooterSettings(array $input): array
@@ -370,6 +370,15 @@ final class ThemeManager
         $clean = self::footerSettingsDefaults();
         $clean['about_title'] = mb_substr(trim(strip_tags((string)($input['about_title'] ?? ''))), 0, 150);
         $clean['about_description'] = mb_substr(trim(strip_tags((string)($input['about_description'] ?? ''))), 0, 3000);
+        $allowedPayments = ['mastercard','visa','troy','diners_club','american_express'];
+        $paymentOrder = is_array($input['payment_order'] ?? null) ? $input['payment_order'] : $clean['payment_order'];
+        $normalizedOrder = [];
+        foreach (array_slice($paymentOrder, 0, 5) as $payment) {
+            $payment = (string)$payment;
+            if (in_array($payment, $allowedPayments, true) && !in_array($payment, $normalizedOrder, true)) $normalizedOrder[] = $payment;
+        }
+        foreach ($allowedPayments as $payment) if (!in_array($payment, $normalizedOrder, true)) $normalizedOrder[] = $payment;
+        $clean['payment_order'] = array_slice($normalizedOrder, 0, 5);
         foreach (['background','text'] as $key) {
             $value = strtolower(trim((string)($input[$key] ?? $clean[$key])));
             if (preg_match('/^#[0-9a-f]{6}$/', $value)) $clean[$key] = $value;
