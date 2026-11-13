@@ -5,6 +5,7 @@ require_once dirname(__DIR__) . '/app/bootstrap.php';
 
 
 use App\Core\PaymentTransactionGuard;
+use App\Core\PaymentCallbackProcessor;
 
 $transaction = ['id'=>51,'booking_id'=>9001,'provider'=>'paytr','provider_reference'=>'VILLA-ORDER-9001','amount'=>'1250.00','currency'=>'TRY','status'=>'pending'];
 $callback = ['booking_id'=>9001,'provider'=>'paytr','provider_reference'=>'VILLA-ORDER-9001','amount'=>'1250','currency'=>'try'];
@@ -15,6 +16,15 @@ foreach ([
 ] as $change) {
     paymentAssert(!PaymentTransactionGuard::matches($transaction,array_merge($callback,$change)), 'Mismatched payment callback was accepted.');
 }
+
+use App\Core\PaymentCallbackProcessor;
+
+paymentAssert(PaymentCallbackProcessor::targetStatus('success') === 'paid', 'Success callback status mapping failed.');
+paymentAssert(PaymentCallbackProcessor::targetStatus('failure') === 'failed', 'Failure callback status mapping failed.');
+paymentAssert(PaymentCallbackProcessor::targetStatus('cancelled') === 'cancelled', 'Cancelled callback status mapping failed.');
+paymentAssert(PaymentCallbackProcessor::targetStatus('refunded') === 'refunded', 'Refund callback status mapping failed.');
+paymentAssert(PaymentCallbackProcessor::targetStatus('unknown') === null, 'Unknown callback status was accepted.');
+
 paymentAssert(PaymentTransactionGuard::canTransition('pending','processing'), 'Pending to processing transition was rejected.');
 paymentAssert(PaymentTransactionGuard::canTransition('processing','paid'), 'Processing to paid transition was rejected.');
 paymentAssert(PaymentTransactionGuard::canTransition('paid','refunded'), 'Paid to refunded transition was rejected.');
