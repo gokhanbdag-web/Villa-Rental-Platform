@@ -1007,7 +1007,6 @@ final class ThemeManager
     var button=document.getElementById('villaBackToTop');
     if(!button || button.dataset.ready==='1') return;
     button.dataset.ready='1';
-    var lastY=window.scrollY||0;
     var travel=0;
     var frame=0;
     var visible=false;
@@ -1016,21 +1015,21 @@ final class ThemeManager
     function paint(){
         frame=0;
         var y=Math.max(0,window.scrollY||0);
-        var delta=y-lastY;
-        lastY=y;
+        var viewport=window.innerHeight||700;
+        var doc=document.documentElement;
+        var maxScroll=Math.max(0,(doc.scrollHeight||document.body.scrollHeight)-viewport);
+        var limit=Math.max(0,viewport-196);
         if(y>threshold){
             if(!visible){visible=true;button.classList.add('is-visible');}
-            if(!reduced && Math.abs(delta)>0){
-                var limit=Math.max(0,(window.innerHeight||700)-112);
-                travel=Math.max(0,Math.min(limit,travel+delta));
-            }
+            var progress=maxScroll>threshold?Math.max(0,Math.min(1,(y-threshold)/(maxScroll-threshold))):1;
+            travel=reduced?0:limit*progress;
         }else{
             visible=false;
             travel=0;
             button.classList.remove('is-visible');
         }
         button.style.setProperty('--villa-scroll-drift',travel.toFixed(2)+'px');
-        button.classList.toggle('is-at-lower-edge',travel>(window.innerHeight||700)*0.42);
+        button.classList.toggle('is-at-lower-edge',travel>limit*0.55);
     }
     function onScroll(){if(!frame) frame=window.requestAnimationFrame(paint);}
     window.addEventListener('scroll',onScroll,{passive:true});
