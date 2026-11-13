@@ -1438,6 +1438,7 @@ $router->get('/admin/theme-design', static function (): void {
     $themeIconSettings = ThemeManager::iconSettings($themeDesignSlug);
     $themeBrandSettings = ThemeManager::brandSettings($themeDesignSlug);
     $themeFamilyBannerTextSettings = ThemeManager::familyBannerTextSettings($themeDesignSlug);
+    $themeFooterSettings = ThemeManager::footerSettings($themeDesignSlug);
     $themeBrandMessage = (string)($_SESSION['villa_theme_brand_message'] ?? '');
     $themeBrandMessageType = (string)($_SESSION['villa_theme_brand_message_type'] ?? 'success');
     unset($_SESSION['villa_theme_brand_message'], $_SESSION['villa_theme_brand_message_type']);
@@ -1455,8 +1456,9 @@ $router->post('/admin/theme-design', static function (): void {
         if (isset($_POST['hero_typography']) && is_array($_POST['hero_typography'])) ThemeManager::saveHeroTypographySettings($_POST['hero_typography'], $activeThemeSlug);
         if (isset($_POST['typography']) && is_array($_POST['typography'])) ThemeManager::saveTypographySettings($_POST['typography'], $activeThemeSlug);
         if (isset($_POST['cards']) && is_array($_POST['cards'])) ThemeManager::saveCardSettings($_POST['cards'], $activeThemeSlug);
+        if (isset($_POST['footer']) && is_array($_POST['footer'])) ThemeManager::saveFooterSettings($_POST['footer'], $activeThemeSlug);
         ThemeManager::saveIconSettings((array)($_POST['icons'] ?? []), $activeThemeSlug);
-        $_SESSION['villa_theme_design_message'] = 'Tema, tipografi ve villa kart ayarları başarıyla kaydedildi.';
+        $_SESSION['villa_theme_design_message'] = 'Tema, tipografi, villa kartı ve footer ayarları başarıyla kaydedildi.';
         $_SESSION['villa_theme_design_message_type'] = 'success';
     } catch (Throwable $e) {
         error_log('Theme design save failed: ' . $e->getMessage());
