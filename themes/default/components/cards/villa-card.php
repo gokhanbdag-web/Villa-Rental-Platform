@@ -39,11 +39,13 @@ $cardReturnTo = (string)($_SERVER['REQUEST_URI'] ?? '/konaklamalar');
     <a class="stay-content" href="<?= e(app_url('/villa/' . rawurlencode((string)$p['slug']) . (!empty($filters['check_in']) && !empty($filters['check_out']) ? '?' . http_build_query(['check_in' => $filters['check_in'], 'check_out' => $filters['check_out']]) : ''))) ?>">
         <h3><?= e($p['title']) ?></h3>
         <div class="meta"><?= e(trim(($p['district'] ?? '') . ', ' . ($p['city'] ?? '') . ', ' . ($p['country'] ?? ''))) ?> · <?= (int)$p['max_guests'] ?> misafir</div>
-        <div class="rating-line">
-            <?php if ((int)($p['rating_count'] ?? 0) > 0): ?>
-                <span class="rating-star">★</span><span class="rating-score"><?= number_format((float)$p['rating_average'], 1, ',', '.') ?>/10</span><span><?= (int)$p['rating_count'] ?> değerlendirme</span>
-            <?php else: ?><span>Henüz değerlendirme yok</span><?php endif; ?>
+        <div class="card-bottom-row">
+            <div class="price"><strong><?= e(number_format((float)$p['base_nightly_price'], 0, ',', '.')) ?> <?= e($p['currency']) ?></strong> <span>/ gece</span></div>
+            <div class="rating-line">
+                <?php if ((int)($p['rating_count'] ?? 0) > 0): ?>
+                    <span class="rating-star">★</span><span class="rating-score"><?= number_format((float)$p['rating_average'], 1, ',', '.') ?>/10</span><span><?= (int)$p['rating_count'] ?> değerlendirme</span>
+                <?php else: ?><span>Henüz değerlendirme yok</span><?php endif; ?>
+            </div>
         </div>
-        <div class="price"><strong><?= e(number_format((float)$p['base_nightly_price'], 0, ',', '.')) ?> <?= e($p['currency']) ?></strong> / gece</div>
     </a>
 </article>
