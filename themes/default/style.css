@@ -1217,19 +1217,16 @@ body.villa-home-mediterranean .hero-filter-panel{
 }
 
 
-/* Full-width OpenStreetMap villa discovery section */
+/* Full-width, edge-to-edge villa map */
 body.villa-home-mediterranean .villa-map-section{
- position:relative;order:4;width:100%;padding:58px 0 0;margin:0;background:#f7f5ef;overflow:hidden
+ display:block!important;position:relative!important;order:4!important;
+ width:100vw!important;max-width:100vw!important;
+ margin:0 calc(50% - 50vw)!important;padding:0!important;
+ border:0!important;background:transparent!important;overflow:visible!important
 }
-body.villa-home-mediterranean .villa-map-heading{padding-bottom:25px}
-body.villa-home-mediterranean .villa-map-heading h2{margin:10px 0 8px}
-body.villa-home-mediterranean .villa-map-heading p{margin:0;color:var(--villa-muted,#6d7b70)}
 body.villa-home-mediterranean .villa-open-map{
- width:100%;height:560px;min-height:420px;background:#e8eee8;z-index:0
-}
-body.villa-home-mediterranean .villa-map-empty{
- max-width:1320px;margin:0 auto;padding:14px 24px 22px;text-align:center;
- color:var(--villa-muted,#6d7b70);font-size:14px
+ display:block!important;width:100%!important;height:560px!important;min-height:420px!important;
+ margin:0!important;padding:0!important;border:0!important;background:#e8eee8;z-index:0
 }
 body.villa-home-mediterranean .villa-map-div-icon{background:transparent;border:0;overflow:visible}
 body.villa-home-mediterranean .villa-map-marker-wrap{
@@ -1271,9 +1268,9 @@ body.villa-home-mediterranean .villa-map-preview-copy small{overflow:hidden;colo
 body.villa-home-mediterranean .villa-map-preview-copy b{color:#285d48;font-size:13px;font-weight:800;white-space:nowrap}
 body.villa-home-mediterranean .villa-map-preview-copy b small{font-size:10px;font-weight:500}
 @media(max-width:760px){
- body.villa-home-mediterranean .villa-map-section{padding-top:38px}
- body.villa-home-mediterranean .villa-map-heading{padding:0 15px 18px}
- body.villa-home-mediterranean .villa-open-map{height:430px;min-height:360px}
+ body.villa-home-mediterranean .villa-map-section{margin:0 calc(50% - 50vw)!important;padding:0!important}
+ 
+ body.villa-home-mediterranean .villa-open-map{height:430px!important;min-height:360px!important}
  body.villa-home-mediterranean .villa-map-preview{width:238px;grid-template-columns:78px minmax(0,1fr);gap:8px}
  body.villa-home-mediterranean .villa-map-preview>img,
  body.villa-home-mediterranean .villa-map-preview-placeholder{width:78px;height:82px}
