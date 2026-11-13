@@ -1229,8 +1229,13 @@ body.villa-home-mediterranean .med-family-banner{
   position:relative;
   background:#dce9e8;
 }
+body.villa-home-mediterranean .med-family-banner-image{
+  display:block;width:100%;height:100%;max-height:280px;object-fit:cover;object-position:center;
+}
+
 @media(max-width:600px){
   body.villa-home-mediterranean .med-family-banner{
     height:190px;
   }
+  body.villa-home-mediterranean .med-family-banner-image{max-height:190px;}
 }
