@@ -715,7 +715,8 @@ final class ThemeManager
         }
         $typographyCss = $themeScope . '{--villa-font-body:' . json_encode($paragraph['family']) . ';--villa-body-size:' . (int)$paragraph['size'] . 'px;--villa-body-line-height:' . $paragraph['line_height'] . ';--villa-body-weight:' . (int)$paragraph['weight'] . ';--villa-body-style:' . $paragraph['style'] . ';--villa-font-heading:' . json_encode($heading['family']) . ';--villa-text-color:' . $design['text'] . ';}'
             . $themeScope . '{font-family:' . json_encode($paragraph['family']) . ',system-ui,sans-serif!important;font-size:' . (int)$paragraph['size'] . 'px!important;line-height:' . $paragraph['line_height'] . '!important;color:var(--villa-text)!important;font-weight:' . (int)$paragraph['weight'] . '!important;font-style:' . $paragraph['style'] . '!important}'
-            . $themeScope . ' *{font-family:inherit!important;font-size:inherit!important;line-height:inherit!important;color:inherit!important}'
+            // Preserve icon-font families while inheriting typography for normal content.
+            . $themeScope . ' *:not(i):not(.material-symbols-rounded):not(.material-icons):not(.material-icons-outlined){font-family:inherit!important;font-size:inherit!important;line-height:inherit!important;color:inherit!important}'
             . $themeScope . ' .villa-social-inner{min-height:' . (int)$typography['topbar_height'] . 'px}'
             . $themeScope . '{font-family:' . json_encode($paragraph['family']) . ',system-ui,sans-serif;font-size:' . (int)$paragraph['size'] . 'px!important;line-height:' . $paragraph['line_height'] . '!important;-webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility}'
             . $headingRules
