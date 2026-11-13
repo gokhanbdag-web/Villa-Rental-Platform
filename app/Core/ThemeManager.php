@@ -1022,7 +1022,7 @@ final class ThemeManager
             if(!visible){visible=true;button.classList.add('is-visible');}
             if(!reduced && Math.abs(delta)>0){
                 var limit=Math.max(0,(window.innerHeight||700)-112);
-                travel=Math.max(-limit,Math.min(0,travel-delta));
+                travel=Math.max(0,Math.min(limit,travel+delta));
             }
         }else{
             visible=false;
@@ -1030,7 +1030,7 @@ final class ThemeManager
             button.classList.remove('is-visible');
         }
         button.style.setProperty('--villa-scroll-drift',travel.toFixed(2)+'px');
-        button.classList.toggle('is-at-upper-edge',travel<-(window.innerHeight||700)*0.42);
+        button.classList.toggle('is-at-lower-edge',travel>(window.innerHeight||700)*0.42);
     }
     function onScroll(){if(!frame) frame=window.requestAnimationFrame(paint);}
     window.addEventListener('scroll',onScroll,{passive:true});
