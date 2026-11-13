@@ -904,6 +904,10 @@ body[data-villa-theme] .premium-stay-card .card-bottom-row .rating-line .rating-
   line-height:var(--villa-body-line-height,1.5)!important;
   font-weight:var(--villa-body-weight,500)!important
  }
+ body.villa-home-mediterranean .drawer-overlay{
+  display:none!important;visibility:hidden!important;opacity:0!important;
+  pointer-events:none!important
+ }
 }
 @keyframes villa-burger-top-fold{
  0%{transform:translate3d(0,0,0) rotate(0) scaleX(1)}
