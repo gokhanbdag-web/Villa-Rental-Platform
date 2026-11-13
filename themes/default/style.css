@@ -247,11 +247,11 @@ body[data-villa-theme] .pagination a{border-radius:10px!important;border-color:#
 
 
 /* Shared platform header strip: markup lives in partials/shared-topbar.php. */
-body[data-villa-theme]{background-color:#fff!important;}
+body[data-villa-theme]{background-color:var(--villa-background)!important;}
 .villa-social-bar{
-  --villa-topbar-font-family:inherit;
-  --villa-topbar-font-size:12px;
-  --villa-topbar-font-weight:400;
+  --villa-topbar-font-family:var(--villa-font-body);
+  --villa-topbar-font-size:var(--villa-body-size);
+  --villa-topbar-font-weight:var(--villa-body-weight);
   position:relative;z-index:40;width:100%;background:#f5f5f0;
   border-bottom:1px solid #e8e8df;box-sizing:border-box;
   font-family:var(--villa-font-body);font-size:var(--villa-body-size);
