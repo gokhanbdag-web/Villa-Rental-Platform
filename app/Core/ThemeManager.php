@@ -347,7 +347,7 @@ final class ThemeManager
                     if (preg_match($pattern, $value)) $clean['icons'][$i] = $value;
                 }
             }
-        } catch (\\Throwable $e) {
+        } catch (\Throwable $e) {
             error_log('Theme icon settings read failed: ' . $e->getMessage());
         }
         return $clean;
@@ -661,7 +661,7 @@ final class ThemeManager
         } elseif ($iconLibrary === 'lucide') {
             $iconAssets = '<script src="https://unpkg.com/lucide@0.468.0/dist/umd/lucide.min.js" defer></script><script>window.addEventListener("DOMContentLoaded",function(){if(window.lucide){window.lucide.createIcons();}});</script>';
         }
-        if ($iconAssets !== '' && stripos($html, '</head>') !== false) {
+        if ($view === 'landing.php' && $iconAssets !== '' && stripos($html, '</head>') !== false) {
             $html = preg_replace('/<\\/head>/i', $iconAssets . '</head>', $html, 1) ?? $html;
         }
 
