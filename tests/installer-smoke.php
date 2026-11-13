@@ -147,6 +147,11 @@ try {
     }
     assertSmoke(!is_file($root . '/app/Core/PageBuilder.php') && !is_file($root . '/app/Core/ThemeDemoImporter.php') && !is_file($root . '/views/admin/builder.php') && !is_file($root . '/views/site/partials/page-builder-home.php'), 'Page Builder and widget implementation files must be removed.');
 
+    $landingThemeSource = (string)file_get_contents($root . '/themes/default/templates/landing.php');
+    $listingPageSource = (string)file_get_contents($root . '/themes/default/templates/pages/listing.php');
+    assertSmoke(str_contains($landingThemeSource, "renderPartial('components/cards/villa-card.php'") && str_contains($listingPageSource, "renderPartial('components/cards/villa-card.php'"), 'Homepage and search results must use the same shared villa card component.');
+    assertSmoke(!str_contains($landingThemeSource, 'class="med-property-card"') && str_contains($landingThemeSource, 'cardGalleryScript'), 'Homepage must not maintain a separate villa card markup and must initialize the shared gallery controls.');
+
     $themeManagerSource = (string)file_get_contents($root . '/app/Core/ThemeManager.php');
     assertSmoke(str_contains($themeManagerSource, 'public static function resolveFile') && str_contains($themeManagerSource, 'public static function assetUrl') && str_contains($themeManagerSource, 'public static function renderPartial') && str_contains($themeManagerSource, "['theme.active']"), 'Active theme resolution must use a validated setting and provide safe file and component resolvers.');
     assertSmoke(str_contains($themeManagerSource, 'Base first, active second') && str_contains($themeManagerSource, "self::assetUrl('style.css', 'default')"), 'Default and active stylesheets must load in cascade order.');
