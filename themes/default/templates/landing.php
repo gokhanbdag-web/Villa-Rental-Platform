@@ -35,9 +35,7 @@ if($topPhoneDigits!==''){
     $topbar.='</div></div>';
     $html=preg_replace('~<header\\b~i',$topbar.'<header',$html,1)??$html;
 }
-$homeCss = <<<'CSS'
-body.villa-home-mediterranean{background:#f8f8f1;color:var(--villa-text);}body.villa-home-mediterranean .site-header{background:#fbfcf7;border-color:#e4e9dc}body.villa-home-mediterranean .hero{padding:24px 0 54px;background:#eef2e7}body.villa-home-mediterranean .hero-card{min-height:530px;background-position:center 55%;box-shadow:0 22px 55px #344c3518}body.villa-home-mediterranean .hero-copy{max-width:850px}body.villa-home-mediterranean .hero h1{font:inherit;letter-spacing:-2px}body.villa-home-mediterranean .section{padding:66px 0}body.villa-home-mediterranean .section-head h2{font:inherit;color:var(--villa-text);}body.villa-home-mediterranean .destination-grid{grid-template-columns:repeat(4,minmax(0,1fr));gap:20px}body.villa-home-mediterranean .destination{height:250px;border-radius:22px}body.villa-home-mediterranean .cards{grid-template-columns:repeat(3,minmax(0,1fr));gap:25px}body.villa-home-mediterranean .stay-photo{height:250px;border-radius:22px}body.villa-home-mediterranean .stay h3{font:inherit;}body.villa-home-mediterranean .home-accommodations{background:#f8f8f1!important}body.villa-home-mediterranean .gallery-strip{grid-template-columns:1.5fr 1fr 1fr;grid-template-rows:210px 210px;gap:15px}body.villa-home-mediterranean .gallery-strip img{border-radius:22px}body.villa-home-mediterranean .host-banner{border-radius:30px}@media(max-width:700px){body.villa-home-mediterranean .hero-card{min-height:560px;}body.villa-home-mediterranean .cards{grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}body.villa-home-mediterranean .stay-photo{height:155px}body.villa-home-mediterranean .destination{height:165px}body.villa-home-mediterranean .section{padding:38px 0}}
-CSS;
+
 
 /* Mediterranean-only content architecture: all copy comes from site_content and live database records. */
 $medSectionActive = static function (string $key) use ($homeSections): bool {
@@ -143,123 +141,17 @@ if($medSectionActive('destinations') && ($regionTitle!==''||$regionSubtitle!==''
 $html=preg_replace('~<section class="section" style="[^"]*"><div class="wrap"><div class="section-head"><div><span class="pill villa-eyebrow">TATİL TARZINI SEÇ</span>.*?</section>~s','',$html,1)??$html;
 $html=preg_replace('~<section class="section" style="[^"]*"><div class="wrap"><div class="section-head"><div><span class="pill villa-eyebrow">TATİL İLHAMIN</span>.*?</section>~s','',$html,1)??$html;
 
-$menuIconCss = '.theme-menu-toggle .menu-open-mark{display:inline!important}.theme-menu-toggle .menu-close-mark,.theme-menu-toggle .menu-close-mark[hidden]{display:none!important}.theme-menu-toggle[aria-expanded="true"] .menu-open-mark{display:none!important}.theme-menu-toggle[aria-expanded="true"] .menu-close-mark{display:inline!important}.theme-menu-toggle[aria-expanded="true"] .menu-close-mark[hidden]{display:inline!important}';
 
-$homeCss .= <<<'CSS'
-/* Mediterranean editorial homepage */
-body.villa-home-mediterranean{background:#f8f8f1;color:var(--villa-text);font-family:var(--villa-font-body);"Times New Roman",serif}
-.med-topbar{background:#304b37;color:var(--villa-text);font:inherit;}.med-topbar>.wrap{display:flex;justify-content:flex-end;align-items:center;gap:22px;min-height:34px}.med-topbar a{color:var(--villa-text);}.med-topbar a:hover{color:var(--villa-text);}
-body.villa-home-mediterranean .site-header{background:#fbfcf7;border-color:#e4e9dc}
-body.villa-home-mediterranean .brand,body.villa-home-mediterranean .nav a:hover{color:var(--villa-text);}
-body.villa-home-mediterranean .hero{background:#eef2e7;padding:22px 0 44px}
-body.villa-home-mediterranean .hero-card{min-height:560px;box-shadow:0 24px 60px #263e2d20}
-body.villa-home-mediterranean .hero h1,body.villa-home-mediterranean .section-head h2,body.villa-home-mediterranean .med-faq-intro h2,body.villa-home-mediterranean .med-support h2{font-family:var(--villa-font-body);"Times New Roman",serif;font-weight:var(--villa-body-weight);letter-spacing:-1.2px}
-body.villa-home-mediterranean .search-enhanced{border:1px solid #e4e8db;box-shadow:0 18px 48px #263e2d1c}
-body.villa-home-mediterranean .search-enhanced .search-submit{background:#315a43;color:var(--villa-text);}
-body.villa-home-mediterranean .section{padding:62px 0}
-body.villa-home-mediterranean .section-head h2{color:var(--villa-text);font-size:var(--villa-body-size);}
-body.villa-home-mediterranean .section-head p{font-family:var(--villa-font-body);color:var(--villa-text);line-height:var(--villa-body-line-height);}
-body.villa-home-mediterranean .pill{background:#e8eee2;color:var(--villa-text);letter-spacing:1px}
-body.villa-home-mediterranean .more{color:var(--villa-text);}
-body.villa-home-mediterranean .section:has(.styles),body.villa-home-mediterranean .section:has(.gallery-strip){display:none!important}
-.med-trust{padding:24px 0!important;background:#fff}
-.med-trust-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:22px}
-.med-trust-item{display:flex;align-items:center;gap:13px;min-width:0}
-.med-trust-icon{display:grid;place-items:center;flex:0 0 44px;width:44px;height:44px;border-radius:50%;background:#edf1e7;color:var(--villa-text);font:inherit;}
-.med-trust-item h3{margin:0 0 5px;color:var(--villa-text);font:inherit;}
-.med-trust-item p{margin:0;color:var(--villa-text);font:inherit;}
-.med-property-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:22px}
-.med-property-card{display:block;min-width:0;overflow:hidden;border:1px solid #e7e9df;border-radius:19px;background:#fff;box-shadow:0 10px 30px #273c2c0c;transition:transform .25s,box-shadow .25s}
-.med-property-card:hover{transform:translateY(-4px);box-shadow:0 18px 38px #273c2c18}
-.med-property-photo{height:215px;overflow:hidden;background:#e8ece3}
-.med-property-photo img{display:block;width:100%;height:100%;object-fit:cover;transition:transform .4s}
-.med-property-card:hover .med-property-photo img{transform:scale(1.04)}
-.med-property-body{padding:15px 16px 18px;font-family:var(--villa-font-body);}
-.med-property-place{display:block;color:var(--villa-text);font-size:var(--villa-body-size);letter-spacing:.3px}
-.med-property-body h3{margin:7px 0;color:var(--villa-text);font:inherit;}
-.med-property-meta{color:var(--villa-text);font-size:var(--villa-body-size);}
-.med-property-price{margin-top:12px;color:var(--villa-text);font-size:var(--villa-body-size);}
-.med-property-price strong{color:var(--villa-text);font-size:var(--villa-body-size);}
-.med-concepts{background:#f0f2e9}
-.med-concept-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:18px}
-.med-concept-card{position:relative;display:block;height:245px;overflow:hidden;border-radius:19px;background:#dfe6d9}
-.med-concept-card img{width:100%;height:100%;object-fit:cover;transition:transform .4s}
-.med-concept-card:hover img{transform:scale(1.05)}
-.med-concept-overlay{position:absolute;inset:35% 0 0;background:linear-gradient(transparent,#142b1dcc)}
-.med-concept-copy{position:absolute;left:18px;right:15px;bottom:17px;color:var(--villa-text);}
-.med-concept-copy strong{display:block;font:inherit;}
-.med-concept-copy small{display:block;margin-top:5px;color:var(--villa-text);font:inherit;}
-.med-collections{background:#fbfbf6}
-.med-collection-row{margin-top:30px}
-.med-collection-heading{display:flex;align-items:end;justify-content:space-between;gap:18px;margin-bottom:16px}
-.med-collection-heading h3{margin:0;color:var(--villa-text);font:inherit;}
-.med-collection-heading p{margin:6px 0 0;color:var(--villa-text);font:inherit;}
-.med-collection-heading>a{color:var(--villa-text);font:inherit;white-space:nowrap}
-.med-property-grid--compact{grid-template-columns:repeat(3,minmax(0,1fr))}
-.med-property-grid--compact .med-property-photo{height:190px}
-.med-reviews{background:#eef1e7}
-.med-review-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:18px}
-.med-review-card{padding:24px;border:1px solid #e0e6d9;border-radius:18px;background:#fff}
-.med-review-stars{color:var(--villa-text);letter-spacing:3px;font:inherit;}
-.med-review-card>p{min-height:90px;color:var(--villa-text);font:inherit;}
-.med-review-author strong,.med-review-author span,.med-review-author small{display:block}
-.med-review-author strong{color:var(--villa-text);font:inherit;}
-.med-review-author span{margin-top:4px;color:var(--villa-text);font:inherit;}
-.med-review-author small{margin-top:7px;color:var(--villa-text);font:inherit;}
-.med-faq-layout{display:grid;grid-template-columns:minmax(220px,.8fr) minmax(0,1.5fr);gap:60px;align-items:start}
-.med-faq-intro h2{margin:12px 0;font-size:var(--villa-body-size);color:var(--villa-text);}
-.med-faq-intro p{color:var(--villa-text);font:inherit;}
-.med-faq-item{border-bottom:1px solid #e2e6dc;padding:18px 0}
-.med-faq-item summary{display:flex;align-items:center;justify-content:space-between;gap:15px;cursor:pointer;list-style:none;color:var(--villa-text);font:inherit;}
-.med-faq-item summary::-webkit-details-marker{display:none}
-.med-faq-item summary span{color:var(--villa-text);font:inherit;}
-.med-faq-item[open] summary span{transform:rotate(45deg)}
-.med-faq-item p{max-width:680px;color:var(--villa-text);font:inherit;}
-.med-support{padding-top:20px!important}
-.med-support-panel{display:flex;align-items:center;justify-content:space-between;gap:30px;padding:42px 48px;border-radius:26px;background:#e9eee3;border:1px solid #e0e7d9}
-.med-support h2{margin:10px 0;color:var(--villa-text);font-size:var(--villa-body-size);}
-.med-support p{max-width:620px;margin:0;color:var(--villa-text);font:inherit;}
-.med-support-actions{display:flex;flex-direction:column;gap:10px;min-width:200px}
-.med-support-actions a{display:block;padding:14px 18px;border-radius:11px;text-align:center;font:inherit;}
-.med-support-phone{background:#fff;color:var(--villa-text);}
-.med-support-whatsapp{background:#365b42;color:var(--villa-text);}
-.med-footer-columns{display:grid;grid-column:1/-1;grid-template-columns:repeat(3,minmax(0,1fr));gap:24px;min-width:0}
-.med-footer-columns strong{display:block;margin-bottom:12px;color:var(--villa-text);font:inherit;}
-.med-footer-columns ul{margin:0;padding:0;list-style:none;display:grid;gap:9px}
-.med-footer-columns a,.med-footer-columns li{color:var(--villa-text);font:inherit;}
-@media(max-width:900px){.med-trust-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.med-property-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.med-concept-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.med-review-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.med-faq-layout{grid-template-columns:1fr;gap:22px}}
-@media(max-width:600px){body.villa-home-mediterranean .hero-card{min-height:560px;}.med-trust-grid{grid-template-columns:1fr 1fr;gap:18px 12px}.med-trust-item{align-items:flex-start;gap:9px}.med-trust-icon{flex-basis:36px;width:36px;height:36px;font-size:var(--villa-body-size);}.med-trust-item h3{font-size:var(--villa-body-size);}.med-trust-item p{font-size:var(--villa-body-size);}.med-property-grid,.med-property-grid--compact{grid-template-columns:1fr;gap:15px}.med-property-photo,.med-property-grid--compact .med-property-photo{height:225px}.med-concept-grid{grid-template-columns:1fr 1fr;gap:10px}.med-concept-card{height:170px;border-radius:14px}.med-concept-copy{left:11px;bottom:12px}.med-concept-copy strong{font-size:var(--villa-body-size);}.med-collection-heading h3{font-size:var(--villa-body-size);}.med-review-grid{grid-template-columns:1fr}.med-review-card>p{min-height:0}.med-faq-intro h2{font-size:var(--villa-body-size);}.med-faq-item summary{font-size:var(--villa-body-size);}.med-support-panel{display:block;padding:27px 22px;border-radius:19px}.med-support h2{font-size:var(--villa-body-size);}.med-support-actions{margin-top:22px}.med-footer-columns{grid-template-columns:1fr 1fr;gap:22px}.med-footer-columns>div:last-child{grid-column:1/-1}}
-CSS;
 
-$homeCss .= <<<'CSS'
 
-/* Keep the mobile burger button anchored inside the main menu bar, below the info bar. */
-@media(max-width:760px){
- body.villa-home-mediterranean .med-topbar{position:relative;z-index:1}
- body.villa-home-mediterranean .theme-header{position:relative!important;z-index:10010!important;width:100%;height:auto!important;min-height:0!important;overflow:visible!important}
- body.villa-home-mediterranean .theme-header-inner{
-  position:relative!important;display:flex!important;flex-flow:row nowrap!important;
-  align-items:center!important;justify-content:space-between!important;
-  width:calc(100% - 30px)!important;min-height:74px!important;height:auto!important;
-  margin:0 auto!important;gap:12px!important;box-sizing:border-box!important
- }
- body.villa-home-mediterranean .theme-brand{flex:0 1 auto!important;min-width:0!important;max-width:calc(100% - 60px)!important}
- body.villa-home-mediterranean .theme-menu-toggle{
-  display:inline-flex!important;position:relative!important;inset:auto!important;
-  top:auto!important;right:auto!important;bottom:auto!important;left:auto!important;
-  transform:none!important;order:2!important;flex:0 0 44px!important;
-  width:44px!important;height:44px!important;margin:0 0 0 auto!important;
-  align-self:center!important;z-index:10030!important
- }
- body.villa-home-mediterranean .theme-header .nav{
-  position:fixed!important;top:0!important;right:0!important;bottom:0!important;left:auto!important;
-  width:min(84vw,360px)!important;height:100dvh!important;z-index:10020!important
- }
+
+
+
+$homeCssPath = \\App\\Core\\ThemeManager::resolveFile('home.css', 'default');
+if ($homeCssPath !== null) {
+    $homeCssLink = '<link rel="stylesheet" href="' . e(\\App\\Core\\ThemeManager::assetUrl('home.css', 'default')) . '?v=' . rawurlencode((string)filemtime($homeCssPath)) . '">';
+    $html = str_replace('</head>', $homeCssLink . '</head>', $html);
 }
-
-CSS;
-
-$html = str_replace('</head>', '<style id="villa-menu-icon-state">' . $menuIconCss . '</style><style>' . $homeCss . '</style></head>', $html);
 $cardGalleryScript = <<<'JS'
 <script>(function(){document.querySelectorAll('[data-card-gallery]').forEach(function(card){if(card.dataset.galleryReady)return;card.dataset.galleryReady='1';var data=card.querySelector('.card-gallery-data'),image=card.querySelector('.card-gallery-image'),count=card.querySelector('.card-gallery-count');if(!data||!image)return;var images=[];try{images=JSON.parse(data.textContent||'[]')}catch(e){}var index=0;card.querySelectorAll('[data-gallery-step]').forEach(function(button){button.addEventListener('click',function(event){event.preventDefault();event.stopPropagation();if(images.length<2)return;index=(index+Number(button.dataset.galleryStep)+images.length)%images.length;image.src=images[index];if(count)count.textContent=(index+1)+' / '+images.length})})})})();</script>
 JS;
