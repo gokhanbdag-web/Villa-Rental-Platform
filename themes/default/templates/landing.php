@@ -50,25 +50,6 @@ $medImage = static function (array $row): string {
     $value = (string)($row['cover_image'] ?? '');
     return $value === '' ? '' : (preg_match('~^https?://~i', $value) ? $value : app_url('/' . ltrim($value, '/')));
 };
-$mapItems = [];
-foreach (($mapProperties ?? []) as $mapProperty) {
-    $location=trim((string)($mapProperty['map_location']??''));
-    if($location==='') $location=trim(implode(', ',array_filter([(string)($mapProperty['neighborhood']??''),(string)($mapProperty['district']??''),(string)($mapProperty['city']??''),'Türkiye'])));
-    if($location==='') continue;
-    $mapItems[]=[
-        'id'=>(int)$mapProperty['id'],
-        'title'=>(string)$mapProperty['title'],
-        'url'=>app_url('/villa/'.rawurlencode((string)$mapProperty['slug'])),
-        'city'=>trim((string)($mapProperty['map_district']??$mapProperty['district']??'').', '.(string)($mapProperty['map_city']??$mapProperty['city']??''),', '),
-        'location'=>$location,
-        'latitude'=>isset($mapProperty['latitude'])&&$mapProperty['latitude']!==''?(float)$mapProperty['latitude']:null,
-        'longitude'=>isset($mapProperty['longitude'])&&$mapProperty['longitude']!==''?(float)$mapProperty['longitude']:null,
-        'image'=>$medImage($mapProperty),
-        'price'=>number_format((float)($mapProperty['base_nightly_price']??0),0,',','.'),
-        'currency'=>(string)($mapProperty['currency']??'TRY'),
-        'guests'=>(int)($mapProperty['max_guests']??0)
-    ];
-}
 $medBlocks = '';
 {
     ob_start();
@@ -99,10 +80,6 @@ $medBlocks = '';
     </div></section>
     <?php endif;
     ?>
-    <section class="villa-map-section" aria-label="Villa konum haritası">
-      <div id="villa-open-map" class="villa-open-map" role="application" aria-label="OpenStreetMap üzerinde villa konumları"></div>
-      <script type="application/json" id="villa-map-data"><?= json_encode($mapItems, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?></script>
-    </section>
     <?php
     if ($medSectionActive('concepts') && !empty($categories)): ?>
     <section class="section med-concepts" style="order:<?= $medSectionOrder('concepts',5) ?>"><div class="wrap">
@@ -280,100 +257,12 @@ body.villa-home-mediterranean .destination-editorial-item:hover .destination-edi
 @media(max-width:600px){body.villa-home-mediterranean .hero-card{min-height:560px;}.med-trust{padding:24px 0!important}.destination-editorial-grid{grid-template-columns:1fr;column-gap:0}.destination-editorial-item{grid-template-columns:38px minmax(0,1fr) 32px;padding:19px 2px}.destination-editorial-copy strong{font-size:22px}.med-trust-grid{grid-template-columns:1fr 1fr;gap:18px 12px}.med-trust-item{align-items:flex-start;gap:9px}.med-trust-icon{flex-basis:36px;width:36px;height:36px;font-size:var(--villa-body-size);}.med-trust-item h3{font-size:var(--villa-body-size);}.med-trust-item p{font-size:var(--villa-body-size);}.med-property-grid,.med-property-grid--compact{grid-template-columns:1fr;gap:15px}.med-property-photo,.med-property-grid--compact .med-property-photo{height:225px}.med-concept-grid{grid-template-columns:1fr 1fr;gap:10px}.med-concept-card{height:170px;border-radius:14px}.med-concept-copy{left:11px;bottom:12px}.med-concept-copy strong{font-size:var(--villa-body-size);}.med-collection-heading h3{font-size:var(--villa-body-size);}.med-review-grid{grid-template-columns:1fr}.med-review-card>p{min-height:0}.med-faq-intro h2{font-size:var(--villa-body-size);}.med-faq-item summary{font-size:var(--villa-body-size);}.med-support-panel{display:block;padding:27px 22px;border-radius:19px}.med-support h2{font-size:var(--villa-body-size);}.med-support-actions{margin-top:22px}.med-footer-columns{grid-template-columns:1fr 1fr;gap:22px}.med-footer-columns>div:last-child{grid-column:1/-1}}
 CSS;
 
-$html = str_replace('</head>', '<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"><style>' . $homeCss . '</style></head>', $html);
+$html = str_replace('</head>', '<style>' . $homeCss . '</style></head>', $html);
 $cardGalleryScript = <<<'JS'
 <script>(function(){document.querySelectorAll('[data-card-gallery]').forEach(function(card){if(card.dataset.galleryReady)return;card.dataset.galleryReady='1';var data=card.querySelector('.card-gallery-data'),image=card.querySelector('.card-gallery-image'),count=card.querySelector('.card-gallery-count');if(!data||!image)return;var images=[];try{images=JSON.parse(data.textContent||'[]')}catch(e){}var index=0;card.querySelectorAll('[data-gallery-step]').forEach(function(button){button.addEventListener('click',function(event){event.preventDefault();event.stopPropagation();if(images.length<2)return;index=(index+Number(button.dataset.galleryStep)+images.length)%images.length;image.src=images[index];if(count)count.textContent=(index+1)+' / '+images.length})})})})();</script>
 JS;
-$villaMapScript = <<<'JS'
-<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-<script>(function(){
- var mapElement=document.getElementById('villa-open-map'),dataElement=document.getElementById('villa-map-data');
- if(!mapElement||!dataElement||!window.L)return;
- var properties=[];try{properties=JSON.parse(dataElement.textContent||'[]')}catch(error){}
- var map=L.map(mapElement,{scrollWheelZoom:false}).setView([39.0,35.0],6);
- L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19,attribution:'&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a> contributors'}).addTo(map);
- function esc(value){return String(value==null?'':value).replace(/[&<>"']/g,function(ch){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]})}
- function wait(ms){return new Promise(function(resolve){setTimeout(resolve,ms)})}
- var cache={};try{cache=JSON.parse(localStorage.getItem('villaMapGeocodeCacheV2')||'{}')}catch(e){}
- var unique=[],seen={};
- properties.forEach(function(p){var hasCoords=p.latitude!==null&&p.latitude!==''&&p.longitude!==null&&p.longitude!==''&&Number.isFinite(Number(p.latitude))&&Number.isFinite(Number(p.longitude));var key=String(p.location||'').trim();if(!hasCoords&&key&&!seen[key]){seen[key]=1;unique.push(key)}});
- var locations={};
- async function geocode(location){
-  if(cache[location]&&Number.isFinite(Number(cache[location].lat))&&Number.isFinite(Number(cache[location].lon)))return cache[location];
-  var parts=location.split(',').map(function(x){return x.trim()}).filter(Boolean);
-  var candidates=[location];
-  if(parts.length>2)candidates.push(parts.slice(-3).join(', '));
-  if(parts.length>1)candidates.push(parts.slice(-2).join(', '));
-  for(var i=0;i<candidates.length;i++){
-   try{
-    var response=await fetch('https://photon.komoot.io/api/?limit=1&lang=tr&q='+encodeURIComponent(candidates[i]),{headers:{'Accept':'application/json'}});
-    if(!response.ok)continue;
-    var result=await response.json(),feature=result&&result.features&&result.features[0],coords=feature&&feature.geometry&&feature.geometry.coordinates;
-    if(coords&&Number.isFinite(Number(coords[0]))&&Number.isFinite(Number(coords[1]))){
-     var point={lat:Number(coords[1]),lon:Number(coords[0])};
-     cache[location]=point;try{localStorage.setItem('villaMapGeocodeCacheV2',JSON.stringify(cache))}catch(e){}
-     return point;
-    }
-   }catch(e){}
-   if(i<candidates.length-1)await wait(250);
-  }
-  try{
-   var fallback=await fetch('https://nominatim.openstreetmap.org/search?format=jsonv2&limit=1&q='+encodeURIComponent(location),{headers:{'Accept':'application/json'}});
-   if(fallback.ok){
-    var rows=await fallback.json();
-    if(rows&&rows[0]&&Number.isFinite(Number(rows[0].lat))&&Number.isFinite(Number(rows[0].lon))){
-     var fallbackPoint={lat:Number(rows[0].lat),lon:Number(rows[0].lon)};
-     cache[location]=fallbackPoint;try{localStorage.setItem('villaMapGeocodeCacheV2',JSON.stringify(cache))}catch(e){}
-     return fallbackPoint;
-    }
-   }
-  }catch(e){}
-  return null;
- }
- async function run(){
-  var bounds=[],resolved=[];
-  for(var i=0;i<unique.length;i++){
-   locations[unique[i]]=await geocode(unique[i]);
-   if(i<unique.length-1)await wait(350);
-  }
-  properties.forEach(function(property){
-   var hasCoords=Number.isFinite(Number(property.latitude))&&property.latitude!==null&&property.latitude!==''&&Number.isFinite(Number(property.longitude))&&property.longitude!==null&&property.longitude!=='';
-   var point=hasCoords?{lat:Number(property.latitude),lon:Number(property.longitude)}:locations[String(property.location||'').trim()];
-   if(!point)return;
-   resolved.push({property:property,point:point});
-  });
-  var groups={};
-  resolved.forEach(function(item){
-   var key=item.point.lat.toFixed(5)+','+item.point.lon.toFixed(5);
-   (groups[key]||(groups[key]=[])).push(item);
-  });
-  Object.keys(groups).forEach(function(key){
-   var group=groups[key],count=group.length;
-   group.forEach(function(item,index){
-    var point=item.point;
-    if(count>1){
-     var angle=(2*Math.PI*index/count)-Math.PI/2;
-     var radius=count>12?0.0025:0.0012;
-     point={lat:point.lat+Math.sin(angle)*radius,lon:point.lon+Math.cos(angle)*radius};
-    }
-    var property=item.property;
-    var image=property.image?'<img src="'+esc(property.image)+'" alt="" loading="lazy">':'<span class="villa-map-preview-placeholder">Villa</span>';
-    var price=esc(property.price)+' '+esc(property.currency)+' <small>/ gece</small>';
-    var html='<div class="villa-map-marker-wrap"><span class="villa-map-marker-pin"></span><a class="villa-map-preview" href="'+esc(property.url)+'">'+image+'<span class="villa-map-preview-copy"><strong>'+esc(property.title)+'</strong><small>'+esc(property.city||property.location)+'</small><b>'+price+'</b></span></a></div>';
-    var icon=L.divIcon({className:'villa-map-div-icon',html:html,iconSize:[44,44],iconAnchor:[22,42]});
-    L.marker([point.lat,point.lon],{icon:icon,keyboard:true,title:property.title}).addTo(map);
-    bounds.push([point.lat,point.lon]);
-   });
-  });
-  if(bounds.length)map.fitBounds(bounds,{padding:[40,40],maxZoom:12});
-  setTimeout(function(){map.invalidateSize()},150);
- }
- if(unique.length)run();
- window.addEventListener('resize',function(){map.invalidateSize()});
-})();</script>
-JS;
 if (stripos($html, '</body>') !== false) {
-    $html = preg_replace('~</body>~i', $cardGalleryScript . $villaMapScript . '</body>', $html, 1) ?? $html;
+    $html = preg_replace('~</body>~i', $cardGalleryScript . '</body>', $html, 1) ?? $html;
 }
 
 echo $html;
