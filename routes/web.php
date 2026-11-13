@@ -1404,6 +1404,7 @@ $router->get('/admin/theme-design', static function (): void {
     $themeTypographySettings = ThemeManager::typographySettings($themeDesignSlug);
     $themeIconSettings = ThemeManager::iconSettings($themeDesignSlug);
     $themeBrandSettings = ThemeManager::brandSettings($themeDesignSlug);
+    $themeFamilyBannerTextSettings = ThemeManager::familyBannerTextSettings($themeDesignSlug);
     $themeBrandMessage = (string)($_SESSION['villa_theme_brand_message'] ?? '');
     $themeBrandMessageType = (string)($_SESSION['villa_theme_brand_message_type'] ?? 'success');
     unset($_SESSION['villa_theme_brand_message'], $_SESSION['villa_theme_brand_message_type']);
@@ -1428,6 +1429,21 @@ $router->post('/admin/theme-design', static function (): void {
         error_log('Theme design save failed: ' . $e->getMessage());
         $_SESSION['villa_theme_design_message'] = 'Kayıt başarısız: ' . $e->getMessage();
         $_SESSION['villa_theme_design_message_type'] = 'error';
+    }
+    redirect('/admin/theme-design');
+});
+
+$router->post('/admin/theme-design/family-banner-text', static function (): void {
+    Auth::requireRole(['super_admin','admin']);
+    verify_csrf();
+    try {
+        ThemeManager::saveFamilyBannerTextSettings((array)($_POST['family_banner_text'] ?? []), ThemeManager::activeSlug());
+        $_SESSION['villa_theme_brand_message'] = 'Ana sayfa banner metin ve tipografi ayarları kaydedildi.';
+        $_SESSION['villa_theme_brand_message_type'] = 'success';
+    } catch (Throwable $e) {
+        error_log('Family banner text settings save failed: ' . $e->getMessage());
+        $_SESSION['villa_theme_brand_message'] = 'Banner metin ayarları kaydedilemedi: ' . $e->getMessage();
+        $_SESSION['villa_theme_brand_message_type'] = 'error';
     }
     redirect('/admin/theme-design');
 });
