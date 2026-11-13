@@ -107,6 +107,24 @@ $labels = [
 <?= csrf_field() ?><input type="hidden" name="asset_type" value="family_banner">
 <div class="design-actions"><input type="file" name="family_banner" accept="image/jpeg,image/png,image/webp" required><button class="design-save" type="submit">Arka plan görselini yükle</button></div>
 </form>
+
+<form method="post" action="<?= e(app_url('/admin/theme-design/family-banner-text')) ?>" class="family-banner-text-form">
+<?= csrf_field() ?>
+<h3 style="margin:22px 0 8px">Banner metinleri ve tipografi</h3>
+<p>Metinler banner görselinin üzerinde, ortalanmış içerik genişliği içinde gösterilir. Üç metin için ortak yazı rengi, ayrıca her metin için bağımsız font ailesi, punto ve satır yüksekliği belirleyebilirsiniz.</p>
+<div class="design-field"><label>Eyebrow text</label><input type="text" name="family_banner_text[eyebrow]" maxlength="190" value="<?= e($themeFamilyBannerTextSettings['eyebrow'] ?? '') ?>" placeholder="Örn. AKDENİZ’DE EŞSİZ BİR TATİL"></div>
+<div class="design-field"><label>Başlık</label><input type="text" name="family_banner_text[title]" maxlength="190" value="<?= e($themeFamilyBannerTextSettings['title'] ?? '') ?>" placeholder="Örn. Hayalinizdeki tatil burada başlıyor"></div>
+<div class="design-field"><label>İçerik</label><textarea name="family_banner_text[description]" rows="3" maxlength="1200" style="width:100%;padding:11px;border:1px solid #dce5df;border-radius:8px;font:inherit"><?= e($themeFamilyBannerTextSettings['description'] ?? '') ?></textarea></div>
+<div class="design-field"><label>Üç metin için ortak yazı rengi</label><input type="color" name="family_banner_text[color]" value="<?= e($themeFamilyBannerTextSettings['color'] ?? '#ffffff') ?>" style="width:90px;height:42px;padding:4px"></div>
+<?php $bannerFonts=['Inter','Roboto','Open Sans','Lato','Montserrat','Poppins','Nunito Sans','Playfair Display','Merriweather','DM Sans','Manrope','Source Sans 3','Raleway','PT Sans','Libre Baskerville']; foreach(['eyebrow'=>'Eyebrow text','title'=>'Başlık','description'=>'İçerik'] as $key=>$label): $type=$themeFamilyBannerTextSettings[$key.'_typography']??[]; ?>
+<div class="hero-type-group"><h3><?= e($label) ?> tipografi ayarları</h3><div class="design-grid">
+<div class="design-field"><label>Font ailesi</label><select name="family_banner_text[<?= e($key) ?>_typography][family]"><?php foreach($bannerFonts as $font): ?><option value="<?= e($font) ?>" <?= ($type['family']??'')===$font?'selected':'' ?>><?= e($font) ?></option><?php endforeach; ?></select></div>
+<div class="design-field"><label>Font boyutu (px)</label><input type="number" min="10" max="100" name="family_banner_text[<?= e($key) ?>_typography][size]" value="<?= (int)($type['size']??16) ?>"></div>
+<div class="design-field"><label>Satır yüksekliği</label><input type="number" min="0.9" max="2.5" step="0.05" name="family_banner_text[<?= e($key) ?>_typography][line_height]" value="<?= e((string)($type['line_height']??1.2)) ?>"></div>
+</div></div>
+<?php endforeach; ?>
+<div class="design-actions" style="margin-top:16px"><button class="design-save" type="submit">Banner metin ayarlarını kaydet</button></div>
+</form>
 </section>
 
 <?php if(($themeBrandMessage??'')!==''): ?><div class="design-notice <?= ($themeBrandMessageType??'')==='error'?'error':'' ?>" role="status"><?= e($themeBrandMessage) ?></div><?php endif; ?>
