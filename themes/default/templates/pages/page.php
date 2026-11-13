@@ -8,7 +8,7 @@
 <style>
 :root{--green:#167c80;--ink:#20332c;--line:#e8eeea}
 *{box-sizing:border-box}
-body{font-family:var(--villa-font-body);color:var(--villa-text);margin:0;background:#fff}
+body{font-family:var(--villa-font-body);"Segoe UI",sans-serif;color:var(--villa-text);margin:0;background:#fff}
 .wrap{max-width:850px;margin:50px auto;padding:0 20px}
 .site-header{border-bottom:1px solid var(--line);padding:16px 0}
 .site-head{display:flex;align-items:center;justify-content:space-between;gap:18px}
