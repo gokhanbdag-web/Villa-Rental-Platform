@@ -376,7 +376,7 @@ final class ThemeManager
             $stmt->execute(['theme.' . $slug . '.cards']);
             $saved = json_decode((string)($stmt->fetchColumn() ?: '{}'), true);
             return self::normalizeCardSettings(is_array($saved) ? $saved : []);
-        } catch (\\Throwable $e) {
+        } catch (\Throwable $e) {
             error_log('Theme card settings read failed: ' . $e->getMessage());
             return self::cardSettingsDefaults();
         }
@@ -894,6 +894,7 @@ final class ThemeManager
             . $themeScope . ' .premium-stay-card .card-bottom-row .price strong{font-size:' . (int)$cardSettings['price_size'] . 'px!important;font-weight:' . (int)$cardSettings['price_weight'] . '!important}'
             . $themeScope . ' .premium-stay-card .card-bottom-row .rating-line{font-size:' . $cardSettings['rating_size'] . 'px!important;font-weight:' . (int)$cardSettings['rating_weight'] . '!important}'
             . $themeScope . ' .premium-stay-card .card-bottom-row .rating-line>span{font-size:inherit!important}'
+            . $themeScope . ' .premium-stay-card .card-bottom-row .rating-line>span:last-child{font-size:' . $cardSettings['rating_note_size'] . 'px!important}'
             . $themeScope . ' .cards,' . $themeScope . ' .grid{display:grid!important;grid-template-columns:repeat(' . (int)$cardSettings['columns_desktop'] . ',minmax(0,1fr))!important;gap:' . (int)$cardSettings['grid_gap'] . 'px!important}'
             . '@media(max-width:900px){' . $themeScope . ' .cards,' . $themeScope . ' .grid{grid-template-columns:repeat(' . (int)$cardSettings['columns_tablet'] . ',minmax(0,1fr))!important}}'
             . '@media(max-width:600px){' . $themeScope . ' .cards,' . $themeScope . ' .grid{grid-template-columns:repeat(' . (int)$cardSettings['columns_mobile'] . ',minmax(0,1fr))!important;gap:' . max(8,(int)$cardSettings['grid_gap']-8) . 'px!important}' . $themeScope . ' .premium-stay-card .card-gallery{height:' . (int)$cardSettings['image_height_mobile'] . 'px!important}}';
