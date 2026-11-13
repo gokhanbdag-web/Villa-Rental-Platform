@@ -294,3 +294,8 @@ body[data-villa-theme]{background-color:#fff!important;}
   .villa-social-right{display:none}
   .villa-social-link{width:28px;height:28px}
 }
+
+
+/* Shared brand alignment and logo rendering. */
+.theme-header-inner{width:min(1200px,calc(100% - 48px));max-width:1200px;margin-inline:auto}.theme-brand-logo{display:block;width:auto;height:auto;max-width:220px;max-height:54px;object-fit:contain}
+@media(max-width:700px){.theme-header-inner{width:calc(100% - 28px)}.theme-brand-logo{max-width:160px;max-height:43px}}
