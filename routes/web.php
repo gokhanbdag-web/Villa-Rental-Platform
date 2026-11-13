@@ -1389,6 +1389,7 @@ $router->get('/admin/theme-design', static function (): void {
     Auth::requireRole(['super_admin','admin']);
     $themeDesignSlug = ThemeManager::activeSlug();
     $themeDesignSettings = ThemeManager::designSettings($themeDesignSlug);
+    $themeHeroTypographySettings = ThemeManager::heroTypographySettings($themeDesignSlug);
     $themeIconSettings = ThemeManager::iconSettings($themeDesignSlug);
     $themeBrandSettings = ThemeManager::brandSettings($themeDesignSlug);
     $themeBrandMessage = (string)($_SESSION['villa_theme_brand_message'] ?? '');
@@ -1405,6 +1406,7 @@ $router->post('/admin/theme-design', static function (): void {
     try {
         $activeThemeSlug = ThemeManager::activeSlug();
         ThemeManager::saveDesignSettings((array)($_POST['design'] ?? []), $activeThemeSlug);
+        if (isset($_POST['hero_typography']) && is_array($_POST['hero_typography'])) ThemeManager::saveHeroTypographySettings($_POST['hero_typography'], $activeThemeSlug);
         ThemeManager::saveIconSettings((array)($_POST['icons'] ?? []), $activeThemeSlug);
         $_SESSION['villa_theme_design_message'] = 'Tema renk paleti ve ana sayfa ikon ayarları başarıyla kaydedildi.';
         $_SESSION['villa_theme_design_message_type'] = 'success';
