@@ -1125,7 +1125,7 @@ body.villa-home-mediterranean .hero-filter-panel{
   }
   body.villa-home-mediterranean .mobile-hero-search-form{
     display:grid!important;
-    grid-template-columns:repeat(4,minmax(0,1fr))!important;
+    grid-template-columns:repeat(6,minmax(0,1fr))!important;
     gap:7px!important;
     width:100%!important;
     max-width:none!important;
@@ -1148,7 +1148,13 @@ body.villa-home-mediterranean .hero-filter-panel{
     background:var(--villa-background,#f7f8f6)!important;
     box-sizing:border-box!important;
   }
-  body.villa-home-mediterranean .mobile-hero-search-form .mobile-search-destination{
+  body.villa-home-mediterranean .mobile-hero-search-form .mobile-search-destination,
+  body.villa-home-mediterranean .mobile-hero-search-form label:nth-child(2){
+    grid-column:span 3!important;
+  }
+  body.villa-home-mediterranean .mobile-hero-search-form label:nth-child(3),
+  body.villa-home-mediterranean .mobile-hero-search-form label:nth-child(4),
+  body.villa-home-mediterranean .mobile-hero-search-form button{
     grid-column:span 2!important;
   }
   body.villa-home-mediterranean .mobile-hero-search-form label>span{
