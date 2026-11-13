@@ -151,7 +151,7 @@ body.villa-home-mediterranean{background:#f8f8f1;color:var(--villa-text);font-fa
 .med-topbar{background:#304b37;color:var(--villa-text);font:inherit;}.med-topbar>.wrap{display:flex;justify-content:flex-end;align-items:center;gap:22px;min-height:34px}.med-topbar a{color:var(--villa-text);}.med-topbar a:hover{color:var(--villa-text);}
 body.villa-home-mediterranean .site-header{background:#fbfcf7;border-color:#e4e9dc}
 body.villa-home-mediterranean .brand,body.villa-home-mediterranean .nav a:hover{color:var(--villa-text);}
-body.villa-home-mediterranean .hero{background:#eef2e7;padding:22px 0 44px}
+body.villa-home-mediterranean .hero{background:#eef2e7;padding:22px 0 0}
 body.villa-home-mediterranean .hero-card{min-height:560px;box-shadow:0 24px 60px #263e2d20}
 body.villa-home-mediterranean .hero h1,body.villa-home-mediterranean .section-head h2,body.villa-home-mediterranean .med-faq-intro h2,body.villa-home-mediterranean .med-support h2{font-family:var(--villa-font-body);"Times New Roman",serif;font-weight:var(--villa-body-weight);letter-spacing:-1.2px}
 body.villa-home-mediterranean .search-enhanced{border:1px solid #e4e8db;box-shadow:0 18px 48px #263e2d1c}
@@ -162,7 +162,7 @@ body.villa-home-mediterranean .section-head p{font-family:var(--villa-font-body)
 body.villa-home-mediterranean .pill{background:#e8eee2;color:var(--villa-text);letter-spacing:1px}
 body.villa-home-mediterranean .more{color:var(--villa-text);}
 body.villa-home-mediterranean .section:has(.styles),body.villa-home-mediterranean .section:has(.gallery-strip){display:none!important}
-.med-trust{padding:24px 0!important;background:#fff}
+.med-trust{padding:36px 0!important;background:#fff}
 .med-trust-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:22px}
 .med-trust-item{display:flex;align-items:center;gap:13px;min-width:0}
 .med-trust-icon{display:grid;place-items:center;flex:0 0 44px;width:44px;height:44px;border-radius:50%;background:#edf1e7;color:var(--villa-text);font:inherit;}
@@ -181,6 +181,15 @@ body.villa-home-mediterranean .section:has(.styles),body.villa-home-mediterranea
 .med-property-price{margin-top:12px;color:var(--villa-text);font-size:var(--villa-body-size);}
 .med-property-price strong{color:var(--villa-text);font-size:var(--villa-body-size);}
 .med-concepts{background:#f0f2e9}
+body.villa-home-mediterranean .destination-editorial-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));column-gap:56px;border-top:1px solid #dce3d8}
+body.villa-home-mediterranean .destination-editorial-item{position:relative;display:grid;grid-template-columns:54px minmax(0,1fr) 34px;align-items:center;gap:18px;min-width:0;padding:25px 4px;border-bottom:1px solid #dce3d8;color:var(--villa-text);transition:padding .22s ease,color .22s ease}
+body.villa-home-mediterranean .destination-editorial-item:hover{padding-left:12px;color:var(--villa-primary)}
+body.villa-home-mediterranean .destination-editorial-index{font-size:13px;letter-spacing:.12em;color:var(--villa-muted);font-variant-numeric:tabular-nums}
+body.villa-home-mediterranean .destination-editorial-copy{display:flex;flex-direction:column;gap:5px;min-width:0}
+body.villa-home-mediterranean .destination-editorial-copy strong{font-family:var(--villa-font-heading,var(--villa-font-body));font-size:clamp(21px,2.2vw,30px);font-weight:650;letter-spacing:-.045em;line-height:1.12}
+body.villa-home-mediterranean .destination-editorial-copy small{font-size:13px;color:var(--villa-muted);letter-spacing:.02em}
+body.villa-home-mediterranean .destination-editorial-arrow{display:grid;place-items:center;width:34px;height:34px;border:1px solid #dce3d8;border-radius:50%;font-size:17px;transition:transform .22s ease,background .22s ease,color .22s ease}
+body.villa-home-mediterranean .destination-editorial-item:hover .destination-editorial-arrow{transform:translate(2px,-2px);background:var(--villa-primary);border-color:var(--villa-primary);color:#fff}
 .med-concept-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:18px}
 .med-concept-card{position:relative;display:block;height:245px;overflow:hidden;border-radius:19px;background:#dfe6d9}
 .med-concept-card img{width:100%;height:100%;object-fit:cover;transition:transform .4s}
@@ -227,8 +236,8 @@ body.villa-home-mediterranean .section:has(.styles),body.villa-home-mediterranea
 .med-footer-columns strong{display:block;margin-bottom:12px;color:var(--villa-text);font:inherit;}
 .med-footer-columns ul{margin:0;padding:0;list-style:none;display:grid;gap:9px}
 .med-footer-columns a,.med-footer-columns li{color:var(--villa-text);font:inherit;}
-@media(max-width:900px){.med-trust-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.med-property-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.med-concept-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.med-review-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.med-faq-layout{grid-template-columns:1fr;gap:22px}}
-@media(max-width:600px){body.villa-home-mediterranean .hero-card{min-height:560px;}.med-trust-grid{grid-template-columns:1fr 1fr;gap:18px 12px}.med-trust-item{align-items:flex-start;gap:9px}.med-trust-icon{flex-basis:36px;width:36px;height:36px;font-size:var(--villa-body-size);}.med-trust-item h3{font-size:var(--villa-body-size);}.med-trust-item p{font-size:var(--villa-body-size);}.med-property-grid,.med-property-grid--compact{grid-template-columns:1fr;gap:15px}.med-property-photo,.med-property-grid--compact .med-property-photo{height:225px}.med-concept-grid{grid-template-columns:1fr 1fr;gap:10px}.med-concept-card{height:170px;border-radius:14px}.med-concept-copy{left:11px;bottom:12px}.med-concept-copy strong{font-size:var(--villa-body-size);}.med-collection-heading h3{font-size:var(--villa-body-size);}.med-review-grid{grid-template-columns:1fr}.med-review-card>p{min-height:0}.med-faq-intro h2{font-size:var(--villa-body-size);}.med-faq-item summary{font-size:var(--villa-body-size);}.med-support-panel{display:block;padding:27px 22px;border-radius:19px}.med-support h2{font-size:var(--villa-body-size);}.med-support-actions{margin-top:22px}.med-footer-columns{grid-template-columns:1fr 1fr;gap:22px}.med-footer-columns>div:last-child{grid-column:1/-1}}
+@media(max-width:900px){.med-trust-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.destination-editorial-grid{column-gap:30px}.med-property-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.med-concept-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.med-review-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.med-faq-layout{grid-template-columns:1fr;gap:22px}}
+@media(max-width:600px){body.villa-home-mediterranean .hero-card{min-height:560px;}.med-trust{padding:24px 0!important}.destination-editorial-grid{grid-template-columns:1fr;column-gap:0}.destination-editorial-item{grid-template-columns:38px minmax(0,1fr) 32px;padding:19px 2px}.destination-editorial-copy strong{font-size:22px}.med-trust-grid{grid-template-columns:1fr 1fr;gap:18px 12px}.med-trust-item{align-items:flex-start;gap:9px}.med-trust-icon{flex-basis:36px;width:36px;height:36px;font-size:var(--villa-body-size);}.med-trust-item h3{font-size:var(--villa-body-size);}.med-trust-item p{font-size:var(--villa-body-size);}.med-property-grid,.med-property-grid--compact{grid-template-columns:1fr;gap:15px}.med-property-photo,.med-property-grid--compact .med-property-photo{height:225px}.med-concept-grid{grid-template-columns:1fr 1fr;gap:10px}.med-concept-card{height:170px;border-radius:14px}.med-concept-copy{left:11px;bottom:12px}.med-concept-copy strong{font-size:var(--villa-body-size);}.med-collection-heading h3{font-size:var(--villa-body-size);}.med-review-grid{grid-template-columns:1fr}.med-review-card>p{min-height:0}.med-faq-intro h2{font-size:var(--villa-body-size);}.med-faq-item summary{font-size:var(--villa-body-size);}.med-support-panel{display:block;padding:27px 22px;border-radius:19px}.med-support h2{font-size:var(--villa-body-size);}.med-support-actions{margin-top:22px}.med-footer-columns{grid-template-columns:1fr 1fr;gap:22px}.med-footer-columns>div:last-child{grid-column:1/-1}}
 CSS;
 
 $homeCss .= <<<'CSS'
