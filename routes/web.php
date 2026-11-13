@@ -47,6 +47,36 @@ function villa_resolve_location(PDO $pdo): array {
     if(!$country||!$city||($ids['district']&&!$district)||($ids['neighborhood']&&!$neighborhood)||($neighborhood&&!$district))throw new InvalidArgumentException('Lütfen ülke ve şehir seçin; alt konum seçimlerini kontrol edin.');
     return ['location_country_id'=>$ids['country'],'location_city_id'=>$ids['city'],'location_district_id'=>$district?$ids['district']:null,'location_neighborhood_id'=>$neighborhood?$ids['neighborhood']:null,'country'=>$country['name'],'city'=>$city['name'],'district'=>$district['name']??'','neighborhood'=>$neighborhood['name']??''];
 }
+$router->get('/admin/updates', static function (): void {
+    Auth::requireRole(['super_admin','admin']);
+    $root = dirname(__DIR__);
+    $versionFile = $root . '/VERSION';
+    $installedVersion = is_file($versionFile) ? trim((string)file_get_contents($versionFile)) : 'Sürüm bilgisi yok';
+    $migrationTotal = count(glob($root . '/database/migrations/*.sql') ?: []);
+    $appliedMigrations = 0;
+    $migrationError = '';
+    try { $appliedMigrations = (int)Database::connection()->query('SELECT COUNT(*) FROM schema_migrations')->fetchColumn(); }
+    catch (Throwable $e) { $migrationError = 'Migration kayıt tablosu henüz okunamadı.'; }
+    $logFile = trim((string)(getenv('VILLA_DEPLOY_LOG') ?: ''));
+    $logReadable = $logFile !== '' && is_file($logFile) && is_readable($logFile);
+    $logLines = []; $lastSuccess = null;
+    if ($logReadable && ($handle = @fopen($logFile, 'rb'))) {
+        $size = filesize($logFile);
+        if ($size !== false) {
+            fseek($handle, max(0, $size - 16384));
+            $chunk = stream_get_contents($handle);
+            if (is_string($chunk)) foreach (preg_split('/\\r?\\n/', $chunk) ?: [] as $line) {
+                $line = trim($line);
+                if ($line !== '' && preg_match('/^(=== DEPLOY |BAŞARILI:|SUCCESS:|PHP dosyaları kontrol ediliyor|Canlı kod yedekleniyor|Yeni sürüm aktarılıyor|Canlı PHP kontrolü|ERROR:|HATA:)/iu', $line)) $logLines[] = mb_substr($line, 0, 240);
+            }
+            $logLines = array_slice($logLines, -25);
+            foreach (array_reverse($logLines) as $line) if (str_contains($line, 'BAŞARILI:') || str_contains($line, 'SUCCESS:')) { $lastSuccess = $line; break; }
+        }
+        fclose($handle);
+    }
+    ThemeManager::renderTemplate('templates/pages/admin/updates.php', get_defined_vars());
+});
+
 $router->get('/admin/homepage', static function (): void {
     Auth::requireRole(['super_admin','admin']);$pdo=Database::connection();
     $sections=$pdo->query('SELECT * FROM homepage_sections ORDER BY sort_order,id')->fetchAll();
