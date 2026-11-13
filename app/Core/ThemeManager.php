@@ -705,7 +705,10 @@ final class ThemeManager
             $headingRules .= $themeScope . ' ' . $level . $headingBaseRule
                 . '{font-size:' . $levelSize . 'px!important;line-height:' . rtrim(rtrim(number_format($levelLineHeight, 2, '.', ''), '0'), '.') . '!important}';
         }
-        $typographyCss = $themeScope . ' .villa-social-inner{min-height:' . (int)$typography['topbar_height'] . 'px}'
+        $typographyCss = $themeScope . '{--villa-font-body:' . json_encode($paragraph['family']) . ';--villa-body-size:' . (int)$paragraph['size'] . 'px;--villa-body-line-height:' . $paragraph['line_height'] . ';--villa-body-weight:' . (int)$paragraph['weight'] . ';--villa-body-style:' . $paragraph['style'] . ';--villa-font-heading:' . json_encode($heading['family']) . ';--villa-text-color:' . $design['text'] . ';}'
+            . $themeScope . '{font-family:' . json_encode($paragraph['family']) . ',system-ui,sans-serif!important;font-size:' . (int)$paragraph['size'] . 'px!important;line-height:' . $paragraph['line_height'] . '!important;color:var(--villa-text)!important;font-weight:' . (int)$paragraph['weight'] . '!important;font-style:' . $paragraph['style'] . '!important}'
+            . $themeScope . ' *{font-family:inherit!important;font-size:inherit!important;line-height:inherit!important;color:inherit!important}'
+            . $themeScope . ' .villa-social-inner{min-height:' . (int)$typography['topbar_height'] . 'px}'
             . $themeScope . '{font-family:' . json_encode($paragraph['family']) . ',system-ui,sans-serif;font-size:' . (int)$paragraph['size'] . 'px!important;line-height:' . $paragraph['line_height'] . '!important;-webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility}'
             . $headingRules
             . $themeScope . ' p{font-family:' . json_encode($paragraph['family']) . '!important;font-size:' . (int)$paragraph['size'] . 'px!important;color:' . $paragraph['color'] . '!important;font-weight:' . (int)$paragraph['weight'] . '!important;font-style:' . $paragraph['style'] . '!important;line-height:' . $paragraph['line_height'] . '!important;letter-spacing:0!important}'
