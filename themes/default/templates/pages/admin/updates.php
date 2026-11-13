@@ -36,6 +36,11 @@ $commitDate = !empty($githubUpdate['commit_date']) ? date('d.m.Y H:i', strtotime
 <?php elseif(!$logLines): ?><div class="vu-empty">Günlük okunabildi ancak tanınan dağıtım kaydı bulunamadı.</div>
 <?php else: ?><?php foreach($logLines as $line): ?><div class="vu-row vu-log"><?= e($line) ?></div><?php endforeach; ?><?php endif; ?>
 <?php if($lastSuccess): ?><p class="vu-muted">Son başarılı dağıtım kaydı: <?= e($lastSuccess) ?></p><?php endif; ?>
+<?php if(!empty($deploymentHistory)): ?><h2 style="margin-top:18px">Yapılandırılmış dağıtım geçmişi</h2>
+<?php foreach($deploymentHistory as $event): ?>
+<div class="vu-row"><span><b><?= e((string)($event['status']??'unknown')) ?></b> · <?= e((string)($event['updated_at']??'')) ?><br><span class="vu-muted"><?= e((string)($event['message']??'')) ?></span></span><span class="vu-log"><?= e(substr((string)($event['commit']??''),0,12)) ?><?= !empty($event['backup']) ? ' · Yedek: '.e((string)$event['backup']) : '' ?></span></div>
+<?php endforeach; ?>
+<?php else: ?><div class="vu-empty">Yapılandırılmış dağıtım geçmişi henüz oluşmadı. Sunucu betiği scripts/deploy-status.php aracını çağırmaya başladığında burada listelenir.</div><?php endif; ?>
 </section>
 <section class="vu-panel"><h2>Dağıtım ve geri alma güvenliği</h2>
 <div class="vu-row"><span>Sunucu otomasyon durumu</span><b><?= e($deploymentStatus==='unknown'?'Henüz durum bildirimi yok':$deploymentStatus) ?></b></div>
