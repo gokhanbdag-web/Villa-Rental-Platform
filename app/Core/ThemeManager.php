@@ -692,6 +692,7 @@ final class ThemeManager
             . $themeScope . ' input:focus,' . $themeScope . ' select:focus,' . $themeScope . ' textarea:focus,' . $themeScope . ' .search-enhanced:focus-within{border-color:var(--villa-primary)!important;outline-color:var(--villa-primary)!important;box-shadow:0 0 0 3px color-mix(in srgb,var(--villa-primary) 16%,transparent)!important}'
             . $themeScope . ' .stay:hover,' . $themeScope . ' .premium-stay-card:hover,' . $themeScope . ' .card:hover{border-color:color-mix(in srgb,var(--villa-primary) 48%,var(--villa-border))!important}'
             . $themeScope . ' .pagination a{border-color:var(--villa-primary)!important;color:var(--villa-primary)!important}'
+            . $themeScope . ' .pill,' . $themeScope . ' .eyebrow,' . $themeScope . ' .section-eyebrow,' . $themeScope . ' .section-head .eyebrow,' . $themeScope . ' .med-faq-intro .eyebrow{display:inline-flex;align-items:center;width:fit-content;padding:7px 13px;border-radius:999px;background:var(--villa-primary)!important;border:1px solid var(--villa-primary)!important;color:#fff!important;font-size:11px;font-weight:700;line-height:1.2;letter-spacing:.08em;text-transform:uppercase}'
             . $themeScope . ' .pagination a:hover{background:var(--villa-primary)!important;color:#fff!important}';
         if (stripos($html, '</head>') !== false) {
             $html = preg_replace('/<\\/head>/i', '<style id="villa-theme-palette-application">' . $paletteCss . '</style></head>', $html, 1) ?? $html;
