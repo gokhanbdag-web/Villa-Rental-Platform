@@ -352,4 +352,9 @@ if (stripos($html, '</body>') !== false) {
     $html = preg_replace('~</body>~i', $cardGalleryScript . '</body>', $html, 1) ?? $html;
 }
 
+ob_start();
+require __DIR__ . '/partials/footer.php';
+$footerMarkup = (string) ob_get_clean();
+$html = preg_replace('~</body>~i', $footerMarkup . '</body>', $html, 1) ?? $html;
+
 echo $html;
