@@ -40,9 +40,9 @@ if (!is_resource($lock) || !flock($lock, LOCK_EX | LOCK_NB)) {
     exit(9);
 }
 
-function villa_runner_status(string $writer, string $state, string $sha, string $message): bool
+function villa_runner_status(string $writer, string $state, string $sha, string $message, string $backup = '-'): bool
 {
-    $command = [PHP_BINARY, $writer, $state, $sha, '-', $message];
+    $command = [PHP_BINARY, $writer, $state, $sha, $backup, $message];
     $pipes = [];
     $process = proc_open($command, [0 => ['pipe', 'r'], 1 => ['pipe', 'w'], 2 => ['pipe', 'w']], $pipes);
     if (!is_resource($process)) {
@@ -154,7 +154,7 @@ $statusLine = '';
 $healthy = ($deployExit === 0) && villa_health_check($healthUrl, $statusLine);
 
 if ($healthy) {
-    if (!villa_runner_status($statusWriter, 'success', $commit, 'Dağıtım ve HTTP sağlık kontrolü başarılı: ' . $statusLine)) {
+    if (!villa_runner_status($statusWriter, 'success', $commit, 'Dağıtım ve HTTP sağlık kontrolü başarılı: ' . $statusLine, $newBackup !== null ? basename($newBackup) : '-')) {
         fwrite(STDERR, "Deployment succeeded but status could not be recorded\n");
         exit(8);
     }
@@ -170,17 +170,17 @@ if ($newBackup !== null && villa_restore_backup($newBackup, $base, $live)) {
     $restoreStatus = '';
     if (villa_health_check($healthUrl, $restoreStatus)) {
         villa_runner_status($statusWriter, 'rolled_back', $commit,
-            $reason . '; önceki yedek geri yüklendi ve sağlık kontrolü başarılı: ' . $restoreStatus);
+            $reason . '; önceki yedek geri yüklendi ve sağlık kontrolü başarılı: ' . $restoreStatus, basename($newBackup));
         fwrite(STDERR, "Deployment failed; previous version restored and healthy\n");
         exit(10);
     }
     villa_runner_status($statusWriter, 'failed', $commit,
-        $reason . '; yedek geri yüklendi ancak eski sürüm sağlık kontrolünden geçmedi: ' . $restoreStatus);
+        $reason . '; yedek geri yüklendi ancak eski sürüm sağlık kontrolünden geçmedi: ' . $restoreStatus, basename($newBackup));
     fwrite(STDERR, "Rollback was applied but restored site health check failed\n");
     exit(11);
 }
 
 villa_runner_status($statusWriter, 'failed', $commit,
-    $reason . '; otomatik geri alma yapılamadı: yeni ve doğrulanmış yedek bulunamadı veya geri yükleme başarısız');
+    $reason . '; otomatik geri alma yapılamadı: yeni ve doğrulanmış yedek bulunamadı veya geri yükleme başarısız', $newBackup !== null ? basename($newBackup) : '-');
 fwrite(STDERR, "Deployment failed and automatic rollback could not be completed\n");
 exit(12);
