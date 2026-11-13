@@ -515,7 +515,8 @@ final class ThemeManager
         $clean = self::familyBannerTextDefaults();
         foreach (['eyebrow','title','description'] as $key) {
             $value = trim((string)($input[$key] ?? $clean[$key]));
-            $clean[$key] = mb_substr($value, 0, $key === 'description' ? 1200 : 190);
+            $limit = $key === 'description' ? 1200 : 190;
+            $clean[$key] = function_exists('mb_substr') ? mb_substr($value, 0, $limit) : substr($value, 0, $limit);
             $row = is_array($input[$key . '_typography'] ?? null) ? $input[$key . '_typography'] : [];
             $family = (string)($row['family'] ?? $clean[$key . '_typography']['family']);
             if (isset(self::typographyFonts()[$family])) $clean[$key . '_typography']['family'] = $family;
