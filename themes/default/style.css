@@ -817,3 +817,40 @@ body[data-villa-theme] .premium-stay-card .card-bottom-row .rating-line>span:las
     font-size:.72em;gap:3px;
   }
 }
+
+
+/* Villa card rating deliberately subdued: override legacy !important sizes. */
+body[data-villa-theme] .premium-stay-card .card-bottom-row .rating-line{
+  font-size:10px!important;
+  line-height:1.2!important;
+  font-weight:400!important;
+  color:var(--villa-muted,#89938d)!important;
+  opacity:.72;
+  gap:3px!important;
+}
+body[data-villa-theme] .premium-stay-card .card-bottom-row .rating-line>span{
+  font-size:10px!important;
+  line-height:1.2!important;
+  font-weight:400!important;
+}
+body[data-villa-theme] .premium-stay-card .card-bottom-row .rating-line .rating-star{
+  font-size:10px!important;
+  color:#b7a27d!important;
+}
+body[data-villa-theme] .premium-stay-card .card-bottom-row .rating-line .rating-score{
+  padding:0!important;
+  background:transparent!important;
+  color:var(--villa-muted,#89938d)!important;
+  font-size:10px!important;
+  font-weight:500!important;
+}
+@media(max-width:600px){
+  body[data-villa-theme] .premium-stay-card .card-bottom-row .rating-line,
+  body[data-villa-theme] .premium-stay-card .card-bottom-row .rating-line>span,
+  body[data-villa-theme] .premium-stay-card .card-bottom-row .rating-line .rating-score{
+    font-size:9px!important;
+  }
+  body[data-villa-theme] .premium-stay-card .card-bottom-row .rating-line .rating-star{
+    font-size:9px!important;
+  }
+}
