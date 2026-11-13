@@ -29,7 +29,7 @@ return static function (string $html, string $requestPath, string $platformMode)
                 '/admin/newsletter' => 'E-posta Aboneleri',
                 '/admin/messages' => 'İletişim Mesajları',
                 '/admin/typography' => 'Tema Tipografi',
-                '/admin/theme-design' => 'Tema Tasarım Ayarları',
+                '/admin/theme-design' => 'Tema Ayarları',
                 '/admin/themes' => Translator::get('admin.themes.title'),
             ],
             'Sistem' => [

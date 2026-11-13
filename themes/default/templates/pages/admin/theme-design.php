@@ -11,11 +11,11 @@ $labels = [
     'border'=>'Kenarlık rengi',
 ];
 ?>
-<!doctype html><html lang="tr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Tema Tasarım Ayarları</title>
+<!doctype html><html lang="tr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Tema Ayarları</title>
 <style>
 .theme-design{max-width:1080px;margin:0 auto;color:#26352e}.theme-design h1{margin:0 0 8px;font-size:26px}.theme-design .intro{color:#718078;font-size:13px;margin:0 0 20px}.design-panel{background:#fff;border:1px solid #e4ebe6;border-radius:15px;padding:20px;margin-bottom:16px}.design-panel h2{font-size:16px;margin:0 0 6px}.design-panel p{font-size:12px;color:#77847c;margin:0 0 16px}.design-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:13px}.design-field{display:flex;align-items:center;gap:12px;padding:11px;border:1px solid #e8eee9;border-radius:10px}.design-field label{font-size:13px;font-weight:700;flex:1}.design-field input{width:54px;height:42px;padding:3px;border:1px solid #dce5df;border-radius:8px;background:#fff}.design-field code{font-size:11px;color:#718078}.design-preview{border:1px solid var(--preview-border);border-radius:14px;background:var(--preview-bg);padding:18px;color:var(--preview-text)}.design-preview .preview-card{background:var(--preview-surface);border:1px solid var(--preview-border);border-radius:11px;padding:15px;margin-top:12px}.design-preview .preview-button{display:inline-block;background:var(--preview-primary);color:#fff;border-radius:8px;padding:9px 14px;font-weight:700;margin-top:10px}.design-preview .preview-accent{color:var(--preview-accent);font-weight:800}.design-save{background:#176b50;color:#fff;border:0;border-radius:9px;padding:12px 18px;font-weight:800;cursor:pointer}.design-notice{padding:12px 14px;background:#eff7f1;color:#176b50;border-radius:9px;margin-bottom:16px}.design-notice.error{background:#fff1f0;color:#a32920}.design-actions{display:flex;gap:12px;align-items:center;flex-wrap:wrap}.design-help{font-size:12px;color:#77847c}@media(max-width:650px){.design-grid{grid-template-columns:1fr}.design-panel{padding:14px}}
 </style></head><body><main class="theme-design">
-<h1>Tema Tasarım Ayarları</h1>
+<h1>Tema Ayarları</h1>
 <p class="intro">Aktif tema: <strong><?= e((string)($themeDesignSlug ?? 'default')) ?></strong>. Renkler yalnızca bu temaya kaydedilir; site metinleri ve içerikleri etkilenmez.</p>
 <?php if(($themeDesignMessage??'')!==''): ?><div class="design-notice <?= ($themeDesignMessageType??'')==='error'?'error':'' ?>" role="status"><?= e($themeDesignMessage) ?></div><?php endif; ?>
 <form method="post" action="<?= e(app_url('/admin/theme-design')) ?>">
@@ -31,7 +31,7 @@ $labels = [
 </form>
 <?php if(($themeBrandMessage??'')!==''): ?><div class="design-notice <?= ($themeBrandMessageType??'')==='error'?'error':'' ?>" role="status"><?= e($themeBrandMessage) ?></div><?php endif; ?>
 <section class="design-panel">
-<h2>Aktif tema logosu</h2>
+<h2>Aktif temanın logosu</h2>
 <p>Logo, bu temanın üst alanında site adının yerine kullanılır. PNG, JPG veya WebP; en fazla 4 MB.</p>
 <?php if(!empty($themeBrandSettings['logo_url'])): ?>
 <div style="display:flex;align-items:center;gap:14px;flex-wrap:wrap;margin:12px 0">
@@ -45,7 +45,7 @@ $labels = [
 </form>
 </section>
 <section class="design-panel">
-<h2>Aktif tema hero video arka planı</h2>
+<h2>Aktif temanın hero video arka planı</h2>
 <p>MP4 veya WebM yükleyin. Video sessiz, döngülü ve otomatik oynatılır; en fazla 45 MB. Video kaldırılırsa temanın varsayılan hero görseli kullanılır.</p>
 <?php if(!empty($themeBrandSettings['hero_video_url'])): ?>
 <div style="margin:12px 0"><video src="<?= e($themeBrandSettings['hero_video_url']) ?>" muted playsinline controls style="display:block;width:min(100%,520px);max-height:180px;background:#17251f;border-radius:10px"></video>
