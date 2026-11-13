@@ -1,4 +1,4 @@
-body[data-villa-theme="mediterranean"]{background:#fbf8f0;color:#344039}body[data-villa-theme="mediterranean"] .site-header{background:#fffaf0;border-color:#e9dfca}body[data-villa-theme="mediterranean"] .brand{color:#687d55;font-family:Georgia,serif;font-size:29px}body[data-villa-theme="mediterranean"] .hero{background:linear-gradient(115deg,#f0e4cc,#dce4d2);border-radius:0 0 42px 42px;padding:56px 0}body[data-villa-theme="mediterranean"] .hero-card{border-radius:28px;background:#fffaf0}body[data-villa-theme="mediterranean"] .search{border-radius:18px;box-shadow:0 12px 35px #74634420}body[data-villa-theme="mediterranean"] .stay{border-radius:20px;background:#fffdf8}body[data-villa-theme="mediterranean"] .stay-photo{border-radius:20px}body[data-villa-theme="mediterranean"] .section h2{font-family:Georgia,serif;color:#526847}body[data-villa-theme="mediterranean"] .search-submit{background:#71845d}body[data-villa-theme="mediterranean"] .site-footer{background:#52634b;color:#fffaf0}
+body[data-villa-theme="mediterranean"]{background:#fbf8f0;color:#344039}body[data-villa-theme="mediterranean"] .site-header{background:#fffaf0;border-color:#e9dfca}body[data-villa-theme="mediterranean"] .brand{color:#687d55;font-family:Georgia,serif;font-size:29px}body[data-villa-theme="mediterranean"] .hero{background:linear-gradient(115deg,#f0e4cc,#dce4d2);padding:56px 0}body[data-villa-theme="mediterranean"] .hero-card{background:#fffaf0}body[data-villa-theme="mediterranean"] .search{border-radius:18px;box-shadow:0 12px 35px #74634420}body[data-villa-theme="mediterranean"] .stay{border-radius:20px;background:#fffdf8}body[data-villa-theme="mediterranean"] .stay-photo{border-radius:20px}body[data-villa-theme="mediterranean"] .section h2{font-family:Georgia,serif;color:#526847}body[data-villa-theme="mediterranean"] .search-submit{background:#71845d}body[data-villa-theme="mediterranean"] .site-footer{background:#52634b;color:#fffaf0}
 
 
 /* Layout signature: wide coastal hero, roomy sections and soft editorial cards. */
@@ -17,7 +17,7 @@ body[data-villa-theme="mediterranean"] .theme-header .nav a{display:inline-flex;
 body[data-villa-theme="mediterranean"] .theme-header .nav a:hover{background:#e9efdf;color:#506b42}
 body[data-villa-theme="mediterranean"] .theme-menu-toggle{display:none}
 body[data-villa-theme="mediterranean"] .hero{background:#f4eee1;padding:42px 0 72px}
-body[data-villa-theme="mediterranean"] .hero-card{min-height:570px;border-radius:34px}
+body[data-villa-theme="mediterranean"] .hero-card{min-height:570px;}
 body[data-villa-theme="mediterranean"] .search-enhanced{border-radius:22px;box-shadow:0 18px 50px #534b3526}
 body[data-villa-theme="mediterranean"] .search-field{border-right:1px solid #ece6d9}
 body[data-villa-theme="mediterranean"] .search-submit{border-radius:15px;background:#71845d}
@@ -209,7 +209,7 @@ body[data-villa-theme] .theme-header .nav a{color:#25394b!important;font:650 13p
 body[data-villa-theme] .theme-header .nav a:hover,body[data-villa-theme] .theme-header .nav a[aria-current="page"]{background:#eaf3fa!important;color:#527f9f!important}
 body[data-villa-theme] .theme-menu-toggle{border:1px solid #dce8f1!important;border-radius:14px!important;background:#eaf3fa!important;color:#527f9f!important;box-shadow:none!important}
 body[data-villa-theme] .hero{background:#f3f8fc!important;color:#25394b!important;padding:30px 0 56px!important}
-body[data-villa-theme] .hero-card{min-height:500px!important;border-radius:30px!important;overflow:hidden!important;box-shadow:0 20px 55px rgba(35,58,82,.12)!important}
+body[data-villa-theme] .hero-card{min-height:500px!important;overflow:hidden!important;box-shadow:0 20px 55px rgba(35,58,82,.12)!important}
 body[data-villa-theme] .hero-copy h1,body[data-villa-theme] .hero h1{font-family:Inter,"Segoe UI",sans-serif!important;font-weight:800!important;letter-spacing:-2.2px!important;line-height:1.04!important}
 body[data-villa-theme] .search,body[data-villa-theme] .search-enhanced{background:#ffffff!important;border:1px solid #dce8f1!important;border-radius:20px!important;box-shadow:0 16px 42px rgba(35,58,82,.09)!important}
 body[data-villa-theme] .search-field{border-color:#dce8f1!important}
@@ -238,7 +238,7 @@ body[data-villa-theme] .pagination a{border-radius:10px!important;border-color:#
  body[data-villa-theme] .theme-header .nav{background:#ffffff!important}
  body[data-villa-theme] .theme-header .nav a{background:#eaf3fa!important;color:#25394b!important;border-radius:12px!important;margin:2px 0!important}
  body[data-villa-theme] .hero{padding:18px 0 32px!important}
- body[data-villa-theme] .hero-card{min-height:520px!important;border-radius:22px!important}
+ body[data-villa-theme] .hero-card{min-height:520px!important;}
  body[data-villa-theme] .section{padding-top:38px!important;padding-bottom:38px!important}
  body[data-villa-theme] .stay{border-radius:18px!important}
  body[data-villa-theme] .stay-photo,body[data-villa-theme] .grid .photo{height:230px!important}
