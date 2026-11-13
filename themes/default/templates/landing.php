@@ -91,7 +91,38 @@ $medBlocks = '';
     </div></section>
     <?php endif;
     if ($medSectionActive('support')): $phone=trim((string)($content['home_support_phone']??''));$wa=trim((string)($content['home_support_whatsapp']??$phone));$phoneDigits=preg_replace('/\D+/','',$phone);$waDigits=preg_replace('/\D+/','',$wa); ?>
-    <section class="section med-support" style="order:<?= $medSectionOrder('support',10) ?>"><div class="wrap"><div class="med-support-panel"><div><span class="pill villa-eyebrow"><?= e($content['home_support_eyebrow'] ?? 'CANLI DESTEK') ?></span><h2><?= e($content['home_support_title'] ?? 'Tatilinizi birlikte planlayalım') ?></h2><p><?= e($content['home_support_subtitle'] ?? '') ?></p></div><div class="med-support-actions"><?php if($phoneDigits): ?><a class="med-support-phone" href="tel:<?= e($phoneDigits) ?>">☎ <?= e($phone) ?></a><?php endif; ?><?php if($waDigits): ?><a class="med-support-whatsapp" href="https://wa.me/<?= e($waDigits) ?>" target="_blank" rel="noopener noreferrer"><?= e($content['home_support_whatsapp_label'] ?? 'WhatsApp ile yazın ↗') ?></a><?php endif; ?></div></div></div></section>
+    <section class="section med-support" style="order:<?= $medSectionOrder('support',10) ?>">
+      <div class="wrap">
+        <div class="med-support-panel">
+          <div class="med-support-heading">
+            <span class="pill villa-eyebrow"><?= e($content['home_support_eyebrow'] ?? 'TATİLİNİZİ PLANLAYIN') ?></span>
+            <h2><?= e($content['home_support_title'] ?? 'Tatilinizi birlikte planlayalım') ?></h2>
+            <p><?= e($content['home_support_subtitle'] ?? 'Giriş ve çıkış tarihlerinizi seçin, size uygun villaları hemen listeleyelim.') ?></p>
+          </div>
+          <form class="med-support-date-form" id="homeAvailabilitySearch" action="<?= e(app_url('/konaklamalar')) ?>" method="get">
+            <div class="med-support-date-field"><label for="homeCheckIn">Giriş tarihi</label><input type="date" id="homeCheckIn" name="check_in" min="<?= e(date('Y-m-d')) ?>" required></div>
+            <div class="med-support-date-field"><label for="homeCheckOut">Çıkış tarihi</label><input type="date" id="homeCheckOut" name="check_out" min="<?= e(date('Y-m-d',strtotime('+1 day'))) ?>" required></div>
+            <p class="med-support-date-hint" id="homeAvailabilityHint" aria-live="polite">İki tarihi de seçtiğinizde müsait villalar otomatik listelenir.</p>
+          </form>
+          <?php if($phoneDigits || $waDigits): ?><div class="med-support-actions"><?php if($phoneDigits): ?><a class="med-support-phone" href="tel:<?= e($phoneDigits) ?>">☎ <?= e($phone) ?></a><?php endif; ?><?php if($waDigits): ?><a class="med-support-whatsapp" href="https://wa.me/<?= e($waDigits) ?>" target="_blank" rel="noopener noreferrer"><?= e($content['home_support_whatsapp_label'] ?? 'WhatsApp ile yazın ↗') ?></a><?php endif; ?></div><?php endif; ?>
+        </div>
+      </div>
+      <script>
+      (function(){
+        var form=document.getElementById('homeAvailabilitySearch');
+        if(!form)return;
+        var checkIn=document.getElementById('homeCheckIn'),checkOut=document.getElementById('homeCheckOut'),hint=document.getElementById('homeAvailabilityHint');
+        function nextDay(value){var p=value.split('-'),d=new Date(Number(p[0]),Number(p[1])-1,Number(p[2]),12);d.setDate(d.getDate()+1);return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');}
+        function search(){if(checkIn.value){var min=nextDay(checkIn.value);checkOut.min=min;if(checkOut.value&&checkOut.value<min)checkOut.value='';}
+          if(!checkIn.value||!checkOut.value){hint.textContent='İki tarihi de seçtiğinizde müsait villalar otomatik listelenir.';return;}
+          if(checkOut.value<=checkIn.value){hint.textContent='Çıkış tarihi, giriş tarihinden sonra olmalıdır.';return;}
+          hint.textContent='Müsait villalar listeleniyor…';
+          window.location.assign(form.action+'?'+new URLSearchParams({check_in:checkIn.value,check_out:checkOut.value}).toString());
+        }
+        checkIn.addEventListener('change',search);checkOut.addEventListener('change',search);
+      })();
+      </script>
+    </section>
     <?php endif;
     $medBlocks = (string)ob_get_clean();
     if ($medBlocks !== '') $html = preg_replace('~</main>~i', $medBlocks . '</main>', $html, 1) ?? $html;
@@ -218,13 +249,19 @@ body.villa-home-mediterranean .destination-editorial-item:hover .destination-edi
 .med-faq-item[open] summary span{transform:rotate(45deg)}
 .med-faq-item p{max-width:680px;color:var(--villa-text);font:inherit;}
 .med-support{padding-top:20px!important}
-.med-support-panel{display:flex;align-items:center;justify-content:space-between;gap:30px;padding:42px 48px;border-radius:26px;background:#e9eee3;border:1px solid #e0e7d9}
-.med-support h2{margin:10px 0;color:var(--villa-text);font-size:var(--villa-body-size);}
-.med-support p{max-width:620px;margin:0;color:var(--villa-text);font:inherit;}
-.med-support-actions{display:flex;flex-direction:column;gap:10px;min-width:200px}
-.med-support-actions a{display:block;padding:14px 18px;border-radius:11px;text-align:center;font:inherit;}
-.med-support-phone{background:#fff;color:var(--villa-text);}
-.med-support-whatsapp{background:#365b42;color:var(--villa-text);}
+.med-support-panel{max-width:1080px;margin:0 auto;display:grid;grid-template-columns:minmax(0,1fr);gap:24px;padding:38px 42px;border-radius:22px;background:#fff;border:1px solid var(--villa-primary,#315a43);box-shadow:0 12px 34px rgba(20,45,30,.07);color:var(--villa-primary,#315a43)}
+.med-support-heading h2{margin:10px 0;color:var(--villa-primary,#315a43);font-size:var(--villa-body-size);}
+.med-support-heading p{max-width:720px;margin:0;color:var(--villa-primary,#315a43);font:inherit;}
+.med-support-date-form{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}
+.med-support-date-field{display:grid;gap:8px}
+.med-support-date-field label{color:var(--villa-primary,#315a43);font-weight:700}
+.med-support-date-field input{width:100%;min-height:54px;padding:12px 14px;border:1px solid var(--villa-primary,#315a43);border-radius:10px;background:#fff;color:var(--villa-primary,#315a43);font:inherit;accent-color:var(--villa-primary,#315a43);color-scheme:light}
+.med-support-date-hint{grid-column:1/-1;margin:0;color:var(--villa-primary,#315a43);font-size:13px}
+.med-support-actions{display:flex;flex-wrap:wrap;gap:10px;min-width:0}
+.med-support-actions a{display:block;padding:12px 18px;border-radius:10px;text-align:center;font:inherit}
+.med-support-phone{background:#fff;color:var(--villa-primary,#315a43);border:1px solid var(--villa-primary,#315a43)}
+.med-support-whatsapp{background:var(--villa-primary,#315a43);color:#fff}
+@media(max-width:600px){.med-support-panel{padding:25px 18px;gap:19px}.med-support-date-form{grid-template-columns:1fr}.med-support-date-hint{grid-column:auto}.med-support-actions{flex-direction:column}}
 .med-footer-columns{display:grid;grid-column:1/-1;grid-template-columns:repeat(3,minmax(0,1fr));gap:24px;min-width:0}
 .med-footer-columns strong{display:block;margin-bottom:12px;color:var(--villa-text);font:inherit;}
 .med-footer-columns ul{margin:0;padding:0;list-style:none;display:grid;gap:9px}
