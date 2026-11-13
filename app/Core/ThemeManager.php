@@ -850,7 +850,7 @@ final class ThemeManager
         $paletteCss = $themeScope . '{color-scheme:light}'
             . $themeScope . '{background:var(--villa-background)!important;color:var(--villa-text)!important}'
             . $themeScope . ' .theme-header,' . $themeScope . ' .site-header,' . $themeScope . ' .villa-social-bar,' . $themeScope . ' .theme-header .nav{background:var(--villa-surface)!important;border-color:var(--villa-border)!important}'
-            . $themeScope . ' .hero,' . $themeScope . ' .intro,' . $themeScope . ' .section,' . $themeScope . ' .home-accommodations{background-color:var(--villa-background)!important}'
+            
             . $themeScope . ' .stay,' . $themeScope . ' .premium-stay-card,' . $themeScope . ' .filter-panel,' . $themeScope . ' .booking,' . $themeScope . ' .panel,' . $themeScope . ' .card,' . $themeScope . ' .med-review-card,' . $themeScope . ' .med-support-panel{background:var(--villa-surface)!important;border-color:var(--villa-border)!important;color:var(--villa-text)!important}'
             . $themeScope . ' .theme-brand,' . $themeScope . ' .theme-brand-name,' . $themeScope . ' .brand,' . $themeScope . ' .section-head h2,' . $themeScope . ' .section h2,' . $themeScope . ' .stay h3,' . $themeScope . ' .med-collection-heading h3,' . $themeScope . ' .med-faq-item summary,' . $themeScope . ' .med-support h2{color:var(--villa-text)!important}'
             . $themeScope . ' .theme-header .nav a,' . $themeScope . ' .theme-header .nav-submenu-toggle,' . $themeScope . ' .villa-social-bar,' . $themeScope . ' .med-property-body,' . $themeScope . ' .med-review-card>p{color:var(--villa-text)!important}'
