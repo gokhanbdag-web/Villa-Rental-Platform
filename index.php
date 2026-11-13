@@ -9,6 +9,7 @@ use App\Core\Installer;
 use App\Core\Migrator;
 use App\Core\Router;
 use App\Core\Translator;
+use App\Core\ThemeManager;
 
 if (!Installer::isInstalled()) {
     header('Location: ' . app_url('/install/'));
