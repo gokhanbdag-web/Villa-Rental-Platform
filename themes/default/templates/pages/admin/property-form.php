@@ -20,6 +20,9 @@ a{color:#176b50;text-decoration:none;transition:color .18s ease,background-color
 <label>İlçe<select name="location_district_id" id="locationDistrict"><option value="">İlçe seçin (isteğe bağlı)</option><?php foreach($districtOptions as $v): ?><option value="<?= (int)$v['id'] ?>" <?= $selectedDistrict===(int)$v['id']?'selected':'' ?>><?= e($v['name']) ?></option><?php endforeach; ?></select></label>
 <label>Semt / Mahalle<select name="location_neighborhood_id" id="locationNeighborhood"><option value="">Semt / mahalle seçin (isteğe bağlı)</option><?php foreach($neighborhoodOptions as $v): ?><option value="<?= (int)$v['id'] ?>" <?= $selectedNeighborhood===(int)$v['id']?'selected':'' ?>><?= e($v['name']) ?></option><?php endforeach; ?></select></label></div></div>
 <label class="wide">Açık adres<input name="address" value="<?= e($property['address']??'') ?>" placeholder="Cadde, sokak, bina numarası vb."></label>
+<label>Harita enlemi (latitude)<input type="number" name="latitude" step="0.0000001" min="-90" max="90" value="<?= e($property['latitude']??'') ?>" placeholder="Örn. 36.6212"></label>
+<label>Harita boylamı (longitude)<input type="number" name="longitude" step="0.0000001" min="-180" max="180" value="<?= e($property['longitude']??'') ?>" placeholder="Örn. 29.1164"></label>
+<p class="hint wide">Haritada doğru noktada görünmesi için iki koordinatı birlikte girin. Koordinatları OpenStreetMap veya harita uygulamasından alabilirsiniz.</p>
 <label>Maksimum misafir<input type="number" min="1" max="100" name="max_guests" value="<?= (int)($property['max_guests']??2) ?>"></label>
 <label>Yatak odası<input type="number" min="0" max="100" name="bedrooms" value="<?= (int)($property['bedrooms']??1) ?>"></label>
 <label>Yatak sayısı<input type="number" min="0" max="100" name="beds" value="<?= (int)($property['beds']??1) ?>"></label>
