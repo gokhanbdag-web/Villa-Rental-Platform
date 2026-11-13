@@ -4,7 +4,7 @@
 <head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Rezervasyon talebi · <?= e($property['title']) ?></title>
-<?php $pageCssPath = \App\Core\\ThemeManager::resolveFile('pages/booking.css', 'default'); if ($pageCssPath !== null): ?><link rel="stylesheet" href="<?= e(\App\Core\\ThemeManager::assetUrl('pages/booking.css', 'default')) ?>?v=<?= (int)filemtime($pageCssPath) ?>"><?php endif; ?>
+<?php $pageCssPath = \App\Core\ThemeManager::resolveFile('pages/booking.css', 'default'); if ($pageCssPath !== null): ?><link rel="stylesheet" href="<?= e(\App\Core\ThemeManager::assetUrl('pages/booking.css', 'default')) ?>?v=<?= (int)filemtime($pageCssPath) ?>"><?php endif; ?>
 </head>
 <body>
 <main class="wrap">
