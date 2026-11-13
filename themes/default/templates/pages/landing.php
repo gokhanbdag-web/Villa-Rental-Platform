@@ -62,9 +62,9 @@ $stylePhotos=['https://images.unsplash.com/photo-1613490493576-7fde63acd811?auto
 <section class="mobile-hero-search" aria-label="Konaklama arama">
   <form class="mobile-hero-search-form" action="/konaklamalar" method="get">
     <label class="mobile-search-destination"><span>Konum</span><input type="text" name="city" placeholder="Nereye gitmek istiyorsunuz?" aria-label="Destinasyon"></label>
+    <label><span>Misafir</span><select name="guests" aria-label="Misafir sayısı"><option value="1">1 kişi</option><option value="2" selected>2 kişi</option><option value="3">3 kişi</option><option value="4">4 kişi</option><option value="5">5 kişi</option><option value="6">6 kişi</option><option value="7">7 kişi</option><option value="8">8+ kişi</option></select></label>
     <label><span>Giriş</span><input type="date" name="check_in" min="<?= e(date('Y-m-d')) ?>" aria-label="Giriş tarihi"></label>
     <label><span>Çıkış</span><input type="date" name="check_out" min="<?= e(date('Y-m-d',strtotime('+1 day'))) ?>" aria-label="Çıkış tarihi"></label>
-    <label><span>Misafir</span><select name="guests" aria-label="Misafir sayısı"><option value="1">1 kişi</option><option value="2" selected>2 kişi</option><option value="3">3 kişi</option><option value="4">4 kişi</option><option value="5">5 kişi</option><option value="6">6 kişi</option><option value="7">7 kişi</option><option value="8">8+ kişi</option></select></label>
     <button type="submit" aria-label="Villa ara"><span aria-hidden="true">⌕</span> Ara</button>
   </form>
 </section>
