@@ -85,7 +85,7 @@ final class ThemeManager
     {
         $slug = $slug ?: self::activeSlug();
         if (!preg_match('/^[a-z0-9_-]{1,60}$/', $slug) || !isset(self::installed()[$slug])) $slug = 'default';
-        $defaults = ['logo_path' => '', 'hero_video_path' => ''];
+        $defaults = ['logo_path' => '', 'hero_video_path' => '', 'family_banner_path' => ''];
         try {
             $pdo = Database::connection();
             $stmt = $pdo->prepare('SELECT setting_value FROM settings WHERE setting_key=? LIMIT 1');
@@ -105,8 +105,10 @@ final class ThemeManager
         return [
             'logo_path' => $defaults['logo_path'],
             'hero_video_path' => $defaults['hero_video_path'],
+            'family_banner_path' => $defaults['family_banner_path'],
             'logo_url' => $defaults['logo_path'] !== '' ? app_url('/' . ltrim($defaults['logo_path'], '/')) : '',
             'hero_video_url' => $defaults['hero_video_path'] !== '' ? app_url('/' . ltrim($defaults['hero_video_path'], '/')) : '',
+            'family_banner_url' => $defaults['family_banner_path'] !== '' ? app_url('/' . ltrim($defaults['family_banner_path'], '/')) : '',
         ];
     }
 
@@ -117,6 +119,7 @@ final class ThemeManager
         $rules = [
             'logo' => ['max'=>4194304,'mimes'=>['image/png'=>'png','image/jpeg'=>'jpg','image/webp'=>'webp'],'key'=>'logo_path'],
             'hero_video' => ['max'=>47185920,'mimes'=>['video/mp4'=>'mp4','video/webm'=>'webm'],'key'=>'hero_video_path'],
+            'family_banner' => ['max'=>8388608,'mimes'=>['image/jpeg'=>'jpg','image/png'=>'png','image/webp'=>'webp'],'key'=>'family_banner_path'],
         ];
         if (!isset($rules[$type])) throw new RuntimeException('Tema görsel dosyası türü geçersiz.');
         if (($upload['error'] ?? UPLOAD_ERR_NO_FILE) !== UPLOAD_ERR_OK || empty($upload['tmp_name']) || !is_uploaded_file((string)$upload['tmp_name'])) throw new RuntimeException('Dosya yüklenemedi. Lütfen yeniden deneyin.');
@@ -126,7 +129,7 @@ final class ThemeManager
         $finfo = new \finfo(FILEINFO_MIME_TYPE);
         $mime = $finfo->file((string)$upload['tmp_name']);
         if (!is_string($mime) || !isset($rule['mimes'][$mime])) throw new RuntimeException($type === 'logo' ? 'Logo PNG, JPG veya WebP olmalıdır.' : 'Video MP4 veya WebM olmalıdır.');
-        if ($type === 'logo' && @getimagesize((string)$upload['tmp_name']) === false) throw new RuntimeException('Geçerli bir görsel dosyası yükleyin.');
+        if (in_array($type, ['logo','family_banner'], true) && @getimagesize((string)$upload['tmp_name']) === false) throw new RuntimeException('Geçerli bir görsel dosyası yükleyin.');
 
         $relativeDir = 'uploads/themes/' . $slug . '/branding';
         $dir = APP_ROOT . '/public/' . $relativeDir;
@@ -138,7 +141,7 @@ final class ThemeManager
         $settings = self::brandSettings($slug);
         $old = (string)($settings[$rule['key']] ?? '');
         $settings[$rule['key']] = $relativeDir . '/' . $name;
-        $json = json_encode(['logo_path'=>$settings['logo_path'],'hero_video_path'=>$settings['hero_video_path']], JSON_UNESCAPED_SLASHES | JSON_THROW_ON_ERROR);
+        $json = json_encode(['logo_path'=>$settings['logo_path'],'hero_video_path'=>$settings['hero_video_path'],'family_banner_path'=>$settings['family_banner_path']], JSON_UNESCAPED_SLASHES | JSON_THROW_ON_ERROR);
         try {
             $pdo = Database::connection();
             $save = $pdo->prepare('INSERT INTO settings(setting_key,setting_value,autoload) VALUES(?,?,1) ON DUPLICATE KEY UPDATE setting_value=VALUES(setting_value),autoload=1');
@@ -157,7 +160,7 @@ final class ThemeManager
     {
         $slug = $slug ?: self::activeSlug();
         if (!preg_match('/^[a-z0-9_-]{1,60}$/', $slug) || !isset(self::installed()[$slug])) throw new RuntimeException('Tema bulunamadı.');
-        $keys = ['logo'=>'logo_path','hero_video'=>'hero_video_path'];
+        $keys = ['logo'=>'logo_path','hero_video'=>'hero_video_path','family_banner'=>'family_banner_path'];
         if (!isset($keys[$type])) throw new RuntimeException('Tema görsel dosyası türü geçersiz.');
         $settings = self::brandSettings($slug);
         $old = (string)($settings[$keys[$type]] ?? '');
