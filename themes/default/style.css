@@ -1051,7 +1051,7 @@ body.villa-home-mediterranean .hero-filter-panel{
   body.villa-home-mediterranean .hero-filter-panel .guest-field{
     grid-column:span 2!important;
   }
-  body.villa-home-mediterranean .hero-filter-panel .date-field:nth-of-type(3){
+  body.villa-home-mediterranean .hero-filter-panel .date-field + .date-field{
     border-right:0!important;
   }
   body.villa-home-mediterranean .hero-filter-panel .search-label{
