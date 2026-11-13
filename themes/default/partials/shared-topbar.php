@@ -13,7 +13,7 @@ foreach ($socialNames as $platform => $label) {
     if ($url === '') continue;
     $size = max(14, min(36, (int)($item['size'] ?? 20)));
     $family = (string)($item['family'] ?? 'brand');
-    $socialItems .= '<a class="villa-social-link villa-social-link--' . e($family) . '" href="' . e($url) . '" target="_blank" rel="noopener noreferrer" aria-label="' . e($label) . '" title="' . e($label) . '" style="--social-icon-size:' . $size . 'px">' . $renderSocialIcon($platform, $family) . '<span>' . e($label) . '</span></a>';
+    $socialItems .= '<a class="villa-social-link villa-social-link--' . e($family) . '" href="' . e($url) . '" target="_blank" rel="noopener noreferrer" aria-label="' . e($label) . '" title="' . e($label) . '" style="--social-icon-size:' . $size . 'px">' . $renderSocialIcon($platform, $family) . '</a>';
 }
 $addressSettings = $socialSettings['_address'] ?? [];
 $addressText = trim((string)($addressSettings['text'] ?? ''));
