@@ -388,7 +388,7 @@ final class ThemeManager
             $stmt->execute(['theme.' . $slug . '.footer']);
             $saved = json_decode((string)($stmt->fetchColumn() ?: '{}'), true);
             return self::normalizeFooterSettings(is_array($saved) ? $saved : []);
-        } catch (\\Throwable $e) {
+        } catch (\Throwable $e) {
             error_log('Theme footer settings read failed: ' . $e->getMessage());
             return self::footerSettingsDefaults();
         }
