@@ -362,12 +362,14 @@ final class ThemeManager
     /** Theme-scoped footer layout and appearance settings. */
     private static function footerSettingsDefaults(): array
     {
-        return ['background'=>'#20352e','text'=>'#ffffff','padding_top'=>42,'padding_bottom'=>42,'margin_top'=>55,'content_width'=>1180];
+        return ['background'=>'#20352e','text'=>'#ffffff','padding_top'=>42,'padding_bottom'=>42,'margin_top'=>55,'content_width'=>1180,'about_title'=>'','about_description'=>''];
     }
 
     private static function normalizeFooterSettings(array $input): array
     {
         $clean = self::footerSettingsDefaults();
+        $clean['about_title'] = mb_substr(trim(strip_tags((string)($input['about_title'] ?? ''))), 0, 150);
+        $clean['about_description'] = mb_substr(trim(strip_tags((string)($input['about_description'] ?? ''))), 0, 3000);
         foreach (['background','text'] as $key) {
             $value = strtolower(trim((string)($input[$key] ?? $clean[$key])));
             if (preg_match('/^#[0-9a-f]{6}$/', $value)) $clean[$key] = $value;
