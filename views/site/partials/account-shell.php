@@ -11,9 +11,9 @@ require APP_ROOT . '/views/account/' . $accountView;
 $html = (string)ob_get_clean();
 
 ob_start();
-\\App\\Core\\ThemeManager::renderPartial('partials/header.php', get_defined_vars());
+\App\Core\ThemeManager::renderPartial('partials/header.php', get_defined_vars());
 $header = (string)ob_get_clean();
-$html = preg_replace_callback('~<body\\\\b[^>]*>~i', static fn(array $match): string => $match[0] . $header, $html, 1) ?? $html;
+$html = preg_replace_callback('~<body\\b[^>]*>~i', static fn(array $match): string => $match[0] . $header, $html, 1) ?? $html;
 $accountPath = (string)(parse_url((string)($_SERVER['REQUEST_URI'] ?? ''), PHP_URL_PATH) ?: '');
 $accountLinks = [
     ['/account/bookings','Rezervasyonlarım'],
