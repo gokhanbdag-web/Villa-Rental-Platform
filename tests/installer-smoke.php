@@ -5,6 +5,7 @@ require_once dirname(__DIR__) . '/app/bootstrap.php';
 
 use App\Core\Installer;
 use App\Core\Migrator;
+use App\Core\PaymentWebhookInbox;
 use App\Core\ThemeManager;
 use App\Core\Router;
 
@@ -74,6 +75,17 @@ try {
 
     $migrationCount = (int)$pdo->query('SELECT COUNT(*) FROM schema_migrations')->fetchColumn();
     assertSmoke($migrationCount >= 20, 'Expected database migrations were not applied.');
+
+    $webhookInbox = new PaymentWebhookInbox($pdo);
+    $eventPayload = ['merchant_oid'=>'VILLA-SMOKE-001','status'=>'success','total_amount'=>'125000'];
+    assertSmoke($webhookInbox->recordVerified('paytr','VILLA-SMOKE-001','payment_callback','VILLA-SMOKE-001',$eventPayload)==='recorded','Verified webhook event was not recorded.');
+    assertSmoke($webhookInbox->recordVerified('paytr','VILLA-SMOKE-001','payment_callback','VILLA-SMOKE-001',$eventPayload)==='duplicate','Repeated webhook event was not recognized.');
+    $changedPayload = ['merchant_oid'=>'VILLA-SMOKE-001','status'=>'failed','total_amount'=>'125000'];
+    assertSmoke($webhookInbox->recordVerified('paytr','VILLA-SMOKE-001','payment_callback','VILLA-SMOKE-001',$changedPayload)==='conflict','Conflicting duplicate webhook payload was not detected.');
+    assertSmoke($webhookInbox->claim('paytr','VILLA-SMOKE-001'),'Webhook event could not be claimed.');
+    assertSmoke(!$webhookInbox->claim('paytr','VILLA-SMOKE-001'),'Webhook event was claimed twice concurrently.');
+    assertSmoke($webhookInbox->markProcessed('paytr','VILLA-SMOKE-001'),'Webhook event could not be marked processed.');
+    assertSmoke(!$webhookInbox->claim('paytr','VILLA-SMOKE-001'),'Processed webhook event was claimable again.');
 
     foreach (['vendors','properties','property_media','bookings','booking_financials','payment_transactions','vendor_payouts','reviews','notifications','cms_pages','navigation_items','contact_messages','newsletter_subscribers'] as $table) {
         $check = $pdo->prepare('SELECT COUNT(*) FROM information_schema.TABLES WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME=?');
