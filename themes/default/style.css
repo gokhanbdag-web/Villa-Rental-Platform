@@ -1237,6 +1237,18 @@ body.villa-home-mediterranean .med-family-banner-description{
 @media(max-width:600px){
   body.villa-home-mediterranean .med-family-banner{height:auto;min-height:240px;}
   body.villa-home-mediterranean .med-family-banner-inner{width:calc(100% - 32px);padding:28px 0;}
+  /* Mobile typography: keep desktop/admin sizes intact while fitting narrow screens. */
+  body.villa-home-mediterranean .med-family-banner-eyebrow{
+    font-size:clamp(10px,2.8vw,12px)!important;line-height:1.25!important;
+    letter-spacing:.1em!important;margin-bottom:8px!important;
+  }
+  body.villa-home-mediterranean .med-family-banner-title{
+    font-size:clamp(22px,6vw,30px)!important;line-height:1.16!important;
+    letter-spacing:-.025em!important;margin-bottom:9px!important;
+  }
+  body.villa-home-mediterranean .med-family-banner-description{
+    font-size:clamp(12px,3.6vw,15px)!important;line-height:1.45!important;
+  }
 }
 
 /* One shared header and mobile drawer for every public/account page. */
