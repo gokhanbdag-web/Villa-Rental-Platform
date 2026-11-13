@@ -106,10 +106,19 @@ final class ThemeManager
             'logo_path' => $defaults['logo_path'],
             'hero_video_path' => $defaults['hero_video_path'],
             'family_banner_path' => $defaults['family_banner_path'],
-            'logo_url' => $defaults['logo_path'] !== '' ? app_url('/' . ltrim($defaults['logo_path'], '/')) : '',
-            'hero_video_url' => $defaults['hero_video_path'] !== '' ? app_url('/' . ltrim($defaults['hero_video_path'], '/')) : '',
-            'family_banner_url' => $defaults['family_banner_path'] !== '' ? app_url('/' . ltrim($defaults['family_banner_path'], '/')) : '',
+            'logo_url' => $defaults['logo_path'] !== '' ? self::brandAssetUrl($defaults['logo_path'], $slug) : '',
+            'hero_video_url' => $defaults['hero_video_path'] !== '' ? self::brandAssetUrl($defaults['hero_video_path'], $slug) : '',
+            'family_banner_url' => $defaults['family_banner_path'] !== '' ? self::brandAssetUrl($defaults['family_banner_path'], $slug) : '',
         ];
+    }
+
+    /** Serve uploaded branding through the application router so it works with both project-root and public/ document roots. */
+    private static function brandAssetUrl(string $relativePath, string $slug): string
+    {
+        $prefix = 'uploads/themes/' . $slug . '/branding/';
+        $filename = str_starts_with($relativePath, $prefix) ? substr($relativePath, strlen($prefix)) : '';
+        if ($filename === '' || !preg_match('/^[a-z0-9_-]+\\.(?:png|jpe?g|webp|mp4|webm)$/i', $filename)) return '';
+        return app_url('/brand-assets/' . rawurlencode($slug) . '/' . rawurlencode($filename));
     }
 
     public static function saveBrandAsset(string $type, array $upload, ?string $slug = null): void
