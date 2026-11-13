@@ -1,7 +1,7 @@
 <?php
 declare(strict_types=1);
 
-$footerSettings = \App\Core\\ThemeManager::footerSettings();
+$footerSettings = \App\Core\ThemeManager::footerSettings();
 ?>
 <footer class="site-footer" aria-label="Alt bilgi"
     style="--footer-bg:<?= e($footerSettings['background']) ?>;--footer-text:<?= e($footerSettings['text']) ?>;--footer-padding-top:<?= (int)$footerSettings['padding_top'] ?>px;--footer-padding-bottom:<?= (int)$footerSettings['padding_bottom'] ?>px;--footer-margin-top:<?= (int)$footerSettings['margin_top'] ?>px;--footer-content-width:<?= (int)$footerSettings['content_width'] ?>px">
