@@ -33,9 +33,9 @@ if (stripos($html, '</body>') !== false) {
 $html = preg_replace('~<body\\b~i', '<body class="villa-property-mediterranean"', $html, 1) ?? $html;
 
 
-$themePageCssPath = \App\Core\\ThemeManager::resolveFile('pages/property-theme.css', 'default');
+$themePageCssPath = \App\Core\ThemeManager::resolveFile('pages/property-theme.css', 'default');
 if ($themePageCssPath !== null) {
- $themePageCssLink = '<link rel="stylesheet" href="' . e(\App\Core\\ThemeManager::assetUrl('pages/property-theme.css', 'default')) . '?v=' . rawurlencode((string)filemtime($themePageCssPath)) . '">';
+ $themePageCssLink = '<link rel="stylesheet" href="' . e(\App\Core\ThemeManager::assetUrl('pages/property-theme.css', 'default')) . '?v=' . rawurlencode((string)filemtime($themePageCssPath)) . '">';
  $html = str_replace('</head>', $themePageCssLink . '</head>', $html);
 }
 echo $html;
