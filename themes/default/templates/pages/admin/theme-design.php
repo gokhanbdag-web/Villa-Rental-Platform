@@ -55,6 +55,7 @@ $labels = [
 <?php endforeach; ?>
 </div></div>
 <?php foreach(['span'=>'Eyebrow ve etiketler','paragraph'=>'Gövde yazısı','paragraph_links'=>'Paragraf bağlantıları'] as $key=>$label): $item=$themeTypographySettings[$key]??[]; ?>
+<div class="hero-type-group" style="margin-top:12px"><h3>Sayfa içi eyebrow rengi</h3><p>Sayfa ve bölüm başlıklarının üzerindeki etiketlerin rengini değiştirir. Hero eyebrow ve aile/banner eyebrow ayarlarından bağımsızdır.</p><div class="design-grid"><div class="design-field"><label>Eyebrow yazı rengi</label><input type="color" name="typography[eyebrow_color]" value="<?= e((string)($themeTypographySettings['eyebrow_color']??'#263b31')) ?>"></div></div></div>
 <div class="hero-type-group" style="margin-top:12px"><h3><?= e($label) ?></h3><div class="design-grid">
 <div class="design-field"><label>Font ailesi</label><select name="typography[<?= e($key) ?>][family]"><?php foreach(['Inter','Roboto','Open Sans','Lato','Montserrat','Poppins','Nunito Sans','Playfair Display','Merriweather','DM Sans','Manrope','Source Sans 3','Raleway','PT Sans','Libre Baskerville'] as $font): ?><option value="<?= e($font) ?>" <?= ($item['family']??'')===$font?'selected':'' ?>><?= e($font) ?></option><?php endforeach; ?></select></div>
 <div class="design-field"><label>Yazı boyutu (px)</label><input type="number" min="10" max="96" name="typography[<?= e($key) ?>][size]" value="<?= (int)($item['size']??16) ?>"></div>
