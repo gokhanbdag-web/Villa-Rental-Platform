@@ -111,7 +111,15 @@ $labels = [
   <div class="design-field"><label for="footerMarginTop">Footer üst dış boşluğu (px)</label><input id="footerMarginTop" type="number" min="0" max="160" name="footer[margin_top]" value="<?= (int)($themeFooterSettings['margin_top']??55) ?>"></div>
   <div class="design-field"><label for="footerContentWidth">İçerik maksimum genişliği (px)</label><input id="footerContentWidth" type="number" min="760" max="1600" name="footer[content_width]" value="<?= (int)($themeFooterSettings['content_width']??1180) ?>"></div>
 </div>
-<p style="margin-top:14px">Bu ayarlar yalnızca aktif temaya uygulanır. Widget alanları şimdilik boştur.</p>
+<div class="footer-about-editor" style="margin-top:22px;padding:18px;border:1px solid #dce5df;border-radius:12px">
+  <h3 style="margin:0 0 8px">Hakkında</h3>
+  <p>İlk footer kolonunda görüntülenecek başlık ve açıklamayı buradan yönetin.</p>
+  <div class="design-grid">
+    <div class="design-field"><label for="footerAboutTitle">Başlık</label><input id="footerAboutTitle" type="text" name="footer[about_title]" maxlength="150" value="<?= e((string)($themeFooterSettings['about_title']??'')) ?>" placeholder="Örn. Hakkımızda"></div>
+    <div class="design-field" style="grid-column:1/-1"><label for="footerAboutDescription">Açıklama</label><textarea id="footerAboutDescription" name="footer[about_description]" rows="5" maxlength="3000" placeholder="Kısa açıklamanızı yazın..." style="width:100%;padding:11px;border:1px solid #dce5df;border-radius:8px;font:inherit"><?= e((string)($themeFooterSettings['about_description']??'')) ?></textarea></div>
+  </div>
+</div>
+<p style="margin-top:14px">Bu ayarlar yalnızca aktif temaya uygulanır. Diğer beş widget alanı boş kalır.</p>
 </section>
 </form>
 <section class="design-panel" data-design-tab-panel="family-banner">
