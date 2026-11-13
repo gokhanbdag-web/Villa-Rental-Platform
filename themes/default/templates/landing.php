@@ -89,6 +89,8 @@ $medBlocks = '';
       <?php endforeach; ?></div>
     </div></section>
     <?php endif;
+    <section class="section med-family-banner" style="order:6" aria-hidden="true"></section>
+    <?php
     if ($medSectionActive('collections') && !empty($homeCategoryCollections)): ?>
     <section class="section med-collections" style="order:<?= $medSectionOrder('collections',7) ?>"><div class="wrap">
       <div class="section-head"><div><span class="pill villa-eyebrow"><?= e($content['home_collections_eyebrow'] ?? 'ÖZENLE HAZIRLANDI') ?></span><h2><?= e($content['home_collections_title'] ?? 'Size Özel Villa Koleksiyonları') ?></h2><p><?= e($content['home_collections_subtitle'] ?? '') ?></p></div></div>
