@@ -36,6 +36,6 @@ $licenseMarkup = ($licenseTitleMarkup !== '' || $licenseNumberMarkup !== '') ? '
 <?php if ($addressMarkup !== '' || $callCenterMarkup !== '' || $licenseMarkup !== ''): ?>
 <div class="villa-social-bar"><div class="villa-social-inner"><div class="villa-social-left"><?= $socialItems ?></div><?= $addressMarkup ?><?= $callCenterMarkup ?><?= $licenseMarkup ?></div></div>
 <?php endif; ?>
-<?php if ($socialItems !== ''): ?>
-<div class="villa-social-drawer" aria-label="Sosyal medya bağlantıları"><?= $socialItems ?></div>
+<?php if ($socialItems !== '' || $addressMarkup !== '' || $licenseMarkup !== ''): ?>
+<div class="villa-social-drawer" aria-label="Sosyal medya ve iletişim bilgileri"><?= $socialItems ?><?= $addressMarkup ?><?= $licenseMarkup ?></div>
 <?php endif; ?>
