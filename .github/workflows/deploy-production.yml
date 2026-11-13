@@ -1,7 +1,9 @@
 name: Production deployment
 
 on:
-  push:
+  workflow_run:
+    workflows: ["PHP checks"]
+    types: [completed]
     branches: [main]
 
 permissions:
@@ -10,6 +12,7 @@ permissions:
 jobs:
   deploy:
     name: Deploy to shared hosting (FTP)
+    if: ${{ github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.head_branch == 'main' }}
     runs-on: ubuntu-latest
     env:
       FTP_SERVER: ${{ secrets.FTP_SERVER }}
@@ -37,6 +40,8 @@ jobs:
       - name: Checkout repository
         if: steps.credentials.outputs.ready == 'true'
         uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.workflow_run.head_sha }}
 
       - name: Deploy application files
         if: steps.credentials.outputs.ready == 'true'
