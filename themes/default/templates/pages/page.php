@@ -5,7 +5,7 @@
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title><?= e($page['meta_title'] ?: $page['title']) ?></title>
 <meta name="description" content="<?= e($page['meta_description']??'') ?>">
-<?php $pageCssPath = \App\Core\\ThemeManager::resolveFile('pages/page.css', 'default'); if ($pageCssPath !== null): ?><link rel="stylesheet" href="<?= e(\App\Core\\ThemeManager::assetUrl('pages/page.css', 'default')) ?>?v=<?= (int)filemtime($pageCssPath) ?>"><?php endif; ?>
+<?php $pageCssPath = \App\Core\ThemeManager::resolveFile('pages/page.css', 'default'); if ($pageCssPath !== null): ?><link rel="stylesheet" href="<?= e(\App\Core\ThemeManager::assetUrl('pages/page.css', 'default')) ?>?v=<?= (int)filemtime($pageCssPath) ?>"><?php endif; ?>
 </head>
 <body>
 <header class="site-header"><div class="wrap site-head">
