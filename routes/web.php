@@ -1389,6 +1389,7 @@ $router->get('/admin/theme-design', static function (): void {
     Auth::requireRole(['super_admin','admin']);
     $themeDesignSlug = ThemeManager::activeSlug();
     $themeDesignSettings = ThemeManager::designSettings($themeDesignSlug);
+    $themeCardSettings = ThemeManager::cardSettings($themeDesignSlug);
     $themeHeroTypographySettings = ThemeManager::heroTypographySettings($themeDesignSlug);
     $themeTypographySettings = ThemeManager::typographySettings($themeDesignSlug);
     $themeIconSettings = ThemeManager::iconSettings($themeDesignSlug);
@@ -1409,8 +1410,9 @@ $router->post('/admin/theme-design', static function (): void {
         ThemeManager::saveDesignSettings((array)($_POST['design'] ?? []), $activeThemeSlug);
         if (isset($_POST['hero_typography']) && is_array($_POST['hero_typography'])) ThemeManager::saveHeroTypographySettings($_POST['hero_typography'], $activeThemeSlug);
         if (isset($_POST['typography']) && is_array($_POST['typography'])) ThemeManager::saveTypographySettings($_POST['typography'], $activeThemeSlug);
+        if (isset($_POST['cards']) && is_array($_POST['cards'])) ThemeManager::saveCardSettings($_POST['cards'], $activeThemeSlug);
         ThemeManager::saveIconSettings((array)($_POST['icons'] ?? []), $activeThemeSlug);
-        $_SESSION['villa_theme_design_message'] = 'Tema renk paleti ve ana sayfa ikon ayarları başarıyla kaydedildi.';
+        $_SESSION['villa_theme_design_message'] = 'Tema, tipografi ve villa kart ayarları başarıyla kaydedildi.';
         $_SESSION['villa_theme_design_message_type'] = 'success';
     } catch (Throwable $e) {
         error_log('Theme design save failed: ' . $e->getMessage());

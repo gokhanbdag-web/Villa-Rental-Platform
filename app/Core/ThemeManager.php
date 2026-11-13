@@ -344,6 +344,44 @@ final class ThemeManager
     }
 
 
+    /** Theme-scoped villa card layout and typography settings. */
+    private static function cardSettingsDefaults(): array
+    {
+        return ['columns_desktop'=>4,'columns_tablet'=>2,'columns_mobile'=>1,'grid_gap'=>22,'radius'=>22,'border_width'=>1,'border_color'=>'#e3e9e4','padding_x'=>20,'padding_y'=>19,'image_height'=>250,'image_height_mobile'=>205,'title_size'=>17,'title_weight'=>700,'title_line_height'=>1.32,'meta_size'=>12.5,'meta_line_height'=>1.5,'price_size'=>19,'price_weight'=>800,'rating_size'=>10,'rating_weight'=>400,'rating_note_size'=>9];
+    }
+
+    private static function normalizeCardSettings(array $input): array
+    {
+        $clean = self::cardSettingsDefaults();
+        $integerRanges = ['columns_desktop'=>[2,5],'columns_tablet'=>[1,4],'columns_mobile'=>[1,2],'grid_gap'=>[8,48],'radius'=>[0,40],'border_width'=>[0,4],'padding_x'=>[8,32],'padding_y'=>[8,32],'image_height'=>[160,360],'image_height_mobile'=>[120,280],'title_size'=>[12,28],'title_weight'=>[300,900],'price_size'=>[12,32],'price_weight'=>[300,900],'rating_weight'=>[300,900]];
+        foreach ($integerRanges as $key=>$range) {
+            $value = filter_var($input[$key] ?? $clean[$key], FILTER_VALIDATE_INT);
+            if ($value !== false) $clean[$key] = max($range[0], min($range[1], $value));
+        }
+        foreach (['title_line_height'=>[1.0,2.0],'meta_size'=>[9,18],'meta_line_height'=>[1.0,2.0],'rating_size'=>[8,14],'rating_note_size'=>[7,13]] as $key=>$range) {
+            $value = filter_var($input[$key] ?? $clean[$key], FILTER_VALIDATE_FLOAT);
+            if ($value !== false) $clean[$key] = max($range[0], min($range[1], (float)$value));
+        }
+        $color = strtolower(trim((string)($input['border_color'] ?? $clean['border_color'])));
+        if (preg_match('/^#[0-9a-f]{6}$/', $color)) $clean['border_color'] = $color;
+        return $clean;
+    }
+
+    public static function cardSettings(?string $slug = null): array
+    {
+        $slug = $slug ?: self::activeSlug();
+        if (!preg_match('/^[a-z0-9_-]{1,60}$/', $slug)) $slug = 'default';
+        try {
+            $stmt = Database::connection()->prepare('SELECT setting_value FROM settings WHERE setting_key=? LIMIT 1');
+            $stmt->execute(['theme.' . $slug . '.cards']);
+            $saved = json_decode((string)($stmt->fetchColumn() ?: '{}'), true);
+            return self::normalizeCardSettings(is_array($saved) ? $saved : []);
+        } catch (\\Throwable $e) {
+            error_log('Theme card settings read failed: ' . $e->getMessage());
+            return self::cardSettingsDefaults();
+        }
+    }
+
     /** Theme-scoped homepage trust-strip icon library and icon choices. */
     public static function iconSettings(?string $slug = null): array
     {
@@ -541,6 +579,21 @@ final class ThemeManager
         $verify = $pdo->prepare('SELECT setting_value FROM settings WHERE setting_key=? LIMIT 1');
         $verify->execute([$key]);
         if ((string)$verify->fetchColumn() !== $json) throw new RuntimeException('Tema tipografi ayarları veritabanına kaydedilemedi.');
+    }
+
+    public static function saveCardSettings(array $input, ?string $slug = null): void
+    {
+        $slug = $slug ?: self::activeSlug();
+        if (!preg_match('/^[a-z0-9_-]{1,60}$/', $slug)) throw new RuntimeException('Tema kodu geçersiz.');
+        $clean = self::normalizeCardSettings($input);
+        $key = 'theme.' . $slug . '.cards';
+        $json = json_encode($clean, JSON_UNESCAPED_UNICODE | JSON_THROW_ON_ERROR);
+        $pdo = Database::connection();
+        $stmt = $pdo->prepare('INSERT INTO settings(setting_key,setting_value,autoload) VALUES(?,?,1) ON DUPLICATE KEY UPDATE setting_value=VALUES(setting_value),autoload=1');
+        $stmt->execute([$key, $json]);
+        $verify = $pdo->prepare('SELECT setting_value FROM settings WHERE setting_key=? LIMIT 1');
+        $verify->execute([$key]);
+        if ((string)$verify->fetchColumn() !== $json) throw new RuntimeException('Villa kart ayarları veritabanına kaydedilemedi.');
     }
 
     /**
@@ -831,6 +884,19 @@ final class ThemeManager
             . $themeScope . ' .destination-label small,' . $themeScope . ' .media-overlay p,' . $themeScope . ' .image-overlay p,' . $themeScope . ' .gallery-overlay p,' . $themeScope . ' [data-text-on-media] p{color:var(--villa-image_overlay_muted)!important}'
             . $themeScope . ' .premium-stay-card .card-gallery-count,' . $themeScope . ' .premium-stay-card .stay-badge{color:var(--villa-image_overlay_text)!important}'
             . $themeScope . ' .premium-stay-card .card-gallery-count small,' . $themeScope . ' .premium-stay-card .stay-badge small{color:var(--villa-image_overlay_muted)!important}';
+        $cardSettings = self::cardSettings($renderSlug);
+        $paletteCss .=
+            $themeScope . ' .premium-stay-card{border-radius:' . (int)$cardSettings['radius'] . 'px!important;border:' . (int)$cardSettings['border_width'] . 'px solid ' . $cardSettings['border_color'] . '!important}'
+            . $themeScope . ' .premium-stay-card .stay-content{padding:' . (int)$cardSettings['padding_y'] . 'px ' . (int)$cardSettings['padding_x'] . 'px!important}'
+            . $themeScope . ' .premium-stay-card .card-gallery{height:' . (int)$cardSettings['image_height'] . 'px!important}'
+            . $themeScope . ' .premium-stay-card .stay-content h3{font-size:' . (int)$cardSettings['title_size'] . 'px!important;font-weight:' . (int)$cardSettings['title_weight'] . '!important;line-height:' . $cardSettings['title_line_height'] . '!important}'
+            . $themeScope . ' .premium-stay-card .stay-content .meta{font-size:' . $cardSettings['meta_size'] . 'px!important;line-height:' . $cardSettings['meta_line_height'] . '!important}'
+            . $themeScope . ' .premium-stay-card .card-bottom-row .price strong{font-size:' . (int)$cardSettings['price_size'] . 'px!important;font-weight:' . (int)$cardSettings['price_weight'] . '!important}'
+            . $themeScope . ' .premium-stay-card .card-bottom-row .rating-line{font-size:' . $cardSettings['rating_size'] . 'px!important;font-weight:' . (int)$cardSettings['rating_weight'] . '!important}'
+            . $themeScope . ' .premium-stay-card .card-bottom-row .rating-line>span{font-size:inherit!important}'
+            . $themeScope . ' .cards,' . $themeScope . ' .grid{display:grid!important;grid-template-columns:repeat(' . (int)$cardSettings['columns_desktop'] . ',minmax(0,1fr))!important;gap:' . (int)$cardSettings['grid_gap'] . 'px!important}'
+            . '@media(max-width:900px){' . $themeScope . ' .cards,' . $themeScope . ' .grid{grid-template-columns:repeat(' . (int)$cardSettings['columns_tablet'] . ',minmax(0,1fr))!important}}'
+            . '@media(max-width:600px){' . $themeScope . ' .cards,' . $themeScope . ' .grid{grid-template-columns:repeat(' . (int)$cardSettings['columns_mobile'] . ',minmax(0,1fr))!important;gap:' . max(8,(int)$cardSettings['grid_gap']-8) . 'px!important}' . $themeScope . ' .premium-stay-card .card-gallery{height:' . (int)$cardSettings['image_height_mobile'] . 'px!important}}';
         if (stripos($html, '</head>') !== false) {
             $html = preg_replace('/<\\/head>/i', '<style id="villa-theme-palette-application">' . $paletteCss . '</style></head>', $html, 1) ?? $html;
         }
