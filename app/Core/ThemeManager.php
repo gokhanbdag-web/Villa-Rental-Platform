@@ -607,7 +607,7 @@ final class ThemeManager
         $designCss = '<style id="villa-theme-design-vars">body[data-villa-theme="' . e($renderSlug) . '"]{'
             . '--villa-primary:' . $design['primary'] . ';--villa-accent:' . $design['accent']
             . ';--villa-surface:' . $design['surface'] . ';--villa-background:' . $design['background']
-            . ';--villa-text:' . $design['text'] . ';--villa-muted:' . $design['muted'] . ';--villa-border:' . $design['border'] . ';'
+            . ';--villa-text:' . $design['text'] . ';--villa-muted:' . $design['muted'] . ';--villa-border:' . $design['border'] . ';--villa-eyebrow_background:' . $design['eyebrow_background'] . ';--villa-eyebrow_text:' . $design['eyebrow_text'] . ';--villa-image_overlay_text:' . $design['image_overlay_text'] . ';'
             . '--coastal-primary:' . $design['primary'] . ';--coastal-primary-dark:' . $design['primary']
             . ';--coastal-accent:' . $design['accent'] . ';--coastal-paper:' . $design['background']
             . ';--coastal-ink:' . $design['text'] . ';--coastal-muted:' . $design['muted'] . ';--coastal-line:' . $design['border'] . ';'
