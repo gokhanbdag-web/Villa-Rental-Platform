@@ -80,46 +80,96 @@ final class ThemeManager
         return app_url('/theme-assets/' . rawurlencode($slug) . '/' . implode('/', array_map('rawurlencode', explode('/', $relative))));
     }
 
-    public static function brandSettings(): array
+    /** Theme-scoped visual assets; legacy branding is read once as a compatibility fallback for Default. */
+    public static function brandSettings(?string $slug = null): array
     {
+        $slug = $slug ?: self::activeSlug();
+        if (!preg_match('/^[a-z0-9_-]{1,60}$/', $slug) || !isset(self::installed()[$slug])) $slug = 'default';
         $defaults = ['logo_path' => '', 'hero_video_path' => ''];
         try {
-            $stmt = Database::connection()->prepare('SELECT setting_value FROM settings WHERE setting_key=? LIMIT 1');
-            $stmt->execute(['theme.branding']);
-            $saved = json_decode((string)($stmt->fetchColumn() ?: '{}'), true);
-            if (is_array($saved)) foreach ($defaults as $key => $value) if (isset($saved[$key]) && is_string($saved[$key])) $defaults[$key] = $saved[$key];
-        } catch (\Throwable $e) { error_log('Theme branding settings read failed: ' . $e->getMessage()); }
-        return ['logo_path'=>$defaults['logo_path'], 'hero_video_path'=>$defaults['hero_video_path'],
-            'logo_url'=>$defaults['logo_path'] !== '' ? app_url('/'.ltrim($defaults['logo_path'],'/')) : '',
-            'hero_video_url'=>$defaults['hero_video_path'] !== '' ? app_url('/'.ltrim($defaults['hero_video_path'],'/')) : ''];
+            $pdo = Database::connection();
+            $stmt = $pdo->prepare('SELECT setting_value FROM settings WHERE setting_key=? LIMIT 1');
+            $stmt->execute(['theme.' . $slug . '.branding']);
+            $raw = $stmt->fetchColumn();
+            if (($raw === false || $raw === null || $raw === '') && $slug === 'default') {
+                $stmt->execute(['theme.branding']);
+                $raw = $stmt->fetchColumn();
+            }
+            $saved = json_decode((string)($raw ?: '{}'), true);
+            if (is_array($saved)) foreach ($defaults as $key => $value) {
+                if (isset($saved[$key]) && is_string($saved[$key])) $defaults[$key] = $saved[$key];
+            }
+        } catch (\Throwable $e) {
+            error_log('Theme branding settings read failed: ' . $e->getMessage());
+        }
+        return [
+            'logo_path' => $defaults['logo_path'],
+            'hero_video_path' => $defaults['hero_video_path'],
+            'logo_url' => $defaults['logo_path'] !== '' ? app_url('/' . ltrim($defaults['logo_path'], '/')) : '',
+            'hero_video_url' => $defaults['hero_video_path'] !== '' ? app_url('/' . ltrim($defaults['hero_video_path'], '/')) : '',
+        ];
     }
-    public static function saveBrandAsset(string $type, array $upload): void
+
+    public static function saveBrandAsset(string $type, array $upload, ?string $slug = null): void
     {
-        $rules = ['logo'=>['max'=>4194304,'mimes'=>['image/png'=>'png','image/jpeg'=>'jpg','image/webp'=>'webp'],'key'=>'logo_path'],
-            'hero_video'=>['max'=>47185920,'mimes'=>['video/mp4'=>'mp4','video/webm'=>'webm'],'key'=>'hero_video_path']];
-        if (!isset($rules[$type])) throw new RuntimeException('Marka dosyası türü geçersiz.');
+        $slug = $slug ?: self::activeSlug();
+        if (!preg_match('/^[a-z0-9_-]{1,60}$/', $slug) || !isset(self::installed()[$slug])) throw new RuntimeException('Tema bulunamadı.');
+        $rules = [
+            'logo' => ['max'=>4194304,'mimes'=>['image/png'=>'png','image/jpeg'=>'jpg','image/webp'=>'webp'],'key'=>'logo_path'],
+            'hero_video' => ['max'=>47185920,'mimes'=>['video/mp4'=>'mp4','video/webm'=>'webm'],'key'=>'hero_video_path'],
+        ];
+        if (!isset($rules[$type])) throw new RuntimeException('Tema görsel dosyası türü geçersiz.');
         if (($upload['error'] ?? UPLOAD_ERR_NO_FILE) !== UPLOAD_ERR_OK || empty($upload['tmp_name']) || !is_uploaded_file((string)$upload['tmp_name'])) throw new RuntimeException('Dosya yüklenemedi. Lütfen yeniden deneyin.');
-        $rule=$rules[$type]; $size=(int)($upload['size']??0);
-        if ($size<1 || $size>$rule['max']) throw new RuntimeException($type==='logo'?'Logo en fazla 4 MB olabilir.':'Video en fazla 45 MB olabilir.');
-        $finfo=new \finfo(FILEINFO_MIME_TYPE); $mime=$finfo->file((string)$upload['tmp_name']);
-        if (!is_string($mime) || !isset($rule['mimes'][$mime])) throw new RuntimeException($type==='logo'?'Logo PNG, JPG veya WebP olmalıdır.':'Video MP4 veya WebM olmalıdır.');
-        if ($type==='logo' && @getimagesize((string)$upload['tmp_name'])===false) throw new RuntimeException('Geçerli bir görsel dosyası yükleyin.');
-        $dir=APP_ROOT.'/public/uploads/branding';
-        if (!is_dir($dir) && !mkdir($dir,0755,true) && !is_dir($dir)) throw new RuntimeException('Yükleme klasörü oluşturulamadı.');
-        $name=$type.'-'.bin2hex(random_bytes(12)).'.'.$rule['mimes'][$mime]; $target=$dir.'/'.$name;
-        if (!move_uploaded_file((string)$upload['tmp_name'],$target)) throw new RuntimeException('Dosya kaydedilemedi.');
-        $settings=self::brandSettings(); $old=(string)($settings[$rule['key']]??''); $settings[$rule['key']]='uploads/branding/'.$name;
-        $json=json_encode(['logo_path'=>$settings['logo_path'],'hero_video_path'=>$settings['hero_video_path']],JSON_UNESCAPED_SLASHES|JSON_THROW_ON_ERROR);
-        $pdo=Database::connection(); $save=$pdo->prepare('INSERT INTO settings(setting_key,setting_value,autoload) VALUES(?,?,1) ON DUPLICATE KEY UPDATE setting_value=VALUES(setting_value),autoload=1'); $save->execute(['theme.branding',$json]);
-        if ($old!=='' && $old!==$settings[$rule['key']] && str_starts_with($old,'uploads/branding/')) { $oldFile=APP_ROOT.'/public/'.$old; if(is_file($oldFile)) @unlink($oldFile); }
+        $rule = $rules[$type];
+        $size = (int)($upload['size'] ?? 0);
+        if ($size < 1 || $size > $rule['max']) throw new RuntimeException($type === 'logo' ? 'Logo en fazla 4 MB olabilir.' : 'Video en fazla 45 MB olabilir.');
+        $finfo = new \finfo(FILEINFO_MIME_TYPE);
+        $mime = $finfo->file((string)$upload['tmp_name']);
+        if (!is_string($mime) || !isset($rule['mimes'][$mime])) throw new RuntimeException($type === 'logo' ? 'Logo PNG, JPG veya WebP olmalıdır.' : 'Video MP4 veya WebM olmalıdır.');
+        if ($type === 'logo' && @getimagesize((string)$upload['tmp_name']) === false) throw new RuntimeException('Geçerli bir görsel dosyası yükleyin.');
+
+        $relativeDir = 'uploads/themes/' . $slug . '/branding';
+        $dir = APP_ROOT . '/public/' . $relativeDir;
+        if (!is_dir($dir) && !mkdir($dir, 0755, true) && !is_dir($dir)) throw new RuntimeException('Tema dosya klasörü oluşturulamadı.');
+        $name = $type . '-' . bin2hex(random_bytes(12)) . '.' . $rule['mimes'][$mime];
+        $target = $dir . '/' . $name;
+        if (!move_uploaded_file((string)$upload['tmp_name'], $target)) throw new RuntimeException('Dosya kaydedilemedi.');
+
+        $settings = self::brandSettings($slug);
+        $old = (string)($settings[$rule['key']] ?? '');
+        $settings[$rule['key']] = $relativeDir . '/' . $name;
+        $json = json_encode(['logo_path'=>$settings['logo_path'],'hero_video_path'=>$settings['hero_video_path']], JSON_UNESCAPED_SLASHES | JSON_THROW_ON_ERROR);
+        try {
+            $pdo = Database::connection();
+            $save = $pdo->prepare('INSERT INTO settings(setting_key,setting_value,autoload) VALUES(?,?,1) ON DUPLICATE KEY UPDATE setting_value=VALUES(setting_value),autoload=1');
+            $save->execute(['theme.' . $slug . '.branding', $json]);
+        } catch (\Throwable $e) {
+            @unlink($target);
+            throw $e;
+        }
+        if ($old !== '' && $old !== $settings[$rule['key']] && str_starts_with($old, 'uploads/themes/' . $slug . '/branding/')) {
+            $oldFile = APP_ROOT . '/public/' . $old;
+            if (is_file($oldFile)) @unlink($oldFile);
+        }
     }
-    public static function removeBrandAsset(string $type): void
+
+    public static function removeBrandAsset(string $type, ?string $slug = null): void
     {
-        $keys=['logo'=>'logo_path','hero_video'=>'hero_video_path']; if(!isset($keys[$type])) throw new RuntimeException('Dosya türü geçersiz.');
-        $settings=self::brandSettings(); $old=(string)($settings[$keys[$type]]??''); $settings[$keys[$type]]='';
-        $json=json_encode(['logo_path'=>$settings['logo_path'],'hero_video_path'=>$settings['hero_video_path']],JSON_UNESCAPED_SLASHES|JSON_THROW_ON_ERROR);
-        $pdo=Database::connection(); $save=$pdo->prepare('INSERT INTO settings(setting_key,setting_value,autoload) VALUES(?,?,1) ON DUPLICATE KEY UPDATE setting_value=VALUES(setting_value),autoload=1'); $save->execute(['theme.branding',$json]);
-        if($old!=='' && str_starts_with($old,'uploads/branding/')) { $oldFile=APP_ROOT.'/public/'.$old; if(is_file($oldFile)) @unlink($oldFile); }
+        $slug = $slug ?: self::activeSlug();
+        if (!preg_match('/^[a-z0-9_-]{1,60}$/', $slug) || !isset(self::installed()[$slug])) throw new RuntimeException('Tema bulunamadı.');
+        $keys = ['logo'=>'logo_path','hero_video'=>'hero_video_path'];
+        if (!isset($keys[$type])) throw new RuntimeException('Tema görsel dosyası türü geçersiz.');
+        $settings = self::brandSettings($slug);
+        $old = (string)($settings[$keys[$type]] ?? '');
+        $settings[$keys[$type]] = '';
+        $json = json_encode(['logo_path'=>$settings['logo_path'],'hero_video_path'=>$settings['hero_video_path']], JSON_UNESCAPED_SLASHES | JSON_THROW_ON_ERROR);
+        $pdo = Database::connection();
+        $save = $pdo->prepare('INSERT INTO settings(setting_key,setting_value,autoload) VALUES(?,?,1) ON DUPLICATE KEY UPDATE setting_value=VALUES(setting_value),autoload=1');
+        $save->execute(['theme.' . $slug . '.branding', $json]);
+        if ($old !== '' && str_starts_with($old, 'uploads/themes/' . $slug . '/branding/')) {
+            $oldFile = APP_ROOT . '/public/' . $old;
+            if (is_file($oldFile)) @unlink($oldFile);
+        }
     }
 
     public static function socialSettings(): array
@@ -423,13 +473,13 @@ final class ThemeManager
         if ($template === '') $template = APP_ROOT . '/views/site/' . basename($view);
         if (!is_file($template)) throw new RuntimeException('Tema şablonu bulunamadı: ' . $view);
 
-        $variables['brandSettings'] = self::brandSettings();
+        $variables['brandSettings'] = self::brandSettings($renderSlug);
         extract($variables, EXTR_SKIP);
         ob_start();
         require $template;
         $html = (string)ob_get_clean();
 
-        $brandSettings = self::brandSettings();
+        $brandSettings = self::brandSettings($renderSlug);
         $logoUrl = (string)($brandSettings['logo_url'] ?? '');
         if ($logoUrl !== '') {
             $siteName = (string)($variables['content']['site_name'] ?? $variables['siteName'] ?? 'VillaStay');

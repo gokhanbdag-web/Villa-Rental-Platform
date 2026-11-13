@@ -1389,6 +1389,10 @@ $router->get('/admin/theme-design', static function (): void {
     Auth::requireRole(['super_admin','admin']);
     $themeDesignSlug = ThemeManager::activeSlug();
     $themeDesignSettings = ThemeManager::designSettings($themeDesignSlug);
+    $themeBrandSettings = ThemeManager::brandSettings($themeDesignSlug);
+    $themeBrandMessage = (string)($_SESSION['villa_theme_brand_message'] ?? '');
+    $themeBrandMessageType = (string)($_SESSION['villa_theme_brand_message_type'] ?? 'success');
+    unset($_SESSION['villa_theme_brand_message'], $_SESSION['villa_theme_brand_message_type']);
     $themeDesignMessage = (string)($_SESSION['villa_theme_design_message'] ?? '');
     $themeDesignMessageType = (string)($_SESSION['villa_theme_design_message_type'] ?? 'success');
     unset($_SESSION['villa_theme_design_message'], $_SESSION['villa_theme_design_message_type']);
@@ -1409,10 +1413,39 @@ $router->post('/admin/theme-design', static function (): void {
     redirect('/admin/theme-design');
 });
 
+$router->post('/admin/theme-design/brand-asset', static function (): void {
+    Auth::requireRole(['super_admin','admin']); verify_csrf();
+    try {
+        $type = (string)($_POST['asset_type'] ?? '');
+        $field = $type === 'logo' ? 'brand_logo' : ($type === 'hero_video' ? 'hero_video' : '');
+        if ($field === '') throw new RuntimeException('Dosya türü geçersiz.');
+        ThemeManager::saveBrandAsset($type, (array)($_FILES[$field] ?? []), ThemeManager::activeSlug());
+        $_SESSION['villa_theme_brand_message'] = $type === 'logo' ? 'Aktif tema logosu başarıyla güncellendi.' : 'Aktif tema hero videosu başarıyla güncellendi.';
+        $_SESSION['villa_theme_brand_message_type'] = 'success';
+    } catch (Throwable $e) {
+        error_log('Theme visual asset upload failed: ' . $e->getMessage());
+        $_SESSION['villa_theme_brand_message'] = 'Yükleme başarısız: ' . $e->getMessage();
+        $_SESSION['villa_theme_brand_message_type'] = 'error';
+    }
+    redirect('/admin/theme-design');
+});
+$router->post('/admin/theme-design/brand-asset/remove', static function (): void {
+    Auth::requireRole(['super_admin','admin']); verify_csrf();
+    try {
+        ThemeManager::removeBrandAsset((string)($_POST['asset_type'] ?? ''), ThemeManager::activeSlug());
+        $_SESSION['villa_theme_brand_message'] = 'Tema dosyası kaldırıldı.';
+        $_SESSION['villa_theme_brand_message_type'] = 'success';
+    } catch (Throwable $e) {
+        error_log('Theme visual asset removal failed: ' . $e->getMessage());
+        $_SESSION['villa_theme_brand_message'] = 'Dosya kaldırılamadı.';
+        $_SESSION['villa_theme_brand_message_type'] = 'error';
+    }
+    redirect('/admin/theme-design');
+});
+
 $router->get('/admin/header-settings', static function (): void {
     Auth::requireRole(['super_admin','admin']);
     $socialSettings=ThemeManager::socialSettings();
-    $brandSettings=ThemeManager::brandSettings();
     $themeMessage=(string)($_SESSION['villa_theme_message']??'');
     $themeMessageType=(string)($_SESSION['villa_theme_message_type']??'success');
     unset($_SESSION['villa_theme_message'],$_SESSION['villa_theme_message_type']);
@@ -1429,19 +1462,6 @@ $router->post('/admin/header-settings/social-icons', static function (): void {
         $_SESSION['villa_theme_message']='Kayıt başarısız: '.$e->getMessage();
         $_SESSION['villa_theme_message_type']='error';
     }
-    redirect('/admin/header-settings');
-});
-
-$router->post('/admin/header-settings/brand-asset', static function (): void {
-    Auth::requireRole(['super_admin','admin']);verify_csrf();
-    try { $type=(string)($_POST['asset_type']??''); $field=$type==='logo'?'brand_logo':($type==='hero_video'?'hero_video':''); if($field==='') throw new RuntimeException('Dosya türü geçersiz.'); ThemeManager::saveBrandAsset($type,(array)($_FILES[$field]??[])); $_SESSION['villa_theme_message']=$type==='logo'?'Logo başarıyla yüklendi.':'Hero videosu başarıyla yüklendi.'; $_SESSION['villa_theme_message_type']='success'; }
-    catch(Throwable $e) { error_log('Brand asset upload failed: '.$e->getMessage()); $_SESSION['villa_theme_message']='Yükleme başarısız: '.$e->getMessage(); $_SESSION['villa_theme_message_type']='error'; }
-    redirect('/admin/header-settings');
-});
-$router->post('/admin/header-settings/brand-asset/remove', static function (): void {
-    Auth::requireRole(['super_admin','admin']);verify_csrf();
-    try { ThemeManager::removeBrandAsset((string)($_POST['asset_type']??'')); $_SESSION['villa_theme_message']='Dosya kaldırıldı.'; $_SESSION['villa_theme_message_type']='success'; }
-    catch(Throwable $e) { error_log('Brand asset removal failed: '.$e->getMessage()); $_SESSION['villa_theme_message']='Dosya kaldırılamadı.'; $_SESSION['villa_theme_message_type']='error'; }
     redirect('/admin/header-settings');
 });
 

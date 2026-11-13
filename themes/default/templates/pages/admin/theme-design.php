@@ -28,7 +28,35 @@ $labels = [
 <div class="design-preview" id="designPreview"><span class="preview-accent">ÖNE ÇIKAN KONAKLAMA</span><h2>Hayalinizdeki tatil burada başlıyor</h2><div class="preview-card"><strong>Deniz manzaralı özel villa</strong><p>Konforlu alanlar, özel havuz ve unutulmaz bir konum.</p><span class="preview-button">Konaklamayı incele</span></div></div>
 </section>
 <div class="design-actions"><button class="design-save" type="submit">Tasarım ayarlarını kaydet</button><span class="design-help">Ayarlar veritabanında tema bazında saklanır ve diğer temaları değiştirmez.</span></div>
-</form></main>
+</form>
+<?php if(($themeBrandMessage??'')!==''): ?><div class="design-notice <?= ($themeBrandMessageType??'')==='error'?'error':'' ?>" role="status"><?= e($themeBrandMessage) ?></div><?php endif; ?>
+<section class="design-panel">
+<h2>Aktif tema logosu</h2>
+<p>Logo, bu temanın üst alanında site adının yerine kullanılır. PNG, JPG veya WebP; en fazla 4 MB.</p>
+<?php if(!empty($themeBrandSettings['logo_url'])): ?>
+<div style="display:flex;align-items:center;gap:14px;flex-wrap:wrap;margin:12px 0">
+<img src="<?= e($themeBrandSettings['logo_url']) ?>" alt="Mevcut tema logosu" style="max-width:220px;max-height:76px;object-fit:contain;background:#f7faf8;padding:10px;border:1px solid #e5ebe7;border-radius:9px">
+<form method="post" action="<?= e(app_url('/admin/theme-design/brand-asset/remove')) ?>"><?= csrf_field() ?><input type="hidden" name="asset_type" value="logo"><button class="design-save" type="submit" style="background:#a43e35">Logoyu kaldır</button></form>
+</div>
+<?php endif; ?>
+<form method="post" enctype="multipart/form-data" action="<?= e(app_url('/admin/theme-design/brand-asset')) ?>">
+<?= csrf_field() ?><input type="hidden" name="asset_type" value="logo">
+<div class="design-actions"><input type="file" name="brand_logo" accept="image/png,image/jpeg,image/webp" required><button class="design-save" type="submit">Logoyu yükle ve uygula</button></div>
+</form>
+</section>
+<section class="design-panel">
+<h2>Aktif tema hero video arka planı</h2>
+<p>MP4 veya WebM yükleyin. Video sessiz, döngülü ve otomatik oynatılır; en fazla 45 MB. Video kaldırılırsa temanın varsayılan hero görseli kullanılır.</p>
+<?php if(!empty($themeBrandSettings['hero_video_url'])): ?>
+<div style="margin:12px 0"><video src="<?= e($themeBrandSettings['hero_video_url']) ?>" muted playsinline controls style="display:block;width:min(100%,520px);max-height:180px;background:#17251f;border-radius:10px"></video>
+<form method="post" action="<?= e(app_url('/admin/theme-design/brand-asset/remove')) ?>" style="margin-top:10px"><?= csrf_field() ?><input type="hidden" name="asset_type" value="hero_video"><button class="design-save" type="submit" style="background:#a43e35">Videoyu kaldır</button></form></div>
+<?php endif; ?>
+<form method="post" enctype="multipart/form-data" action="<?= e(app_url('/admin/theme-design/brand-asset')) ?>">
+<?= csrf_field() ?><input type="hidden" name="asset_type" value="hero_video">
+<div class="design-actions"><input type="file" name="hero_video" accept="video/mp4,video/webm" required><button class="design-save" type="submit">Videoyu yükle ve uygula</button></div>
+</form>
+</section>
+</main>
 <script>
 (function(){const form=document.querySelector('.theme-design form');const preview=document.getElementById('designPreview');if(!form||!preview)return;const map={primary:'--preview-primary',accent:'--preview-accent',surface:'--preview-surface',background:'--preview-bg',text:'--preview-text',border:'--preview-border'};function update(){form.querySelectorAll('[data-design-color]').forEach(input=>{const key=input.dataset.designColor;if(map[key])preview.style.setProperty(map[key],input.value);const code=input.parentElement.querySelector('code');if(code)code.textContent=input.value;});}form.addEventListener('input',update);update();})();
 </script></body></html>
