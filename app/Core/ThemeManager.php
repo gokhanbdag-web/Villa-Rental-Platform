@@ -993,6 +993,68 @@ final class ThemeManager
             $html = preg_replace('/<\\/head>/i', '<style id="villa-theme-palette-application">' . $paletteCss . '</style></head>', $html, 1) ?? $html;
         }
 
+        // Site-wide scroll-reactive back-to-top control (shared by every rendered theme page).
+        $backToTopMarkup = <<<'HTML'
+<button type="button" class="villa-back-to-top" id="villaBackToTop" aria-label="Sayfanın başına dön" title="Yukarı çık">
+    <span class="villa-back-to-top__orbit" aria-hidden="true"></span>
+    <svg viewBox="0 0 24 24" width="25" height="25" fill="none" aria-hidden="true">
+        <path d="M12 19V5M6.5 10.5 12 5l5.5 5.5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+    </svg>
+    <span class="villa-back-to-top__shine" aria-hidden="true"></span>
+</button>
+<script>
+(function(){
+    var button=document.getElementById('villaBackToTop');
+    if(!button || button.dataset.ready==='1') return;
+    button.dataset.ready='1';
+    var lastY=window.scrollY||0;
+    var travel=0;
+    var frame=0;
+    var visible=false;
+    var threshold=85;
+    var reduced=window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    function paint(){
+        frame=0;
+        var y=Math.max(0,window.scrollY||0);
+        var delta=y-lastY;
+        lastY=y;
+        if(y>threshold){
+            if(!visible){visible=true;button.classList.add('is-visible');}
+            if(!reduced && Math.abs(delta)>0){
+                var limit=Math.max(0,(window.innerHeight||700)-112);
+                travel=Math.max(-limit,Math.min(0,travel-delta));
+            }
+        }else{
+            visible=false;
+            travel=0;
+            button.classList.remove('is-visible');
+        }
+        button.style.setProperty('--villa-scroll-drift',travel.toFixed(2)+'px');
+        button.classList.toggle('is-at-upper-edge',travel<-(window.innerHeight||700)*0.42);
+    }
+    function onScroll(){if(!frame) frame=window.requestAnimationFrame(paint);}
+    window.addEventListener('scroll',onScroll,{passive:true});
+    window.addEventListener('resize',onScroll,{passive:true});
+    button.addEventListener('click',function(){
+        button.classList.add('is-returning');
+        window.scrollTo({top:0,behavior:reduced?'auto':'smooth'});
+    });
+    window.addEventListener('scroll',function(){
+        if((window.scrollY||0)<2 && button.classList.contains('is-returning')){
+            button.classList.remove('is-returning');
+            button.classList.remove('is-visible');
+            travel=0;
+            button.style.setProperty('--villa-scroll-drift','0px');
+        }
+    },{passive:true});
+    paint();
+})();
+</script>
+HTML;
+        if (stripos($html, '</body>') !== false) {
+            $html = preg_replace('~</body>~i', $backToTopMarkup . '</body>', $html, 1) ?? $html;
+        }
+
         echo $html;
     }
 
