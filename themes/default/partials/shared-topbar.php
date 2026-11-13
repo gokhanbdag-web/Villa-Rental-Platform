@@ -34,7 +34,7 @@ $licenseSeparator = ($licenseTitleMarkup !== '' && $licenseNumberMarkup !== '') 
 $licenseMarkup = ($licenseTitleMarkup !== '' || $licenseNumberMarkup !== '') ? '<div class="villa-social-license">' . $licenseTitleMarkup . $licenseSeparator . $licenseNumberMarkup . '</div>' : '';
 ?>
 <?php if ($addressMarkup !== '' || $callCenterMarkup !== '' || $licenseMarkup !== ''): ?>
-<div class="villa-social-bar"><div class="villa-social-inner"><?= $addressMarkup ?><?= $callCenterMarkup ?><?= $licenseMarkup ?></div></div>
+<div class="villa-social-bar"><div class="villa-social-inner"><div class="villa-social-left"><?= $socialItems ?></div><?= $addressMarkup ?><?= $callCenterMarkup ?><?= $licenseMarkup ?></div></div>
 <?php endif; ?>
 <?php if ($socialItems !== ''): ?>
 <div class="villa-social-drawer" aria-label="Sosyal medya bağlantıları"><?= $socialItems ?></div>
