@@ -700,27 +700,64 @@ final class ThemeManager
         $span = $typography['span'];
         $paragraph = $typography['paragraph'];
         $paragraphLinks = $typography['paragraph_links'];
-        $headingBaseRule = '{font-family:' . json_encode($heading['family']) . '!important;color:' . $heading['color'] . '!important;font-weight:' . (int)$heading['weight'] . '!important;font-style:' . $heading['style'] . '!important;letter-spacing:-.035em!important;text-wrap:balance}';
+        // Build each heading rule as one valid CSS rule. Keep hero H1 isolated so its
+        // dedicated controls below remain authoritative.
         $headingRules = '';
         foreach (['h1','h2','h3','h4','h5','h6'] as $level) {
             $levelSize = (int)$heading['sizes'][$level];
-            $levelLineHeight = (float)$heading['line_heights'][$level];
-            // Give saved heading controls enough specificity to override theme-level
-            // selectors such as ".section-head h2" that also use !important.
-            // The hero H1 is intentionally excluded because it has its own controls.
-            $headingSelector = 'html ' . $themeScope . ' :not(script):not(style) ' . $level
-                . ($level === 'h1' ? ':not(.hero-copy h1)' : '');
-            $headingRules .= $headingSelector . $headingBaseRule
-                . '{font-size:' . $levelSize . 'px!important;line-height:' . rtrim(rtrim(number_format($levelLineHeight, 2, '.', ''), '0'), '.') . '!important}';
+            $levelLineHeight = rtrim(rtrim(number_format((float)$heading['line_heights'][$level], 2, '.', ''), '0'), '.');
+            $headingSelector = $themeScope . ' ' . $level;
+            if ($level === 'h1') $headingSelector .= ':not(.hero-copy h1)';
+            $headingRules .= $headingSelector . '{'
+                . 'font-family:' . json_encode($heading['family']) . ',system-ui,sans-serif!important;'
+                . 'font-size:' . $levelSize . 'px!important;'
+                . 'line-height:' . $levelLineHeight . '!important;'
+                . 'color:' . $heading['color'] . '!important;'
+                . 'font-weight:' . (int)$heading['weight'] . '!important;'
+                . 'font-style:' . $heading['style'] . '!important;'
+                . 'letter-spacing:-.035em!important;text-wrap:balance}';
         }
-        $typographyCss = $themeScope . '{--villa-font-body:' . json_encode($paragraph['family']) . ';--villa-body-size:' . (int)$paragraph['size'] . 'px;--villa-body-line-height:' . $paragraph['line_height'] . ';--villa-body-weight:' . (int)$paragraph['weight'] . ';--villa-body-style:' . $paragraph['style'] . ';--villa-font-heading:' . json_encode($heading['family']) . ';--villa-text-color:' . $design['text'] . ';}'
-            . $themeScope . '{font-family:' . json_encode($paragraph['family']) . ',system-ui,sans-serif!important;font-size:' . (int)$paragraph['size'] . 'px!important;line-height:' . $paragraph['line_height'] . '!important;color:var(--villa-text)!important;font-weight:' . (int)$paragraph['weight'] . '!important;font-style:' . $paragraph['style'] . '!important}'
+        $typographyCss = $themeScope . '{'
+            . '--villa-font-body:' . json_encode($paragraph['family']) . ';'
+            . '--villa-body-size:' . (int)$paragraph['size'] . 'px;'
+            . '--villa-body-line-height:' . $paragraph['line_height'] . ';'
+            . '--villa-body-weight:' . (int)$paragraph['weight'] . ';'
+            . '--villa-body-style:' . $paragraph['style'] . ';'
+            . '--villa-font-heading:' . json_encode($heading['family']) . ';'
+            . '--villa-text-color:' . $design['text'] . ';'
+            . 'font-family:' . json_encode($paragraph['family']) . ',system-ui,sans-serif!important;'
+            . 'font-size:' . (int)$paragraph['size'] . 'px!important;'
+            . 'line-height:' . $paragraph['line_height'] . '!important;'
+            . 'color:var(--villa-text)!important;'
+            . 'font-weight:' . (int)$paragraph['weight'] . '!important;'
+            . 'font-style:' . $paragraph['style'] . '!important}'
             . $themeScope . ' .villa-social-inner{min-height:' . (int)$typography['topbar_height'] . 'px}'
-            . $themeScope . '{font-family:' . json_encode($paragraph['family']) . ',system-ui,sans-serif;font-size:' . (int)$paragraph['size'] . 'px!important;line-height:' . $paragraph['line_height'] . '!important;-webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility}'
             . $headingRules
-            . $themeScope . ' p{font-family:' . json_encode($paragraph['family']) . '!important;font-size:' . (int)$paragraph['size'] . 'px!important;color:' . $paragraph['color'] . '!important;font-weight:' . (int)$paragraph['weight'] . '!important;font-style:' . $paragraph['style'] . '!important;line-height:' . $paragraph['line_height'] . '!important;letter-spacing:0!important}'
-            . $themeScope . ' .villa-eyebrow,' . $themeScope . ' .eyebrow:not(.villa-hero-eyebrow),' . $themeScope . ' .section-eyebrow,' . $themeScope . ' .pill,' . $themeScope . ' .section-head .eyebrow,' . $themeScope . ' .med-faq-intro .eyebrow{font-family:' . json_encode($span['family']) . '!important;font-size:' . (int)$span['size'] . 'px!important;font-weight:' . (int)$span['weight'] . '!important;font-style:' . $span['style'] . '!important;letter-spacing:.075em!important;line-height:' . $span['line_height'] . '!important}'
-            . $themeScope . ' p a:not(.button):not(.btn):not([class*="button"]):not([class*="btn"]):not([class*="cta"]):not(.search-submit):not([role="button"]){font-family:' . json_encode($paragraphLinks['family']) . '!important;font-size:inherit!important;line-height:' . $paragraphLinks['line_height'] . '!important;color:' . $paragraphLinks['color'] . '!important;font-weight:' . (int)$paragraphLinks['weight'] . '!important;font-style:' . $paragraphLinks['style'] . '!important;text-decoration-thickness:1px;text-underline-offset:3px}';
+            . $themeScope . ' p:not(.hero-copy p){'
+            . 'font-family:' . json_encode($paragraph['family']) . ',system-ui,sans-serif!important;'
+            . 'font-size:' . (int)$paragraph['size'] . 'px!important;'
+            . 'color:' . $paragraph['color'] . '!important;'
+            . 'font-weight:' . (int)$paragraph['weight'] . '!important;'
+            . 'font-style:' . $paragraph['style'] . '!important;'
+            . 'line-height:' . $paragraph['line_height'] . '!important;letter-spacing:0!important}'
+            . $themeScope . ' .villa-eyebrow,'
+            . $themeScope . ' .eyebrow:not(.villa-hero-eyebrow),'
+            . $themeScope . ' .section-eyebrow,'
+            . $themeScope . ' .pill,'
+            . $themeScope . ' .section-head .eyebrow,'
+            . $themeScope . ' .med-faq-intro .eyebrow{'
+            . 'font-family:' . json_encode($span['family']) . ',system-ui,sans-serif!important;'
+            . 'font-size:' . (int)$span['size'] . 'px!important;'
+            . 'font-weight:' . (int)$span['weight'] . '!important;'
+            . 'font-style:' . $span['style'] . '!important;'
+            . 'letter-spacing:.075em!important;line-height:' . $span['line_height'] . '!important}'
+            . $themeScope . ' p a:not(.button):not(.btn):not([class*="button"]):not([class*="btn"]):not([class*="cta"]):not(.search-submit):not([role="button"]){'
+            . 'font-family:' . json_encode($paragraphLinks['family']) . ',system-ui,sans-serif!important;'
+            . 'font-size:inherit!important;line-height:' . $paragraphLinks['line_height'] . '!important;'
+            . 'color:' . $paragraphLinks['color'] . '!important;'
+            . 'font-weight:' . (int)$paragraphLinks['weight'] . '!important;'
+            . 'font-style:' . $paragraphLinks['style'] . '!important;'
+            . 'text-decoration-thickness:1px;text-underline-offset:3px}';
         $heroTypography = self::heroTypographySettings($renderSlug);
         $heroFontQuery = [];
         foreach (['eyebrow','title','description','button'] as $heroGroup) {
