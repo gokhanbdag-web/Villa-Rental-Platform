@@ -27,7 +27,7 @@ $header = '<header class="theme-header theme-header--coastal"><div class="theme-
 
 $html = preg_replace('~<header\\b[^>]*>.*?</header>(?:\\s*<div class="drawer-overlay" id="menuOverlay"></div>)?~s', $header, $html, 1) ?? $html;
 if (stripos($html, '</body>') !== false) {
-    $menuScript = '<script>(function(){var b=document.getElementById("menuToggle"),n=document.getElementById("siteNavigation"),o=document.getElementById("menuOverlay");if(!b||!n||!o)return;b.addEventListener("click",function(){requestAnimationFrame(function(){o.classList.toggle("is-open",b.getAttribute("aria-expanded")==="true")})});o.addEventListener("click",function(){if(b.getAttribute("aria-expanded")==="true")b.click()})})();</script>';
+    $menuScript = '<script>(function(){var b=document.getElementById("menuToggle"),n=document.getElementById("siteNavigation"),o=document.getElementById("menuOverlay");if(!b||!n||!o||b.dataset.menuReady==="1")return;b.dataset.menuReady="1";function set(open){n.classList.toggle("is-open",open);o.classList.toggle("is-open",open);b.setAttribute("aria-expanded",open?"true":"false");b.setAttribute("aria-label",open?"Menüyü kapat":"Menüyü aç");document.body.classList.toggle("menu-open",open)}b.addEventListener("click",function(){set(b.getAttribute("aria-expanded")!=="true")});o.addEventListener("click",function(){set(false)});n.addEventListener("click",function(e){if(e.target.closest("a"))set(false)});document.addEventListener("keydown",function(e){if(e.key==="Escape")set(false)})})();</script>';
     $html = preg_replace('~</body>~i', $menuScript . '</body>', $html, 1) ?? $html;
 }
 $html = preg_replace('~<body\\b~i', '<body class="villa-property-mediterranean"', $html, 1) ?? $html;
