@@ -1235,8 +1235,6 @@ body.villa-home-mediterranean .med-family-banner-description{
 @media(max-width:600px){
   body.villa-home-mediterranean .med-family-banner{height:auto;min-height:240px;}
   body.villa-home-mediterranean .med-family-banner-inner{width:calc(100% - 32px);padding:28px 0;}
-  body.villa-home-mediterranean .med-family-banner-title{font-size:min(9vw,38px)!important;}
-  body.villa-home-mediterranean .med-family-banner-description{font-size:min(4vw,16px)!important;}
 }
 
 /* One shared header and mobile drawer for every public/account page. */
