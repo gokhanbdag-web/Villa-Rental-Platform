@@ -45,6 +45,17 @@ $sealed = PaymentSecretVault::encrypt($secret);
 paymentAssert($sealed !== $secret && str_starts_with($sealed, 'enc:v1:'), 'Secret was not encrypted.');
 paymentAssert(PaymentSecretVault::decrypt($sealed) === $secret, 'Encrypted secret did not round-trip.');
 
+$paytrTokenVector = [
+    'merchant_id'=>'123456','user_ip'=>'203.0.113.1','merchant_oid'=>'TESTORDER001',
+    'email'=>'test@example.com','payment_amount'=>'125000',
+    'user_basket'=>'W1siVmlsbGEiLCIxMjUwLjAwIiwxXV0=',
+    'no_installment'=>'0','max_installment'=>'0','currency'=>'TL','test_mode'=>'1',
+    'paytr_token'=>'mZXU+gQEGZ8k+Xh+oVoQHDPWMD5Lb5mFBAxWc7tvStE=',
+];
+paymentAssert(PaymentSignatureVerifier::verifyPaytrIframeToken($paytrTokenVector,'test-merchant-key','test-salt'), 'Valid PayTR iFrame token signature was rejected.');
+$paytrTokenVector['payment_amount']='1';
+paymentAssert(!PaymentSignatureVerifier::verifyPaytrIframeToken($paytrTokenVector,'test-merchant-key','test-salt'), 'Tampered PayTR iFrame token request was accepted.');
+
 $paytrPayload = [
     'merchant_oid' => 'VILLA-TEST-0001',
     'status' => 'success',
