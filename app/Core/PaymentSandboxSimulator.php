@@ -125,20 +125,26 @@ final class PaymentSandboxSimulator
         $message = $secret . $payload['iyziEventType'] . $payload['iyziPaymentId']
             . $payload['token'] . $payload['paymentConversationId'] . $payload['status'];
         $signature = hash_hmac('sha256', $message, $secret);
-        if ($scenario === 'tampered') $payload['paymentConversationId'] = 'VILLA-TAMPERED';
-
+        if (in_array($scenario, ['tampered','wrong_order'], true)) $payload['paymentConversationId'] = 'VILLA-TAMPERED';
         $valid = PaymentSignatureVerifier::verifyIyzicoV3($payload, $signature, $secret);
+        $amountMatches = $scenario !== 'amount_mismatch';
+        $accepted = $valid && $amountMatches;
         $success = $payload['status'] === 'SUCCESS';
+        $messageText = !$valid
+            ? 'Değiştirilmiş iyzico bildirimi veya sipariş referansı reddedildi.'
+            : (!$amountMatches
+                ? 'İmza geçerli ancak ödeme tutarı uyuşmadığı için sonuç reddedildi.'
+                : ($success ? 'Yerel iyzico bildirim simülasyonu doğrulandı.' : 'İmza geçerli, ödeme sonucu başarısız.'));
         return [
             'provider' => 'iyzico',
             'scenario' => $scenario,
             'signature_valid' => $valid,
             'request_signature_valid' => true,
-            'amount_matches' => null,
+            'amount_matches' => $amountMatches,
             'order_matches' => $valid,
-            'callback_accepted' => $valid,
-            'payment_success' => $valid && $success,
-            'message' => !$valid ? 'Değiştirilmiş iyzico bildirimi reddedildi.' : ($success ? 'Yerel iyzico bildirim simülasyonu doğrulandı.' : 'İmza geçerli, ödeme sonucu başarısız.'),
+            'callback_accepted' => $accepted,
+            'payment_success' => $accepted && $success,
+            'message' => $messageText,
             'network_requests' => 0,
             'real_charge' => false,
             'booking_changed' => false,
