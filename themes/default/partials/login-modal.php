@@ -11,6 +11,25 @@
 </form><div class="villa-login-foot">Hesabınız yok mu? <a href="<?= e(app_url('/register')) ?>">Misafir hesabı oluşturun</a></div>
 </div></section>
 <style>
+.villa-login-overlay{position:fixed;inset:0;z-index:5000;background:rgba(13,28,23,.58);backdrop-filter:blur(4px);opacity:0;transition:opacity .22s ease}
+.villa-login-overlay:not([hidden]){opacity:1}
+.villa-login-modal{position:fixed;inset:0;z-index:5001;display:grid;place-items:center;padding:18px;pointer-events:none}
+.villa-login-modal[hidden],.villa-login-overlay[hidden]{display:none}
+.villa-login-card{pointer-events:auto;position:relative;width:min(440px,100%);padding:30px;background:#fff;border-radius:22px;box-shadow:0 25px 80px #071b1438;transform:translateY(12px) scale(.98);opacity:0;transition:transform .32s cubic-bezier(.22,.75,.25,1),opacity .28s ease}
+.villa-login-open .villa-login-card{transform:translateY(0) scale(1);opacity:1}
+.villa-login-card h2{margin:0 0 7px;font-size:24px;color:#20332c}
+.villa-login-card>p{margin:0 0 20px;color:#718078}
+.villa-login-card label{display:block;margin:14px 0 6px;font-size:13px;font-weight:650}
+.villa-login-card input{width:100%;box-sizing:border-box;padding:13px;border:1px solid #dfe8e2;border-radius:10px;font:inherit}
+.villa-login-submit{width:100%;margin-top:20px;padding:14px;border:0;border-radius:11px;background:#167c80;color:#fff;font-weight:700;cursor:pointer}
+.villa-login-close{position:absolute;right:14px;top:12px;width:36px;height:36px;border:0;border-radius:50%;background:#f1f5f2;color:#20332c;font-size:24px;cursor:pointer}
+.villa-login-error{margin-top:12px;padding:10px 12px;border-radius:9px;background:#fff0ef;color:#a32b20;font-size:13px}
+.villa-login-foot{margin-top:17px;text-align:center;font-size:13px;color:#718078}
+.villa-login-foot a{color:#167c80;font-weight:700}
+@media(max-width:600px){.villa-login-modal{align-items:end;padding:0 12px calc(76px + env(safe-area-inset-bottom))}.villa-login-card{width:100%;max-width:480px;padding:26px 21px 22px;border-radius:22px 22px 18px 18px;transform:translateY(calc(100% + 24px));max-height:calc(100dvh - 112px);overflow-y:auto}.villa-login-open .villa-login-card{transform:translateY(0)}}
+@media(prefers-reduced-motion:reduce){.villa-login-card,.villa-login-overlay{transition:none}}
+</style>
+<style>
 .villa-logout-form{display:inline-flex;align-items:center;margin:0}
 .villa-logout-button{display:inline-flex;align-items:center;justify-content:center;padding:10px 14px;border:1px solid #f0d9d6;border-radius:10px;background:#fff8f7;color:var(--villa-text);font:inherit;font-size:var(--villa-body-size);font-weight:var(--villa-body-weight);cursor:pointer;transition:background .18s ease,border-color .18s ease}
 .villa-logout-button:hover{background:#fff0ee;border-color:#e9c2bd}
