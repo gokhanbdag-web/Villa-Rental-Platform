@@ -23,18 +23,14 @@ $topPhoneDigits = preg_replace('/\\D+/', '', $topPhone);
     <nav class="nav" id="siteNavigation"><?php \App\Core\ThemeManager::renderPartial('partials/navigation-items.php', get_defined_vars()); ?></nav>
   </div>
 </header>
-<div class="drawer-overlay" id="menuOverlay"></div>
 <script>
 (function(){
   var button=document.getElementById('menuToggle');
   var menu=document.getElementById('siteNavigation');
-  var overlay=document.getElementById('menuOverlay');
-  if(!button||!menu||!overlay||button.dataset.menuReady==='1')return;
+  if(!button||!menu||button.dataset.menuReady==='1')return;
   button.dataset.menuReady='1';
   function setOpen(open){
     menu.classList.toggle('is-open',open);
-    overlay.classList.toggle('is-open',open);
-    document.body.classList.toggle('menu-open',open);
     button.setAttribute('aria-expanded',open?'true':'false');
     button.setAttribute('aria-label',open?'Menüyü kapat':'Menüyü aç');
     var openMark=button.querySelector('.menu-open-mark');
@@ -47,7 +43,6 @@ $topPhoneDigits = preg_replace('/\\D+/', '', $topPhone);
     event.stopImmediatePropagation();
     setOpen(button.getAttribute('aria-expanded')!=='true');
   },true);
-  overlay.addEventListener('click',function(event){event.stopImmediatePropagation();setOpen(false);},true);
   menu.addEventListener('click',function(event){if(event.target.closest('a'))setOpen(false);},true);
   document.addEventListener('keydown',function(event){if(event.key==='Escape')setOpen(false);});
   window.addEventListener('resize',function(){if(window.innerWidth>760)setOpen(false);});
