@@ -205,6 +205,11 @@ $labels = [
 <label style="display:block;font-weight:700;margin-bottom:7px">YouTube video bağlantısı</label>
 <input type="url" name="hero_youtube_url" value="<?= e($themeBrandSettings['hero_youtube_url']??'') ?>" placeholder="https://www.youtube.com/watch?v=..." style="width:100%;padding:11px;border:1px solid #dce5df;border-radius:8px">
 <small style="display:block;color:#718078;margin:6px 0 14px">Normal YouTube, Shorts ve youtu.be bağlantıları desteklenir. Boş bırakırsanız yüklenmiş MP4/WebM video kullanılır.</small>
+<label for="heroVideoStartSeconds" style="display:block;font-weight:700;margin:14px 0 7px">Videonun başlayacağı saniye</label>
+<input id="heroVideoStartSeconds" type="number" name="hero_video_start_seconds" min="0" max="86400" step="1" value="<?= (int)($themeBrandSettings['hero_video_start_seconds']??0) ?>" style="width:100%;padding:11px;border:1px solid #dce5df;border-radius:8px">
+<small style="display:block;color:#718078;margin:6px 0 14px">Örneğin 15 yazarsanız video 15. saniyeden başlar. 0 videonun başından başlatır.</small>
+<input type="hidden" name="hero_video_loop" value="0">
+<label style="display:flex;align-items:center;gap:9px;font-weight:700;margin:12px 0 14px"><input type="checkbox" name="hero_video_loop" value="1" <?= !empty($themeBrandSettings['hero_video_loop'])?'checked':'' ?>> Video bittiğinde başa sarıp tekrar oynat</label>
 <label for="heroOverlayOpacity" style="display:block;font-weight:700;margin-bottom:7px">Video overlay opacity: <strong id="heroOverlayOpacityValue"><?= (int)($themeBrandSettings['hero_overlay_opacity']??58) ?>%</strong></label>
 <input id="heroOverlayOpacity" type="range" name="hero_overlay_opacity" min="0" max="100" step="1" value="<?= (int)($themeBrandSettings['hero_overlay_opacity']??58) ?>" oninput="document.getElementById('heroOverlayOpacityValue').textContent=this.value+'%'" style="width:100%">
 <small style="display:block;color:#718078;margin:6px 0 14px">0%: karartma yok · 100%: en koyu görünüm. Bu ayar video ve yedek görselin üzerindeki katmanı kontrol eder.</small>
