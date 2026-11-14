@@ -807,7 +807,7 @@ $router->post('/checkout/{bookingCode}/iyzico/start', static function (array $pa
         $checkoutFormContent=trim((string)($response['checkoutFormContent']??''));
         $paymentPageUrl=villa_iyzico_sandbox_payment_url((string)($response['paymentPageUrl']??''));
         $secret=(string)($config['credentials']['secret_key']??'');
-        if(!\\App\\Core\\PaymentSignatureVerifier::verifyIyzicoCheckoutFormInitialize($response,$secret)
+        if(!\App\Core\PaymentSignatureVerifier::verifyIyzicoCheckoutFormInitialize($response,$secret)
             ||!hash_equals($conversationId,(string)($response['conversationId']??''))) {
             throw new RuntimeException('iyzico ödeme oturumu yanıtı imza veya işlem referansı doğrulamasından geçmedi.');
         }
