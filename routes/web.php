@@ -835,8 +835,9 @@ $router->post('/payments/iyzico/webhook', static function (): void {
     $iyziPaymentId=trim((string)($payload['iyziPaymentId']??''));
     $conversationId=trim((string)($payload['paymentConversationId']??''));
     $eventStatus=strtoupper(trim((string)($payload['status']??'')));
+    if(!in_array($eventStatus,['SUCCESS','FAILURE'],true)){http_response_code(200);exit('Intermediate event ignored');}
     $eventId=trim((string)($payload['iyziReferenceCode']??''));
-    if($token===''||$iyziPaymentId===''||$conversationId===''||$eventId===''||!in_array($eventStatus,['SUCCESS','FAILURE'],true)){http_response_code(422);exit('Invalid event');}
+    if($token===''||$iyziPaymentId===''||$conversationId===''||$eventId===''){http_response_code(422);exit('Invalid event');}
     $pdo=Database::connection();
     $find=$pdo->prepare("SELECT pt.id,pt.booking_id,pt.amount,pt.currency,pt.request_payload,b.booking_code FROM payment_transactions pt JOIN bookings b ON b.id=pt.booking_id WHERE pt.provider='iyzico' AND pt.provider_reference=? LIMIT 1");
     $find->execute([$token]);$transaction=$find->fetch();
