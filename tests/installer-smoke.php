@@ -231,7 +231,8 @@ try {
     $landingThemeSource = (string)file_get_contents($root . '/themes/default/templates/landing.php');
     $listingPageSource = (string)file_get_contents($root . '/themes/default/templates/pages/listing.php');
     assertSmoke(str_contains($landingThemeSource, "renderPartial('components/cards/villa-card.php'") && str_contains($listingPageSource, "renderPartial('components/cards/villa-card.php'"), 'Homepage and search results must use the same shared villa card component.');
-    assertSmoke(str_contains($landingThemeSource, 'id="homeCalendar"') && str_contains($landingThemeSource, 'id="calendarMonths"') && str_contains($landingThemeSource, 'class="date-picker-trigger"') && str_contains($landingThemeSource, 'is-in-range') && str_contains($landingThemeSource, "co.value<=ci.value") && !str_contains($landingThemeSource, 'showPicker'), 'Homepage hero must use the accessible custom date-range calendar with past-date blocking, range highlighting and checkout validation.');
+    $heroLandingSource = (string)file_get_contents($root . '/themes/default/templates/pages/landing.php');
+    assertSmoke(str_contains($heroLandingSource, 'id="homeCalendar"') && str_contains($heroLandingSource, 'id="calendarMonths"') && str_contains($heroLandingSource, 'class="date-picker-trigger"') && str_contains($heroLandingSource, 'is-in-range') && str_contains($heroLandingSource, "co.value<=ci.value") && !str_contains($heroLandingSource, 'showPicker'), 'Homepage hero must use the accessible custom date-range calendar with past-date blocking, range highlighting and checkout validation.');
     assertSmoke(!str_contains($landingThemeSource, 'class="med-property-card"') && str_contains($landingThemeSource, 'cardGalleryScript'), 'Homepage must not maintain a separate villa card markup and must initialize the shared gallery controls.');
 
     $themeManagerSource = (string)file_get_contents($root . '/app/Core/ThemeManager.php');
