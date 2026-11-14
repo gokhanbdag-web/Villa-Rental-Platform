@@ -1102,8 +1102,9 @@ final class ThemeManager
             $html = preg_replace('/<\\/head>/i', '<style id="villa-theme-palette-application">' . $paletteCss . '</style></head>', $html, 1) ?? $html;
         }
 
-        // Site-wide scroll-reactive back-to-top control (shared by every rendered theme page).
+        // Back-to-top remains available on desktop; mobile uses the fixed bottom navigation instead.
         $backToTopMarkup = <<<'HTML'
+<style>@media(max-width:760px){.villa-back-to-top{display:none!important}}</style>
 <button type="button" class="villa-back-to-top" id="villaBackToTop" aria-label="Sayfanın başına dön" title="Yukarı çık">
     <span class="villa-back-to-top__orbit" aria-hidden="true"></span>
     <svg viewBox="0 0 24 24" width="25" height="25" fill="none" aria-hidden="true">
