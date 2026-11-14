@@ -1542,7 +1542,9 @@ $router->post('/admin/typography', static function (): void {
 
 $router->get('/admin/settings', static function (): void {
     Auth::requireRole(['super_admin','admin']);
-    $settings=Database::connection()->query("SELECT setting_key,setting_value FROM settings WHERE setting_key IN ('platform.commission_percent','app.currency','app.timezone','payments.iyzico.environment','payments.paytr.environment','payments.iyzico.api_key','payments.iyzico.secret_key','payments.paytr.merchant_id','payments.paytr.merchant_key','payments.paytr.merchant_salt')")->fetchAll(PDO::FETCH_KEY_PAIR);
+    $settings=Database::connection()->query("SELECT setting_key,setting_value FROM settings WHERE setting_key IN ('platform.commission_percent','app.currency','app.timezone','payments.iyzico.environment','payments.paytr.environment','payments.iyzico.enabled','payments.paytr.enabled','payments.iyzico.api_key','payments.iyzico.secret_key','payments.paytr.merchant_id','payments.paytr.merchant_key','payments.paytr.merchant_salt')")->fetchAll(PDO::FETCH_KEY_PAIR);
+    $iyzicoEnabled=($settings['payments.iyzico.enabled']??'0')==='1';
+    $paytrEnabled=($settings['payments.paytr.enabled']??'0')==='1';
     $iyzicoConfigured=!empty($settings['payments.iyzico.api_key'])&&!empty($settings['payments.iyzico.secret_key']);
     $paytrConfigured=!empty($settings['payments.paytr.merchant_id'])&&!empty($settings['payments.paytr.merchant_key'])&&!empty($settings['payments.paytr.merchant_salt']);
     unset($settings['payments.iyzico.api_key'],$settings['payments.iyzico.secret_key'],$settings['payments.paytr.merchant_id'],$settings['payments.paytr.merchant_key'],$settings['payments.paytr.merchant_salt']);
@@ -1554,7 +1556,10 @@ $router->post('/admin/settings', static function (): void {
     $iyzicoEnvironment=(string)($_POST['iyzico_environment']??'sandbox');$paytrEnvironment=(string)($_POST['paytr_environment']??'sandbox');
     if($commission<0||$commission>50||!preg_match('/^[A-Z]{3}$/',$currency)||!in_array($timezone,DateTimeZone::listIdentifiers(),true)||!in_array($iyzicoEnvironment,['sandbox','production'],true)||!in_array($paytrEnvironment,['sandbox','production'],true)){http_response_code(422);exit('Ayar değerlerini kontrol edin.');}
     $pdo=Database::connection();$save=$pdo->prepare('INSERT INTO settings(setting_key,setting_value,autoload) VALUES(?,?,1) ON DUPLICATE KEY UPDATE setting_value=VALUES(setting_value),autoload=1');
-    foreach(['platform.commission_percent'=>(string)$commission,'app.currency'=>$currency,'app.timezone'=>$timezone,'payments.iyzico.environment'=>$iyzicoEnvironment,'payments.paytr.environment'=>$paytrEnvironment,'payments.enabled'=>'0','payments.provider'=>'multiple'] as $key=>$value)$save->execute([$key,$value]);
+    $iyzicoEnabled=!empty($_POST['iyzico_enabled'])&&$_POST['iyzico_enabled']==='1';
+    $paytrEnabled=!empty($_POST['paytr_enabled'])&&$_POST['paytr_enabled']==='1';
+    $anyPaymentEnabled=$iyzicoEnabled||$paytrEnabled;
+    foreach(['platform.commission_percent'=>(string)$commission,'app.currency'=>$currency,'app.timezone'=>$timezone,'payments.iyzico.environment'=>$iyzicoEnvironment,'payments.paytr.environment'=>$paytrEnvironment,'payments.iyzico.enabled'=>$iyzicoEnabled?'1':'0','payments.paytr.enabled'=>$paytrEnabled?'1':'0','payments.enabled'=>$anyPaymentEnabled?'1':'0','payments.provider'=>$anyPaymentEnabled?'multiple':'none'] as $key=>$value)$save->execute([$key,$value]);
     $secrets=['payments.iyzico.api_key'=>'iyzico_api_key','payments.iyzico.secret_key'=>'iyzico_secret_key','payments.paytr.merchant_id'=>'paytr_merchant_id','payments.paytr.merchant_key'=>'paytr_merchant_key','payments.paytr.merchant_salt'=>'paytr_merchant_salt'];
     foreach($secrets as $key=>$field){$value=trim((string)($_POST[$field]??''));if($value!=='')$save->execute([$key,\App\Core\PaymentSecretVault::encrypt($value)]);}
     $clear=[];if(!empty($_POST['clear_iyzico']))$clear=array_merge($clear,['payments.iyzico.api_key','payments.iyzico.secret_key']);if(!empty($_POST['clear_paytr']))$clear=array_merge($clear,['payments.paytr.merchant_id','payments.paytr.merchant_key','payments.paytr.merchant_salt']);
