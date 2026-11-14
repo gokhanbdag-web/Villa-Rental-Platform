@@ -80,7 +80,7 @@ $navigation = is_array($navigation ?? null) ? $navigation : [];
 <header class="checkout-heading">
 <span class="checkout-kicker">Rezervasyonunuz hazır</span>
 <h1>Konaklamanızı tamamlayın</h1>
-<p>Rezervasyon bilgilerinizi kontrol edin ve güvenli ödeme adımını tamamlayın. Ödeme sonucu Villa CMS üzerinde görüntülenecektir.</p>
+<p>Rezervasyon bilgilerinizi kontrol edin ve güvenli ödeme adımını tamamlayın. Ödeme tamamlandığında iyzico sizi başarılı veya başarısız sonuç sayfamıza geri yönlendirecektir.</p>
 </header>
 <div class="checkout-layout">
 <section class="checkout-main">
@@ -105,14 +105,7 @@ $navigation = is_array($navigation ?? null) ? $navigation : [];
 <?php if(!empty($iyzicoPaymentAvailable)&&$booking['status']==='pending'&&($paymentStatus??'')!=='review'): ?>
 <section class="checkout-payment">
 <div class="checkout-section-title"><span class="checkout-step">2</span><div><h2>iyzico ile güvenli ödeme</h2></div></div>
-<p class="checkout-payment-copy">Kart bilgilerinizi iyzico'nun güvenli ödeme bileşeni üzerinden girin. Kart bilgileriniz Villa CMS sunucusuna aktarılmaz.</p>
-<?php if(!empty($iyzicoCheckoutFormHtml)): ?>
-<div class="checkout-form-shell"><div id="iyzipay-checkout-form" class="responsive"></div><?= $iyzicoCheckoutFormHtml ?></div>
-<div class="checkout-notice"><span class="checkout-notice-icon">🔒</span><div><strong>Güvenli ödeme bağlantısı</strong>Ödeme işleminiz iyzico tarafından yürütülür. Sonuç bu sayfada gösterilecektir; lütfen işlem sırasında sayfayı kapatmayın.</div></div>
-<?php elseif(!empty($iyzicoCheckoutFormUrl)): ?>
-<div class="checkout-form-shell checkout-iframe-shell"><iframe title="iyzico güvenli ödeme formu" src="<?= e($iyzicoCheckoutFormUrl) ?>" loading="eager" referrerpolicy="strict-origin-when-cross-origin" allow="payment *" style="display:block;width:100%;min-height:760px;border:0;background:#fff" sandbox="allow-forms allow-scripts allow-same-origin allow-popups allow-popups-to-escape-sandbox allow-top-navigation-by-user-activation"></iframe></div>
-<div class="checkout-notice"><span class="checkout-notice-icon">🔒</span><div><strong>iyzico güvenli ödeme formu</strong>Kart bilgileri iyzico'nun güvenli alanında girilir. Ödeme tamamlandığında rezervasyon sonucu bu sisteme bildirilir.</div></div>
-<?php else: ?>
+<p class="checkout-payment-copy">Devam ettiğinizde iyzico'nun güvenli ödeme sayfasına yönlendirileceksiniz. Kart bilgileriniz Villa CMS sunucusuna aktarılmaz.</p>
 <form method="post" action="<?= e(app_url('/checkout/'.rawurlencode((string)$booking['booking_code']).'/iyzico/start')) ?>">
 <?= csrf_field() ?>
 <div class="checkout-fields">
@@ -121,9 +114,8 @@ $navigation = is_array($navigation ?? null) ? $navigation : [];
 <label class="checkout-field full">Fatura adresi<input name="billing_address" autocomplete="street-address" maxlength="500" required placeholder="Mahalle, cadde, sokak ve kapı numarası"></label>
 </div>
 <p class="checkout-summary-location">Fatura bilgileriniz iyzico'ya aktarılır. Kart numarası ve güvenlik kodu uygulamamızın sunucusundan geçmez.</p>
-<button class="checkout-pay-button" type="submit">Güvenli ödeme alanına geç</button>
+<button class="checkout-pay-button" type="submit">iyzico güvenli ödeme sayfasına git</button>
 </form>
-<?php endif; ?>
 </section>
 <?php else: ?>
 <div class="checkout-notice"><span class="checkout-notice-icon">i</span><div><strong>Ödeme bilgisi</strong>Online ödeme şu anda etkin değil veya rezervasyonunuzun ödeme durumu güncelleniyor.</div></div>
