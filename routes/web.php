@@ -693,6 +693,7 @@ $router->post('/checkout/{bookingCode}/iyzico/start', static function (array $pa
     $user=Auth::user();if(!$user)redirect('/login');
     $config=\App\Core\PaymentGatewayConfig::forProvider('iyzico');
     if(!$config['enabled']||!$config['configured']){http_response_code(409);exit('iyzico ödeme altyapısı etkin değil veya API bilgileri eksik.');}
+    if($config['environment']!=='sandbox'){http_response_code(409);exit('Bu aşamada yalnızca iyzico Sandbox ödemeleri açıktır. Canlı ödeme akışı ayrıca etkinleştirilecektir.');}
     $pdo=Database::connection();
     $stmt=$pdo->prepare("SELECT b.*,p.title AS property_title,p.slug AS property_slug,u.username,u.email AS account_email,u.created_at AS account_created FROM bookings b JOIN properties p ON p.id=b.property_id JOIN users u ON u.id=b.guest_user_id WHERE b.booking_code=? AND b.guest_user_id=? LIMIT 1");
     $stmt->execute([$params['bookingCode']??'',(int)$user['id']]);$booking=$stmt->fetch();
@@ -723,6 +724,7 @@ $router->post('/checkout/{bookingCode}/iyzico/start', static function (array $pa
     $ip=(string)($_SERVER['REMOTE_ADDR']??'127.0.0.1');
     $conversationId='VR'.$booking['id'].'-'.bin2hex(random_bytes(8));
     $callbackUrl=app_url('/payments/iyzico/callback');
+    if(!str_starts_with($callbackUrl,'https://')){http_response_code(503);exit('iyzico ödeme bildirimi için HTTPS adresi gereklidir.');}
     $payload=[
         'locale'=>'tr','conversationId'=>$conversationId,'price'=>$amount,'paidPrice'=>$amount,
         'currency'=>$currency,'basketId'=>(string)$booking['booking_code'],'paymentGroup'=>'PRODUCT',
