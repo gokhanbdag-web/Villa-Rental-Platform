@@ -1635,3 +1635,42 @@ body[data-villa-theme] .listing-card button:focus,
 body[data-villa-theme] .stay button:focus{
   border-color:transparent!important;
 }
+
+/* Smooth clean header: keep only a barely visible divider under the top info strip. */
+body[data-villa-theme] .med-topbar{
+  border:0!important;
+  border-bottom:1px solid rgba(255,255,255,.16)!important;
+  box-shadow:none!important;
+}
+body[data-villa-theme] .theme-header,
+body[data-villa-theme] .site-header{
+  border:0!important;
+  box-shadow:none!important;
+}
+body[data-villa-theme] .site-header .mobile-menu-toggle,
+body[data-villa-theme] .site-header .theme-menu-toggle,
+body[data-villa-theme] .theme-header .theme-menu-toggle{
+  border:0!important;
+  box-shadow:none!important;
+}
+body[data-villa-theme] .site-header .nav a,
+body[data-villa-theme] .theme-header .nav a,
+body[data-villa-theme] .site-header .nav .nav-entry-top>a,
+body[data-villa-theme] .theme-header .nav .nav-entry-top>a{
+  border:0!important;
+  box-shadow:none!important;
+}
+@media(min-width:761px){
+  body[data-villa-theme] .site-header,
+  body[data-villa-theme] .theme-header{
+    border-top:0!important;
+    border-bottom:0!important;
+  }
+}
+@media(max-width:760px){
+  body[data-villa-theme] .site-header,
+  body[data-villa-theme] .theme-header{
+    border-top:0!important;
+    border-bottom:0!important;
+  }
+}
