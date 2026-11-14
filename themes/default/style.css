@@ -1710,33 +1710,3 @@ body[data-villa-theme] .drawer-overlay{display:none!important;opacity:0!importan
   body[data-villa-theme].menu-open{overflow:visible!important}
 }
 
-
-/* Ensure the mobile menu control always shows a clear open/close glyph. */
-@media(max-width:760px){
-  body[data-villa-theme] .site-header .theme-menu-toggle{
-    color:var(--villa-text,#20332c)!important;
-    font-size:0!important;
-    line-height:1!important;
-    -webkit-text-fill-color:initial!important;
-    opacity:1!important;
-    visibility:visible!important;
-  }
-  body[data-villa-theme] .site-header .theme-menu-toggle .menu-open-mark,
-  body[data-villa-theme] .site-header .theme-menu-toggle .menu-close-mark{
-    display:none!important;
-  }
-  body[data-villa-theme] .site-header .theme-menu-toggle::before{
-    content:"☰"!important;
-    display:block!important;
-    color:var(--villa-text,#20332c)!important;
-    font-family:Arial,sans-serif!important;
-    font-size:29px!important;
-    font-weight:400!important;
-    line-height:1!important;
-    text-align:center!important;
-  }
-  body[data-villa-theme] .site-header .theme-menu-toggle[aria-expanded="true"]::before{
-    content:"×"!important;
-    font-size:37px!important;
-  }
-}
