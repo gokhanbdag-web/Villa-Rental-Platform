@@ -682,7 +682,7 @@ $router->get('/checkout/{bookingCode}', static function(array $params):void {
     $pdo=Database::connection();$stmt=$pdo->prepare("SELECT b.*,p.title AS property_title,p.slug AS property_slug FROM bookings b JOIN properties p ON p.id=b.property_id WHERE b.booking_code=? AND b.guest_user_id=? LIMIT 1");
     $stmt->execute([$params['bookingCode']??'',(int)$user['id']]);$booking=$stmt->fetch();
     if(!$booking){http_response_code(404);exit('Rezervasyon bulunamadı.');}
-    $iyzicoConfig=\\App\\Core\\PaymentGatewayConfig::forProvider('iyzico');
+    $iyzicoConfig=\App\Core\PaymentGatewayConfig::forProvider('iyzico');
     $iyzicoPaymentAvailable=!empty($iyzicoConfig['enabled'])&&!empty($iyzicoConfig['configured']);
     $paymentStatus=(string)($_GET['payment']??'');
     ThemeManager::renderTemplate('templates/pages/checkout.php',get_defined_vars());
