@@ -33,7 +33,14 @@
 <?php if(!empty($iyzicoPaymentAvailable)&&$booking['status']==='pending'&&($paymentStatus??'')!=='review'): ?>
 <section class="payment-panel">
 <h2>iyzico ile güvenli ödeme</h2>
-<p class="muted">Kart bilgileriniz bu siteye kaydedilmez. Ödeme, iyzico'nun güvenli ödeme sayfasında tamamlanır.</p>
+<p class="muted">Kart bilgilerinizi bu sayfadan ayrılmadan, iyzico'nun güvenli ödeme bileşeni üzerinden girin. Kart bilgileriniz uygulamamıza aktarılmaz.</p>
+<?php if(!empty($iyzicoCheckoutFormHtml)): ?>
+<div class="iyzico-embedded-shell">
+<div id="iyzipay-checkout-form" class="responsive"></div>
+<?= $iyzicoCheckoutFormHtml ?>
+</div>
+<div class="notice" style="margin-top:14px">Ödeme işleminiz iyzico tarafından güvenli şekilde yürütülür. İşlem tamamlandığında rezervasyon sonucunuz bu sitede gösterilecektir. Lütfen ödeme sırasında sayfayı kapatmayın.</div>
+<?php else: ?>
 <form method="post" action="<?= e(app_url('/checkout/'.rawurlencode((string)$booking['booking_code']).'/iyzico/start')) ?>">
 <?= csrf_field() ?>
 <div class="fields">
@@ -47,9 +54,10 @@
 <input name="billing_address" autocomplete="street-address" maxlength="500" required placeholder="Mahalle, cadde, sokak ve kapı numarası">
 </label>
 </div>
-<p class="fine">Bu bilgiler iyzico'nun ödeme işlemini gerçekleştirmesi için aktarılır. Kart bilgileri uygulamamızın sunucusundan geçmez.</p>
-<button class="button pay" type="submit">iyzico ile <?= e(number_format((float)$booking['total'],2,',','.')) ?> <?= e($booking['currency']) ?> öde</button>
+<p class="fine">Fatura bilgileriniz iyzico'ya aktarılır. Kart numarası ve güvenlik kodu uygulamamızın sunucusundan geçmez.</p>
+<button class="button pay" type="submit">Güvenli ödeme alanını aç</button>
 </form>
+<?php endif; ?>
 </section>
 <?php else: ?>
 <div class="notice">Online ödeme altyapısı şu anda etkin değil. Rezervasyonunuz beklemede kalır; ödeme tamamlanmadan onaylanmaz.</div>

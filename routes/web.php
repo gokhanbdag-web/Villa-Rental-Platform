@@ -686,11 +686,19 @@ $router->get('/checkout/{bookingCode}', static function(array $params):void {
     $iyzicoPaymentAvailable=!empty($iyzicoConfig['enabled'])&&!empty($iyzicoConfig['configured'])&&($iyzicoConfig['environment']??'')==='sandbox';
     $requestedPaymentStatus=(string)($_GET['payment']??'');
     $paymentStatus=in_array($requestedPaymentStatus,['failed','verify_error'],true)?$requestedPaymentStatus:'';
-    $latestPayment=$pdo->prepare("SELECT status FROM payment_transactions WHERE booking_id=? AND provider='iyzico' ORDER BY id DESC LIMIT 1");
-    $latestPayment->execute([(int)$booking['id']]);$latestPaymentStatus=(string)($latestPayment->fetchColumn()?:'');
+    $latestPayment=$pdo->prepare("SELECT status,response_payload,expires_at FROM payment_transactions WHERE booking_id=? AND provider='iyzico' ORDER BY id DESC LIMIT 1");
+    $latestPayment->execute([(int)$booking['id']]);$latestPaymentRow=$latestPayment->fetch(PDO::FETCH_ASSOC)?:[];
+    $latestPaymentStatus=(string)($latestPaymentRow['status']??'');
+    $iyzicoCheckoutFormHtml='';
     if($latestPaymentStatus==='processing')$paymentStatus='review';
     elseif($latestPaymentStatus==='paid')$paymentStatus='paid';
     elseif($latestPaymentStatus==='failed')$paymentStatus='failed';
+    elseif($latestPaymentStatus==='pending'&&!empty($latestPaymentRow['expires_at'])&&strtotime((string)$latestPaymentRow['expires_at'])>time()){
+        $storedResponse=json_decode((string)($latestPaymentRow['response_payload']??''),true);
+        $encodedForm=is_array($storedResponse)?(string)($storedResponse['checkoutFormContent']??''):'';
+        $decodedForm=$encodedForm!==''?base64_decode($encodedForm,true):false;
+        if(is_string($decodedForm)&&$decodedForm!==''&&str_contains($decodedForm,'iyzipay-checkout-form'))$iyzicoCheckoutFormHtml=$decodedForm;
+    }
     ThemeManager::renderTemplate('templates/pages/checkout.php',get_defined_vars());
 });
 
@@ -709,7 +717,16 @@ $router->post('/checkout/{bookingCode}/iyzico/start', static function (array $pa
     $existingPayment->execute([(int)$booking['id']]);$activePayment=$existingPayment->fetch();
     if($activePayment&&$activePayment['status']==='processing')redirect('/checkout/'.rawurlencode((string)$booking['booking_code']).'?payment=review');
     if($activePayment&&$activePayment['status']==='pending'){
-        if(!empty($activePayment['checkout_url'])&&(!empty($activePayment['expires_at'])&&strtotime((string)$activePayment['expires_at'])>time()))redirect((string)$activePayment['checkout_url']);
+        if(!empty($activePayment['expires_at'])&&strtotime((string)$activePayment['expires_at'])>time()){
+            $stored=$pdo->prepare("SELECT response_payload FROM payment_transactions WHERE provider='iyzico' AND provider_reference=? AND status='pending' LIMIT 1");
+            $stored->execute([(string)$activePayment['provider_reference']]);
+            $storedResponse=json_decode((string)($stored->fetchColumn()?:''),true);
+            $encodedForm=is_array($storedResponse)?(string)($storedResponse['checkoutFormContent']??''):'';
+            $decodedForm=$encodedForm!==''?base64_decode($encodedForm,true):false;
+            if(is_string($decodedForm)&&$decodedForm!==''&&str_contains($decodedForm,'iyzipay-checkout-form')){
+                redirect('/checkout/'.rawurlencode((string)$booking['booking_code']));
+            }
+        }
         if(str_starts_with((string)$activePayment['provider_reference'],'init:')){http_response_code(409);exit('Ödeme oturumu hazırlanıyor. Lütfen birkaç saniye sonra tekrar deneyin.');}
         $expire=$pdo->prepare("UPDATE payment_transactions SET status='expired',updated_at=NOW() WHERE provider='iyzico' AND provider_reference=? AND status='pending'");
         $expire->execute([(string)$activePayment['provider_reference']]);
@@ -765,40 +782,25 @@ $router->post('/checkout/{bookingCode}/iyzico/start', static function (array $pa
         $insert->execute([(int)$booking['id'],$placeholder,$idempotency,$amount,$currency,json_encode(['conversationId'=>$conversationId,'basketId'=>$booking['booking_code'],'environment'=>'sandbox'],JSON_UNESCAPED_UNICODE)]);
         $transactionId=(int)$pdo->lastInsertId();
         $response=\App\Core\IyzicoApiClient::initializeCheckoutForm($config,$payload);
-        $token=trim((string)($response['token']??''));$paymentUrl=trim((string)($response['paymentPageUrl']??''));
+        $token=trim((string)($response['token']??''));
+        $checkoutFormContent=trim((string)($response['checkoutFormContent']??''));
         $secret=(string)($config['credentials']['secret_key']??'');
         if(!\App\Core\PaymentSignatureVerifier::verifyIyzicoCheckoutFormInitialize($response,$secret)
             ||!hash_equals($conversationId,(string)($response['conversationId']??''))) {
             throw new RuntimeException('iyzico ödeme oturumu yanıtı imza veya işlem referansı doğrulamasından geçmedi.');
         }
-        $urlParts=parse_url($paymentUrl);
-        $actualHost=is_array($urlParts)?strtolower((string)($urlParts['host']??'')):'';
-        $query=[];
-        if(is_array($urlParts))parse_str((string)($urlParts['query']??''),$query);
-        $urlValidation = [
-            'scheme' => (string)($urlParts['scheme'] ?? ''),
-            'host' => $actualHost,
-            'port' => (int)($urlParts['port'] ?? 443),
-            'has_userinfo' => isset($urlParts['user']) || isset($urlParts['pass']),
-            'has_fragment' => isset($urlParts['fragment']),
-            'token_present' => $token !== '',
-            'token_query_present' => isset($query['token']),
-            'token_matches' => $token !== '' && hash_equals($token, (string)($query['token'] ?? '')),
-        ];
-        $validPaymentHost = in_array($actualHost, ['sandbox-api.iyzipay.com', 'sandbox-cpp.iyzipay.com'], true);
-        $validPaymentUrl = $token !== '' && is_array($urlParts)
-            && $urlValidation['scheme'] === 'https'
-            && !$urlValidation['has_userinfo'] && !$urlValidation['has_fragment']
-            && $urlValidation['port'] === 443
-            && $validPaymentHost && $urlValidation['token_matches'];
-        if (!$validPaymentUrl) {
-            error_log('iyzico Checkout URL validation details: ' . json_encode($urlValidation, JSON_UNESCAPED_SLASHES));
-            throw new RuntimeException('iyzico Sandbox ödeme sayfası adresi doğrulanamadı.');
+        $decodedCheckoutForm=$checkoutFormContent!==''?base64_decode($checkoutFormContent,true):false;
+        if($token===''||!is_string($decodedCheckoutForm)||$decodedCheckoutForm===''||!str_contains($decodedCheckoutForm,'iyzipay-checkout-form')){
+            throw new RuntimeException('iyzico güvenli ödeme bileşeni yanıtı eksik veya geçersiz.');
         }
-        $update=$pdo->prepare("UPDATE payment_transactions SET provider_reference=?,checkout_url=?,response_payload=?,expires_at=DATE_ADD(NOW(),INTERVAL 30 MINUTE),updated_at=NOW() WHERE id=? AND status='pending'");
-        $update->execute([$token,$paymentUrl,json_encode(['token'=>$token,'conversationId'=>$conversationId],JSON_UNESCAPED_UNICODE),$transactionId]);
+        $storedResponse=json_encode([
+            'token'=>$token,'conversationId'=>$conversationId,'checkoutFormContent'=>$checkoutFormContent,
+            'render_mode'=>'embedded','environment'=>'sandbox',
+        ],JSON_UNESCAPED_UNICODE|JSON_UNESCAPED_SLASHES);
+        $update=$pdo->prepare("UPDATE payment_transactions SET provider_reference=?,checkout_url=NULL,response_payload=?,expires_at=DATE_ADD(NOW(),INTERVAL 30 MINUTE),updated_at=NOW() WHERE id=? AND status='pending'");
+        $update->execute([$token,$storedResponse,$transactionId]);
         if($update->rowCount()!==1)throw new RuntimeException('Ödeme oturumu yerel kayda bağlanamadı.');
-        redirect($paymentUrl);
+        redirect('/checkout/'.rawurlencode((string)$booking['booking_code']));
     }catch(Throwable $e){
         if(isset($transactionId)){
             $fail=$pdo->prepare("UPDATE payment_transactions SET status='failed',updated_at=NOW() WHERE id=? AND status='pending'");$fail->execute([$transactionId]);
