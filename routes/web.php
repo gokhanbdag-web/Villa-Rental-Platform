@@ -919,6 +919,7 @@ foreach(['success','failed','review'] as $paymentResultType){
         $contentStmt=$pdo->prepare('SELECT content_key,content_value FROM site_content WHERE language_code=?');
         $contentStmt->execute([$locale]);$content=$contentStmt->fetchAll(PDO::FETCH_KEY_PAIR);
         $siteName=(string)($content['site_name']??'VillaStay');
+        $brandSettings=ThemeManager::brandSettings(ThemeManager::activeSlug());
         ThemeManager::renderTemplate('templates/pages/payment-result.php',get_defined_vars());
     });
 }
