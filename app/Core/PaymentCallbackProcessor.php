@@ -95,7 +95,7 @@ final class PaymentCallbackProcessor
             $currentStatus = (string)$transaction['status'];
             if ($currentStatus === $targetStatus) {
                 if (!$inbox->markProcessed($provider, $eventId)) {
-                    throw new \\RuntimeException('Tekrarlanan ödeme bildirimi tamamlandı olarak işaretlenemedi.');
+                    throw new \RuntimeException('Tekrarlanan ödeme bildirimi tamamlandı olarak işaretlenemedi.');
                 }
                 $this->pdo->commit();
                 return ['result' => 'already_applied', 'payment_updated' => false, 'payment_status' => $currentStatus];
