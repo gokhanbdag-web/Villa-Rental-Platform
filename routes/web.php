@@ -501,6 +501,42 @@ $router->get('/destinasyonlar', static function (): void {
     ThemeManager::render('destinations.php', get_defined_vars());
 });
 
+$router->get('/api/villas/suggest', static function (): void {
+    $term = trim((string)($_GET['q'] ?? ''));
+    $term = mb_substr($term, 0, 80);
+    header('Content-Type: application/json; charset=utf-8');
+    header('Cache-Control: no-store, max-age=0');
+    if ($term === '') {
+        echo json_encode(['items' => []], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+        return;
+    }
+    $pdo = Database::connection();
+    $stmt = $pdo->prepare("SELECT p.title,p.slug,p.city,p.district,p.base_nightly_price,p.max_guests,
+        (SELECT pm.file_path FROM property_media pm WHERE pm.property_id=p.id ORDER BY pm.is_cover DESC,pm.sort_order,pm.id LIMIT 1) AS cover_image
+        FROM properties p
+        WHERE p.status='published' AND p.title LIKE ?
+        ORDER BY p.title ASC,p.id ASC
+        LIMIT 15");
+    $stmt->execute(['%' . $term . '%']);
+    $items = [];
+    foreach ($stmt->fetchAll(PDO::FETCH_ASSOC) as $property) {
+        $image = trim((string)($property['cover_image'] ?? ''));
+        if ($image !== '' && !preg_match('~^https?://~i', $image)) {
+            $image = '/' . ltrim($image, '/');
+        }
+        $items[] = [
+            'title' => (string)$property['title'],
+            'url' => app_url('/villa/' . rawurlencode((string)$property['slug'])),
+            'image' => $image,
+            'city' => (string)($property['city'] ?? ''),
+            'district' => (string)($property['district'] ?? ''),
+            'price' => (int)($property['base_nightly_price'] ?? 0),
+            'guests' => (int)($property['max_guests'] ?? 0),
+        ];
+    }
+    echo json_encode(['items' => $items], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+});
+
 $router->get('/villa/{slug}', static function (array $params): void {
     $pdo=Database::connection();
     $stmt=$pdo->prepare("SELECT * FROM properties WHERE slug=? AND status='published' LIMIT 1");
