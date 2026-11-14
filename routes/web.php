@@ -714,8 +714,11 @@ $router->post('/checkout/{bookingCode}/iyzico/start', static function (array $pa
     $nameParts=preg_split('/\s+/u',trim((string)$booking['guest_name']),2)?:[];
     $firstName=trim((string)($nameParts[0]??'Misafir'));
     $lastName=trim((string)($nameParts[1]??'Misafir'));
-    $phone=preg_replace('/[^0-9+]/','',(string)$booking['guest_phone'])?:'+905000000000';
-    if(!str_starts_with($phone,'+'))$phone='+'.$phone;
+    $phoneDigits=preg_replace('/\D+/','',(string)$booking['guest_phone'])??'';
+    if(strlen($phoneDigits)===11&&str_starts_with($phoneDigits,'0'))$phone='+90'.substr($phoneDigits,1);
+    elseif(strlen($phoneDigits)===12&&str_starts_with($phoneDigits,'90'))$phone='+'.$phoneDigits;
+    elseif(strlen($phoneDigits)===10)$phone='+90'.$phoneDigits;
+    else{http_response_code(422);exit('Telefon numarası iyzico formatına uygun değil. Lütfen hesap telefon bilginizi güncelleyin.');}
     $now=date('Y-m-d H:i:s');
     $ip=(string)($_SERVER['REMOTE_ADDR']??'127.0.0.1');
     $conversationId='VR'.$booking['id'].'-'.bin2hex(random_bytes(8));
@@ -778,7 +781,7 @@ $router->post('/payments/iyzico/callback', static function (): void {
         $fraudStatus=(int)($result['fraudStatus']??-1);
         $normalizedStatus=($paymentStatus==='SUCCESS'&&$fraudStatus===1)?'paid':(($paymentStatus==='SUCCESS'&&$fraudStatus===0)?'processing':'failed');
         $paymentId=trim((string)($result['paymentId']??''));
-        if($paymentId==='')throw new RuntimeException('iyzico ödeme referansı eksik.');
+        $eventId=$paymentId!==''?$paymentId:'token-'.$token;
         $callback=[
             'provider'=>'iyzico','provider_reference'=>$token,'booking_id'=>(int)$transaction['booking_id'],
             'amount'=>(string)($result['paidPrice']??''),'currency'=>strtoupper((string)($result['currency']??'')),
@@ -786,7 +789,7 @@ $router->post('/payments/iyzico/callback', static function (): void {
         ];
         $eventPayload=['token'=>$token,'paymentId'=>$paymentId,'paymentStatus'=>$paymentStatus,'fraudStatus'=>$fraudStatus,'paidPrice'=>$callback['amount'],'currency'=>$callback['currency']];
         $processed=(new \App\Core\PaymentCallbackProcessor($pdo))->processVerified(
-            'iyzico',$paymentId,'CHECKOUT_FORM_AUTH',$token,$eventPayload,$callback
+            'iyzico',$eventId,'CHECKOUT_FORM_AUTH',$token,$eventPayload,$callback
         );
         $suffix=($processed['payment_status']??'')==='paid'?'paid':(($normalizedStatus==='processing')?'review':'failed');
         redirect('/checkout/'.rawurlencode((string)$transaction['booking_code']).'?payment='.$suffix);
