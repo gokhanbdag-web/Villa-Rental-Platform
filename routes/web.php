@@ -722,19 +722,7 @@ $router->get('/checkout/{bookingCode}', static function(array $params):void {
     if($latestPaymentStatus==='processing')$paymentStatus='review';
     elseif($latestPaymentStatus==='paid')$paymentStatus='paid';
     elseif($latestPaymentStatus==='failed'&&$paymentStatus!=='init_error')$paymentStatus='failed';
-    elseif($latestPaymentStatus==='pending'&&!empty($latestPaymentRow['expires_at'])&&strtotime((string)$latestPaymentRow['expires_at'])>time()){
-        $storedResponse=json_decode((string)($latestPaymentRow['response_payload']??''),true);
-        if(is_array($storedResponse)){
-            $encodedForm=(string)($storedResponse['checkoutFormContent']??'');
-            $decodedForm=villa_iyzico_checkout_form_html($encodedForm);
-            if($decodedForm!==null){
-                $iyzicoCheckoutFormHtml=$decodedForm;
-            }else{
-                $iyzicoCheckoutFormUrl=villa_iyzico_checkout_iframe_url((string)($storedResponse['paymentPageUrl']??''))
-                    ??villa_iyzico_checkout_iframe_url((string)($storedResponse['checkoutIframeUrl']??''));
-            }
-        }
-    }
+
     $locale='tr';
     $navigation=villa_navigation_tree($pdo,'header',$locale);
     $footerNavigation=villa_navigation_tree($pdo,'footer',$locale);
