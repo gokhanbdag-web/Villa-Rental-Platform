@@ -19,7 +19,7 @@ $topPhoneDigits = preg_replace('/\\D+/', '', $topPhone);
 <header class="site-header">
   <div class="wrap head">
     <a class="brand" href="<?= e(app_url('/')) ?>" aria-label="<?= e($themeSiteName) ?>"><?php if ($themeLogoUrl !== ''): ?><img src="<?= e($themeLogoUrl) ?>" alt="<?= e($themeSiteName) ?>"><?php else: ?><?= e($themeSiteName) ?><?php endif; ?></a>
-    <button class="mobile-menu-toggle theme-menu-toggle" id="menuToggle" type="button" aria-label="Menüyü aç" aria-controls="siteNavigation" aria-expanded="false"><span class="menu-open-mark">☰</span><span class="menu-close-mark" hidden>×</span></button>
+    <button class="mobile-menu-toggle theme-menu-toggle" id="menuToggle" type="button" aria-label="Menüyü aç" aria-controls="siteNavigation" aria-expanded="false"><span class="menu-open-mark" aria-hidden="true">☰</span><span class="menu-close-mark" aria-hidden="true">×</span></button>
     <nav class="nav" id="siteNavigation"><?php \App\Core\ThemeManager::renderPartial('partials/navigation-items.php', get_defined_vars()); ?></nav>
   </div>
 </header>
@@ -33,10 +33,6 @@ $topPhoneDigits = preg_replace('/\\D+/', '', $topPhone);
     menu.classList.toggle('is-open',open);
     button.setAttribute('aria-expanded',open?'true':'false');
     button.setAttribute('aria-label',open?'Menüyü kapat':'Menüyü aç');
-    var openMark=button.querySelector('.menu-open-mark');
-    var closeMark=button.querySelector('.menu-close-mark');
-    if(openMark)openMark.hidden=open;
-    if(closeMark)closeMark.hidden=!open;
   }
   button.addEventListener('click',function(event){
     event.preventDefault();
