@@ -14,8 +14,8 @@ $heroYouTubeId=static function(string $url):string{
     }
     return preg_match('/^[A-Za-z0-9_-]{11}$/',$id)?$id:'';
 };
-$heroYouTubeIdValue=$heroYouTubeId((string)($homeSections['hero']['video_url']??''));
-$heroOverlayOpacity=max(0,min(100,(int)($homeSections['hero']['overlay_opacity']??58)));
+$heroYouTubeIdValue=$heroYouTubeId((string)($brandSettings['hero_youtube_url']??$homeSections['hero']['video_url']??''));
+$heroOverlayOpacity=max(0,min(100,(int)($brandSettings['hero_overlay_opacity']??$homeSections['hero']['overlay_opacity']??58)));
 $heroOverlayAlpha=number_format($heroOverlayOpacity/100,2,'.','');
 // Every homepage must surface accommodation inventory, regardless of optional section toggles.
 $showFeatured = true;
