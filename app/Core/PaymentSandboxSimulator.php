@@ -41,12 +41,19 @@ final class PaymentSandboxSimulator
         // PayTR iFrame API step 1 token signature:
         // HMAC_SHA256(merchant_id + user_ip + merchant_oid + email + amount
         // + basket + no_installment + max_installment + currency + test_mode + salt, key)
+        $tokenPayload = [
+            'merchant_id' => $merchantId, 'user_ip' => $userIp, 'merchant_oid' => $merchantOid,
+            'email' => $email, 'payment_amount' => $paymentAmount, 'user_basket' => $basket,
+            'no_installment' => $noInstallment, 'max_installment' => $maxInstallment,
+            'currency' => $currency, 'test_mode' => $testMode,
+        ];
         $tokenMessage = $merchantId . $userIp . $merchantOid . $email . $paymentAmount
             . $basket . $noInstallment . $maxInstallment . $currency . $testMode . self::PAYTR_SALT;
-        $requestToken = base64_encode(hash_hmac('sha256', $tokenMessage, self::PAYTR_KEY, true));
-        $tokenSignatureValid = hash_equals(
-            base64_encode(hash_hmac('sha256', $tokenMessage, self::PAYTR_KEY, true)),
-            $requestToken
+        $tokenPayload['paytr_token'] = base64_encode(hash_hmac('sha256', $tokenMessage, self::PAYTR_KEY, true));
+        $tokenSignatureValid = PaymentSignatureVerifier::verifyPaytrIframeToken(
+            $tokenPayload,
+            self::PAYTR_KEY,
+            self::PAYTR_SALT
         );
 
         $status = $scenario === 'failure' ? 'failed' : 'success';
