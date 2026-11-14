@@ -1825,3 +1825,5 @@ $router->get('/admin', static function (): void {
         ORDER BY b.created_at DESC LIMIT 6")->fetchAll();
     ThemeManager::renderTemplate('templates/pages/admin/dashboard.php', get_defined_vars());
 });
+
+require_once __DIR__ . '/admin-property-location-routes.php';
