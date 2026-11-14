@@ -1,9 +1,9 @@
 <?php
 declare(strict_types=1);
 
-use App\\Core\\Auth;
-use App\\Core\\Database;
-use App\\Core\\ThemeManager;
+use App\Core\Auth;
+use App\Core\Database;
+use App\Core\ThemeManager;
 
 $router->get('/admin/properties/locations', static function (): void {
     Auth::requireRole(['super_admin', 'admin']);
@@ -11,7 +11,7 @@ $router->get('/admin/properties/locations', static function (): void {
     $counts = $pdo->query("SELECT
         SUM(CASE WHEN latitude IS NULL AND longitude IS NULL THEN 1 ELSE 0 END) AS missing,
         SUM(CASE WHEN (latitude IS NULL AND longitude IS NOT NULL) OR (latitude IS NOT NULL AND longitude IS NULL) THEN 1 ELSE 0 END) AS partial,
-        SUM(CASE WHEN latitude IS NULL AND longitude IS NULL AND COALESCE(NULLIF(TRIM(address),''),NULLIF(TRIM(city),'')) IS NULL THEN 1 ELSE 0 END) AS no_address
+        SUM(CASE WHEN latitude IS NULL AND longitude IS NULL AND COALESCE(NULLIF(TRIM(address),''),NULLIF(TRIM(district),''),NULLIF(TRIM(neighborhood),'')) IS NULL THEN 1 ELSE 0 END) AS no_address
         FROM properties")->fetch(PDO::FETCH_ASSOC) ?: [];
     $missingCount = (int)($counts['missing'] ?? 0);
     $partialCount = (int)($counts['partial'] ?? 0);
@@ -53,6 +53,18 @@ $router->post('/admin/properties/locations/process', static function (): void {
                 $parts[] = $value;
             }
         }
+        $hasSpecificAddress = false;
+        foreach (['address', 'neighborhood', 'district'] as $specificField) {
+            if (trim((string)($property[$specificField] ?? '')) !== '') {
+                $hasSpecificAddress = true;
+                break;
+            }
+        }
+        if (!$hasSpecificAddress) {
+            $failed[] = ['id' => $id, 'title' => (string)$property['title'], 'reason' => 'Yalnızca ülke/şehir bilgisi var; ilçe veya açık adres gerekli'];
+            continue;
+        }
+
         $query = implode(', ', $parts);
         if ($query === '') {
             $failed[] = ['id' => $id, 'title' => (string)$property['title'], 'reason' => 'Adres veya şehir bilgisi bulunamadı'];
@@ -93,14 +105,14 @@ $router->post('/admin/properties/locations/process', static function (): void {
 
         if ($latitude === null || $longitude === null || $latitude < -90 || $latitude > 90 || $longitude < -180 || $longitude > 180) {
             $failed[] = ['id' => $id, 'title' => (string)$property['title'], 'reason' => 'Adres için koordinat bulunamadı'];
-            usleep(350000);
+            usleep(800000);
             continue;
         }
 
         $save = $pdo->prepare('UPDATE properties SET latitude=?,longitude=?,updated_at=NOW() WHERE id=? AND latitude IS NULL AND longitude IS NULL');
         $save->execute([$latitude, $longitude, $id]);
         if ($save->rowCount() > 0) $updated++;
-        usleep(350000);
+        usleep(800000);
     }
 
     $remaining = (int)$pdo->query('SELECT COUNT(*) FROM properties WHERE latitude IS NULL AND longitude IS NULL')->fetchColumn();
