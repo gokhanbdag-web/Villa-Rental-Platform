@@ -54,25 +54,48 @@ $mobilePhone = preg_replace('/\\D+/', '', (string)($mobileBarSettings['mobile_ba
 <style>
 .villa-mobile-bar,.villa-mobile-search-overlay{display:none}
 @media(max-width:760px){
- body{padding-bottom:calc(76px + env(safe-area-inset-bottom,0px))!important}
- .villa-mobile-bar{position:fixed;z-index:9998;left:0;right:0;bottom:0;display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:2px;padding:7px 8px calc(7px + env(safe-area-inset-bottom,0px));background:rgba(255,255,255,.97);border-top:1px solid #e6ebe5;box-shadow:0 -8px 28px rgba(29,52,38,.10);backdrop-filter:blur(14px)}
- .villa-mobile-bar a,.villa-mobile-bar button{min-width:0;min-height:52px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;border:0;background:transparent;color:#334b3b;text-decoration:none;font:inherit;cursor:pointer;-webkit-tap-highlight-color:transparent}
- .villa-mobile-bar svg{width:22px;height:22px;display:block;stroke:currentColor;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
- .villa-mobile-bar span{font-size:10px;font-weight:650;line-height:1.15;white-space:nowrap}
- .villa-mobile-bar .villa-mobile-whatsapp svg{color:#159b62}.villa-mobile-bar .villa-mobile-phone svg{color:#315a43}
- .villa-mobile-search-overlay{position:fixed;z-index:10000;inset:0;display:flex;align-items:flex-end;justify-content:center;padding:16px;background:rgba(17,34,25,.48);opacity:0;visibility:hidden;transition:opacity .2s ease,visibility .2s ease}
+ body{padding-bottom:calc(104px + env(safe-area-inset-bottom,0px))!important}
+ .villa-mobile-bar{
+  position:fixed;z-index:9998;left:50%;right:auto;bottom:calc(10px + env(safe-area-inset-bottom,0px));
+  transform:translateX(-50%);width:min(560px,calc(100% - 24px));box-sizing:border-box;
+  display:grid;grid-template-columns:repeat(4,minmax(0,1fr));align-items:center;gap:2px;
+  padding:9px 8px 10px;background:linear-gradient(135deg,rgba(24,49,39,.98),rgba(35,65,51,.98));
+  border:1px solid rgba(224,197,139,.28);border-radius:22px;
+  box-shadow:0 12px 34px rgba(14,31,23,.28),inset 0 1px 0 rgba(255,255,255,.12);
+  -webkit-backdrop-filter:blur(18px);backdrop-filter:blur(18px)
+ }
+ .villa-mobile-bar>a,.villa-mobile-bar>button,.villa-mobile-bar>span{
+  box-sizing:border-box;min-width:0;width:100%;min-height:62px;margin:0;padding:4px 2px;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;gap:5px;
+  border:0;border-radius:14px;background:transparent;color:#f7f5ef;text-decoration:none;
+  font:inherit;cursor:pointer;-webkit-tap-highlight-color:transparent
+ }
+ .villa-mobile-bar>span{opacity:.48;cursor:default}
+ .villa-mobile-bar svg{box-sizing:border-box;width:35px;height:35px;padding:8px;display:block;
+  stroke:currentColor;fill:none;stroke-width:1.75;stroke-linecap:round;stroke-linejoin:round;
+  border-radius:12px;background:rgba(255,255,255,.085);color:#f4f1e9
+ }
+ .villa-mobile-bar>span svg{background:rgba(255,255,255,.06)}
+ .villa-mobile-bar span{font-size:10px;font-weight:650;line-height:1.1;letter-spacing:.01em;white-space:nowrap}
+ .villa-mobile-bar [data-villa-search-open] svg{background:#d9bd83;color:#243b2e;box-shadow:0 3px 10px rgba(0,0,0,.14)}
+ .villa-mobile-bar .villa-mobile-whatsapp svg{color:#78e0a8;background:rgba(37,174,105,.15)}
+ .villa-mobile-bar .villa-mobile-phone svg{color:#e6d3a9;background:rgba(217,189,131,.13)}
+ .villa-mobile-bar>a:active,.villa-mobile-bar>button:active{transform:translateY(1px)}
+ .villa-mobile-bar a:focus-visible,.villa-mobile-bar button:focus-visible{outline:2px solid #e2c58c;outline-offset:2px}
+ .villa-mobile-search-overlay{position:fixed;z-index:10000;inset:0;display:flex;align-items:flex-end;justify-content:center;padding:16px 16px calc(16px + env(safe-area-inset-bottom,0px));background:rgba(12,27,20,.58);opacity:0;visibility:hidden;transition:opacity .22s ease,visibility .22s ease}
  .villa-mobile-search-overlay.is-open{opacity:1;visibility:visible}
- .villa-mobile-search-card{width:min(520px,100%);padding:20px 18px calc(18px + env(safe-area-inset-bottom,0px));border-radius:20px 20px 14px 14px;background:#fff;box-shadow:0 -12px 45px rgba(0,0,0,.16);transform:translateY(18px);transition:transform .22s ease}
+ .villa-mobile-search-card{box-sizing:border-box;width:min(520px,100%);padding:24px 22px calc(22px + env(safe-area-inset-bottom,0px));border:1px solid #e9e2d4;border-radius:24px;background:linear-gradient(160deg,#fff 0%,#f7f6f1 100%);box-shadow:0 -12px 45px rgba(0,0,0,.2);transform:translateY(18px);transition:transform .24s cubic-bezier(.2,.8,.2,1)}
  .villa-mobile-search-overlay.is-open .villa-mobile-search-card{transform:translateY(0)}
- .villa-mobile-search-head{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:14px}
- .villa-mobile-search-head strong{font-size:17px;color:#263b2d}
- .villa-mobile-search-close{width:34px;height:34px;border:0;border-radius:50%;background:#f0f4ef;color:#344b3b;font-size:22px;line-height:1;cursor:pointer}
- .villa-mobile-search-form{display:flex;gap:8px}
- .villa-mobile-search-form input{flex:1;min-width:0;height:48px;padding:0 14px;border:1px solid #dce6dc;border-radius:11px;font:inherit;font-size:14px;outline:none}
- .villa-mobile-search-form input:focus{border-color:#547b5d;box-shadow:0 0 0 3px rgba(84,123,93,.12)}
- .villa-mobile-search-form button{height:48px;padding:0 16px;border:0;border-radius:11px;background:#315a43;color:#fff;font:inherit;font-size:13px;font-weight:700;white-space:nowrap;cursor:pointer}
+ .villa-mobile-search-head{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:18px}
+ .villa-mobile-search-head strong{font-size:19px;font-weight:750;letter-spacing:-.02em;color:#20382b}
+ .villa-mobile-search-close{flex:0 0 38px;width:38px;height:38px;border:1px solid #e7e3d9;border-radius:50%;background:#f1f0e9;color:#344b3b;font-size:23px;line-height:1;cursor:pointer}
+ .villa-mobile-search-form{display:flex;align-items:stretch;gap:9px}
+ .villa-mobile-search-form input{box-sizing:border-box;flex:1;min-width:0;height:52px;padding:0 15px;border:1px solid #dcded4;border-radius:13px;background:#fff;color:#25392d;font:inherit;font-size:14px;outline:none}
+ .villa-mobile-search-form input:focus{border-color:#9c875d;box-shadow:0 0 0 3px rgba(190,164,111,.17)}
+ .villa-mobile-search-form button{height:52px;padding:0 20px;border:0;border-radius:13px;background:linear-gradient(135deg,#294b38,#1c382a);color:#fff;font:inherit;font-size:13px;font-weight:750;white-space:nowrap;cursor:pointer}
 }
-@media(prefers-reduced-motion:reduce){.villa-mobile-search-overlay,.villa-mobile-search-card{transition:none}}
+@media(max-width:360px){@media(max-width:760px){.villa-mobile-bar{width:calc(100% - 16px);padding-left:5px;padding-right:5px}.villa-mobile-bar>a,.villa-mobile-bar>button,.villa-mobile-bar>span{min-height:58px}.villa-mobile-bar svg{width:32px;height:32px}.villa-mobile-bar span{font-size:9px}}}
+@media(prefers-reduced-motion:reduce){.villa-mobile-search-overlay,.villa-mobile-search-card,.villa-mobile-bar>a,.villa-mobile-bar>button{transition:none;transform:none}}
 </style>
 <nav class="villa-mobile-bar" aria-label="Mobil hızlı menü">
  <a href="<?= e(app_url('/')) ?>" aria-label="Ana Sayfa"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m3 10 9-7 9 7"></path><path d="M5 9.5V21h14V9.5M9 21v-7h6v7"></path></svg><span>Ana Sayfa</span></a>
