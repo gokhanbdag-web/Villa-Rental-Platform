@@ -274,6 +274,9 @@ try {
     assertSmoke(str_contains($themeRoutesSource, 'test_iyzico_sandbox') && str_contains($themeRoutesSource, 'IyzicoApiClient::testSandboxConnection'), 'Admin settings must expose the iyzico Sandbox connection test.');
     assertSmoke(str_contains($themeRoutesSource, "/checkout/{bookingCode}/iyzico/start") && str_contains($themeRoutesSource, "/payments/iyzico/callback"), 'iyzico Checkout Form start and callback routes must be registered.');
     assertSmoke(str_contains($themeRoutesSource, 'IyzicoApiClient::initializeCheckoutForm') && str_contains($themeRoutesSource, 'IyzicoApiClient::retrieveCheckoutForm'), 'iyzico checkout must initialize and retrieve the result from the provider.');
+    assertSmoke(str_contains($themeRoutesSource, 'verifyIyzicoCheckoutFormInitialize') && str_contains($themeRoutesSource, 'sandbox-cpp.iyzipay.com'), 'iyzico initialization must verify its response signature and hosted Sandbox payment URL.');
+    assertSmoke(str_contains($themeRoutesSource, 'verifyIyzicoCheckoutFormRetrieve'), 'iyzico callback and webhook must verify the Checkout Form retrieve response signature.');
+
     assertSmoke(str_contains($themeRoutesSource, "/payments/iyzico/webhook") && str_contains($themeRoutesSource, 'verifyIyzicoV3'), 'iyzico Checkout Form webhook must verify V3 signatures.');
     $helpersSource = (string)file_get_contents($root . '/app/Support/helpers.php');
     assertSmoke(str_contains($helpersSource, 'function app_absolute_url') && str_contains($helpersSource, 'HTTPS bağlantısı gereklidir'), 'Absolute HTTPS URL helper must be available for provider callbacks.');
