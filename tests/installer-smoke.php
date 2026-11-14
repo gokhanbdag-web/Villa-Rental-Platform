@@ -126,6 +126,32 @@ try {
     assertSmoke($webhookInbox->markProcessed('paytr','VILLA-SMOKE-001'),'Webhook event could not be marked processed.');
     assertSmoke(!$webhookInbox->claim('paytr','VILLA-SMOKE-001'),'Processed webhook event was claimable again.');
 
+    // A verified successful payment must atomically mark the payment paid and confirm its booking.
+    $paymentReference = 'VILLA-PAYMENT-' . strtoupper(bin2hex(random_bytes(4)));
+    $createPayment = $pdo->prepare("INSERT INTO payment_transactions(booking_id,provider,provider_reference,amount,currency,status,created_at) VALUES(?,'paytr',?,?,?,'pending',NOW())");
+    $createPayment->execute([$bookingId,$paymentReference,number_format($total,2,'.',''),$property['currency']]);
+    $paymentCallback = [
+        'booking_id'=>$bookingId,
+        'provider'=>'paytr',
+        'provider_reference'=>$paymentReference,
+        'amount'=>number_format($total,2,'.',''),
+        'currency'=>$property['currency'],
+        'status'=>'success',
+    ];
+    $paymentProcessor = new PaymentCallbackProcessor($pdo);
+    $paymentEventId = 'VILLA-PAYMENT-EVENT-' . strtoupper(bin2hex(random_bytes(4)));
+    $paymentEventPayload = ['reference'=>$paymentReference,'status'=>'success','amount'=>number_format($total,2,'.','')];
+    $paymentResult = $paymentProcessor->processVerified('paytr',$paymentEventId,'payment_callback',$paymentReference,$paymentEventPayload,$paymentCallback);
+    assertSmoke(($paymentResult['result']??'')==='processed'&&($paymentResult['payment_status']??'')==='paid','Verified successful payment callback was not processed.');
+    $paymentState = $pdo->prepare('SELECT status FROM payment_transactions WHERE provider=? AND provider_reference=? LIMIT 1');
+    $paymentState->execute(['paytr',$paymentReference]);
+    assertSmoke($paymentState->fetchColumn()==='paid','Payment transaction was not marked paid.');
+    $bookingState = $pdo->prepare('SELECT status FROM bookings WHERE id=?');
+    $bookingState->execute([$bookingId]);
+    assertSmoke($bookingState->fetchColumn()==='confirmed','Successful payment did not confirm the booking.');
+    $duplicatePayment = $paymentProcessor->processVerified('paytr',$paymentEventId,'payment_callback',$paymentReference,$paymentEventPayload,$paymentCallback);
+    assertSmoke(($duplicatePayment['result']??'')==='duplicate'&&!($duplicatePayment['payment_updated']??true),'Duplicate payment callback changed the payment a second time.');
+
     foreach (['vendors','properties','property_media','bookings','booking_financials','payment_transactions','vendor_payouts','reviews','notifications','cms_pages','navigation_items','contact_messages','newsletter_subscribers'] as $table) {
         $check = $pdo->prepare('SELECT COUNT(*) FROM information_schema.TABLES WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME=?');
         $check->execute([$table]);
