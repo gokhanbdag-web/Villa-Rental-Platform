@@ -64,9 +64,9 @@ $mobilePhone = preg_replace('/\\D+/', '', (string)($mobileBarSettings['mobile_ba
  .villa-mobile-bar [data-villa-search-open]:after{content:"";position:absolute;top:0;left:50%;width:27px;height:2px;transform:translateX(-50%);background:#222}
  .villa-mobile-bar>a:active,.villa-mobile-bar>button:active{background:#f5f5f5}
  .villa-mobile-bar a:focus-visible,.villa-mobile-bar button:focus-visible{outline:2px solid #555;outline-offset:-3px}
- .villa-mobile-search-overlay{position:fixed;z-index:10000;inset:0;display:flex;flex-direction:column;align-items:stretch;justify-content:flex-start;padding:0;background:#f7f7f5;opacity:0;visibility:hidden;pointer-events:none;transition:opacity .2s ease,visibility .2s ease}
- .villa-mobile-search-overlay.is-open{opacity:1;visibility:visible;pointer-events:auto}
- .villa-mobile-search-card{box-sizing:border-box;width:100%;height:100%;min-height:100dvh;overflow-y:auto;padding:calc(18px + env(safe-area-inset-top,0px)) 18px calc(24px + env(safe-area-inset-bottom,0px));border:0;border-radius:0;background:#f7f7f5;box-shadow:none;transform:translateY(8px);transition:transform .22s ease}
+ .villa-mobile-search-overlay{position:fixed!important;z-index:2147483000!important;isolation:isolate;inset:0;display:flex;flex-direction:column;align-items:stretch;justify-content:flex-start;padding:0;background:#f7f7f5;opacity:0;visibility:hidden;pointer-events:none;transition:opacity .2s ease,visibility .2s ease}
+ .villa-mobile-search-overlay.is-open{z-index:2147483000!important;opacity:1;visibility:visible;pointer-events:auto}
+ .villa-mobile-search-card{position:relative;z-index:1;box-sizing:border-box;width:100%;height:100%;min-height:100dvh;overflow-y:auto;padding:calc(18px + env(safe-area-inset-top,0px)) 18px calc(24px + env(safe-area-inset-bottom,0px));border:0;border-radius:0;background:#f7f7f5;box-shadow:none;transform:translateY(8px);transition:transform .22s ease}
  .villa-mobile-search-overlay.is-open .villa-mobile-search-card{transform:translateY(0)}
  .villa-mobile-search-head{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:24px}
  .villa-mobile-search-heading{display:flex;flex-direction:column;gap:5px}
