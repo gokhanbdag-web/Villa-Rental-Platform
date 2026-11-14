@@ -892,7 +892,7 @@ $router->post('/payments/iyzico/webhook', static function (): void {
         $processed=(new \App\Core\PaymentCallbackProcessor($pdo))->processVerified(
             'iyzico',$eventId,$eventType,$token,$eventPayload,$callback
         );
-        if(in_array($processed['result']??'', ['processed','duplicate','in_progress'],true)){http_response_code(200);exit('OK');}
+        if(in_array($processed['result']??'', ['processed','duplicate','already_applied','in_progress'],true)){http_response_code(200);exit('OK');}
         error_log('iyzico webhook was signature-valid but rejected by payment guards: '.(string)($processed['result']??'unknown'));
         http_response_code(200);exit('Rejected');
     }catch(Throwable $e){
