@@ -85,7 +85,7 @@ final class ThemeManager
     {
         $slug = $slug ?: self::activeSlug();
         if (!preg_match('/^[a-z0-9_-]{1,60}$/', $slug) || !isset(self::installed()[$slug])) $slug = 'default';
-        $defaults = ['logo_path' => '', 'hero_video_path' => '', 'family_banner_path' => ''];
+        $defaults = ['logo_path' => '', 'hero_video_path' => '', 'family_banner_path' => '', 'hero_youtube_url' => '', 'hero_overlay_opacity' => '58'];
         try {
             $pdo = Database::connection();
             $stmt = $pdo->prepare('SELECT setting_value FROM settings WHERE setting_key=? LIMIT 1');
@@ -97,7 +97,7 @@ final class ThemeManager
             }
             $saved = json_decode((string)($raw ?: '{}'), true);
             if (is_array($saved)) foreach ($defaults as $key => $value) {
-                if (isset($saved[$key]) && is_string($saved[$key])) $defaults[$key] = $saved[$key];
+                if (isset($saved[$key]) && (is_string($saved[$key]) || is_numeric($saved[$key]))) $defaults[$key] = (string)$saved[$key];
             }
         } catch (\Throwable $e) {
             error_log('Theme branding settings read failed: ' . $e->getMessage());
@@ -106,6 +106,8 @@ final class ThemeManager
             'logo_path' => $defaults['logo_path'],
             'hero_video_path' => $defaults['hero_video_path'],
             'family_banner_path' => $defaults['family_banner_path'],
+            'hero_youtube_url' => $defaults['hero_youtube_url'],
+            'hero_overlay_opacity' => max(0, min(100, (int)$defaults['hero_overlay_opacity'])),
             'logo_url' => $defaults['logo_path'] !== '' ? self::brandAssetUrl($defaults['logo_path'], $slug) : '',
             'hero_video_url' => $defaults['hero_video_path'] !== '' ? self::brandAssetUrl($defaults['hero_video_path'], $slug) : '',
             'family_banner_url' => $defaults['family_banner_path'] !== '' ? self::brandAssetUrl($defaults['family_banner_path'], $slug) : '',
@@ -150,7 +152,7 @@ final class ThemeManager
         $settings = self::brandSettings($slug);
         $old = (string)($settings[$rule['key']] ?? '');
         $settings[$rule['key']] = $relativeDir . '/' . $name;
-        $json = json_encode(['logo_path'=>$settings['logo_path'],'hero_video_path'=>$settings['hero_video_path'],'family_banner_path'=>$settings['family_banner_path']], JSON_UNESCAPED_SLASHES | JSON_THROW_ON_ERROR);
+        $json = json_encode(['logo_path'=>$settings['logo_path'],'hero_video_path'=>$settings['hero_video_path'],'family_banner_path'=>$settings['family_banner_path'],'hero_youtube_url'=>$settings['hero_youtube_url'],'hero_overlay_opacity'=>(string)$settings['hero_overlay_opacity']], JSON_UNESCAPED_SLASHES | JSON_THROW_ON_ERROR);
         try {
             $pdo = Database::connection();
             $save = $pdo->prepare('INSERT INTO settings(setting_key,setting_value,autoload) VALUES(?,?,1) ON DUPLICATE KEY UPDATE setting_value=VALUES(setting_value),autoload=1');
@@ -165,6 +167,39 @@ final class ThemeManager
         }
     }
 
+    public static function saveHeroVideoSettings(string $youtubeUrl, int $overlayOpacity, ?string $slug = null): void
+    {
+        $slug = $slug ?: self::activeSlug();
+        if (!preg_match('/^[a-z0-9_-]{1,60}$/', $slug) || !isset(self::installed()[$slug])) throw new RuntimeException('Tema kodu geçersiz.');
+        $youtubeUrl = trim($youtubeUrl);
+        if ($youtubeUrl !== '') {
+            if (!filter_var($youtubeUrl, FILTER_VALIDATE_URL)) throw new RuntimeException('Geçerli bir YouTube bağlantısı girin.');
+            $parts = parse_url($youtubeUrl);
+            $host = strtolower((string)($parts['host'] ?? ''));
+            $path = (string)($parts['path'] ?? '');
+            $videoId = '';
+            if (in_array($host, ['youtu.be','www.youtu.be'], true)) $videoId = trim($path, '/');
+            elseif (in_array($host, ['youtube.com','www.youtube.com','m.youtube.com','youtube-nocookie.com','www.youtube-nocookie.com'], true)) {
+                parse_str((string)($parts['query'] ?? ''), $query);
+                $videoId = (string)($query['v'] ?? '');
+                if ($videoId === '' && preg_match('~^/(?:embed|shorts)/([A-Za-z0-9_-]{11})(?:/|$)~', $path, $match)) $videoId = $match[1];
+            }
+            if (!preg_match('/^[A-Za-z0-9_-]{11}$/', $videoId)) throw new RuntimeException('YouTube video bağlantısı tanınamadı.');
+            $youtubeUrl = 'https://www.youtube.com/watch?v=' . $videoId;
+        }
+        $settings = self::brandSettings($slug);
+        $json = json_encode([
+            'logo_path'=>$settings['logo_path'],
+            'hero_video_path'=>$settings['hero_video_path'],
+            'family_banner_path'=>$settings['family_banner_path'],
+            'hero_youtube_url'=>$youtubeUrl,
+            'hero_overlay_opacity'=>(string)max(0,min(100,$overlayOpacity))
+        ], JSON_UNESCAPED_SLASHES | JSON_THROW_ON_ERROR);
+        $pdo = Database::connection();
+        $save = $pdo->prepare('INSERT INTO settings(setting_key,setting_value,autoload) VALUES(?,?,1) ON DUPLICATE KEY UPDATE setting_value=VALUES(setting_value),autoload=1');
+        $save->execute(['theme.' . $slug . '.branding', $json]);
+    }
+
     public static function removeBrandAsset(string $type, ?string $slug = null): void
     {
         $slug = $slug ?: self::activeSlug();
@@ -174,7 +209,7 @@ final class ThemeManager
         $settings = self::brandSettings($slug);
         $old = (string)($settings[$keys[$type]] ?? '');
         $settings[$keys[$type]] = '';
-        $json = json_encode(['logo_path'=>$settings['logo_path'],'hero_video_path'=>$settings['hero_video_path']], JSON_UNESCAPED_SLASHES | JSON_THROW_ON_ERROR);
+        $json = json_encode(['logo_path'=>$settings['logo_path'],'hero_video_path'=>$settings['hero_video_path'],'family_banner_path'=>$settings['family_banner_path'],'hero_youtube_url'=>$settings['hero_youtube_url'],'hero_overlay_opacity'=>(string)$settings['hero_overlay_opacity']], JSON_UNESCAPED_SLASHES | JSON_THROW_ON_ERROR);
         $pdo = Database::connection();
         $save = $pdo->prepare('INSERT INTO settings(setting_key,setting_value,autoload) VALUES(?,?,1) ON DUPLICATE KEY UPDATE setting_value=VALUES(setting_value),autoload=1');
         $save->execute(['theme.' . $slug . '.branding', $json]);
