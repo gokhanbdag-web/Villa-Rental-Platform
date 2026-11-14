@@ -814,6 +814,56 @@ $router->post('/payments/iyzico/callback', static function (): void {
     }
 });
 
+$router->post('/payments/iyzico/webhook', static function (): void {
+    $config=\App\Core\PaymentGatewayConfig::forProvider('iyzico');
+    if(!$config['enabled']||!$config['configured']){http_response_code(403);exit('Disabled');}
+    $payload=$_POST;
+    if(!$payload){
+        $raw=(string)file_get_contents('php://input');
+        $decoded=json_decode($raw,true);
+        if(is_array($decoded))$payload=$decoded;
+    }
+    $signature=trim((string)($_SERVER['HTTP_X_IYZ_SIGNATURE_V3']??''));
+    $secret=(string)($config['credentials']['secret_key']??'');
+    if(!\App\Core\PaymentSignatureVerifier::verifyIyzicoV3($payload,$signature,$secret)){http_response_code(401);exit('Invalid signature');}
+    $eventType=(string)($payload['iyziEventType']??'');
+    if($eventType!=='CHECKOUT_FORM_AUTH'){http_response_code(200);exit('Ignored');}
+    $token=trim((string)($payload['token']??''));
+    $iyziPaymentId=trim((string)($payload['iyziPaymentId']??''));
+    $conversationId=trim((string)($payload['paymentConversationId']??''));
+    $eventStatus=strtoupper(trim((string)($payload['status']??'')));
+    $eventId=trim((string)($payload['iyziReferenceCode']??''));
+    if($token===''||$iyziPaymentId===''||$conversationId===''||$eventId===''||!in_array($eventStatus,['SUCCESS','FAILURE'],true)){http_response_code(422);exit('Invalid event');}
+    $pdo=Database::connection();
+    $find=$pdo->prepare("SELECT pt.id,pt.booking_id,pt.amount,pt.currency,pt.request_payload,b.booking_code FROM payment_transactions pt JOIN bookings b ON b.id=pt.booking_id WHERE pt.provider='iyzico' AND pt.provider_reference=? LIMIT 1");
+    $find->execute([$token]);$transaction=$find->fetch();
+    if(!$transaction){http_response_code(404);exit('Unknown payment');}
+    $requestData=json_decode((string)$transaction['request_payload'],true);
+    if(!is_array($requestData)||!hash_equals((string)($requestData['conversationId']??''),$conversationId)){http_response_code(409);exit('Conversation mismatch');}
+    try{
+        $result=\App\Core\IyzicoApiClient::retrieveCheckoutForm($config,$token);
+        if(strtolower((string)($result['status']??''))!=='success'){http_response_code(503);exit('Retrieve failed');}
+        if((string)($result['paymentId']??'')!==$iyziPaymentId){http_response_code(409);exit('Payment reference mismatch');}
+        $fraudStatus=(int)($result['fraudStatus']??-1);
+        $paymentStatus=strtoupper((string)($result['paymentStatus']??$eventStatus));
+        $normalizedStatus=($paymentStatus==='SUCCESS'&&$eventStatus==='SUCCESS'&&$fraudStatus===1)?'paid':(($paymentStatus==='SUCCESS'&&$eventStatus==='SUCCESS'&&$fraudStatus===0)?'processing':'failed');
+        $callback=[
+            'provider'=>'iyzico','provider_reference'=>$token,'booking_id'=>(int)$transaction['booking_id'],
+            'amount'=>(string)($result['paidPrice']??''),'currency'=>strtoupper((string)($result['currency']??'')),
+            'status'=>$normalizedStatus,
+        ];
+        $eventPayload=['token'=>$token,'paymentId'=>$iyziPaymentId,'paymentStatus'=>$paymentStatus,'eventStatus'=>$eventStatus,'fraudStatus'=>$fraudStatus,'paidPrice'=>$callback['amount'],'currency'=>$callback['currency']];
+        $processed=(new \App\Core\PaymentCallbackProcessor($pdo))->processVerified(
+            'iyzico',$eventId,$eventType,$token,$eventPayload,$callback
+        );
+        if(in_array($processed['result']??'', ['processed','duplicate'],true)){http_response_code(200);exit('OK');}
+        http_response_code(409);exit('Not processed');
+    }catch(Throwable $e){
+        error_log('iyzico webhook processing failed: '.$e->getMessage());
+        http_response_code(503);exit('Retry');
+    }
+});
+
 $router->get('/account/messages/{bookingId}', static function (array $params): void {
     $user=Auth::user();if(!$user)redirect('/login');$pdo=Database::connection();$bookingId=(int)$params['bookingId'];
     $s=$pdo->prepare('SELECT b.*,p.title,p.vendor_id,g.username AS guest_name,v.user_id AS vendor_user_id FROM bookings b JOIN properties p ON p.id=b.property_id JOIN users g ON g.id=b.guest_user_id LEFT JOIN vendors v ON v.id=p.vendor_id WHERE b.id=?');
