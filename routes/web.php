@@ -43,13 +43,22 @@ function villa_iyzico_checkout_iframe_url(string $url): ?string {
     $parts=parse_url($url);
     if(!is_array($parts))return null;
     $host=strtolower((string)($parts['host']??''));
+    $path=(string)($parts['path']??'');
     if(strtolower((string)($parts['scheme']??''))!=='https'
         ||!in_array($host,['sandbox-api.iyzipay.com','sandbox-cpp.iyzipay.com'],true)
-        ||isset($parts['user'])||isset($parts['pass'])||isset($parts['fragment'])
-        ||!str_starts_with((string)($parts['path']??''),'/checkoutform/'))return null;
+        ||isset($parts['user'])||isset($parts['pass'])||isset($parts['fragment']))return null;
     parse_str((string)($parts['query']??''),$query);
+    // iyzico's documented Sandbox CPP URL is https://sandbox-cpp.iyzipay.com?token=...&lang=tr
+    // while some API responses use the /checkoutform/ path on sandbox-api. Accept only these
+    // two exact provider URL shapes; never accept arbitrary paths or hosts.
+    $isSandboxCpp=$host==='sandbox-cpp.iyzipay.com'
+        &&in_array($path,['','/'],true)
+        &&preg_match('/^[A-Za-z0-9-]{16,128}$/',(string)($query['token']??''))===1;
+    $isSandboxApi=$host==='sandbox-api.iyzipay.com'
+        &&str_starts_with($path,'/checkoutform/');
+    if(!$isSandboxCpp&&!$isSandboxApi)return null;
     $query['iframe']='true';
-    return 'https://'.$host.(string)$parts['path'].'?'.http_build_query($query,'','&',PHP_QUERY_RFC3986);
+    return 'https://'.$host.$path.'?'.http_build_query($query,'','&',PHP_QUERY_RFC3986);
 }
 function villa_safe_return_url(string $url): string { $path=parse_url($url,PHP_URL_PATH)?:'/'; if(!str_starts_with($path,'/')||str_starts_with($path,'//'))return '/'; $query=parse_url($url,PHP_URL_QUERY); return $path.($query!==null?'?'.$query:''); }
 function villa_return_with_status(string $url,string $key,string $value): string { $back=villa_safe_return_url($url); return $back.(str_contains($back,'?')?'&':'?').rawurlencode($key).'='.rawurlencode($value); }
