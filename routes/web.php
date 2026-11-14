@@ -1862,7 +1862,7 @@ $router->post('/admin/theme-design/family-banner-text', static function (): void
 $router->post('/admin/theme-design/hero-video-settings', static function (): void {
     Auth::requireRole(['super_admin','admin']); verify_csrf();
     try {
-        ThemeManager::saveHeroVideoSettings((string)($_POST['hero_youtube_url'] ?? ''), (int)($_POST['hero_overlay_opacity'] ?? 58), (string)($_POST['hero_background_image_url'] ?? ''), ThemeManager::activeSlug());
+        ThemeManager::saveHeroVideoSettings((string)($_POST['hero_youtube_url'] ?? ''), (int)($_POST['hero_overlay_opacity'] ?? 58), (string)($_POST['hero_background_image_url'] ?? ''), (int)($_POST['hero_video_start_seconds'] ?? 0), (string)($_POST['hero_video_loop'] ?? '0') === '1', ThemeManager::activeSlug());
         $_SESSION['villa_theme_brand_message'] = 'Hero video ayarları kaydedildi.';
         $_SESSION['villa_theme_brand_message_type'] = 'success';
     } catch (Throwable $e) {
