@@ -36,15 +36,28 @@ function villa_safe_return_url(string $url): string { $path=parse_url($url,PHP_U
 function villa_return_with_status(string $url,string $key,string $value): string { $back=villa_safe_return_url($url); return $back.(str_contains($back,'?')?'&':'?').rawurlencode($key).'='.rawurlencode($value); }
 
 function villa_resolve_location(PDO $pdo): array {
+    $geoCountry=trim((string)($_POST['geo_country']??''));
+    $geoCity=trim((string)($_POST['geo_city']??''));
+    if($geoCountry!==''&&$geoCity!==''){
+        $resolve=static function(string $type,string $name,?int $parent) use($pdo): ?int {
+            $name=mb_substr(trim($name),0,190);
+            if($name==='')return null;
+            $find=$pdo->prepare('SELECT id FROM locations WHERE parent_id <=> ? AND location_type=? AND name=? LIMIT 1');
+            $find->execute([$parent,$type,$name]);$id=$find->fetchColumn();
+            if($id!==false)return (int)$id;
+            $insert=$pdo->prepare('INSERT INTO locations(parent_id,location_type,name,sort_order,is_active) VALUES(?,?,?,10,1)');
+            $insert->execute([$parent,$type,$name]);return (int)$pdo->lastInsertId();
+        };
+        $countryId=$resolve('country',$geoCountry,null);
+        $cityId=$resolve('city',$geoCity,$countryId);
+        $districtName=trim((string)($_POST['geo_district']??''));$districtId=$districtName!==''?$resolve('district',$districtName,$cityId):null;
+        $neighborhoodName=trim((string)($_POST['geo_neighborhood']??''));$neighborhoodId=($neighborhoodName!==''&&$districtId)?$resolve('neighborhood',$neighborhoodName,$districtId):null;
+        return ['location_country_id'=>$countryId,'location_city_id'=>$cityId,'location_district_id'=>$districtId,'location_neighborhood_id'=>$neighborhoodId,'country'=>$geoCountry,'city'=>$geoCity,'district'=>$districtName,'neighborhood'=>$neighborhoodName];
+    }
     $ids=['country'=>(int)($_POST['location_country_id']??0),'city'=>(int)($_POST['location_city_id']??0),'district'=>(int)($_POST['location_district_id']??0),'neighborhood'=>(int)($_POST['location_neighborhood_id']??0)];
-    $get=static function(int $id,string $type,?int $parent) use($pdo): ?array {
-        if($id<1)return null;$s=$pdo->prepare('SELECT id,parent_id,name FROM locations WHERE id=? AND location_type=? AND is_active=1 LIMIT 1');$s->execute([$id,$type]);$row=$s->fetch();
-        if(!$row||($parent!==null&&(int)$row['parent_id']!==$parent))return null;return $row;
-    };
-    $country=$get($ids['country'],'country',null);$city=$get($ids['city'],'city',$ids['country']);
-    $district=$ids['district']?$get($ids['district'],'district',$ids['city']):null;
-    $neighborhood=$ids['neighborhood']?$get($ids['neighborhood'],'neighborhood',$ids['district']):null;
-    if(!$country||!$city||($ids['district']&&!$district)||($ids['neighborhood']&&!$neighborhood)||($neighborhood&&!$district))throw new InvalidArgumentException('Lütfen ülke ve şehir seçin; alt konum seçimlerini kontrol edin.');
+    $get=static function(int $id,string $type,?int $parent) use($pdo): ?array {if($id<1)return null;$s=$pdo->prepare('SELECT id,parent_id,name FROM locations WHERE id=? AND location_type=? AND is_active=1 LIMIT 1');$s->execute([$id,$type]);$row=$s->fetch();if(!$row||($parent!==null&&(int)$row['parent_id']!==$parent))return null;return $row;};
+    $country=$get($ids['country'],'country',null);$city=$get($ids['city'],'city',$ids['country']);$district=$ids['district']?$get($ids['district'],'district',$ids['city']):null;$neighborhood=$ids['neighborhood']?$get($ids['neighborhood'],'neighborhood',$ids['district']):null;
+    if(!$country||!$city||($ids['district']&&!$district)||($ids['neighborhood']&&!$neighborhood)||($neighborhood&&!$district))throw new InvalidArgumentException('Lütfen adres önerilerinden geçerli bir konum seçin.');
     return ['location_country_id'=>$ids['country'],'location_city_id'=>$ids['city'],'location_district_id'=>$district?$ids['district']:null,'location_neighborhood_id'=>$neighborhood?$ids['neighborhood']:null,'country'=>$country['name'],'city'=>$city['name'],'district'=>$district['name']??'','neighborhood'=>$neighborhood['name']??''];
 }
 function villa_update_http_get(string $url, bool $json = true): ?array {
