@@ -85,7 +85,27 @@ $stylePhotos=['https://images.unsplash.com/photo-1613490493576-7fde63acd811?auto
 <main class="home-sections"><?php if($active('hero')): ?><section class="hero" style="order:<?= $order('hero',1) ?>"><div class="hero-card" style="<?= $heroBackgroundImageUrl!==''?'background-image:url(&quot;'.e($heroBackgroundImageUrl).'&quot;)':'' ?>">
 <?php if($heroYouTubeIdValue!==''): ?><iframe class="hero-video hero-video-youtube" src="https://www.youtube-nocookie.com/embed/<?= e($heroYouTubeIdValue) ?>?autoplay=1&amp;mute=1&amp;start=<?= $heroVideoStartSeconds ?>&amp;loop=<?= $heroVideoLoop?'1':'0' ?><?= $heroVideoLoop?'&amp;playlist='.e($heroYouTubeIdValue):'' ?>&amp;controls=0&amp;rel=0&amp;playsinline=1" title="Karşılama arka plan videosu" frameborder="0" allow="autoplay; encrypted-media; picture-in-picture" tabindex="-1" aria-hidden="true"></iframe><?php elseif($heroVideoUrl!==''): ?><video class="hero-video" autoplay muted <?= $heroVideoLoop?'loop':'' ?> playsinline preload="metadata"<?= $heroBackgroundImageUrl!==''?' poster="'.e($heroBackgroundImageUrl).'"':'' ?>><source src="<?= e($heroVideoUrl) ?>" type="<?= str_ends_with(strtolower((string)parse_url($heroVideoUrl,PHP_URL_PATH)),'.webm')?'video/webm':'video/mp4' ?>"></video><?php endif; ?><div class="hero-shade" style="background:rgba(8,29,25,<?= e($heroOverlayAlpha) ?>)"></div>
 <?php if($heroVideoStartSeconds>0 && $heroVideoUrl!==''): ?><script>
-document.addEventListener('DOMContentLoaded',function(){const video=document.querySelector('.hero-card video.hero-video');if(!video)return;const seek=()=>{try{video.currentTime=Math.min(<?= $heroVideoStartSeconds ?>,Math.max(0,(video.duration||<?= $heroVideoStartSeconds ?>)-0.25));}catch(e){}};if(video.readyState>=1)seek();else video.addEventListener('loadedmetadata',seek,{once:true});});
+(function(){
+ const video=document.querySelector('.hero-card video.hero-video');
+ if(!video)return;
+ const requestedStart=<?= $heroVideoStartSeconds ?>;
+ let applied=false;
+ const seekToStart=function(){
+  if(applied||!Number.isFinite(video.duration)||video.duration<=0)return;
+  const target=Math.min(requestedStart,Math.max(0,video.duration-0.1));
+  if(target<=0){applied=true;return;}
+  applied=true;
+  video.pause();
+  const resume=function(){
+   video.removeEventListener('seeked',resume);
+   video.play().catch(function(){});
+  };
+  video.addEventListener('seeked',resume,{once:true});
+  try{video.currentTime=target;}catch(error){applied=false;video.removeEventListener('seeked',resume);}
+ };
+ if(video.readyState>=1)seekToStart();
+ else video.addEventListener('loadedmetadata',seekToStart,{once:true});
+})();
 </script><?php endif; ?>
 <?php if($heroYouTubeIdValue!==''): ?><script>
 (function(){
