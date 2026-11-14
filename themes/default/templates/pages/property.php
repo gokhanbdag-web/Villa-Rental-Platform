@@ -93,7 +93,7 @@ $images = $property['images'] ?? [];
 <div class="availability-heading"><div><p class="muted">Dolu ve kapalı günleri görüntüleyin.</p></div><div class="calendar-nav"><button type="button" id="calendarPrev" aria-label="Önceki ay">‹</button><strong id="calendarMonth">Takvim</strong><button type="button" id="calendarNext" aria-label="Sonraki ay">›</button></div></div>
 <div class="calendar-legend"><span><i class="available"></i>Müsait</span><span><i class="booked"></i>Rezerve</span><span><i class="blocked"></i>Kapalı</span><span><i class="selected"></i>Seçiminiz</span></div>
 <div class="calendar-grid" id="villaCalendarGrid" aria-live="polite"></div><p class="calendar-status" id="villaCalendarStatus" role="status">Müsaitlik bilgisi yükleniyor…</p>
-<div class="calendar-selection"><span id="calendarSelectionText">Giriş ve çıkış tarihlerinizi takvimden seçin.</span></div>
+<div class="calendar-selection"><span id="calendarSelectionText">Giriş ve çıkış tarihlerinizi takvimden seçin.</span><a id="calendarReserve" href="#" aria-disabled="true">Rezervasyona Devam Et</a></div>
 </section></div>
 <div class="booking-price-preview" id="bookingPricePreview" hidden><div><span id="bookingNightCount">0 gece</span><strong id="bookingNightSubtotal">—</strong></div><div><span>Temizlik ücreti</span><strong id="bookingCleaningFee">—</strong></div><div class="booking-total"><span>Toplam tutar</span><strong id="bookingGrandTotal">—</strong></div></div>
 <p class="booking-inline-status" id="bookingAvailabilityStatus" role="status" aria-live="polite">Giriş ve çıkış tarihlerinizi seçin.</p>
