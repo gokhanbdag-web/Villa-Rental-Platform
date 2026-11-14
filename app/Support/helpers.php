@@ -98,6 +98,19 @@ function app_url(string $path = '/'): string {
     return $base . $path;
 }
 
+function app_absolute_url(string $path = '/'): string {
+    $host = trim((string)($_SERVER['HTTP_HOST'] ?? $_SERVER['SERVER_NAME'] ?? ''));
+    if ($host === '' || !preg_match('/^(?=.{1,253}$)[a-z0-9.-]+(?::[0-9]{1,5})?$/i', $host)) {
+        throw new RuntimeException('Ödeme bildirimi için geçerli site alan adı belirlenemedi.');
+    }
+    $https = (!empty($_SERVER['HTTPS']) && strtolower((string)$_SERVER['HTTPS']) !== 'off')
+        || (int)($_SERVER['SERVER_PORT'] ?? 0) === 443;
+    if (!$https) {
+        throw new RuntimeException('iyzico ödeme bildirimi için HTTPS bağlantısı gereklidir.');
+    }
+    return 'https://' . $host . app_url($path);
+}
+
 function redirect(string $path): never {
     header('Location: ' . (str_starts_with($path, '/') ? app_url($path) : $path));
     exit;
