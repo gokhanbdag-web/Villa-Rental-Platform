@@ -43,8 +43,8 @@ final class IyzicoApiClient
                 CURLOPT_POSTFIELDS => $body,
                 CURLOPT_RETURNTRANSFER => true,
                 CURLOPT_HTTPHEADER => $headers,
-                CURLOPT_CONNECTTIMEOUT => 8,
-                CURLOPT_TIMEOUT => 20,
+                CURLOPT_CONNECTTIMEOUT => 15,
+                CURLOPT_TIMEOUT => 30,
                 CURLOPT_SSL_VERIFYPEER => true,
                 CURLOPT_SSL_VERIFYHOST => 2,
             ]);
@@ -60,7 +60,7 @@ final class IyzicoApiClient
                 'method' => 'POST',
                 'header' => implode("\r\n", $headers),
                 'content' => $body,
-                'timeout' => 20,
+                'timeout' => 30,
                 'ignore_errors' => true,
             ]]);
             $raw = @file_get_contents($url, false, $context);
