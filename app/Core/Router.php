@@ -18,6 +18,18 @@ final class Router
     }
 
     /**
+     * Check whether a path has a literal route (without placeholders).
+     * Literal routes must take precedence over parameterized routes when
+     * the application mount path overlaps a real route prefix.
+     */
+    public function hasExactRoute(string $method, string $path): bool
+    {
+        $path = $this->normalize($path);
+        return isset($this->routes[strtoupper($method)][$path])
+            && !str_contains($path, '{');
+    }
+
+    /**
      * Dispatch a matching route.
      *
      * Returns false without emitting a 404 when no route matches. This lets
