@@ -818,14 +818,16 @@ $router->post('/payments/iyzico/callback', static function (): void {
     try{
         $config=\App\Core\PaymentGatewayConfig::forProvider('iyzico');
         $config['environment']='sandbox';
-        $result=\App\Core\IyzicoApiClient::retrieveCheckoutForm($config,$token);
+        $requestData=json_decode((string)$transaction['request_payload'],true);
+        $expectedConversationId=is_array($requestData)?trim((string)($requestData['conversationId']??'')):'';
+        $expectedBasketId=is_array($requestData)?trim((string)($requestData['basketId']??'')):'';
+        if($expectedConversationId===''||$expectedBasketId==='')throw new RuntimeException('Yerel ödeme referansları eksik veya okunamadı.');
+        $result=\App\Core\IyzicoApiClient::retrieveCheckoutForm($config,$token,$expectedConversationId);
         if(strtolower((string)($result['status']??''))!=='success')throw new RuntimeException('iyzico ödeme sonucu doğrulanamadı.');
         $secret=(string)($config['credentials']['secret_key']??'');
         if(!\App\Core\PaymentSignatureVerifier::verifyIyzicoCheckoutFormRetrieve($result,$secret))throw new RuntimeException('iyzico ödeme yanıtı imza doğrulamasından geçmedi.');
-        $requestData=json_decode((string)$transaction['request_payload'],true);
-        if(!is_array($requestData)
-            ||!hash_equals((string)($requestData['conversationId']??''),(string)($result['conversationId']??''))
-            ||!hash_equals((string)($requestData['basketId']??''),(string)($result['basketId']??''))) {
+        if(!hash_equals($expectedConversationId,(string)($result['conversationId']??''))
+            ||!hash_equals($expectedBasketId,(string)($result['basketId']??''))) {
             throw new RuntimeException('iyzico ödeme yanıtı rezervasyon referanslarıyla eşleşmedi.');
         }
         $paymentStatus=strtoupper((string)($result['paymentStatus']??''));
