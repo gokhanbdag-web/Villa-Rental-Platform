@@ -1147,7 +1147,7 @@ $router->post('/login/ajax', static function (): void {
     if($identity===''||$password===''||!Auth::attempt($identity,$password)){http_response_code(401);echo json_encode(['ok'=>false,'message'=>'E-posta/kullanıcı adı veya şifre hatalı.']);return;}
     $user=Auth::user();$role=(string)($user['role']??'customer');
     $destination=$role==='customer'?'/account/bookings':($role==='vendor'?'/vendor':'/admin');
-    echo json_encode(['ok'=>true,'user'=>['username'=>(string)($user['username']??''),'role'=>$role,'label'=>in_array($role,['admin','super_admin'],true)?'Yönetim Paneli':($role==='vendor'?'Ev Sahibi Paneli':'Hesabım'),'url'=>app_url($destination)]],JSON_UNESCAPED_UNICODE|JSON_THROW_ON_ERROR);
+    echo json_encode(['ok'=>true,'user'=>['username'=>(string)($user['username']??''),'role'=>$role,'label'=>in_array($role,['admin','super_admin'],true)?'Yönetim':($role==='vendor'?'Ev Sahibi':'Hesabım'),'url'=>app_url($destination)]],JSON_UNESCAPED_UNICODE|JSON_THROW_ON_ERROR);
 });
 $router->post('/login', static function (): void {
     verify_csrf();
