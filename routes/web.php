@@ -799,7 +799,8 @@ $router->post('/payments/iyzico/callback', static function (): void {
         $eventId=$paymentId!==''?$paymentId:'token-'.$token;
         $callback=[
             'provider'=>'iyzico','provider_reference'=>$token,'booking_id'=>(int)$transaction['booking_id'],
-            'amount'=>(string)($result['paidPrice']??''),'currency'=>strtoupper((string)($result['currency']??'')),
+            'amount'=>$normalizedStatus==='failed'?(string)$transaction['amount']:(string)($result['paidPrice']??''),
+            'currency'=>$normalizedStatus==='failed'?strtoupper((string)$transaction['currency']):strtoupper((string)($result['currency']??'')),
             'status'=>$normalizedStatus,
         ];
         $eventPayload=['token'=>$token,'paymentId'=>$paymentId,'paymentStatus'=>$paymentStatus,'fraudStatus'=>$fraudStatus,'paidPrice'=>$callback['amount'],'currency'=>$callback['currency']];
@@ -849,7 +850,8 @@ $router->post('/payments/iyzico/webhook', static function (): void {
         $normalizedStatus=($paymentStatus==='SUCCESS'&&$eventStatus==='SUCCESS'&&$fraudStatus===1)?'paid':(($paymentStatus==='SUCCESS'&&$eventStatus==='SUCCESS'&&$fraudStatus===0)?'processing':'failed');
         $callback=[
             'provider'=>'iyzico','provider_reference'=>$token,'booking_id'=>(int)$transaction['booking_id'],
-            'amount'=>(string)($result['paidPrice']??''),'currency'=>strtoupper((string)($result['currency']??'')),
+            'amount'=>$normalizedStatus==='failed'?(string)$transaction['amount']:(string)($result['paidPrice']??''),
+            'currency'=>$normalizedStatus==='failed'?strtoupper((string)$transaction['currency']):strtoupper((string)($result['currency']??'')),
             'status'=>$normalizedStatus,
         ];
         $eventPayload=['token'=>$token,'paymentId'=>$iyziPaymentId,'paymentStatus'=>$paymentStatus,'eventStatus'=>$eventStatus,'fraudStatus'=>$fraudStatus,'paidPrice'=>$callback['amount'],'currency'=>$callback['currency']];
