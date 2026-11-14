@@ -14,13 +14,6 @@ $headerUser = is_array($user ?? null) ? $user : null;
 $topPhone = trim((string) ($content['home_support_phone'] ?? ''));
 $topPhoneDigits = preg_replace('/\\D+/', '', $topPhone);
 ?>
-<?php if ($themeLogoUrl !== ''): ?>
-<div class="site-logo-topbar">
-  <a class="site-logo-topbar__brand" href="<?= e(app_url('/')) ?>" aria-label="<?= e($themeSiteName) ?>">
-    <img src="<?= e($themeLogoUrl) ?>" alt="<?= e($themeSiteName) ?>">
-  </a>
-</div>
-<?php endif; ?>
 <header class="site-header">
   <div class="wrap head">
     <button class="mobile-menu-toggle theme-menu-toggle" id="menuToggle" type="button" aria-label="Menüyü aç" aria-controls="siteNavigation" aria-expanded="false"><span class="menu-open-mark">☰</span><span class="menu-close-mark" hidden>×</span></button>
