@@ -532,8 +532,9 @@ $router->get('/villa/{slug}/calendar', static function (array $params): void {
     header('Content-Type: application/json; charset=utf-8');
     header('Cache-Control: no-store');
     $pdo=Database::connection();
-    $s=$pdo->prepare("SELECT id FROM properties WHERE slug=? AND status='published' LIMIT 1");
-    $s->execute([$params['slug']??'']);$propertyId=(int)$s->fetchColumn();
+    $s=$pdo->prepare("SELECT id,base_nightly_price,weekend_nightly_price,currency FROM properties WHERE slug=? AND status='published' LIMIT 1");
+    $s->execute([$params['slug']??'']);$property=$s->fetch(PDO::FETCH_ASSOC);
+    $propertyId=(int)($property['id']??0);
     if(!$propertyId){http_response_code(404);echo json_encode(['ok'=>false,'message'=>'Konaklama bulunamadı.']);return;}
     $month=(string)($_GET['month']??date('Y-m'));
     if(!preg_match('/^\d{4}-(0[1-9]|1[0-2])$/',$month)){http_response_code(422);echo json_encode(['ok'=>false,'message'=>'Ay bilgisi geçersiz.']);return;}
@@ -542,7 +543,7 @@ $router->get('/villa/{slug}/calendar', static function (array $params): void {
     $b->execute([$propertyId,$to,$from]);
     $a=$pdo->prepare("SELECT date_from,date_to,status FROM availability WHERE property_id=? AND date_from < ? AND date_to > ? ORDER BY date_from");
     $a->execute([$propertyId,$to,$from]);
-    echo json_encode(['ok'=>true,'month'=>$month,'today'=>date('Y-m-d'),'bookings'=>$b->fetchAll(PDO::FETCH_ASSOC),'rules'=>$a->fetchAll(PDO::FETCH_ASSOC)],JSON_UNESCAPED_UNICODE|JSON_THROW_ON_ERROR);
+    echo json_encode(['ok'=>true,'month'=>$month,'today'=>date('Y-m-d'),'bookings'=>$b->fetchAll(PDO::FETCH_ASSOC),'rules'=>$a->fetchAll(PDO::FETCH_ASSOC),'base_nightly_price'=>(float)$property['base_nightly_price'],'weekend_nightly_price'=>(float)($property['weekend_nightly_price']??0),'currency'=>(string)$property['currency']],JSON_UNESCAPED_UNICODE|JSON_THROW_ON_ERROR);
 });
 
 $router->get('/villa/{slug}/availability', static function (array $params): void {
