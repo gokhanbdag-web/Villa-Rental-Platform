@@ -275,6 +275,8 @@ try {
     assertSmoke(str_contains($themeRoutesSource, "/checkout/{bookingCode}/iyzico/start") && str_contains($themeRoutesSource, "/payments/iyzico/callback"), 'iyzico Checkout Form start and callback routes must be registered.');
     assertSmoke(str_contains($themeRoutesSource, 'IyzicoApiClient::initializeCheckoutForm') && str_contains($themeRoutesSource, 'IyzicoApiClient::retrieveCheckoutForm'), 'iyzico checkout must initialize and retrieve the result from the provider.');
     assertSmoke(str_contains($themeRoutesSource, "/payments/iyzico/webhook") && str_contains($themeRoutesSource, 'verifyIyzicoV3'), 'iyzico Checkout Form webhook must verify V3 signatures.');
+    $helpersSource = (string)file_get_contents($root . '/app/Support/helpers.php');
+    assertSmoke(str_contains($helpersSource, 'function app_absolute_url') && str_contains($helpersSource, 'HTTPS connection'), 'Absolute HTTPS URL helper must be available for provider callbacks.');
     $paymentSettingsViewSource = (string)file_get_contents($root . '/themes/default/templates/pages/admin/settings.php');
     assertSmoke(str_contains($paymentSettingsViewSource, '/payments/iyzico/webhook') && str_contains($paymentSettingsViewSource, 'Webhook V3'), 'Admin payment settings must display the iyzico webhook endpoint and setup note.');
 
