@@ -790,7 +790,7 @@ $router->post('/checkout/{bookingCode}/iyzico/start', static function (array $pa
             throw new RuntimeException('iyzico ödeme oturumu yanıtı imza veya işlem referansı doğrulamasından geçmedi.');
         }
         $decodedCheckoutForm=$checkoutFormContent!==''?base64_decode($checkoutFormContent,true):false;
-        if($token===''||!is_string($decodedCheckoutForm)||$decodedCheckoutForm===''||!stripos($decodedCheckoutForm,'<script')!==false){
+        if($token===''||!is_string($decodedCheckoutForm)||$decodedCheckoutForm===''||stripos($decodedCheckoutForm,'<script')===false){
             throw new RuntimeException('iyzico güvenli ödeme bileşeni yanıtı eksik veya geçersiz.');
         }
         $storedResponse=json_encode([

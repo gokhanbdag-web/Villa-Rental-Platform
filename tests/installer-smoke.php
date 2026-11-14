@@ -277,7 +277,7 @@ try {
     assertSmoke(str_contains($themeRoutesSource, 'test_iyzico_sandbox') && str_contains($themeRoutesSource, 'IyzicoApiClient::testSandboxConnection'), 'Admin settings must expose the iyzico Sandbox connection test.');
     assertSmoke(str_contains($themeRoutesSource, "/checkout/{bookingCode}/iyzico/start") && str_contains($themeRoutesSource, "/payments/iyzico/callback"), 'iyzico Checkout Form start and callback routes must be registered.');
     assertSmoke(str_contains($themeRoutesSource, 'IyzicoApiClient::initializeCheckoutForm') && str_contains($themeRoutesSource, 'IyzicoApiClient::retrieveCheckoutForm'), 'iyzico checkout must initialize and retrieve the result from the provider.');
-    assertSmoke(str_contains($themeRoutesSource, 'verifyIyzicoCheckoutFormInitialize') && str_contains($themeRoutesSource, 'sandbox-api.iyzipay.com') && str_contains($themeRoutesSource, 'sandbox-cpp.iyzipay.com'), 'iyzico initialization must verify its response signature and allow only official hosted Sandbox payment URL hosts.');
+    assertSmoke(str_contains($themeRoutesSource, 'verifyIyzicoCheckoutFormInitialize') && str_contains($themeRoutesSource, 'checkoutFormContent') && str_contains($themeRoutesSource, 'stripos($decodedCheckoutForm') && str_contains($themeRoutesSource, 'checkout_url=NULL'), 'iyzico initialization must verify its response signature and render the provider-hosted embedded form without redirecting to the hosted payment page.');
     assertSmoke(str_contains($themeRoutesSource, 'verifyIyzicoCheckoutFormRetrieve'), 'iyzico callback and webhook must verify the Checkout Form retrieve response signature.');
 
     assertSmoke(str_contains($themeRoutesSource, "/payments/iyzico/webhook") && str_contains($themeRoutesSource, 'verifyIyzicoV3'), 'iyzico Checkout Form webhook must verify V3 signatures.');
@@ -288,7 +288,7 @@ try {
 
     assertSmoke(str_contains($themeRoutesSource, "fraudStatus") && str_contains($themeRoutesSource, "environment']!=='sandbox"), 'iyzico checkout must honor fraud review and remain Sandbox-only.');
     $checkoutViewSource = (string)file_get_contents($root . '/themes/default/templates/pages/checkout.php');
-    assertSmoke(str_contains($checkoutViewSource, 'iyzico ile güvenli ödeme') && str_contains($checkoutViewSource, 'identity_number') && str_contains($checkoutViewSource, 'billing_address'), 'Booking checkout must collect required iyzico buyer billing details and show the hosted payment action.');
+    assertSmoke(str_contains($checkoutViewSource, 'iyzico ile güvenli ödeme') && str_contains($checkoutViewSource, 'identity_number') && str_contains($checkoutViewSource, 'billing_address') && str_contains($checkoutViewSource, 'iyzicoCheckoutFormHtml') && str_contains($checkoutViewSource, 'iyzipay-checkout-form'), 'Booking checkout must collect buyer billing details and render the embedded iyzico payment form inside the booking page.');
 
     $paymentSimulatorSource = (string)file_get_contents($root . '/app/Core/PaymentSandboxSimulator.php');
     assertSmoke(str_contains($paymentSimulatorSource, 'LOCAL-ONLY-TEST-MERCHANT-KEY') && str_contains($paymentSimulatorSource, 'LOCAL-ONLY-TEST-MERCHANT-SALT'), 'PayTR local sandbox must use isolated synthetic credentials.');
