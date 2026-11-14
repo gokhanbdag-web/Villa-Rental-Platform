@@ -46,24 +46,4 @@ $topPhoneDigits = preg_replace('/\\D+/', '', $topPhone);
     </div>
   </div>
 </header>
-<script>
-(function(){
-  var button=document.getElementById('menuToggle');
-  var menu=document.getElementById('siteNavigation');
-  if(!button||!menu||button.dataset.menuReady==='1')return;
-  button.dataset.menuReady='1';
-  function setOpen(open){
-    menu.classList.toggle('is-open',open);
-    button.setAttribute('aria-expanded',open?'true':'false');
-    button.setAttribute('aria-label',open?'Menüyü kapat':'Menüyü aç');
-  }
-  button.addEventListener('click',function(event){
-    event.preventDefault();
-    event.stopImmediatePropagation();
-    setOpen(button.getAttribute('aria-expanded')!=='true');
-  },true);
-  menu.addEventListener('click',function(event){if(event.target.closest('a'))setOpen(false);},true);
-  document.addEventListener('keydown',function(event){if(event.key==='Escape')setOpen(false);});
-  window.addEventListener('resize',function(){if(window.innerWidth>760)setOpen(false);});
-})();
-</script>
+
