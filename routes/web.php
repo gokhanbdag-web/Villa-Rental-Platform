@@ -619,7 +619,7 @@ $router->post('/villa/{slug}/reserve', static function (array $params): void {
     if($first===''||$last===''||mb_strlen($first)>90||mb_strlen($last)>90||!filter_var($email,FILTER_VALIDATE_EMAIL)||strlen($email)>190||$phone===''||strlen($phone)>40||strlen($password)<10||strlen($password)>128||!$checkIn||!$checkOut||$checkIn->format('Y-m-d')!==$inRaw||$checkOut->format('Y-m-d')!==$outRaw||$checkIn<new DateTimeImmutable('today')||$checkOut<=$checkIn||(int)$checkIn->diff($checkOut)->days>365||$guests<1||$guests>(int)$property['max_guests']){
         http_response_code(422);exit('Lütfen tüm bilgileri ve rezervasyon tarihlerini kontrol edin. Şifre en az 10 karakter olmalıdır.');
     }
-    $currentUser=Auth::user();$userId=0;
+    $currentUser=Auth::user();$userId=0;$createNewAccount=false;$newUsername='';
     $existing=$pdo->prepare('SELECT id,username,email,password_hash,role,status FROM users WHERE email=? LIMIT 1');$existing->execute([$email]);$account=$existing->fetch();
     if($currentUser){
         if((int)$currentUser['id']!==(int)($account['id']??0)||strtolower((string)$currentUser['email'])!==$email){http_response_code(409);exit('Oturumunuzdaki hesap ile rezervasyon e-posta adresi aynı olmalıdır.');}
@@ -633,11 +633,10 @@ $router->post('/villa/{slug}/reserve', static function (array $params): void {
         $base=mb_strtolower($first.' '.$last,'UTF-8');
         $base=strtr($base,['ı'=>'i','ğ'=>'g','ü'=>'u','ş'=>'s','ö'=>'o','ç'=>'c']);
         $base=preg_replace('/[^a-z0-9]+/','.',iconv('UTF-8','ASCII//TRANSLIT//IGNORE',$base)?:$base)?:'misafir';
-        $base=trim(substr($base,0,65),'.');$username=$base;$suffix=1;
+        $base=trim(substr($base,0,65),'.');$newUsername=$base;$suffix=1;
         $checkUsername=$pdo->prepare('SELECT 1 FROM users WHERE username=? LIMIT 1');
-        while(true){$checkUsername->execute([$username]);if(!$checkUsername->fetchColumn())break;$username=substr($base,0,65).'.'.$suffix++;}
-        $create=$pdo->prepare("INSERT INTO users(username,email,password_hash,role,status,created_at) VALUES(?,?,?,'customer','active',NOW())");
-        $create->execute([$username,$email,password_hash($password,PASSWORD_DEFAULT)]);$userId=(int)$pdo->lastInsertId();
+        while(true){$checkUsername->execute([$newUsername]);if(!$checkUsername->fetchColumn())break;$newUsername=substr($base,0,65).'.'.$suffix++;}
+        $createNewAccount=true;
     }
     try{
         $pdo->beginTransaction();
@@ -655,6 +654,10 @@ $router->post('/villa/{slug}/reserve', static function (array $params): void {
             if($unavailable)break;$subtotal+=$rate;
         }
         if($conflict->fetchColumn()||$unavailable){$pdo->rollBack();http_response_code(409);exit('Seçtiğiniz tarihler artık müsait değil. Lütfen yeni tarih seçin.');}
+        if($createNewAccount){
+            $create=$pdo->prepare("INSERT INTO users(username,email,password_hash,role,status,created_at) VALUES(?,?,?,'customer','active',NOW())");
+            $create->execute([$newUsername,$email,password_hash($password,PASSWORD_DEFAULT)]);$userId=(int)$pdo->lastInsertId();
+        }
         $fees=(float)($current['cleaning_fee']??0);$total=round($subtotal+$fees,2);$code='VR'.date('Ymd').strtoupper(bin2hex(random_bytes(3)));
         $save=$pdo->prepare("INSERT INTO bookings(booking_code,property_id,guest_user_id,guest_name,guest_email,guest_phone,booking_source,check_in,check_out,guests,subtotal,fees,total,currency,status,created_at) VALUES(?,?,?,?,?,?,'website',?,?,?,?,?,?,?,'pending',NOW())");
         $save->execute([$code,(int)$property['id'],$userId,$fullName,$email,$phone,$inRaw,$outRaw,$guests,$subtotal,$fees,$total,$current['currency']]);
@@ -667,7 +670,7 @@ $router->post('/villa/{slug}/reserve', static function (array $params): void {
         $financial=$pdo->prepare("INSERT INTO booking_financials(booking_id,gross_amount,platform_fee,vendor_net_amount,currency,payout_status,created_at) VALUES(?,?,?,?,?,'unpaid',NOW())");$financial->execute([$bookingId,$total,$platformFee,$vendorNet,$current['currency']]);
         $notice=$pdo->prepare("INSERT INTO notifications(user_id,notification_type,title,body,created_at) VALUES(?,'booking.created','Rezervasyonunuz oluşturuldu',?,NOW())");$notice->execute([$userId,'Rezervasyon kodunuz: '.$code]);
         $pdo->commit();
-        if(!$currentUser&&!$account)Auth::attempt($email,$password);
+        if($createNewAccount)Auth::attempt($email,$password);
         redirect('/checkout/'.rawurlencode($code));
     }catch(Throwable $e){if($pdo->inTransaction())$pdo->rollBack();error_log('Booking creation failed: '.$e->getMessage());http_response_code(500);exit('Rezervasyon kaydedilemedi. Lütfen tekrar deneyin.');}
 });
