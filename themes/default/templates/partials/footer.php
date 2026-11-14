@@ -54,55 +54,52 @@ $mobilePhone = preg_replace('/\\D+/', '', (string)($mobileBarSettings['mobile_ba
 <style>
 .villa-mobile-bar,.villa-mobile-search-overlay{display:none}
 @media(max-width:760px){
- body{padding-bottom:calc(102px + env(safe-area-inset-bottom,0px))!important}
+ body{padding-bottom:calc(82px + env(safe-area-inset-bottom,0px))!important}
  .villa-mobile-bar{
-  position:fixed;z-index:9998;left:50%;bottom:calc(12px + env(safe-area-inset-bottom,0px));
-  transform:translateX(-50%);width:min(560px,calc(100% - 26px));box-sizing:border-box;
-  display:grid;grid-template-columns:repeat(4,minmax(0,1fr));align-items:center;gap:0;
-  padding:8px 7px;background:rgba(250,249,245,.97);
-  border:1px solid rgba(180,157,112,.42);border-radius:21px;
-  box-shadow:0 9px 30px rgba(34,44,35,.13),0 2px 7px rgba(34,44,35,.06),inset 0 1px 0 #fff;
-  -webkit-backdrop-filter:blur(22px) saturate(145%);backdrop-filter:blur(22px) saturate(145%)
+  position:fixed;z-index:9998;left:0;right:0;bottom:0;
+  width:100%;box-sizing:border-box;display:grid;
+  grid-template-columns:repeat(4,minmax(0,1fr));align-items:stretch;gap:0;
+  padding:7px 8px calc(7px + env(safe-area-inset-bottom,0px));
+  background:#fff;border:0;border-top:1px solid #e8e8e8;border-radius:0;
+  box-shadow:0 -5px 20px rgba(0,0,0,.055);
  }
- .villa-mobile-bar:before{content:"";position:absolute;top:-1px;left:25%;right:25%;height:1px;background:linear-gradient(90deg,transparent,#c7ad78,transparent);opacity:.85}
  .villa-mobile-bar>a,.villa-mobile-bar>button,.villa-mobile-bar>span{
-  box-sizing:border-box;position:relative;min-width:0;width:100%;min-height:59px;margin:0;padding:5px 1px;
-  display:flex;flex-direction:column;align-items:center;justify-content:center;gap:5px;
-  border:0;border-radius:14px;background:transparent;color:#455247;text-decoration:none;
-  font:inherit;cursor:pointer;-webkit-tap-highlight-color:transparent
+  box-sizing:border-box;position:relative;min-width:0;width:100%;min-height:62px;
+  margin:0;padding:7px 2px;display:flex;flex-direction:column;
+  align-items:center;justify-content:center;gap:5px;
+  border:0;border-radius:0;background:transparent;color:#222;
+  text-decoration:none;font:inherit;cursor:pointer;-webkit-tap-highlight-color:transparent
  }
- .villa-mobile-bar>span{opacity:.38;cursor:default}
+ .villa-mobile-bar>span{opacity:.35;cursor:default}
  .villa-mobile-bar svg{width:23px;height:23px;display:block;stroke:currentColor;fill:none;
-  stroke-width:1.65;stroke-linecap:round;stroke-linejoin:round;color:#536356}
+  stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round;color:#252525}
  .villa-mobile-bar a>span,.villa-mobile-bar button>span,.villa-mobile-bar>span>span{
-  font-size:10px;font-weight:650;line-height:1.1;letter-spacing:.015em;white-space:nowrap;color:#566257
+  font-size:10px;font-weight:600;line-height:1.1;letter-spacing:0;white-space:nowrap;color:#333
  }
- .villa-mobile-bar [data-villa-search-open]{background:linear-gradient(145deg,#294b39,#1d392b);color:#fff;box-shadow:0 4px 11px rgba(30,58,43,.18),inset 0 1px 0 rgba(255,255,255,.13)}
- .villa-mobile-bar [data-villa-search-open] svg{color:#f0dfb8}
- .villa-mobile-bar [data-villa-search-open]>span{color:#fff}
- .villa-mobile-bar .villa-mobile-whatsapp svg{color:#219765}
- .villa-mobile-bar .villa-mobile-phone svg{color:#9b8151}
- .villa-mobile-bar>a:active,.villa-mobile-bar>button:active{transform:scale(.97)}
- .villa-mobile-bar a:focus-visible,.villa-mobile-bar button:focus-visible{outline:2px solid #bda36f;outline-offset:1px}
- .villa-mobile-search-overlay{position:fixed;z-index:10000;inset:0;display:flex;align-items:flex-end;justify-content:center;padding:16px 16px calc(16px + env(safe-area-inset-bottom,0px));background:rgba(19,31,23,.48);opacity:0;visibility:hidden;transition:opacity .22s ease,visibility .22s ease}
+ .villa-mobile-bar [data-villa-search-open]{color:#111}
+ .villa-mobile-bar [data-villa-search-open]:after{
+  content:"";position:absolute;top:0;left:50%;width:27px;height:2px;
+  transform:translateX(-50%);background:#222
+ }
+ .villa-mobile-bar>a:active,.villa-mobile-bar>button:active{background:#f5f5f5}
+ .villa-mobile-bar a:focus-visible,.villa-mobile-bar button:focus-visible{outline:2px solid #555;outline-offset:-3px}
+ .villa-mobile-search-overlay{position:fixed;z-index:10000;inset:0;display:flex;align-items:flex-end;justify-content:center;padding:16px 16px calc(16px + env(safe-area-inset-bottom,0px));background:rgba(0,0,0,.48);opacity:0;visibility:hidden;transition:opacity .22s ease,visibility .22s ease}
  .villa-mobile-search-overlay.is-open{opacity:1;visibility:visible}
- .villa-mobile-search-card{box-sizing:border-box;width:min(520px,100%);padding:25px 22px calc(22px + env(safe-area-inset-bottom,0px));border:1px solid #e7dfcf;border-radius:25px;background:#fbfaf6;box-shadow:0 -14px 48px rgba(0,0,0,.18);transform:translateY(18px);transition:transform .24s cubic-bezier(.2,.8,.2,1)}
+ .villa-mobile-search-card{box-sizing:border-box;width:min(520px,100%);padding:25px 22px calc(22px + env(safe-area-inset-bottom,0px));border:1px solid #e5e5e5;border-radius:20px 20px 0 0;background:#fff;box-shadow:0 -14px 48px rgba(0,0,0,.16);transform:translateY(18px);transition:transform .24s cubic-bezier(.2,.8,.2,1)}
  .villa-mobile-search-overlay.is-open .villa-mobile-search-card{transform:translateY(0)}
  .villa-mobile-search-head{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:18px}
- .villa-mobile-search-head strong{font-size:19px;font-weight:720;letter-spacing:-.025em;color:#263d2e}
- .villa-mobile-search-close{flex:0 0 38px;width:38px;height:38px;border:1px solid #e6dfd1;border-radius:50%;background:#f3f0e8;color:#405344;font-size:23px;line-height:1;cursor:pointer}
+ .villa-mobile-search-head strong{font-size:19px;font-weight:700;letter-spacing:-.025em;color:#171717}
+ .villa-mobile-search-close{flex:0 0 38px;width:38px;height:38px;border:1px solid #e5e5e5;border-radius:50%;background:#f7f7f7;color:#222;font-size:23px;line-height:1;cursor:pointer}
  .villa-mobile-search-form{display:flex;align-items:stretch;gap:9px}
- .villa-mobile-search-form input{box-sizing:border-box;flex:1;min-width:0;height:52px;padding:0 15px;border:1px solid #deded3;border-radius:13px;background:#fff;color:#25392d;font:inherit;font-size:14px;outline:none}
- .villa-mobile-search-form input:focus{border-color:#b49a68;box-shadow:0 0 0 3px rgba(180,154,104,.14)}
- .villa-mobile-search-form button{height:52px;padding:0 20px;border:0;border-radius:13px;background:#294b39;color:#fff;font:inherit;font-size:13px;font-weight:700;white-space:nowrap;cursor:pointer}
+ .villa-mobile-search-form input{box-sizing:border-box;flex:1;min-width:0;height:52px;padding:0 15px;border:1px solid #ddd;border-radius:10px;background:#fff;color:#222;font:inherit;font-size:14px;outline:none}
+ .villa-mobile-search-form input:focus{border-color:#777;box-shadow:0 0 0 3px rgba(0,0,0,.07)}
+ .villa-mobile-search-form button{height:52px;padding:0 20px;border:0;border-radius:10px;background:#222;color:#fff;font:inherit;font-size:13px;font-weight:700;white-space:nowrap;cursor:pointer}
 }
 @media(max-width:360px){
- @media(max-width:760px){
-  .villa-mobile-bar{width:calc(100% - 18px);padding-left:5px;padding-right:5px}
-  .villa-mobile-bar>a,.villa-mobile-bar>button,.villa-mobile-bar>span{min-height:56px}
-  .villa-mobile-bar svg{width:21px;height:21px}
-  .villa-mobile-bar a>span,.villa-mobile-bar button>span,.villa-mobile-bar>span>span{font-size:9px}
- }
+ .villa-mobile-bar{padding-left:4px;padding-right:4px}
+ .villa-mobile-bar>a,.villa-mobile-bar>button,.villa-mobile-bar>span{min-height:58px}
+ .villa-mobile-bar svg{width:21px;height:21px}
+ .villa-mobile-bar a>span,.villa-mobile-bar button>span,.villa-mobile-bar>span>span{font-size:9px}
 }
 @media(prefers-reduced-motion:reduce){.villa-mobile-search-overlay,.villa-mobile-search-card,.villa-mobile-bar>a,.villa-mobile-bar>button{transition:none}}
 </style>
