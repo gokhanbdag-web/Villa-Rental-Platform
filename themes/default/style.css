@@ -1579,3 +1579,59 @@ body[data-villa-theme] .site-footer .footer-payment-logo img{display:block;width
  body[data-villa-theme] .site-footer .footer-row-primary{grid-template-columns:repeat(2,minmax(0,1fr))}
  body[data-villa-theme] .site-footer .footer-row-secondary{grid-template-columns:minmax(0,1fr)}
 }
+
+/* Remove unwanted decorative borders from public search, mobile drawer and villa cards. */
+body[data-villa-theme] .hero-filter-panel,
+body[data-villa-theme] .search-enhanced,
+body[data-villa-theme] .mobile-hero-search,
+body[data-villa-theme] .filter-panel{
+  border:0!important;
+}
+body[data-villa-theme] .hero-filter-panel .search-field,
+body[data-villa-theme] .search-enhanced .search-field,
+body[data-villa-theme] .mobile-hero-search-form label,
+body[data-villa-theme] .filter-panel .field input:not([type="hidden"]),
+body[data-villa-theme] .filter-panel .field select{
+  border:0!important;
+  box-shadow:none!important;
+}
+@media(max-width:760px){
+  body[data-villa-theme] .site-header .nav a,
+  body[data-villa-theme] .theme-header .nav a,
+  body[data-villa-theme] .site-header .nav .nav-entry-top>a,
+  body[data-villa-theme] .theme-header .nav .nav-entry-top>a{
+    border:0!important;
+  }
+}
+body[data-villa-theme] .med-property-card,
+body[data-villa-theme] .villa-card,
+body[data-villa-theme] .property-card,
+body[data-villa-theme] .listing-card,
+body[data-villa-theme] .stay{
+  border:0!important;
+}
+body[data-villa-theme] .med-property-card:focus,
+body[data-villa-theme] .villa-card:focus,
+body[data-villa-theme] .property-card:focus,
+body[data-villa-theme] .listing-card:focus,
+body[data-villa-theme] .stay:focus,
+body[data-villa-theme] .med-property-card:focus-visible,
+body[data-villa-theme] .villa-card:focus-visible,
+body[data-villa-theme] .property-card:focus-visible,
+body[data-villa-theme] .listing-card:focus-visible,
+body[data-villa-theme] .stay:focus-visible,
+body[data-villa-theme] .med-property-card button:focus,
+body[data-villa-theme] .villa-card button:focus,
+body[data-villa-theme] .property-card button:focus,
+body[data-villa-theme] .listing-card button:focus,
+body[data-villa-theme] .stay button:focus{
+  outline:0!important;
+  box-shadow:none!important;
+}
+body[data-villa-theme] .med-property-card button:focus,
+body[data-villa-theme] .villa-card button:focus,
+body[data-villa-theme] .property-card button:focus,
+body[data-villa-theme] .listing-card button:focus,
+body[data-villa-theme] .stay button:focus{
+  border-color:transparent!important;
+}
