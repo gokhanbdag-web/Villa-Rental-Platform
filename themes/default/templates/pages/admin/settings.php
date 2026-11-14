@@ -5,6 +5,15 @@
 <label>Platform komisyonu (%)<input type="number" name="commission" min="0" max="50" step=".1" value="<?= e($settings['platform.commission_percent']??'12') ?>"></label>
 <label>Varsayılan para birimi<input name="currency" maxlength="3" pattern="[A-Za-z]{3}" value="<?= e($settings['app.currency']??'TRY') ?>"></label>
 <label>Zaman dilimi<input name="timezone" value="<?= e($settings['app.timezone']??'Europe/Istanbul') ?>"></label></div></section>
+<section class="panel"><h2>Mobil alt menü</h2>
+<p class="muted">Mobil cihazlarda ekranın altına sabitlenen menüde Ana Sayfa, villa adıyla arama, WhatsApp ve telefon kısayolları gösterilir.</p>
+<label class="clear"><input type="checkbox" name="mobile_bar_enabled" value="1" <?= !empty($mobileBarEnabled)?'checked':'' ?>> Mobil alt menüyü etkinleştir</label>
+<div class="grid">
+<label>WhatsApp numarası<input type="tel" name="mobile_bar_whatsapp" inputmode="tel" autocomplete="tel" placeholder="905xxxxxxxxx" value="<?= e($settings['mobile_bar.whatsapp']??'') ?>"></label>
+<label>Telefon numarası<input type="tel" name="mobile_bar_phone" inputmode="tel" autocomplete="tel" placeholder="905xxxxxxxxx" value="<?= e($settings['mobile_bar.phone']??'') ?>"></label>
+</div>
+<p class="muted">Numaraları ülke koduyla birlikte girin. Örnek: Türkiye için 905xxxxxxxxx. WhatsApp ve telefon bağlantıları bu numaralardan otomatik oluşturulur.</p>
+</section>
 <section class="panel"><h2>iyzico bağlantısı</h2><?php if(!empty($iyzicoTestMessage)): ?><div class="notice <?= ($iyzicoTestMessageType??'success')==='error'?'error':'success' ?>" role="status"><?= e($iyzicoTestMessage) ?></div><?php endif; ?><label class="clear"><input type="checkbox" name="iyzico_enabled" value="1" <?= !empty($iyzicoEnabled)?'checked':'' ?>> iyzico ödemelerini etkinleştir</label><p class="muted">API Key ve Secret Key AES-256-GCM ile şifrelenerek saklanır. Kayıtlı değerler tekrar gösterilmez.</p><p class="status"><?= $iyzicoConfigured?'● Kimlik bilgileri kayıtlı':'● Kimlik bilgileri girilmedi' ?></p><div class="grid">
 <label>Ortam<select name="iyzico_environment"><option value="sandbox" <?= ($settings['payments.iyzico.environment']??'sandbox')==='sandbox'?'selected':'' ?>>Test</option><option value="production" <?= ($settings['payments.iyzico.environment']??'sandbox')==='production'?'selected':'' ?>>Canlı</option></select></label>
 <label>API Key<input type="password" name="iyzico_api_key" autocomplete="new-password" placeholder="<?= $iyzicoConfigured?'Değiştirmek için yeni değer girin':'API Key' ?>"></label>
