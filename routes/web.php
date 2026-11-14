@@ -1746,7 +1746,46 @@ $router->get('/brand-assets/{slug}/{filename}', static function (array $params):
     header('Content-Type: ' . $mime);
     header('X-Content-Type-Options: nosniff');
     header('Cache-Control: public, max-age=3600');
-    header('Content-Length: ' . (string)filesize($realPath));
+    $fileSize = (int)filesize($realPath);
+    // HTML5 video seeking requires byte-range responses. Without 206/Content-Range,
+    // browsers may ignore currentTime changes and always start the uploaded video at 0.
+    if (in_array($extension, ['mp4','webm'], true)) {
+        header('Accept-Ranges: bytes');
+        $rangeHeader = trim((string)($_SERVER['HTTP_RANGE'] ?? ''));
+        if ($rangeHeader !== '' && preg_match('/^bytes=(\\d*)-(\\d*)$/', $rangeHeader, $rangeMatch)) {
+            $rangeStart = $rangeMatch[1] === '' ? null : (int)$rangeMatch[1];
+            $rangeEnd = $rangeMatch[2] === '' ? null : (int)$rangeMatch[2];
+            if ($rangeStart === null && $rangeEnd !== null) {
+                $suffixLength = max(0, $rangeEnd);
+                $rangeStart = max(0, $fileSize - $suffixLength);
+                $rangeEnd = $fileSize - 1;
+            } elseif ($rangeStart !== null) {
+                $rangeEnd = $rangeEnd === null ? $fileSize - 1 : min($rangeEnd, $fileSize - 1);
+            }
+            if ($rangeStart === null || $rangeStart >= $fileSize || $rangeEnd === null || $rangeEnd < $rangeStart) {
+                http_response_code(416);
+                header('Content-Range: bytes */' . $fileSize);
+                exit;
+            }
+            $contentLength = $rangeEnd - $rangeStart + 1;
+            http_response_code(206);
+            header('Content-Range: bytes ' . $rangeStart . '-' . $rangeEnd . '/' . $fileSize);
+            header('Content-Length: ' . $contentLength);
+            $stream = fopen($realPath, 'rb');
+            if ($stream === false) { http_response_code(500); exit; }
+            fseek($stream, $rangeStart);
+            $remaining = $contentLength;
+            while ($remaining > 0 && !feof($stream)) {
+                $chunk = fread($stream, min(8192, $remaining));
+                if ($chunk === false || $chunk === '') break;
+                echo $chunk;
+                $remaining -= strlen($chunk);
+            }
+            fclose($stream);
+            exit;
+        }
+    }
+    header('Content-Length: ' . $fileSize);
     readfile($realPath);
     exit;
 });
