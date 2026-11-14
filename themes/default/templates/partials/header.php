@@ -24,15 +24,17 @@ $topPhoneDigits = preg_replace('/\\D+/', '', $topPhone);
     <?php endif; ?>
     <nav class="nav" id="siteNavigation"><?php \App\Core\ThemeManager::renderPartial('partials/navigation-items.php', get_defined_vars()); ?></nav>
     <div class="site-header-auth">
+      <?php
+        $headerRole = (string) ($headerUser['role'] ?? '');
+        $headerAccountPath = $headerRole === 'customer' ? '/account/bookings' : ($headerRole === 'vendor' ? '/vendor' : '/admin');
+        $headerAccountLabel = in_array($headerRole, ['admin', 'super_admin'], true) ? 'Yönetim Paneli' : ($headerRole === 'vendor' ? 'Ev Sahibi Paneli' : 'Hesabım');
+      ?>
       <?php if ($headerUser !== null): ?>
-        <form method="post" action="<?= e(app_url('/logout')) ?>" class="site-header-logout-form">
-          <input type="hidden" name="_csrf" value="<?= e(csrf_token()) ?>">
-          <button type="submit" class="site-header-auth-link site-header-logout" aria-label="Çıkış Yap" title="Çıkış Yap">
-            <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M10 17l5-5-5-5M15 12H3m9-9h6a3 3 0 0 1 3 3v12a3 3 0 0 1-3 3h-6"/></svg><span>Çıkış Yap</span>
-          </button>
-        </form>
+        <a class="site-header-auth-link" data-auth-link href="<?= e(app_url($headerAccountPath)) ?>" aria-label="<?= e($headerAccountLabel) ?>" title="<?= e($headerAccountLabel) ?>">
+          <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></svg>
+        </a>
       <?php else: ?>
-        <a class="site-header-auth-link" href="<?= e(app_url('/login')) ?>" aria-label="Giriş Yap" title="Giriş Yap">
+        <a class="site-header-auth-link" data-login-trigger href="<?= e(app_url('/login')) ?>" aria-label="Giriş Yap" title="Giriş Yap">
           <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4M10 17l5-5-5-5m5 5H3"/></svg>
         </a>
       <?php endif; ?>
