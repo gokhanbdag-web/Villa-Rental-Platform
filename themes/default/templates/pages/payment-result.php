@@ -34,7 +34,7 @@ $description = $isSuccess
 </style>
 </head>
 <body>
-<?php \\App\\Core\\ThemeManager::renderPartial('partials/header.php', get_defined_vars()); ?>
+<?php \App\Core\ThemeManager::renderPartial('partials/header.php', get_defined_vars()); ?>
 <main class="payment-result-page">
 <div class="payment-result-wrap">
 <section class="payment-result-card" aria-live="polite">
@@ -50,6 +50,6 @@ $description = $isSuccess
 </section>
 </div>
 </main>
-<?php \\App\\Core\\ThemeManager::renderPartial('partials/footer.php', get_defined_vars()); ?>
+<?php \App\Core\ThemeManager::renderPartial('partials/footer.php', get_defined_vars()); ?>
 </body>
 </html>
