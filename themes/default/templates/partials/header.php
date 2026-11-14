@@ -42,24 +42,6 @@ $topPhoneDigits = preg_replace('/\\D+/', '', $topPhone);
   </div>
 </header>
 <div class="drawer-overlay" id="menuOverlay"></div>
-<script>
-(function(){
- var b=document.getElementById('menuToggle'),n=document.getElementById('siteNavigation'),o=document.getElementById('menuOverlay');
- if(!b||!n||!o)return;
- function setOpen(open){
-  n.classList.toggle('is-open',open);o.classList.toggle('is-open',open);document.body.classList.toggle('menu-open',open);
-  b.setAttribute('aria-expanded',open?'true':'false');b.setAttribute('aria-label',open?'Menüyü kapat':'Menüyü aç');
-  var openMark=b.querySelector('.menu-open-mark'),closeMark=b.querySelector('.menu-close-mark');
-  if(openMark)openMark.hidden=open;if(closeMark)closeMark.hidden=!open;
- }
- function close(){setOpen(false)}
- setOpen(false);
- b.addEventListener('click',function(){setOpen(!n.classList.contains('is-open'))});
- o.addEventListener('click',close);
- n.addEventListener('click',function(e){if(e.target.closest('a'))close()});
- document.addEventListener('keydown',function(e){if(e.key==='Escape')close()});
- window.addEventListener('resize',function(){if(window.innerWidth>760)close()});
-})();
-</script>
+
 
 
