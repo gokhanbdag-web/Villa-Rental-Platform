@@ -90,14 +90,21 @@ final class IyzicoApiClient
         return self::post($config, '/payment/iyzipos/checkoutform/initialize/auth/ecom', $payload);
     }
 
-    public static function retrieveCheckoutForm(array $config, string $token): array
+    public static function retrieveCheckoutForm(array $config, string $token, ?string $conversationId = null): array
     {
         if ($token === '' || strlen($token) > 128) {
-            throw new \InvalidArgumentException('iyzico ödeme token değeri geçersiz.');
+            throw new \\InvalidArgumentException('iyzico ödeme token değeri geçersiz.');
+        }
+        $conversationId = trim((string)$conversationId);
+        if ($conversationId === '') {
+            $conversationId = 'villa-retrieve-' . bin2hex(random_bytes(6));
+        }
+        if (strlen($conversationId) > 128) {
+            throw new \\InvalidArgumentException('iyzico işlem referansı geçersiz.');
         }
         return self::post($config, '/payment/iyzipos/checkoutform/auth/ecom/detail', [
             'locale' => 'tr',
-            'conversationId' => 'villa-retrieve-' . bin2hex(random_bytes(6)),
+            'conversationId' => $conversationId,
             'token' => $token,
         ]);
     }
