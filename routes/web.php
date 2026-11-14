@@ -760,7 +760,7 @@ $router->post('/checkout/{bookingCode}/iyzico/start', static function (array $pa
     $placeholder='init:'.$conversationId;
     try{
         $insert=$pdo->prepare("INSERT INTO payment_transactions(booking_id,provider,provider_reference,idempotency_key,amount,currency,status,request_payload,created_at,updated_at) VALUES(?,'iyzico',?,?,?,?, 'pending',?,NOW(),NOW())");
-        $insert->execute([(int)$booking['id'],$placeholder,$idempotency,$amount,$currency,json_encode(['conversationId'=>$conversationId,'basketId'=>$booking['booking_code']],JSON_UNESCAPED_UNICODE)]);
+        $insert->execute([(int)$booking['id'],$placeholder,$idempotency,$amount,$currency,json_encode(['conversationId'=>$conversationId,'basketId'=>$booking['booking_code'],'environment'=>'sandbox'],JSON_UNESCAPED_UNICODE)]);
         $transactionId=(int)$pdo->lastInsertId();
         $response=\App\Core\IyzicoApiClient::initializeCheckoutForm($config,$payload);
         $token=trim((string)($response['token']??''));$paymentUrl=trim((string)($response['paymentPageUrl']??''));
@@ -790,6 +790,7 @@ $router->post('/payments/iyzico/callback', static function (): void {
     if(!$transaction){http_response_code(404);exit('Ödeme işlemi bulunamadı.');}
     try{
         $config=\App\Core\PaymentGatewayConfig::forProvider('iyzico');
+        $config['environment']='sandbox';
         $result=\App\Core\IyzicoApiClient::retrieveCheckoutForm($config,$token);
         if(strtolower((string)($result['status']??''))!=='success')throw new RuntimeException('iyzico ödeme sonucu doğrulanamadı.');
         $paymentStatus=strtoupper((string)($result['paymentStatus']??''));
@@ -817,7 +818,8 @@ $router->post('/payments/iyzico/callback', static function (): void {
 
 $router->post('/payments/iyzico/webhook', static function (): void {
     $config=\App\Core\PaymentGatewayConfig::forProvider('iyzico');
-    if(!$config['enabled']||!$config['configured']){http_response_code(403);exit('Disabled');}
+    if(!$config['configured']){http_response_code(403);exit('Not configured');}
+    $config['environment']='sandbox';
     $payload=$_POST;
     if(!$payload){
         $raw=(string)file_get_contents('php://input');
