@@ -1074,46 +1074,19 @@ final class ThemeManager
     var button=document.getElementById('villaBackToTop');
     if(!button || button.dataset.ready==='1') return;
     button.dataset.ready='1';
-    var travel=0;
     var frame=0;
-    var visible=false;
     var threshold=85;
     var reduced=window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
     function paint(){
         frame=0;
-        var y=Math.max(0,window.scrollY||0);
-        var viewport=window.innerHeight||700;
-        var doc=document.documentElement;
-        var maxScroll=Math.max(0,(doc.scrollHeight||document.body.scrollHeight)-viewport);
-        var limit=Math.max(0,viewport-196);
-        if(y>threshold){
-            if(!visible){visible=true;button.classList.add('is-visible');}
-            var progress=maxScroll>threshold?Math.max(0,Math.min(1,(y-threshold)/(maxScroll-threshold))):1;
-            travel=reduced?0:limit*progress;
-        }else{
-            visible=false;
-            travel=0;
-            button.classList.remove('is-visible');
-        }
-        button.style.setProperty('--villa-scroll-drift',travel.toFixed(2)+'px');
-        button.classList.toggle('is-at-lower-edge',travel>limit*0.55);
+        button.classList.toggle('is-visible',(window.scrollY||0)>threshold);
     }
     function onScroll(){if(!frame) frame=window.requestAnimationFrame(paint);}
     window.addEventListener('scroll',onScroll,{passive:true});
     window.addEventListener('resize',onScroll,{passive:true});
-    function finishReturn(){
-        if((window.scrollY||0)<2 && button.classList.contains('is-returning')){
-            button.classList.remove('is-returning');
-            button.classList.remove('is-visible');
-            travel=0;
-            button.style.setProperty('--villa-scroll-drift','0px');
-        }
-    }
     button.addEventListener('click',function(){
-        button.classList.add('is-returning');
         window.scrollTo({top:0,behavior:reduced?'auto':'smooth'});
     });
-    window.addEventListener('scroll',finishReturn,{passive:true});
     paint();
 })();
 </script>
