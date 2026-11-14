@@ -77,12 +77,12 @@ foreach (['iyzico','paytr'] as $provider) {
     paymentAssert($failure['signature_valid']&&!$failure['payment_success'],$provider.' failure simulation failed.');
     $tampered=PaymentSandboxSimulator::run($provider,'tampered');
     paymentAssert(!$tampered['signature_valid']&&!$tampered['payment_success'],$provider.' tampered simulation was accepted.');
-    $requestSignature=PaymentSandboxSimulator::run('paytr','success');
-    paymentAssert($requestSignature['request_signature_valid']===true && $requestSignature['callback_accepted']===true, 'PayTR iFrame request token signature or callback signature failed.');
-    foreach (['amount_mismatch','wrong_order'] as $badScenario) {
-        $rejected=PaymentSandboxSimulator::run('paytr',$badScenario);
-        paymentAssert($rejected['signature_valid']===true && $rejected['callback_accepted']===false && $rejected['payment_success']===false, 'PayTR '.$badScenario.' callback was not rejected after matching checks.');
-        paymentAssert($rejected['network_requests']===0 && $rejected['real_charge']===false && $rejected['booking_changed']===false, 'PayTR local simulator performed an external or persistent action.');
-    }
+}
+$requestSignature=PaymentSandboxSimulator::run('paytr','success');
+paymentAssert($requestSignature['request_signature_valid']===true && $requestSignature['callback_accepted']===true, 'PayTR iFrame request token signature or callback signature failed.');
+foreach (['amount_mismatch','wrong_order'] as $badScenario) {
+    $rejected=PaymentSandboxSimulator::run('paytr',$badScenario);
+    paymentAssert($rejected['signature_valid']===true && $rejected['callback_accepted']===false && $rejected['payment_success']===false, 'PayTR '.$badScenario.' callback was not rejected after matching checks.');
+    paymentAssert($rejected['network_requests']===0 && $rejected['real_charge']===false && $rejected['booking_changed']===false, 'PayTR local simulator performed an external or persistent action.');
 }
 echo "Payment security smoke tests passed. No gateway API requests were made.\n";
