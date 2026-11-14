@@ -85,6 +85,23 @@ final class IyzicoApiClient
         return $decoded;
     }
 
+    public static function initializeCheckoutForm(array $config, array $payload): array
+    {
+        return self::post($config, '/payment/iyzipos/checkoutform/initialize/auth/ecom', $payload);
+    }
+
+    public static function retrieveCheckoutForm(array $config, string $token): array
+    {
+        if ($token === '' || strlen($token) > 128) {
+            throw new \InvalidArgumentException('iyzico ödeme token değeri geçersiz.');
+        }
+        return self::post($config, '/payment/iyzipos/checkoutform/auth/ecom/detail', [
+            'locale' => 'tr',
+            'conversationId' => 'villa-retrieve-' . bin2hex(random_bytes(6)),
+            'token' => $token,
+        ]);
+    }
+
     public static function testSandboxConnection(array $config): array
     {
         // BIN check validates API authentication without creating a payment or charging a card.
