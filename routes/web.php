@@ -32,12 +32,23 @@ function villa_render_account_view(string $view, array $variables): void {
     ThemeManager::render('account.php', array_merge($variables, compact('navigation','footerNavigation','content','siteName','accountView')));
 }
 
-function villa_iyzico_sandbox_payment_url(string $url): ?string {
-    $parts=parse_url(trim($url));
-    if(!is_array($parts)||strtolower((string)($parts['scheme']??''))!=='https'||strtolower((string)($parts['host']??''))!=='sandbox-api.iyzipay.com'||isset($parts['user'])||isset($parts['pass']))return null;
-    $path=(string)($parts['path']??'');
-    if(!str_starts_with($path,'/checkoutform/')||strlen($path)>2048)return null;
-    return 'https://sandbox-api.iyzipay.com'.$path.(isset($parts['query'])?'?'.$parts['query']:'');
+function villa_iyzico_sandbox_payment_url(string $url, string $expectedToken=''): ?string {
+    $url=trim($url);$parts=parse_url($url);
+    if(!is_array($parts)||strtolower((string)($parts['scheme']??''))!=='https'||isset($parts['user'])||isset($parts['pass'])||isset($parts['fragment']))return null;
+    $host=strtolower((string)($parts['host']??''));$path=(string)($parts['path']??'');
+    $allowed=false;
+    if($host==='sandbox-cpp.iyzipay.com'&&($path===''||$path==='/'))$allowed=true;
+    if($host==='sandbox-api.iyzipay.com'&&str_starts_with($path,'/checkoutform/'))$allowed=true;
+    if(!$allowed||strlen($url)>2048)return null;
+    parse_str((string)($parts['query']??''),$query);
+    if($expectedToken!==''&&(!isset($query['token'])||!is_string($query['token'])||!hash_equals($expectedToken,$query['token'])))return null;
+    return $url;
+}
+function villa_iyzico_checkout_form_html(string $content): ?string {
+    if($content===''||strlen($content)>2000000)return null;
+    if(stripos($content,'<script')!==false)return $content;
+    $decoded=base64_decode($content,true);
+    return is_string($decoded)&&$decoded!==''&&stripos($decoded,'<script')!==false?$decoded:null;
 }
 function villa_safe_return_url(string $url): string { $path=parse_url($url,PHP_URL_PATH)?:'/'; if(!str_starts_with($path,'/')||str_starts_with($path,'//'))return '/'; $query=parse_url($url,PHP_URL_QUERY); return $path.($query!==null?'?'.$query:''); }
 function villa_return_with_status(string $url,string $key,string $value): string { $back=villa_safe_return_url($url); return $back.(str_contains($back,'?')?'&':'?').rawurlencode($key).'='.rawurlencode($value); }
@@ -741,11 +752,12 @@ $router->post('/checkout/{bookingCode}/iyzico/start', static function (array $pa
             $stored->execute([(string)$activePayment['provider_reference']]);
             $storedResponse=json_decode((string)($stored->fetchColumn()?:''),true);
             $encodedForm=is_array($storedResponse)?(string)($storedResponse['checkoutFormContent']??''):'';
-            $decodedForm=$encodedForm!==''?base64_decode($encodedForm,true):false;
-            if(is_string($decodedForm)&&$decodedForm!==''&&stripos($decodedForm,'<script')!==false){
+            $decodedForm=villa_iyzico_checkout_form_html($encodedForm);
+            if($decodedForm!==null){
                 redirect('/checkout/'.rawurlencode((string)$booking['booking_code']));
             }
-            $hostedUrl=is_array($storedResponse)?villa_iyzico_sandbox_payment_url((string)($storedResponse['paymentPageUrl']??'')):null;
+            $storedToken=is_array($storedResponse)?(string)($storedResponse['token']??$activePayment['provider_reference']):'';
+            $hostedUrl=is_array($storedResponse)?villa_iyzico_sandbox_payment_url((string)($storedResponse['paymentPageUrl']??''),$storedToken):null;
             if($hostedUrl!==null){header('Location: '.$hostedUrl,true,303);exit;}
         }
         if(str_starts_with((string)$activePayment['provider_reference'],'init:')){http_response_code(409);exit('Ödeme oturumu hazırlanıyor. Lütfen birkaç saniye sonra tekrar deneyin.');}
@@ -805,14 +817,14 @@ $router->post('/checkout/{bookingCode}/iyzico/start', static function (array $pa
         $response=\App\Core\IyzicoApiClient::initializeCheckoutForm($config,$payload);
         $token=trim((string)($response['token']??''));
         $checkoutFormContent=trim((string)($response['checkoutFormContent']??''));
-        $paymentPageUrl=villa_iyzico_sandbox_payment_url((string)($response['paymentPageUrl']??''));
+        $paymentPageUrl=villa_iyzico_sandbox_payment_url((string)($response['paymentPageUrl']??''),$token);
         $secret=(string)($config['credentials']['secret_key']??'');
         if(!\App\Core\PaymentSignatureVerifier::verifyIyzicoCheckoutFormInitialize($response,$secret)
             ||!hash_equals($conversationId,(string)($response['conversationId']??''))) {
             throw new RuntimeException('iyzico ödeme oturumu yanıtı imza veya işlem referansı doğrulamasından geçmedi.');
         }
-        $decodedCheckoutForm=$checkoutFormContent!==''?base64_decode($checkoutFormContent,true):false;
-        $hasEmbeddedForm=is_string($decodedCheckoutForm)&&$decodedCheckoutForm!==''&&stripos($decodedCheckoutForm,'<script')!==false;
+        $decodedCheckoutForm=villa_iyzico_checkout_form_html($checkoutFormContent);
+        $hasEmbeddedForm=$decodedCheckoutForm!==null;
         if($token===''||(!$hasEmbeddedForm&&$paymentPageUrl===null)){
             $responseFields=array_keys($response);
             sort($responseFields);
