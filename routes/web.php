@@ -685,6 +685,10 @@ $router->get('/checkout/{bookingCode}', static function(array $params):void {
     $iyzicoConfig=\App\Core\PaymentGatewayConfig::forProvider('iyzico');
     $iyzicoPaymentAvailable=!empty($iyzicoConfig['enabled'])&&!empty($iyzicoConfig['configured']);
     $paymentStatus=(string)($_GET['payment']??'');
+    $latestPayment=$pdo->prepare("SELECT status FROM payment_transactions WHERE booking_id=? AND provider='iyzico' ORDER BY id DESC LIMIT 1");
+    $latestPayment->execute([(int)$booking['id']]);$latestPaymentStatus=(string)($latestPayment->fetchColumn()?:'');
+    if($latestPaymentStatus==='processing')$paymentStatus='review';
+    if($latestPaymentStatus==='paid')$paymentStatus='paid';
     ThemeManager::renderTemplate('templates/pages/checkout.php',get_defined_vars());
 });
 
