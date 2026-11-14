@@ -41,8 +41,9 @@ function villa_iyzico_checkout_form_html(string $content): ?string {
 function villa_iyzico_checkout_iframe_url(string $url): ?string {
     if($url===''||strlen($url)>2048)return null;
     $parts=parse_url($url);
+    if(!is_array($parts))return null;
     $host=strtolower((string)($parts['host']??''));
-    if(!is_array($parts)||strtolower((string)($parts['scheme']??''))!=='https'
+    if(strtolower((string)($parts['scheme']??''))!=='https'
         ||!in_array($host,['sandbox-api.iyzipay.com','sandbox-cpp.iyzipay.com'],true)
         ||isset($parts['user'])||isset($parts['pass'])||isset($parts['fragment'])
         ||!str_starts_with((string)($parts['path']??''),'/checkoutform/'))return null;
