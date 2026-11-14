@@ -104,7 +104,7 @@ $navigation = is_array($navigation ?? null) ? $navigation : [];
 <?php endif; ?>
 <?php if(!empty($iyzicoPaymentAvailable)&&$booking['status']==='pending'&&($paymentStatus??'')!=='review'): ?>
 <section class="checkout-payment">
-<div class="checkout-section-title"><span class="checkout-step">2</span><div><h2>Güvenli ödeme</h2></div></div>
+<div class="checkout-section-title"><span class="checkout-step">2</span><div><h2>iyzico ile güvenli ödeme</h2></div></div>
 <p class="checkout-payment-copy">Kart bilgilerinizi iyzico'nun güvenli ödeme bileşeni üzerinden girin. Kart bilgileriniz Villa CMS sunucusuna aktarılmaz.</p>
 <?php if(!empty($iyzicoCheckoutFormHtml)): ?>
 <div class="checkout-form-shell"><div id="iyzipay-checkout-form" class="responsive"></div><?= $iyzicoCheckoutFormHtml ?></div>
