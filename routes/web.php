@@ -1944,6 +1944,7 @@ $router->post('/admin/theme-design/brand-asset/remove', static function (): void
 $router->get('/admin/header-settings', static function (): void {
     Auth::requireRole(['super_admin','admin']);
     $socialSettings=ThemeManager::socialSettings();
+    $mobileBarPhone=(string)(Database::connection()->query("SELECT setting_value FROM settings WHERE setting_key='mobile_bar.phone' LIMIT 1")->fetchColumn() ?: '');
     $themeMessage=(string)($_SESSION['villa_theme_message']??'');
     $themeMessageType=(string)($_SESSION['villa_theme_message_type']??'success');
     unset($_SESSION['villa_theme_message'],$_SESSION['villa_theme_message_type']);
@@ -1953,7 +1954,11 @@ $router->post('/admin/header-settings/social-icons', static function (): void {
     Auth::requireRole(['super_admin','admin']);verify_csrf();
     try {
         ThemeManager::saveSocialSettings((array)($_POST['social']??[]));
-        $_SESSION['villa_theme_message']='Üst bilgi ayarları başarıyla veritabanına kaydedildi.';
+        $mobilePhone=preg_replace('/\\D+/','',trim((string)($_POST['mobile_bar_phone']??'')))??'';
+        if($mobilePhone!==''&&(strlen($mobilePhone)<7||strlen($mobilePhone)>15)) throw new RuntimeException('Telefon numarasını ülke koduyla birlikte kontrol edin.');
+        $savePhone=Database::connection()->prepare('INSERT INTO settings(setting_key,setting_value,autoload) VALUES(?, ?, 1) ON DUPLICATE KEY UPDATE setting_value=VALUES(setting_value),autoload=1');
+        $savePhone->execute(['mobile_bar.phone',$mobilePhone]);
+        $_SESSION['villa_theme_message']='Tema ayarları başarıyla kaydedildi.';
         $_SESSION['villa_theme_message_type']='success';
     } catch(Throwable $e) {
         error_log('Shared header settings save failed: '.$e->getMessage());
@@ -1988,7 +1993,7 @@ $router->post('/admin/typography', static function (): void {
 
 $router->get('/admin/settings', static function (): void {
     Auth::requireRole(['super_admin','admin']);
-    $settings=Database::connection()->query("SELECT setting_key,setting_value FROM settings WHERE setting_key IN ('platform.commission_percent','app.currency','app.timezone','payments.iyzico.environment','payments.paytr.environment','payments.iyzico.enabled','payments.paytr.enabled','payments.iyzico.api_key','payments.iyzico.secret_key','payments.paytr.merchant_id','payments.paytr.merchant_key','payments.paytr.merchant_salt','mobile_bar.enabled','mobile_bar.whatsapp','mobile_bar.phone')")->fetchAll(PDO::FETCH_KEY_PAIR);
+    $settings=Database::connection()->query("SELECT setting_key,setting_value FROM settings WHERE setting_key IN ('platform.commission_percent','app.currency','app.timezone','payments.iyzico.environment','payments.paytr.environment','payments.iyzico.enabled','payments.paytr.enabled','payments.iyzico.api_key','payments.iyzico.secret_key','payments.paytr.merchant_id','payments.paytr.merchant_key','payments.paytr.merchant_salt')")->fetchAll(PDO::FETCH_KEY_PAIR);
     $iyzicoEnabled=($settings['payments.iyzico.enabled']??'0')==='1';
     $paytrEnabled=($settings['payments.paytr.enabled']??'0')==='1';
     $iyzicoConfigured=!empty($settings['payments.iyzico.api_key'])&&!empty($settings['payments.iyzico.secret_key']);
@@ -1997,7 +2002,6 @@ $router->get('/admin/settings', static function (): void {
     $iyzicoTestMessageType=(string)($_SESSION['villa_iyzico_test_message_type']??'success');
     unset($_SESSION['villa_iyzico_test_message'],$_SESSION['villa_iyzico_test_message_type']);
     unset($settings['payments.iyzico.api_key'],$settings['payments.iyzico.secret_key'],$settings['payments.paytr.merchant_id'],$settings['payments.paytr.merchant_key'],$settings['payments.paytr.merchant_salt']);
-    $mobileBarEnabled=($settings['mobile_bar.enabled']??'1')==='1';
     ThemeManager::renderTemplate('templates/pages/admin/settings.php',get_defined_vars());
 });
 $router->post('/admin/settings', static function (): void {
@@ -2016,10 +2020,6 @@ $router->post('/admin/settings', static function (): void {
         }
         redirect('/admin/settings');
     }
-    $mobileBarEnabled=!empty($_POST['mobile_bar_enabled'])&&$_POST['mobile_bar_enabled']==='1';
-    $mobileWhatsapp=preg_replace('/\\D+/','',trim((string)($_POST['mobile_bar_whatsapp']??'')))??'';
-    $mobilePhone=preg_replace('/\\D+/','',trim((string)($_POST['mobile_bar_phone']??'')))??'';
-    if(($mobileWhatsapp!==''&&(strlen($mobileWhatsapp)<7||strlen($mobileWhatsapp)>15))||($mobilePhone!==''&&(strlen($mobilePhone)<7||strlen($mobilePhone)>15))){http_response_code(422);exit('WhatsApp ve telefon numaralarını ülke koduyla birlikte kontrol edin.');}
     $commission=(float)($_POST['commission']??12);$currency=strtoupper(trim((string)($_POST['currency']??'TRY')));$timezone=trim((string)($_POST['timezone']??'Europe/Istanbul'));
     $iyzicoEnvironment=(string)($_POST['iyzico_environment']??'sandbox');$paytrEnvironment=(string)($_POST['paytr_environment']??'sandbox');
     if($commission<0||$commission>50||!preg_match('/^[A-Z]{3}$/',$currency)||!in_array($timezone,DateTimeZone::listIdentifiers(),true)||!in_array($iyzicoEnvironment,['sandbox','production'],true)||!in_array($paytrEnvironment,['sandbox','production'],true)){http_response_code(422);exit('Ayar değerlerini kontrol edin.');}
@@ -2027,7 +2027,7 @@ $router->post('/admin/settings', static function (): void {
     $iyzicoEnabled=!empty($_POST['iyzico_enabled'])&&$_POST['iyzico_enabled']==='1';
     $paytrEnabled=!empty($_POST['paytr_enabled'])&&$_POST['paytr_enabled']==='1';
     $anyPaymentEnabled=$iyzicoEnabled||$paytrEnabled;
-    foreach(['platform.commission_percent'=>(string)$commission,'app.currency'=>$currency,'app.timezone'=>$timezone,'payments.iyzico.environment'=>$iyzicoEnvironment,'payments.paytr.environment'=>$paytrEnvironment,'payments.iyzico.enabled'=>$iyzicoEnabled?'1':'0','payments.paytr.enabled'=>$paytrEnabled?'1':'0','payments.enabled'=>$anyPaymentEnabled?'1':'0','payments.provider'=>$anyPaymentEnabled?'multiple':'none','mobile_bar.enabled'=>$mobileBarEnabled?'1':'0','mobile_bar.whatsapp'=>$mobileWhatsapp,'mobile_bar.phone'=>$mobilePhone] as $key=>$value)$save->execute([$key,$value]);
+    foreach(['platform.commission_percent'=>(string)$commission,'app.currency'=>$currency,'app.timezone'=>$timezone,'payments.iyzico.environment'=>$iyzicoEnvironment,'payments.paytr.environment'=>$paytrEnvironment,'payments.iyzico.enabled'=>$iyzicoEnabled?'1':'0','payments.paytr.enabled'=>$paytrEnabled?'1':'0','payments.enabled'=>$anyPaymentEnabled?'1':'0','payments.provider'=>$anyPaymentEnabled?'multiple':'none'] as $key=>$value)$save->execute([$key,$value]);
     $secrets=['payments.iyzico.api_key'=>'iyzico_api_key','payments.iyzico.secret_key'=>'iyzico_secret_key','payments.paytr.merchant_id'=>'paytr_merchant_id','payments.paytr.merchant_key'=>'paytr_merchant_key','payments.paytr.merchant_salt'=>'paytr_merchant_salt'];
     foreach($secrets as $key=>$field){$value=trim((string)($_POST[$field]??''));if($value!=='')$save->execute([$key,\App\Core\PaymentSecretVault::encrypt($value)]);}
     $clear=[];if(!empty($_POST['clear_iyzico']))$clear=array_merge($clear,['payments.iyzico.api_key','payments.iyzico.secret_key']);if(!empty($_POST['clear_paytr']))$clear=array_merge($clear,['payments.paytr.merchant_id','payments.paytr.merchant_key','payments.paytr.merchant_salt']);
