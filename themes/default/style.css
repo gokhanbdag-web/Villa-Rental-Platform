@@ -1793,3 +1793,24 @@ body[data-villa-theme] .site-header .nav{margin-left:auto!important}
     justify-content:flex-start!important;
   }
 }
+
+
+/* Desktop header account action: keep it at the far right, separate from navigation. */
+@media(min-width:761px){
+  body[data-villa-theme] .site-header .head{justify-content:flex-start!important;gap:24px!important}
+  body[data-villa-theme] .site-header .nav{margin-left:0!important;margin-right:0!important;justify-content:flex-start!important;flex:0 1 auto!important}
+  body[data-villa-theme] .site-header-auth{display:flex!important;align-items:center!important;margin-left:auto!important;flex:0 0 auto!important}
+  body[data-villa-theme] .site-header-logout-form{display:block!important;margin:0!important}
+  body[data-villa-theme] .site-header-auth-link{
+    display:inline-flex!important;align-items:center!important;justify-content:center!important;gap:8px!important;
+    min-width:44px!important;min-height:44px!important;padding:9px 12px!important;
+    border:1px solid var(--villa-primary,#176b50)!important;border-radius:999px!important;
+    background:var(--villa-surface,#fff)!important;color:var(--villa-text,#20332c)!important;
+    text-decoration:none!important;font:inherit!important;font-weight:650!important;cursor:pointer!important;
+  }
+  body[data-villa-theme] .site-header-auth-link svg{display:block!important;width:21px!important;height:21px!important;fill:none!important;stroke:currentColor!important;stroke-width:1.8!important;stroke-linecap:round!important;stroke-linejoin:round!important}
+  body[data-villa-theme] .site-header-auth-link:hover{background:var(--villa-primary,#176b50)!important;color:#fff!important}
+}
+@media(max-width:760px){
+  body[data-villa-theme] .site-header-auth{display:none!important}
+}
