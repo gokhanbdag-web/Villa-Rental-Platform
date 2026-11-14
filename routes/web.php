@@ -38,6 +38,17 @@ function villa_iyzico_checkout_form_html(string $content): ?string {
     $decoded=base64_decode($content,true);
     return is_string($decoded)&&$decoded!==''&&stripos($decoded,'<script')!==false?$decoded:null;
 }
+function villa_iyzico_checkout_iframe_url(string $url): ?string {
+    if($url===''||strlen($url)>2048)return null;
+    $parts=parse_url($url);
+    if(!is_array($parts)||strtolower((string)($parts['scheme']??''))!=='https'
+        ||strtolower((string)($parts['host']??''))!=='sandbox-api.iyzipay.com'
+        ||isset($parts['user'])||isset($parts['pass'])||isset($parts['fragment'])
+        ||!str_starts_with((string)($parts['path']??''),'/checkoutform/'))return null;
+    parse_str((string)($parts['query']??''),$query);
+    $query['iframe']='true';
+    return 'https://sandbox-api.iyzipay.com'.(string)$parts['path'].'?'.http_build_query($query,'','&',PHP_QUERY_RFC3986);
+}
 function villa_safe_return_url(string $url): string { $path=parse_url($url,PHP_URL_PATH)?:'/'; if(!str_starts_with($path,'/')||str_starts_with($path,'//'))return '/'; $query=parse_url($url,PHP_URL_QUERY); return $path.($query!==null?'?'.$query:''); }
 function villa_return_with_status(string $url,string $key,string $value): string { $back=villa_safe_return_url($url); return $back.(str_contains($back,'?')?'&':'?').rawurlencode($key).'='.rawurlencode($value); }
 
@@ -696,6 +707,7 @@ $router->get('/checkout/{bookingCode}', static function(array $params):void {
     $latestPayment->execute([(int)$booking['id']]);$latestPaymentRow=$latestPayment->fetch(PDO::FETCH_ASSOC)?:[];
     $latestPaymentStatus=(string)($latestPaymentRow['status']??'');
     $iyzicoCheckoutFormHtml='';
+    $iyzicoCheckoutFormUrl='';
     $iyzicoInitializationError='';
     if($paymentStatus==='init_error'&&$latestPaymentStatus==='failed'){
         $failureData=json_decode((string)($latestPaymentRow['response_payload']??''),true);
@@ -711,6 +723,9 @@ $router->get('/checkout/{bookingCode}', static function(array $params):void {
             $decodedForm=villa_iyzico_checkout_form_html($encodedForm);
             if($decodedForm!==null){
                 $iyzicoCheckoutFormHtml=$decodedForm;
+            }else{
+                $iyzicoCheckoutFormUrl=villa_iyzico_checkout_iframe_url((string)($storedResponse['paymentPageUrl']??''))
+                    ??villa_iyzico_checkout_iframe_url((string)($storedResponse['checkoutIframeUrl']??''));
             }
         }
     }
@@ -745,7 +760,8 @@ $router->post('/checkout/{bookingCode}/iyzico/start', static function (array $pa
             $storedResponse=json_decode((string)($stored->fetchColumn()?:''),true);
             $encodedForm=is_array($storedResponse)?(string)($storedResponse['checkoutFormContent']??''):'';
             $decodedForm=villa_iyzico_checkout_form_html($encodedForm);
-            if($decodedForm!==null){
+            $iframeUrl=is_array($storedResponse)?villa_iyzico_checkout_iframe_url((string)($storedResponse['paymentPageUrl']??'')):null;
+            if($decodedForm!==null||$iframeUrl!==null){
                 redirect('/checkout/'.rawurlencode((string)$booking['booking_code']));
             }
         }
@@ -812,15 +828,16 @@ $router->post('/checkout/{bookingCode}/iyzico/start', static function (array $pa
             throw new RuntimeException('iyzico ödeme oturumu yanıtı imza veya işlem referansı doğrulamasından geçmedi.');
         }
         $decodedCheckoutForm=villa_iyzico_checkout_form_html($checkoutFormContent);
-        $hasEmbeddedForm=$decodedCheckoutForm!==null;
-        if($token===''||!$hasEmbeddedForm){
+        $iframeUrl=villa_iyzico_checkout_iframe_url(trim((string)($response['paymentPageUrl']??'')));
+        if($token===''||($decodedCheckoutForm===null&&$iframeUrl===null)){
             $responseFields=array_keys($response);
             sort($responseFields);
-            throw new RuntimeException('iyzico yanıtında geçerli ödeme formu bulunamadı (alanlar: '.implode(',',$responseFields).').');
+            throw new RuntimeException('iyzico yanıtında gömülü HTML veya güvenli Sandbox iframe adresi bulunamadı (alanlar: '.implode(',',$responseFields).').');
         }
         $storedResponse=json_encode([
             'token'=>$token,'conversationId'=>$conversationId,'checkoutFormContent'=>$checkoutFormContent,
-            'render_mode'=>'embedded','environment'=>'sandbox',
+            'paymentPageUrl'=>$iframeUrl!==null?(string)$response['paymentPageUrl']:'',
+            'render_mode'=>$decodedCheckoutForm!==null?'embedded':'iframe','environment'=>'sandbox',
         ],JSON_UNESCAPED_UNICODE|JSON_UNESCAPED_SLASHES);
         $update=$pdo->prepare("UPDATE payment_transactions SET provider_reference=?,checkout_url=NULL,response_payload=?,expires_at=DATE_ADD(NOW(),INTERVAL 30 MINUTE),updated_at=NOW() WHERE id=? AND status='pending'");
         $update->execute([$token,$storedResponse,$transactionId]);
