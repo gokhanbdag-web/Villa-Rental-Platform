@@ -267,6 +267,11 @@ try {
     assertSmoke(str_contains($themeRoutesSource, "villa_theme_message_type") && str_contains($themeRoutesSource, 'Shared header settings save failed'), 'Header settings save failures must be logged and surfaced to the administrator.');
     assertSmoke(str_contains($themeSettingsViewSource, 'role="status"') && str_contains($themeSettingsViewSource, '.notice.error'), 'Header settings must visibly distinguish a failed save from a successful save.');
 
+    $iyzicoClientSource = (string)file_get_contents($root . '/app/Core/IyzicoApiClient.php');
+    assertSmoke(str_contains($iyzicoClientSource, 'IYZWSv2 ') && str_contains($iyzicoClientSource, 'hash_hmac') && str_contains($iyzicoClientSource, '/payment/bin/check'), 'Native iyzico Sandbox connection client must use HMAC authentication and a non-payment BIN check.');
+    assertSmoke(str_contains($iyzicoClientSource, 'sandbox-api.iyzipay.com') && str_contains($iyzicoClientSource, 'CURLOPT_SSL_VERIFYPEER => true'), 'iyzico Sandbox client must target the sandbox host and verify TLS certificates.');
+    assertSmoke(str_contains($iyzicoClientSource, 'function testSandboxConnection') && str_contains($iyzicoClientSource, 'binNumber'), 'iyzico admin connection test must use a non-payment BIN lookup.');
+    assertSmoke(str_contains($themeRoutesSource, 'test_iyzico_sandbox') && str_contains($themeRoutesSource, 'IyzicoApiClient::testSandboxConnection'), 'Admin settings must expose the iyzico Sandbox connection test.');
     $paymentSimulatorSource = (string)file_get_contents($root . '/app/Core/PaymentSandboxSimulator.php');
     assertSmoke(str_contains($paymentSimulatorSource, 'LOCAL-ONLY-TEST-MERCHANT-KEY') && str_contains($paymentSimulatorSource, 'LOCAL-ONLY-TEST-MERCHANT-SALT'), 'PayTR local sandbox must use isolated synthetic credentials.');
     assertSmoke(str_contains($paymentSimulatorSource, 'amount_mismatch') && str_contains($paymentSimulatorSource, 'wrong_order') && str_contains($paymentSimulatorSource, 'PaymentSignatureVerifier::verifyPaytr'), 'PayTR local sandbox must test callback signatures, amount mismatch and order mismatch.');
