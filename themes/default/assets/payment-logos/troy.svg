@@ -1,1 +1,11 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 150 64" role="img" aria-labelledby="t"><title id="t">TROY</title><path d="M10 14h35v8H31v31H22V22H10z" fill="#E6332A"/><path d="M48 22h9v5c3-4 7-6 13-6v9c-8 0-13 4-13 12v11h-9z" fill="#fff"/><path d="M75 22h10l9 21 9-21h10L98 53c-3 7-8 10-17 10v-8c4 0 7-1 9-5z" fill="#fff"/><path d="M118 22h22v8h-13v4h12v7h-12v4h14v8h-23z" fill="#E6332A"/></svg>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 154 58" role="img" aria-labelledby="title">
+  <title id="title">TROY</title>
+  <g fill="#45535B" font-family="Arial, Helvetica, sans-serif" font-size="45" font-style="italic" font-weight="900">
+    <text x="2" y="43" letter-spacing="-4">tr</text>
+    <text x="91" y="43">y</text>
+  </g>
+  <circle cx="75" cy="28" r="17" fill="#00B9C8"/>
+  <circle cx="75" cy="28" r="8" fill="#fff"/>
+  <path d="M69 13.5 73 13.5 81 42.5 77 42.5Z" fill="#fff"/>
+  <text x="127" y="18" fill="#45535B" font-family="Arial, Helvetica, sans-serif" font-size="8" font-weight="700">®</text>
+</svg>
