@@ -22,6 +22,10 @@ paymentAssert(PaymentCallbackProcessor::targetStatus('failure') === 'failed', 'F
 paymentAssert(PaymentCallbackProcessor::targetStatus('cancelled') === 'cancelled', 'Cancelled callback status mapping failed.');
 paymentAssert(PaymentCallbackProcessor::targetStatus('refunded') === 'refunded', 'Refund callback status mapping failed.');
 paymentAssert(PaymentCallbackProcessor::targetStatus('unknown') === null, 'Unknown callback status was accepted.');
+paymentAssert(PaymentCallbackProcessor::targetStatus('processing') === 'processing', 'iyzico fraud-review status mapping failed.');
+paymentAssert(method_exists(\\App\\Core\\IyzicoApiClient::class, 'initializeCheckoutForm'), 'iyzico Checkout Form initialize method is missing.');
+paymentAssert(method_exists(\\App\\Core\\IyzicoApiClient::class, 'retrieveCheckoutForm'), 'iyzico Checkout Form retrieve method is missing.');
+
 
 paymentAssert(PaymentTransactionGuard::canTransition('pending','processing'), 'Pending to processing transition was rejected.');
 paymentAssert(PaymentTransactionGuard::canTransition('processing','paid'), 'Processing to paid transition was rejected.');
