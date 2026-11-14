@@ -736,8 +736,8 @@ $router->post('/checkout/{bookingCode}/iyzico/start', static function (array $pa
     $now=date('Y-m-d H:i:s');
     $ip=(string)($_SERVER['REMOTE_ADDR']??'127.0.0.1');
     $conversationId='VR'.$booking['id'].'-'.bin2hex(random_bytes(8));
-    $callbackUrl=app_url('/payments/iyzico/callback');
-    if(!str_starts_with($callbackUrl,'https://')){http_response_code(503);exit('iyzico ödeme bildirimi için HTTPS adresi gereklidir.');}
+    try{$callbackUrl=app_absolute_url('/payments/iyzico/callback');}
+    catch(Throwable $e){http_response_code(503);exit('iyzico ödeme bildirimi için geçerli HTTPS site adresi gereklidir.');}
     $payload=[
         'locale'=>'tr','conversationId'=>$conversationId,'price'=>$amount,'paidPrice'=>$amount,
         'currency'=>$currency,'basketId'=>(string)$booking['booking_code'],'paymentGroup'=>'PRODUCT',
