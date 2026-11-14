@@ -1335,6 +1335,9 @@ body[data-villa-theme] .drawer-overlay{display:none}
  }
  body[data-villa-theme] .site-header .nav.is-open{transform:translateX(0)!important;visibility:visible!important}
  body[data-villa-theme] .site-header .nav a{display:flex!important;padding:16px 4px!important;border-bottom:1px solid var(--villa-primary,#176b50)!important}
+ body[data-villa-theme] .site-header .nav a,
+ body[data-villa-theme] .site-header .nav .nav-submenu-toggle,
+ body[data-villa-theme] .site-header .nav .nav-entry-top>a{color:var(--villa-primary,#176b50)!important}
  body[data-villa-theme] .drawer-overlay{
   display:block!important;position:fixed!important;inset:0!important;z-index:10000!important;
   background:#10251f80!important;opacity:0!important;visibility:hidden!important;pointer-events:none!important;
