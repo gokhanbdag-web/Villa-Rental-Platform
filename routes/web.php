@@ -699,7 +699,7 @@ $router->get('/checkout/{bookingCode}', static function(array $params):void {
         $decodedForm=$encodedForm!==''?base64_decode($encodedForm,true):false;
         if(is_string($decodedForm)&&$decodedForm!==''&&stripos($decodedForm,'<script')!==false)$iyzicoCheckoutFormHtml=$decodedForm;
     }
-    ThemeManager::renderTemplate('templates/pages/checkout.php',get_defined_vars());
+    ThemeManager::render('checkout.php',get_defined_vars());
 });
 
 $router->post('/checkout/{bookingCode}/iyzico/start', static function (array $params): void {
