@@ -231,6 +231,8 @@ try {
     $landingThemeSource = (string)file_get_contents($root . '/themes/default/templates/landing.php');
     $listingPageSource = (string)file_get_contents($root . '/themes/default/templates/pages/listing.php');
     assertSmoke(str_contains($landingThemeSource, "renderPartial('components/cards/villa-card.php'") && str_contains($listingPageSource, "renderPartial('components/cards/villa-card.php'"), 'Homepage and search results must use the same shared villa card component.');
+    $webRoutesSource = (string)file_get_contents($root . '/routes/web.php');
+    assertSmoke(substr_count($webRoutesSource, "status='confirmed'") >= 7 && !str_contains($webRoutesSource, "status IN ('pending','confirmed')"), 'Unpaid/pending booking requests must not block property availability or appear as occupied calendar dates; only confirmed bookings may occupy nights.');
     $heroLandingSource = (string)file_get_contents($root . '/themes/default/templates/pages/landing.php');
     assertSmoke(str_contains($heroLandingSource, 'id="homeCalendar"') && str_contains($heroLandingSource, 'id="calendarMonths"') && str_contains($heroLandingSource, 'date-picker-trigger') && str_contains($heroLandingSource, 'is-in-range') && str_contains($heroLandingSource, "co.value<=ci.value") && !str_contains($heroLandingSource, 'showPicker'), 'Homepage hero must use the accessible custom date-range calendar with past-date blocking, range highlighting and checkout validation.');
     assertSmoke(!str_contains($landingThemeSource, 'class="med-property-card"') && str_contains($landingThemeSource, 'cardGalleryScript'), 'Homepage must not maintain a separate villa card markup and must initialize the shared gallery controls.');
