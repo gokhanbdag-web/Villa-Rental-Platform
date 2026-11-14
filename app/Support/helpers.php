@@ -24,6 +24,15 @@ function app_base_path(): string {
         $root = $normalize($appRoot);
         $doc = $normalize($documentRoot);
 
+        // When the application root itself is the web document root, it is
+        // already mounted at /. Do not infer a URL prefix from the physical
+        // directory name (for example, /villa), or routes such as /villa/{slug}
+        // would be incorrectly rewritten to /villa/villa/{slug}.
+        if ($root === $doc) {
+            $base = '';
+            return $base;
+        }
+
         // Standard deployment: project root is a subdirectory of document root.
         if (str_starts_with($root, $doc . '/')) {
             $relative = trim(substr($root, strlen($doc)), '/');
