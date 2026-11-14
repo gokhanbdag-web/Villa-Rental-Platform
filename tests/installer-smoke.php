@@ -267,6 +267,13 @@ try {
     assertSmoke(str_contains($themeRoutesSource, "villa_theme_message_type") && str_contains($themeRoutesSource, 'Shared header settings save failed'), 'Header settings save failures must be logged and surfaced to the administrator.');
     assertSmoke(str_contains($themeSettingsViewSource, 'role="status"') && str_contains($themeSettingsViewSource, '.notice.error'), 'Header settings must visibly distinguish a failed save from a successful save.');
 
+    $paymentSimulatorSource = (string)file_get_contents($root . '/app/Core/PaymentSandboxSimulator.php');
+    assertSmoke(str_contains($paymentSimulatorSource, 'LOCAL-ONLY-TEST-MERCHANT-KEY') && str_contains($paymentSimulatorSource, 'LOCAL-ONLY-TEST-MERCHANT-SALT'), 'PayTR local sandbox must use isolated synthetic credentials.');
+    assertSmoke(str_contains($paymentSimulatorSource, 'amount_mismatch') && str_contains($paymentSimulatorSource, 'wrong_order') && str_contains($paymentSimulatorSource, 'PaymentSignatureVerifier::verifyPaytr'), 'PayTR local sandbox must test callback signatures, amount mismatch and order mismatch.');
+    assertSmoke(str_contains($paymentSimulatorSource, "'network_requests' => 0") && str_contains($paymentSimulatorSource, "'real_charge' => false") && str_contains($paymentSimulatorSource, "'booking_changed' => false"), 'Local payment sandbox must never contact providers, charge cards or mutate bookings.');
+    $paymentTestViewSource = (string)file_get_contents($root . '/themes/default/templates/pages/admin/payment-tests.php');
+    assertSmoke(str_contains($paymentTestViewSource, 'PayTR – Yerel iFrame simülatörü') && str_contains($paymentTestViewSource, 'Tutar uyuşmazlığı') && str_contains($paymentTestViewSource, 'Sipariş numarası uyuşmazlığı'), 'Admin payment test center must expose PayTR protocol failure scenarios.');
+
     // A second migration pass must be safe and leave the migration ledger intact.
     Migrator::run($pdo, $root);
     $migrationCountAfter = (int)$pdo->query('SELECT COUNT(*) FROM schema_migrations')->fetchColumn();
