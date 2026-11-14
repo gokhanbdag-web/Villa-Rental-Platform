@@ -1814,3 +1814,35 @@ body[data-villa-theme] .site-header .nav{margin-left:auto!important}
 @media(max-width:760px){
   body[data-villa-theme] .site-header-auth{display:none!important}
 }
+
+
+/* Desktop header uses the site's primary brand color with white navigation and account icon. */
+@media(min-width:761px){
+  body[data-villa-theme] .site-header{
+    background:var(--villa-primary,#176b50)!important;
+    color:#fff!important;
+  }
+  body[data-villa-theme] .site-header .nav a,
+  body[data-villa-theme] .site-header .nav .nav-entry-top>a,
+  body[data-villa-theme] .site-header .nav-submenu-toggle{
+    color:#fff!important;
+  }
+  body[data-villa-theme] .site-header .nav a:hover,
+  body[data-villa-theme] .site-header .nav a[aria-current="page"]{
+    background:rgba(255,255,255,.14)!important;
+    color:#fff!important;
+  }
+  body[data-villa-theme] .site-header-auth-link{
+    color:#fff!important;
+    background:transparent!important;
+    border-color:rgba(255,255,255,.7)!important;
+  }
+  body[data-villa-theme] .site-header-auth-link svg{
+    color:#fff!important;
+    stroke:#fff!important;
+  }
+  body[data-villa-theme] .site-header-auth-link:hover{
+    background:rgba(255,255,255,.16)!important;
+    color:#fff!important;
+  }
+}
