@@ -46,7 +46,7 @@ $basePath = app_base_path();
 
 // Prefer the literal URL first. This matters when a valid application route
 // (such as /villa/{slug}) has the same prefix as the physical install folder.
-// Only try the prefix-stripped path when the literal URL has no matching route.
+// Keep both URL forms; exact routes are prioritized across both forms below.
 $pathCandidates = [$requestedPath];
 if ($basePath !== '' && ($requestedPath === $basePath || str_starts_with($requestedPath, $basePath . '/'))) {
     $strippedPath = substr($requestedPath, strlen($basePath)) ?: '/';
