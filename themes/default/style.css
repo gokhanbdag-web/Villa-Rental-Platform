@@ -1674,3 +1674,10 @@ body[data-villa-theme] .theme-header .nav .nav-entry-top>a{
     border-bottom:0!important;
   }
 }
+
+/* The gallery arrow can retain keyboard focus; do not outline the whole stay card. */
+body[data-villa-theme] .premium-stay-card:focus-within{
+  outline:0!important;
+  outline-offset:0!important;
+  box-shadow:none!important;
+}
