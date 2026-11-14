@@ -4,6 +4,19 @@ $siteName=$content['site_name']??'VillaStay';
 $brandSettings=is_array($brandSettings??null)?$brandSettings:[];
 $logoUrl=(string)($brandSettings['logo_url']??'');
 $heroVideoUrl=(string)($brandSettings['hero_video_url']??'');
+$heroYouTubeId=static function(string $url):string{
+    $parts=parse_url(trim($url));if(!is_array($parts))return '';
+    $host=strtolower((string)($parts['host']??''));$path=(string)($parts['path']??'');$id='';
+    if(in_array($host,['youtu.be','www.youtu.be'],true))$id=trim($path,'/');
+    elseif(in_array($host,['youtube.com','www.youtube.com','m.youtube.com','youtube-nocookie.com','www.youtube-nocookie.com'],true)){
+        parse_str((string)($parts['query']??''),$query);$id=(string)($query['v']??'');
+        if($id===''&&preg_match('~^/(?:embed|shorts)/([A-Za-z0-9_-]{11})(?:/|$)~',$path,$match))$id=$match[1];
+    }
+    return preg_match('/^[A-Za-z0-9_-]{11}$/',$id)?$id:'';
+};
+$heroYouTubeIdValue=$heroYouTubeId((string)($homeSections['hero']['video_url']??''));
+$heroOverlayOpacity=max(0,min(100,(int)($homeSections['hero']['overlay_opacity']??58)));
+$heroOverlayAlpha=number_format($heroOverlayOpacity/100,2,'.','');
 // Every homepage must surface accommodation inventory, regardless of optional section toggles.
 $showFeatured = true;
 $photo=static function(array $row):string{$v=(string)($row['cover_image']??'');return $v===''?'':(preg_match('~^https?://~i',$v)?$v:'/'.ltrim($v,'/'));};
@@ -34,7 +47,7 @@ $stylePhotos=['https://images.unsplash.com/photo-1613490493576-7fde63acd811?auto
 .brand{display:inline-flex;align-items:center;min-width:0;max-width:260px;line-height:var(--villa-body-line-height);}.brand img{display:block;width:auto;height:auto;max-width:220px;max-height:54px;object-fit:contain}
 .hero{padding:0;background:#102a25}.hero>.hero-card{width:100%;max-width:none;margin:0}
 .hero-card{position:relative;isolation:isolate;width:100%;min-height:680px;padding:68px max(28px,calc((100vw - 1200px)/2));display:flex;align-items:center;background:#183b32 center/cover no-repeat}
-.hero-video,.hero-shade{position:absolute;inset:0;width:100%;height:100%;z-index:-2}.hero-video{object-fit:cover}.hero-shade{z-index:-1;background:linear-gradient(90deg,rgba(8,29,25,.78),rgba(8,29,25,.58) 58%,rgba(8,29,25,.44))}
+.hero-video,.hero-shade{position:absolute;inset:0;width:100%;height:100%;z-index:-2}.hero-video{object-fit:cover}.hero-video-youtube{width:100%;height:100%;border:0;pointer-events:none;transform:scale(1.18)}.hero-shade{z-index:-1;background:linear-gradient(90deg,rgba(8,29,25,.78),rgba(8,29,25,.58) 58%,rgba(8,29,25,.44))}
 .hero-inner{position:relative;z-index:1;width:100%;max-width:1200px;margin:0 auto;display:grid;grid-template-columns:minmax(0,2fr) minmax(310px,1fr);gap:5%;align-items:center}
 .hero-copy{width:100%;max-width:760px;padding:25px 0;color:var(--villa-text);}.hero-copy .eyebrow{display:inline-block;margin-bottom:12px}.hero-copy h1{max-width:780px;font-size:var(--villa-body-size);line-height:var(--villa-body-line-height);letter-spacing:-2.5px;text-wrap:balance}.hero-copy p{max-width:650px;font-size:var(--villa-body-size);line-height:var(--villa-body-line-height);}
 .hero-filter-panel{position:relative;z-index:2;width:100%;max-width:420px;justify-self:end;padding:22px;background:rgba(255,255,255,.97);border:1px solid rgba(255,255,255,.7);border-radius:22px;box-shadow:0 24px 70px rgba(0,0,0,.24);backdrop-filter:blur(12px)}
@@ -63,7 +76,7 @@ $stylePhotos=['https://images.unsplash.com/photo-1613490493576-7fde63acd811?auto
 </style></head><body>
 <header class="site-header"><div class="wrap head"><a class="brand" href="/" aria-label="<?= e($siteName) ?>"><?php if($logoUrl!==''): ?><img src="<?= e($logoUrl) ?>" alt="<?= e($siteName) ?>"><?php else: ?><?= e($siteName) ?><?php endif; ?></a><button class="mobile-menu-toggle" id="menuToggle" type="button" aria-label="Menüyü aç" aria-controls="siteNavigation" aria-expanded="false"><span class="menu-open-mark">☰</span><span class="menu-close-mark" hidden>×</span></button><nav class="nav" id="siteNavigation"><?php $navItems=$navigation??[];$navAllowAuth=true;\App\Core\ThemeManager::renderPartial('partials/navigation-items.php', get_defined_vars()); ?></nav></div></header><div class="drawer-overlay" id="menuOverlay"></div>
 <main class="home-sections"><?php if($active('hero')): ?><section class="hero" style="order:<?= $order('hero',1) ?>"><div class="hero-card" style="<?= !empty($homeSections['hero']['image_url'])?'background-image:linear-gradient(90deg,rgba(14,40,37,.7),rgba(14,40,37,.05)),url('.e($homeSections['hero']['image_url']).')':'' ?>">
-<?php if($heroVideoUrl!==''): ?><video class="hero-video" autoplay muted loop playsinline preload="metadata"<?= !empty($homeSections['hero']['image_url'])?' poster="'.e($homeSections['hero']['image_url']).'"':'' ?>><source src="<?= e($heroVideoUrl) ?>" type="<?= str_ends_with(strtolower((string)parse_url($heroVideoUrl,PHP_URL_PATH)),'.webm')?'video/webm':'video/mp4' ?>"></video><?php endif; ?><div class="hero-shade"></div>
+<?php if($heroYouTubeIdValue!==''): ?><iframe class="hero-video hero-video-youtube" src="https://www.youtube-nocookie.com/embed/<?= e($heroYouTubeIdValue) ?>?autoplay=1&amp;mute=1&amp;loop=1&amp;playlist=<?= e($heroYouTubeIdValue) ?>&amp;controls=0&amp;rel=0&amp;playsinline=1" title="Karşılama arka plan videosu" frameborder="0" allow="autoplay; encrypted-media; picture-in-picture" tabindex="-1" aria-hidden="true"></iframe><?php elseif($heroVideoUrl!==''): ?><video class="hero-video" autoplay muted loop playsinline preload="metadata"<?= !empty($homeSections['hero']['image_url'])?' poster="'.e($homeSections['hero']['image_url']).'"':'' ?>><source src="<?= e($heroVideoUrl) ?>" type="<?= str_ends_with(strtolower((string)parse_url($heroVideoUrl,PHP_URL_PATH)),'.webm')?'video/webm':'video/mp4' ?>"></video><?php endif; ?><div class="hero-shade" style="background:rgba(8,29,25,<?= e($heroOverlayAlpha) ?>)"></div>
 <div class="hero-inner"><div class="hero-copy"><span class="eyebrow villa-hero-eyebrow"><?= e($content['home_eyebrow']??'TATİLİNİZİ GÜZELLEŞTİRİN') ?></span><h1><?= e($content['home_title']??'Hayalinizdeki tatil sizi bekliyor') ?></h1><p><?= e($content['home_subtitle']??'Deniz, doğa ve huzur… Size en uygun tatil evini keşfedin.') ?></p></div></div>
 <div class="hero-filter-panel"><form class="search search-enhanced" action="/konaklamalar" method="get" id="homeSearch">
 <label class="search-field destination-field"><span class="search-label"><span class="search-icon">⌖</span> Nereye?</span><input type="text" name="city" id="homeDestination" list="homeDestinationOptions" placeholder="Şehir, ilçe veya semt seçin" aria-label="Destinasyon" autocomplete="off"><div class="location-suggestions" id="homeDestinationOptions" role="listbox" hidden></div><input type="hidden" name="location_id" id="homeLocationId" value=""></label>
