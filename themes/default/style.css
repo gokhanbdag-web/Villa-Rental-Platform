@@ -1687,3 +1687,41 @@ body[data-villa-theme] .premium-stay-card:focus-within{
 
 
 
+
+
+/* Fluid comet-tail burger morph: both strokes curl inward around one shared center. */
+@media(max-width:760px){
+  body[data-villa-theme] .theme-menu-toggle .menu-open-mark::before,
+  body[data-villa-theme] .theme-menu-toggle .menu-open-mark::after{
+    will-change:top,transform,filter;
+    transition:top .72s cubic-bezier(.22,1,.36,1),transform .72s cubic-bezier(.22,1,.36,1),filter .4s ease!important;
+  }
+  body[data-villa-theme] .theme-menu-toggle[aria-expanded="true"] .menu-open-mark::before{
+    animation:villa-comet-curl-top .92s cubic-bezier(.2,.85,.25,1) both!important;
+    filter:drop-shadow(0 0 3px rgba(121,200,235,.55));
+  }
+  body[data-villa-theme] .theme-menu-toggle[aria-expanded="true"] .menu-open-mark::after{
+    animation:villa-comet-curl-bottom .92s cubic-bezier(.2,.85,.25,1) both!important;
+    filter:drop-shadow(0 0 3px rgba(121,200,235,.55));
+  }
+}
+@keyframes villa-comet-curl-top{
+  0%{top:-8px;transform:translate3d(0,0,0) rotate(0) skewX(0) scaleX(1);box-shadow:none}
+  24%{top:-6px;transform:translate3d(2px,0,0) rotate(18deg) skewX(32deg) scaleX(.78);box-shadow:-5px 0 0 -1px rgba(121,200,235,.55),-10px 0 0 -2px rgba(121,200,235,.24)}
+  48%{top:-2px;transform:translate3d(-1px,0,0) rotate(68deg) skewX(-24deg) scaleX(.9);box-shadow:-7px 0 0 -1px rgba(121,200,235,.42),-13px 0 0 -2px rgba(121,200,235,.16)}
+  72%{top:0;transform:translate3d(0,0,0) rotate(38deg) skewX(8deg) scaleX(1.06);box-shadow:-4px 0 0 -1px rgba(121,200,235,.3)}
+  100%{top:0;transform:translate3d(0,0,0) rotate(45deg) skewX(0) scaleX(1);box-shadow:none}
+}
+@keyframes villa-comet-curl-bottom{
+  0%{top:8px;transform:translate3d(0,0,0) rotate(0) skewX(0) scaleX(1);box-shadow:none}
+  24%{top:6px;transform:translate3d(-2px,0,0) rotate(-18deg) skewX(-32deg) scaleX(.78);box-shadow:5px 0 0 -1px rgba(121,200,235,.55),10px 0 0 -2px rgba(121,200,235,.24)}
+  48%{top:2px;transform:translate3d(1px,0,0) rotate(-68deg) skewX(24deg) scaleX(.9);box-shadow:7px 0 0 -1px rgba(121,200,235,.42),13px 0 0 -2px rgba(121,200,235,.16)}
+  72%{top:0;transform:translate3d(0,0,0) rotate(-38deg) skewX(-8deg) scaleX(1.06);box-shadow:4px 0 0 -1px rgba(121,200,235,.3)}
+  100%{top:0;transform:translate3d(0,0,0) rotate(-45deg) skewX(0) scaleX(1);box-shadow:none}
+}
+@media(prefers-reduced-motion:reduce){
+  body[data-villa-theme] .theme-menu-toggle[aria-expanded="true"] .menu-open-mark::before,
+  body[data-villa-theme] .theme-menu-toggle[aria-expanded="true"] .menu-open-mark::after{
+    animation:none!important;filter:none!important;
+  }
+}
