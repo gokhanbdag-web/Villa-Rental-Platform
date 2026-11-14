@@ -699,6 +699,13 @@ $router->get('/checkout/{bookingCode}', static function(array $params):void {
         $decodedForm=$encodedForm!==''?base64_decode($encodedForm,true):false;
         if(is_string($decodedForm)&&$decodedForm!==''&&stripos($decodedForm,'<script')!==false)$iyzicoCheckoutFormHtml=$decodedForm;
     }
+    $locale='tr';
+    $navigation=villa_navigation_tree($pdo,'header',$locale);
+    $footerNavigation=villa_navigation_tree($pdo,'footer',$locale);
+    $contentStmt=$pdo->prepare('SELECT content_key,content_value FROM site_content WHERE language_code=?');
+    $contentStmt->execute([$locale]);
+    $content=$contentStmt->fetchAll(PDO::FETCH_KEY_PAIR);
+    $siteName=(string)($content['site_name']??'VillaStay');
     ThemeManager::render('checkout.php',get_defined_vars());
 });
 
