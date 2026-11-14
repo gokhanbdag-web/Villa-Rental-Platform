@@ -21,6 +21,11 @@
 <div class="field"><label for="bookingCheckIn">Giriş tarihi</label><input type="date" id="bookingCheckIn" name="check_in" min="<?= e(date('Y-m-d')) ?>" value="<?= e($checkInDate??'') ?>" required></div>
 <div class="field"><label for="bookingCheckOut">Çıkış tarihi</label><input type="date" id="bookingCheckOut" name="check_out" min="<?= e(date('Y-m-d',strtotime('+1 day'))) ?>" value="<?= e($checkOutDate??'') ?>" required></div>
 <div class="field wide"><label for="bookingGuests">Misafir sayısı</label><input type="number" id="bookingGuests" name="guests" min="1" max="<?= (int)$property['max_guests'] ?>" value="<?= e((string)min(2,max(1,(int)$property['max_guests']))) ?>" required></div>
+<div class="field"><label for="guestFirstName">Adınız</label><input id="guestFirstName" name="first_name" type="text" maxlength="90" autocomplete="given-name" required></div>
+<div class="field"><label for="guestLastName">Soyadınız</label><input id="guestLastName" name="last_name" type="text" maxlength="90" autocomplete="family-name" required></div>
+<div class="field"><label for="guestEmail">E-posta adresi</label><input id="guestEmail" name="email" type="email" maxlength="190" autocomplete="email" required></div>
+<div class="field"><label for="guestPhone">Telefon</label><input id="guestPhone" name="phone" type="tel" maxlength="40" autocomplete="tel" required></div>
+<div class="field wide"><label for="guestPassword">Hesap şifresi</label><input id="guestPassword" name="password" type="password" minlength="10" maxlength="128" autocomplete="new-password" required><small class="muted">Rezervasyonunuzu hesabınızdan takip edebilmeniz için en az 10 karakterli bir şifre belirleyin. Bu e-posta ile hesabınız varsa mevcut şifrenizi girin.</small></div>
 <div class="field wide"><button class="btn" id="bookingSubmit" type="submit">Rezervasyon talebini gönder</button></div>
 </div>
 <p class="notice"><?= e($content['booking_notice'] ?? 'Bu aşamada ödeme alınmaz. Rezervasyon talebiniz ev sahibi veya yönetim tarafından incelenir.') ?></p>
