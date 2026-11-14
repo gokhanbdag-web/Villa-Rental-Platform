@@ -52,20 +52,26 @@ form.addEventListener('submit',async function(e){
  try{
   var response=await fetch(form.dataset.endpoint,{method:'POST',body:new FormData(form),credentials:'same-origin',headers:{'X-Requested-With':'XMLHttpRequest','Accept':'application/json'}});
   var contentType=(response.headers.get('content-type')||'').toLowerCase();
-  if(!contentType.includes('application/json')){
-   // Shared-hosting rewrite/error pages can return HTML for the AJAX URL.
-   // Fall back to the regular POST /login flow instead of exposing a JSON parse error.
-   HTMLFormElement.prototype.submit.call(form);
-   return;
-  }
-  var raw=await response.text(),data;
-  if(raw.trim().charAt(0)==='<'){
-   HTMLFormElement.prototype.submit.call(form);
-   return;
-  }
-  try{data=JSON.parse(raw)}catch(parseError){throw new Error('Sunucu geçerli JSON yanıtı vermedi. Hosting hata kaydını kontrol edin.');}
+  if(!contentType.includes('application/json'))throw new Error('Giriş servisi beklenen yanıtı vermedi. Sayfa yenilenmedi; lütfen tekrar deneyin.');
+  var data;
+  try{data=await response.json()}catch(parseError){throw new Error('Sunucudan geçerli yanıt alınamadı. Sayfa yenilenmedi; tekrar deneyin.');}
   if(!response.ok||!data.ok)throw new Error(data.message||'Giriş yapılamadı.');
-  document.querySelectorAll('[data-auth-link]').forEach(function(link){link.textContent=data.user.label;link.href=data.user.url;link.removeAttribute('data-login-trigger');});
+  document.querySelectorAll('[data-auth-link], [data-login-trigger]').forEach(function(link){
+   var accountLink=link;
+   if(link.tagName==='BUTTON'){
+    accountLink=document.createElement('a');
+    accountLink.className=link.className;
+    accountLink.innerHTML=link.innerHTML;
+    link.replaceWith(accountLink);
+   }
+   accountLink.href=data.user.url;
+   accountLink.setAttribute('data-auth-link','');
+   accountLink.removeAttribute('data-login-trigger');
+   accountLink.setAttribute('aria-label',data.user.label);
+   accountLink.setAttribute('title',data.user.label);
+   var label=accountLink.querySelector('span');
+   if(label)label.textContent=data.user.label;
+  });
   close();form.reset();
   document.dispatchEvent(new CustomEvent('villa:login',{detail:data.user}));
  }catch(err){error.textContent=err.message||'Bir hata oluştu. Tekrar deneyin.';error.hidden=false;}
