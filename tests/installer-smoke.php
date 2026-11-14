@@ -278,7 +278,6 @@ try {
     assertSmoke(str_contains($themeRoutesSource, "/checkout/{bookingCode}/iyzico/start") && str_contains($themeRoutesSource, "/payments/iyzico/callback"), 'iyzico Checkout Form start and callback routes must be registered.');
     assertSmoke(str_contains($themeRoutesSource, 'IyzicoApiClient::initializeCheckoutForm') && str_contains($themeRoutesSource, 'IyzicoApiClient::retrieveCheckoutForm'), 'iyzico checkout must initialize and retrieve the result from the provider.');
     assertSmoke(str_contains($themeRoutesSource, 'verifyIyzicoCheckoutFormInitialize') && str_contains($themeRoutesSource, 'villa_iyzico_checkout_form_html') && str_contains($themeRoutesSource, 'villa_iyzico_checkout_iframe_url') && str_contains($themeRoutesSource, 'checkoutFormContent') && str_contains($themeRoutesSource, 'paymentPageUrl') && str_contains($themeRoutesSource, 'checkout_url=NULL') && !str_contains($themeRoutesSource, "header('Location: '.$paymentPageUrl") && !str_contains($themeRoutesSource, 'villa_iyzico_sandbox_payment_url'), 'iyzico initialization must verify its response signature, render the form as embedded HTML or a validated Sandbox iframe, and never redirect to the hosted payment page.');
-    assertSmoke(str_contains($checkoutViewSource, 'checkout-iframe-shell') && str_contains($checkoutViewSource, 'iyzico güvenli ödeme formu'), 'Checkout must render the iyzico paymentPageUrl in an embedded iframe fallback.');
     assertSmoke(str_contains($themeRoutesSource, 'verifyIyzicoCheckoutFormRetrieve'), 'iyzico callback and webhook must verify the Checkout Form retrieve response signature.');
 
     assertSmoke(str_contains($themeRoutesSource, "/payments/iyzico/webhook") && str_contains($themeRoutesSource, 'verifyIyzicoV3'), 'iyzico Checkout Form webhook must verify V3 signatures.');
@@ -289,6 +288,7 @@ try {
 
     assertSmoke(str_contains($themeRoutesSource, "fraudStatus") && str_contains($themeRoutesSource, "environment']!=='sandbox"), 'iyzico checkout must honor fraud review and remain Sandbox-only.');
     $checkoutViewSource = (string)file_get_contents($root . '/themes/default/templates/pages/checkout.php');
+    assertSmoke(str_contains($checkoutViewSource, 'checkout-iframe-shell') && str_contains($checkoutViewSource, 'iyzico güvenli ödeme formu'), 'Checkout must render the iyzico paymentPageUrl in an embedded iframe fallback.');
     assertSmoke(str_contains($checkoutViewSource, 'iyzico ile güvenli ödeme') && str_contains($checkoutViewSource, 'identity_number') && str_contains($checkoutViewSource, 'billing_address') && str_contains($checkoutViewSource, 'iyzicoCheckoutFormHtml') && str_contains($checkoutViewSource, 'iyzipay-checkout-form'), 'Booking checkout must collect buyer billing details and render the embedded iyzico payment form inside the booking page.');
 
     $paymentSimulatorSource = (string)file_get_contents($root . '/app/Core/PaymentSandboxSimulator.php');
