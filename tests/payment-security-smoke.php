@@ -85,6 +85,20 @@ paymentAssert(PaymentSignatureVerifier::verifyIyzicoV3($iyzicoPayload, $signatur
 $iyzicoPayload['status'] = 'FAILURE';
 paymentAssert(!PaymentSignatureVerifier::verifyIyzicoV3($iyzicoPayload, $signature, $secret), 'Tampered iyzico callback was accepted.');
 
+$retrieveResponse = [
+    'paymentStatus'=>'SUCCESS','paymentId'=>'99887766','currency'=>'TRY','basketId'=>'VILLA-TEST-0002',
+    'conversationId'=>'VILLA-TEST-0002','paidPrice'=>'1250.00','price'=>'1250.00','token'=>'test-token',
+];
+$retrieveMessage = implode(':', [
+    $retrieveResponse['paymentStatus'],$retrieveResponse['paymentId'],$retrieveResponse['currency'],
+    $retrieveResponse['basketId'],$retrieveResponse['conversationId'],'1250','1250',$retrieveResponse['token'],
+]);
+$retrieveResponse['signature'] = hash_hmac('sha256',$retrieveMessage,$secret);
+paymentAssert(PaymentSignatureVerifier::verifyIyzicoCheckoutFormRetrieve($retrieveResponse,$secret), 'Valid iyzico Checkout Form retrieve signature was rejected.');
+$retrieveResponse['paidPrice'] = '1250.01';
+paymentAssert(!PaymentSignatureVerifier::verifyIyzicoCheckoutFormRetrieve($retrieveResponse,$secret), 'Tampered iyzico retrieve amount was accepted.');
+
+
 foreach (['iyzico','paytr'] as $provider) {
     $success=PaymentSandboxSimulator::run($provider,'success');
     paymentAssert($success['signature_valid']&&$success['payment_success']&&$success['network_requests']===0&&!$success['real_charge'],$provider.' success simulation failed.');
