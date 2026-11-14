@@ -16,6 +16,17 @@ $description = $isSuccess
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title><?= e($title) ?> · <?= e($booking['booking_code']) ?></title>
+<?php
+$paymentThemeSlug = \\App\\Core\\ThemeManager::activeSlug();
+$paymentDefaultCss = \\App\\Core\\ThemeManager::resolveFile('style.css', 'default');
+$paymentActiveCss = $paymentThemeSlug !== 'default' ? \\App\\Core\\ThemeManager::resolveFile('style.css', $paymentThemeSlug) : null;
+?>
+<?php if ($paymentDefaultCss !== null): ?>
+<link rel="stylesheet" href="<?= e(\\App\\Core\\ThemeManager::assetUrl('style.css', 'default')) ?>?v=<?= e((string)filemtime($paymentDefaultCss)) ?>">
+<?php endif; ?>
+<?php if ($paymentActiveCss !== null && $paymentActiveCss !== $paymentDefaultCss): ?>
+<link rel="stylesheet" href="<?= e(\\App\\Core\\ThemeManager::assetUrl('style.css', $paymentThemeSlug)) ?>?v=<?= e((string)filemtime($paymentActiveCss)) ?>">
+<?php endif; ?>
 <style>
 .payment-result-page{min-height:65vh;padding:clamp(34px,6vw,76px) 0;background:var(--villa-background,#f7f8f6);color:var(--villa-text,#20332c)}
 .payment-result-wrap{width:min(760px,calc(100% - 32px));margin:0 auto}
@@ -33,7 +44,7 @@ $description = $isSuccess
 @media(max-width:520px){.payment-result-actions{display:grid}.payment-result-actions a{width:100%}}
 </style>
 </head>
-<body>
+<body data-villa-theme="<?= e($paymentThemeSlug) ?>">
 <?php \App\Core\ThemeManager::renderPartial('partials/header.php', get_defined_vars()); ?>
 <main class="payment-result-page">
 <div class="payment-result-wrap">
