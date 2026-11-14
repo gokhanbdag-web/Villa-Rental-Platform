@@ -95,9 +95,17 @@ document.addEventListener('DOMContentLoaded',function(){const video=document.que
   const w=box.clientWidth,h=box.clientHeight;
   if(!w||!h)return;
   const scale=Math.max(w/16,h/9);
-  frame.style.width=(scale*16)+'px';
-  frame.style.height=(scale*9)+'px';
-  frame.style.left='50%';frame.style.top='50%';frame.style.transform='translate(-50%,-50%)';
+  const videoWidth=scale*16,videoHeight=scale*9;
+  frame.style.position='absolute';
+  frame.style.width=videoWidth+'px';
+  frame.style.height=videoHeight+'px';
+  frame.style.left='50%';
+  frame.style.top='50%';
+  frame.style.right='auto';
+  frame.style.bottom='auto';
+  frame.style.marginLeft=(-videoWidth/2)+'px';
+  frame.style.marginTop=(-videoHeight/2)+'px';
+  frame.style.transform='none';
  };
  fit();
  if('ResizeObserver' in window){new ResizeObserver(fit).observe(frame.parentElement);}
