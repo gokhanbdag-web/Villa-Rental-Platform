@@ -982,7 +982,11 @@ final class ThemeManager
         // Apply the saved palette after theme and typography CSS so fixed theme colors cannot override it.
         $paletteCss = $themeScope . '{color-scheme:light}'
             . $themeScope . '{background:var(--villa-background)!important;color:var(--villa-text)!important}'
-            . $themeScope . ' .theme-header,' . $themeScope . ' .site-header,' . $themeScope . ' .villa-social-bar,' . $themeScope . ' .theme-header .nav{background:var(--villa-surface)!important;border-color:var(--villa-primary)!important}'
+            . $themeScope . ' .theme-header,' . $themeScope . ' .villa-social-bar,' . $themeScope . ' .theme-header .nav{background:var(--villa-surface)!important;border-color:var(--villa-primary)!important}'
+            . $themeScope . ' .site-header{background:var(--villa-primary)!important;border-color:var(--villa-primary)!important;color:#fff!important}'
+            . $themeScope . ' .site-header .nav a,' . $themeScope . ' .site-header .nav .nav-entry-top>a,' . $themeScope . ' .site-header .nav-submenu-toggle,' . $themeScope . ' .site-header .site-header-auth-link{color:#fff!important}'
+            . $themeScope . ' .site-header .site-header-auth-link{background:transparent!important;border-color:rgba(255,255,255,.7)!important}'
+            . $themeScope . ' .site-header .site-header-auth-link svg{stroke:#fff!important}'
             
             . $themeScope . ' .stay,' . $themeScope . ' .premium-stay-card,' . $themeScope . ' .filter-panel,' . $themeScope . ' .booking,' . $themeScope . ' .panel,' . $themeScope . ' .card,' . $themeScope . ' .med-review-card,' . $themeScope . ' .med-support-panel{background:var(--villa-surface)!important;border-color:var(--villa-primary)!important;color:var(--villa-text)!important}'
             . $themeScope . ' .theme-brand,' . $themeScope . ' .theme-brand-name,' . $themeScope . ' .brand,' . $themeScope . ' .section-head h2,' . $themeScope . ' .section h2,' . $themeScope . ' .stay h3,' . $themeScope . ' .med-collection-heading h3,' . $themeScope . ' .med-faq-item summary,' . $themeScope . ' .med-support h2{color:var(--villa-text)!important}'
