@@ -196,15 +196,18 @@ $labels = [
 </section>
 <section class="design-panel" data-design-tab-panel="header">
 <h2>Aktif temanın hero video arka planı</h2>
-<p>Hero alanında MP4/WebM dosyası yükleyebilir veya YouTube bağlantısı kullanabilirsiniz. YouTube videosu sessiz, otomatik ve döngülü oynatılır. YouTube bağlantısı varsa yüklenen dosyaya öncelik verir.</p>
+<p>Hero arka planında YouTube veya MP4/WebM video kullanabilirsiniz. Video olmadığında yukarıda belirlediğiniz yedek görsel gösterilir. YouTube videosu sessiz, otomatik ve döngülü oynatılır.</p>
 <form method="post" action="<?= e(app_url('/admin/theme-design/hero-video-settings')) ?>" style="margin:14px 0;padding:16px;border:1px solid #e5ebe7;border-radius:12px">
 <?= csrf_field() ?>
+<label style="display:block;font-weight:700;margin-bottom:7px">Video olmadığında gösterilecek hero görseli</label>
+<input type="url" name="hero_background_image_url" value="<?= e($themeBrandSettings['hero_background_image_url']??'') ?>" placeholder="https://.../hero-gorseli.webp" style="width:100%;padding:11px;border:1px solid #dce5df;border-radius:8px">
+<small style="display:block;color:#718078;margin:6px 0 14px">Video oynatılmadığında veya video bağlantısı boş olduğunda gösterilir. Boş bırakırsanız eski ana sayfa hero görseli kullanılır; sabit demo görseli kullanılmaz.</small>
 <label style="display:block;font-weight:700;margin-bottom:7px">YouTube video bağlantısı</label>
 <input type="url" name="hero_youtube_url" value="<?= e($themeBrandSettings['hero_youtube_url']??'') ?>" placeholder="https://www.youtube.com/watch?v=..." style="width:100%;padding:11px;border:1px solid #dce5df;border-radius:8px">
 <small style="display:block;color:#718078;margin:6px 0 14px">Normal YouTube, Shorts ve youtu.be bağlantıları desteklenir. Boş bırakırsanız yüklenmiş MP4/WebM video kullanılır.</small>
 <label for="heroOverlayOpacity" style="display:block;font-weight:700;margin-bottom:7px">Video overlay opacity: <strong id="heroOverlayOpacityValue"><?= (int)($themeBrandSettings['hero_overlay_opacity']??58) ?>%</strong></label>
 <input id="heroOverlayOpacity" type="range" name="hero_overlay_opacity" min="0" max="100" step="1" value="<?= (int)($themeBrandSettings['hero_overlay_opacity']??58) ?>" oninput="document.getElementById('heroOverlayOpacityValue').textContent=this.value+'%'" style="width:100%">
-<small style="display:block;color:#718078;margin:6px 0 14px">0%: karartma yok · 100%: en koyu görünüm</small>
+<small style="display:block;color:#718078;margin:6px 0 14px">0%: karartma yok · 100%: en koyu görünüm. Bu ayar video ve yedek görselin üzerindeki katmanı kontrol eder.</small>
 <button class="design-save" type="submit">YouTube ve overlay ayarlarını kaydet</button>
 </form>
 <?php if(!empty($themeBrandSettings['hero_video_url'])): ?>
