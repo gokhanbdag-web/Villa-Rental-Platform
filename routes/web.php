@@ -690,6 +690,11 @@ $router->get('/checkout/{bookingCode}', static function(array $params):void {
     $latestPayment->execute([(int)$booking['id']]);$latestPaymentRow=$latestPayment->fetch(PDO::FETCH_ASSOC)?:[];
     $latestPaymentStatus=(string)($latestPaymentRow['status']??'');
     $iyzicoCheckoutFormHtml='';
+    $iyzicoInitializationError='';
+    if($paymentStatus==='init_error'&&$latestPaymentStatus==='failed'){
+        $failureData=json_decode((string)($latestPaymentRow['response_payload']??''),true);
+        if(is_array($failureData))$iyzicoInitializationError=trim((string)($failureData['initialization_error']??''));
+    }
     if($latestPaymentStatus==='processing')$paymentStatus='review';
     elseif($latestPaymentStatus==='paid')$paymentStatus='paid';
     elseif($latestPaymentStatus==='failed'&&$paymentStatus!=='init_error')$paymentStatus='failed';
