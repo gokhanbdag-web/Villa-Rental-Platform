@@ -260,6 +260,9 @@ try {
     assertSmoke(!str_contains($rootHtaccess, 'public/demo/') && str_contains($rootHtaccess, 'public/uploads/'), 'Root rewrite rules must not point to the removed demo asset directory and must retain upload routing.');
 
     $themeRoutesSource = (string)file_get_contents($root . '/routes/web.php');
+    $adminUsersViewSource = (string)file_get_contents($root . '/themes/default/templates/pages/admin/users.php');
+    assertSmoke(str_contains($themeRoutesSource, "/admin/users/delete") && str_contains($themeRoutesSource, "UPDATE bookings SET guest_user_id=NULL WHERE guest_user_id=?") && str_contains($themeRoutesSource, "role IN ('customer','vendor')"), 'Admin member deletion must be CSRF-protected, limited to customer/vendor accounts and preserve booking history.');
+    assertSmoke(str_contains($adminUsersViewSource, 'action="/admin/users/delete"') && str_contains($adminUsersViewSource, 'Üyeyi sil') && str_contains($adminUsersViewSource, 'confirm('), 'Admin user list must expose a confirmed delete action for eligible members.');
     $adminShellSource = (string)file_get_contents($root . '/themes/default/layouts/admin-shell.php');
     assertSmoke(str_contains($themeRoutesSource, "/admin/header-settings/social-icons") && !str_contains($themeRoutesSource, 'PageBuilder') && !str_contains($themeRoutesSource, '/admin/builder') && !str_contains($adminShellSource, '/admin/builder'), 'Builder routes and navigation must be removed while shared top information settings remain available.');
     $themeDesignViewSource = (string)file_get_contents($root . '/themes/default/templates/pages/admin/theme-design.php');
