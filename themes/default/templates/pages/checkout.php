@@ -109,6 +109,9 @@ $navigation = is_array($navigation ?? null) ? $navigation : [];
 <?php if(!empty($iyzicoCheckoutFormHtml)): ?>
 <div class="checkout-form-shell"><div id="iyzipay-checkout-form" class="responsive"></div><?= $iyzicoCheckoutFormHtml ?></div>
 <div class="checkout-notice"><span class="checkout-notice-icon">🔒</span><div><strong>Güvenli ödeme bağlantısı</strong>Ödeme işleminiz iyzico tarafından yürütülür. Sonuç bu sayfada gösterilecektir; lütfen işlem sırasında sayfayı kapatmayın.</div></div>
+<?php elseif(!empty($iyzicoCheckoutFormUrl)): ?>
+<div class="checkout-form-shell checkout-iframe-shell"><iframe title="iyzico güvenli ödeme formu" src="<?= e($iyzicoCheckoutFormUrl) ?>" loading="eager" referrerpolicy="strict-origin-when-cross-origin" allow="payment *" style="display:block;width:100%;min-height:760px;border:0;background:#fff" sandbox="allow-forms allow-scripts allow-same-origin allow-popups allow-popups-to-escape-sandbox allow-top-navigation-by-user-activation"></iframe></div>
+<div class="checkout-notice"><span class="checkout-notice-icon">🔒</span><div><strong>iyzico güvenli ödeme formu</strong>Kart bilgileri iyzico'nun güvenli alanında girilir. Ödeme tamamlandığında rezervasyon sonucu bu sisteme bildirilir.</div></div>
 <?php else: ?>
 <form method="post" action="<?= e(app_url('/checkout/'.rawurlencode((string)$booking['booking_code']).'/iyzico/start')) ?>">
 <?= csrf_field() ?>
