@@ -683,7 +683,7 @@ $router->get('/checkout/{bookingCode}', static function(array $params):void {
     $stmt->execute([$params['bookingCode']??'',(int)$user['id']]);$booking=$stmt->fetch();
     if(!$booking){http_response_code(404);exit('Rezervasyon bulunamadı.');}
     $iyzicoConfig=\App\Core\PaymentGatewayConfig::forProvider('iyzico');
-    $iyzicoPaymentAvailable=!empty($iyzicoConfig['enabled'])&&!empty($iyzicoConfig['configured']);
+    $iyzicoPaymentAvailable=!empty($iyzicoConfig['enabled'])&&!empty($iyzicoConfig['configured'])&&($iyzicoConfig['environment']??'')==='sandbox';
     $paymentStatus=(string)($_GET['payment']??'');
     $latestPayment=$pdo->prepare("SELECT status FROM payment_transactions WHERE booking_id=? AND provider='iyzico' ORDER BY id DESC LIMIT 1");
     $latestPayment->execute([(int)$booking['id']]);$latestPaymentStatus=(string)($latestPayment->fetchColumn()?:'');
