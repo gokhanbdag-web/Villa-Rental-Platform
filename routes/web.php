@@ -428,6 +428,7 @@ $router->get('/konaklamalar', static function (): void {
     }
     $locationCities=$locationChildren($locationCountryId);$locationDistricts=$locationChildren($locationCityId);$locationNeighborhoods=$locationChildren($locationDistrictId);
     $city = $selectedLocationId>0 ? '' : trim((string)($_GET['city'] ?? ''));
+    $villaNameQuery=mb_substr(trim((string)($_GET['q']??'')),0,120);
     $guests = max(0,(int)($_GET['guests'] ?? 0));
     $categoryId = max(0,(int)($_GET['category'] ?? 0));
     $minPrice = max(0,(float)($_GET['min_price'] ?? 0));
@@ -451,10 +452,11 @@ $router->get('/konaklamalar', static function (): void {
     }
     if (!$dateRangeValid) { $checkInDate = ''; $checkOutDate = ''; }
     $sort = in_array($_GET['sort'] ?? '', ['price_asc','price_desc'], true) ? $_GET['sort'] : 'newest';
-    $filters = ['city' => $city, 'guests' => $guests, 'category' => $categoryId, 'min_price'=>$minPrice, 'max_price'=>$maxPrice, 'sort'=>$sort,'country_id'=>$locationCountryId,'city_id'=>$locationCityId,'district_id'=>$locationDistrictId,'neighborhood_id'=>$locationNeighborhoodId,'check_in'=>$checkInDate,'check_out'=>$checkOutDate];
+    $filters = ['q'=>$villaNameQuery,'city' => $city, 'guests' => $guests, 'category' => $categoryId, 'min_price'=>$minPrice, 'max_price'=>$maxPrice, 'sort'=>$sort,'country_id'=>$locationCountryId,'city_id'=>$locationCityId,'district_id'=>$locationDistrictId,'neighborhood_id'=>$locationNeighborhoodId,'check_in'=>$checkInDate,'check_out'=>$checkOutDate];
     $sql = "SELECT p.*, (SELECT pm.file_path FROM property_media pm WHERE pm.property_id=p.id ORDER BY pm.is_cover DESC,pm.sort_order,pm.id LIMIT 1) AS cover_image,(SELECT COUNT(*) FROM bookings b WHERE b.property_id=p.id AND b.status NOT IN ('cancelled','rejected')) AS booking_count,(SELECT AVG(r.rating) FROM reviews r WHERE r.property_id=p.id AND r.status='approved') AS rating_average,(SELECT COUNT(*) FROM reviews r WHERE r.property_id=p.id AND r.status='approved') AS rating_count FROM properties p WHERE p.status='published'";
     $params = [];
     if ($city !== '') { $sql .= ' AND (p.city LIKE ? OR p.district LIKE ? OR p.country LIKE ?)'; $like='%'.$city.'%'; array_push($params,$like,$like,$like); }
+    if ($villaNameQuery !== '') { $sql .= ' AND p.title LIKE ?'; $params[]='%'.$villaNameQuery.'%'; }
     if($locationCountryId>0){$sql.=' AND p.location_country_id=?';$params[]=$locationCountryId;}
     if($locationCityId>0){$sql.=' AND p.location_city_id=?';$params[]=$locationCityId;}
     if($locationDistrictId>0){$sql.=' AND p.location_district_id=?';$params[]=$locationDistrictId;}
@@ -1878,7 +1880,7 @@ $router->post('/admin/typography', static function (): void {
 
 $router->get('/admin/settings', static function (): void {
     Auth::requireRole(['super_admin','admin']);
-    $settings=Database::connection()->query("SELECT setting_key,setting_value FROM settings WHERE setting_key IN ('platform.commission_percent','app.currency','app.timezone','payments.iyzico.environment','payments.paytr.environment','payments.iyzico.enabled','payments.paytr.enabled','payments.iyzico.api_key','payments.iyzico.secret_key','payments.paytr.merchant_id','payments.paytr.merchant_key','payments.paytr.merchant_salt')")->fetchAll(PDO::FETCH_KEY_PAIR);
+    $settings=Database::connection()->query("SELECT setting_key,setting_value FROM settings WHERE setting_key IN ('platform.commission_percent','app.currency','app.timezone','payments.iyzico.environment','payments.paytr.environment','payments.iyzico.enabled','payments.paytr.enabled','payments.iyzico.api_key','payments.iyzico.secret_key','payments.paytr.merchant_id','payments.paytr.merchant_key','payments.paytr.merchant_salt','mobile_bar.enabled','mobile_bar.whatsapp','mobile_bar.phone')")->fetchAll(PDO::FETCH_KEY_PAIR);
     $iyzicoEnabled=($settings['payments.iyzico.enabled']??'0')==='1';
     $paytrEnabled=($settings['payments.paytr.enabled']??'0')==='1';
     $iyzicoConfigured=!empty($settings['payments.iyzico.api_key'])&&!empty($settings['payments.iyzico.secret_key']);
@@ -1887,6 +1889,7 @@ $router->get('/admin/settings', static function (): void {
     $iyzicoTestMessageType=(string)($_SESSION['villa_iyzico_test_message_type']??'success');
     unset($_SESSION['villa_iyzico_test_message'],$_SESSION['villa_iyzico_test_message_type']);
     unset($settings['payments.iyzico.api_key'],$settings['payments.iyzico.secret_key'],$settings['payments.paytr.merchant_id'],$settings['payments.paytr.merchant_key'],$settings['payments.paytr.merchant_salt']);
+    $mobileBarEnabled=($settings['mobile_bar.enabled']??'1')==='1';
     ThemeManager::renderTemplate('templates/pages/admin/settings.php',get_defined_vars());
 });
 $router->post('/admin/settings', static function (): void {
@@ -1905,6 +1908,10 @@ $router->post('/admin/settings', static function (): void {
         }
         redirect('/admin/settings');
     }
+    $mobileBarEnabled=!empty($_POST['mobile_bar_enabled'])&&$_POST['mobile_bar_enabled']==='1';
+    $mobileWhatsapp=preg_replace('/\\D+/','',trim((string)($_POST['mobile_bar_whatsapp']??'')))??'';
+    $mobilePhone=preg_replace('/\\D+/','',trim((string)($_POST['mobile_bar_phone']??'')))??'';
+    if(($mobileWhatsapp!==''&&(strlen($mobileWhatsapp)<7||strlen($mobileWhatsapp)>15))||($mobilePhone!==''&&(strlen($mobilePhone)<7||strlen($mobilePhone)>15))){http_response_code(422);exit('WhatsApp ve telefon numaralarını ülke koduyla birlikte kontrol edin.');}
     $commission=(float)($_POST['commission']??12);$currency=strtoupper(trim((string)($_POST['currency']??'TRY')));$timezone=trim((string)($_POST['timezone']??'Europe/Istanbul'));
     $iyzicoEnvironment=(string)($_POST['iyzico_environment']??'sandbox');$paytrEnvironment=(string)($_POST['paytr_environment']??'sandbox');
     if($commission<0||$commission>50||!preg_match('/^[A-Z]{3}$/',$currency)||!in_array($timezone,DateTimeZone::listIdentifiers(),true)||!in_array($iyzicoEnvironment,['sandbox','production'],true)||!in_array($paytrEnvironment,['sandbox','production'],true)){http_response_code(422);exit('Ayar değerlerini kontrol edin.');}
@@ -1912,7 +1919,7 @@ $router->post('/admin/settings', static function (): void {
     $iyzicoEnabled=!empty($_POST['iyzico_enabled'])&&$_POST['iyzico_enabled']==='1';
     $paytrEnabled=!empty($_POST['paytr_enabled'])&&$_POST['paytr_enabled']==='1';
     $anyPaymentEnabled=$iyzicoEnabled||$paytrEnabled;
-    foreach(['platform.commission_percent'=>(string)$commission,'app.currency'=>$currency,'app.timezone'=>$timezone,'payments.iyzico.environment'=>$iyzicoEnvironment,'payments.paytr.environment'=>$paytrEnvironment,'payments.iyzico.enabled'=>$iyzicoEnabled?'1':'0','payments.paytr.enabled'=>$paytrEnabled?'1':'0','payments.enabled'=>$anyPaymentEnabled?'1':'0','payments.provider'=>$anyPaymentEnabled?'multiple':'none'] as $key=>$value)$save->execute([$key,$value]);
+    foreach(['platform.commission_percent'=>(string)$commission,'app.currency'=>$currency,'app.timezone'=>$timezone,'payments.iyzico.environment'=>$iyzicoEnvironment,'payments.paytr.environment'=>$paytrEnvironment,'payments.iyzico.enabled'=>$iyzicoEnabled?'1':'0','payments.paytr.enabled'=>$paytrEnabled?'1':'0','payments.enabled'=>$anyPaymentEnabled?'1':'0','payments.provider'=>$anyPaymentEnabled?'multiple':'none','mobile_bar.enabled'=>$mobileBarEnabled?'1':'0','mobile_bar.whatsapp'=>$mobileWhatsapp,'mobile_bar.phone'=>$mobilePhone] as $key=>$value)$save->execute([$key,$value]);
     $secrets=['payments.iyzico.api_key'=>'iyzico_api_key','payments.iyzico.secret_key'=>'iyzico_secret_key','payments.paytr.merchant_id'=>'paytr_merchant_id','payments.paytr.merchant_key'=>'paytr_merchant_key','payments.paytr.merchant_salt'=>'paytr_merchant_salt'];
     foreach($secrets as $key=>$field){$value=trim((string)($_POST[$field]??''));if($value!=='')$save->execute([$key,\App\Core\PaymentSecretVault::encrypt($value)]);}
     $clear=[];if(!empty($_POST['clear_iyzico']))$clear=array_merge($clear,['payments.iyzico.api_key','payments.iyzico.secret_key']);if(!empty($_POST['clear_paytr']))$clear=array_merge($clear,['payments.paytr.merchant_id','payments.paytr.merchant_key','payments.paytr.merchant_salt']);
