@@ -697,7 +697,7 @@ $router->get('/checkout/{bookingCode}', static function(array $params):void {
         $storedResponse=json_decode((string)($latestPaymentRow['response_payload']??''),true);
         $encodedForm=is_array($storedResponse)?(string)($storedResponse['checkoutFormContent']??''):'';
         $decodedForm=$encodedForm!==''?base64_decode($encodedForm,true):false;
-        if(is_string($decodedForm)&&$decodedForm!==''&&str_contains($decodedForm,'iyzipay-checkout-form'))$iyzicoCheckoutFormHtml=$decodedForm;
+        if(is_string($decodedForm)&&$decodedForm!==''&&stripos($decodedForm,'<script')!==false)$iyzicoCheckoutFormHtml=$decodedForm;
     }
     ThemeManager::renderTemplate('templates/pages/checkout.php',get_defined_vars());
 });
@@ -723,7 +723,7 @@ $router->post('/checkout/{bookingCode}/iyzico/start', static function (array $pa
             $storedResponse=json_decode((string)($stored->fetchColumn()?:''),true);
             $encodedForm=is_array($storedResponse)?(string)($storedResponse['checkoutFormContent']??''):'';
             $decodedForm=$encodedForm!==''?base64_decode($encodedForm,true):false;
-            if(is_string($decodedForm)&&$decodedForm!==''&&str_contains($decodedForm,'iyzipay-checkout-form')){
+            if(is_string($decodedForm)&&$decodedForm!==''&&stripos($decodedForm,'<script')!==false){
                 redirect('/checkout/'.rawurlencode((string)$booking['booking_code']));
             }
         }
@@ -790,7 +790,7 @@ $router->post('/checkout/{bookingCode}/iyzico/start', static function (array $pa
             throw new RuntimeException('iyzico ödeme oturumu yanıtı imza veya işlem referansı doğrulamasından geçmedi.');
         }
         $decodedCheckoutForm=$checkoutFormContent!==''?base64_decode($checkoutFormContent,true):false;
-        if($token===''||!is_string($decodedCheckoutForm)||$decodedCheckoutForm===''||!str_contains($decodedCheckoutForm,'iyzipay-checkout-form')){
+        if($token===''||!is_string($decodedCheckoutForm)||$decodedCheckoutForm===''||!stripos($decodedCheckoutForm,'<script')!==false){
             throw new RuntimeException('iyzico güvenli ödeme bileşeni yanıtı eksik veya geçersiz.');
         }
         $storedResponse=json_encode([
