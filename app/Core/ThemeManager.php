@@ -862,6 +862,18 @@ final class ThemeManager
             $html = preg_replace('~<span class="theme-brand-name">.*?</span>~s', $logoMarkup, $html) ?? $html;
         }
 
+        // The shared topbar is intentionally logo-only. Keep the legacy contact/social
+        // information strip out of the public header while reusing this partial on pages.
+        if ($logoUrl !== '' && preg_match('~<header\\b~i', $html)) {
+            ob_start();
+            self::renderPartial('partials/shared-topbar.php', [
+                'logoUrl' => $logoUrl,
+                'siteName' => (string)($variables['content']['site_name'] ?? $variables['siteName'] ?? 'VillaStay'),
+            ]);
+            $logoTopbar = (string)ob_get_clean();
+            $html = preg_replace('~<header\\b~i', $logoTopbar . '<header', $html, 1) ?? $html;
+        }
+
         // Base first, active second: browser cascade merges individual declarations.
         $styleTags = '';
         $defaultCss = self::resolveFile('style.css', 'default');
