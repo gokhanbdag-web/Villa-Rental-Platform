@@ -53,6 +53,9 @@ final class PaymentGatewayConfig
             }
         }
 
+        $enabledKey = 'payments.' . $provider . '.enabled';
+        $enabled = (string)($stored[$enabledKey] ?? '0') === '1';
+
         $environment = (string)($stored[$definitions[$provider]['environment']] ?? 'sandbox');
         if (!in_array($environment, ['sandbox', 'production'], true)) {
             $environment = 'sandbox';
@@ -62,6 +65,7 @@ final class PaymentGatewayConfig
             'provider' => $provider,
             'environment' => $environment,
             'configured' => count($credentials) === count($definitions[$provider]['credentials']),
+            'enabled' => $enabled,
             'credentials' => $credentials,
         ];
     }
