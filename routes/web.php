@@ -32,6 +32,13 @@ function villa_render_account_view(string $view, array $variables): void {
     ThemeManager::render('account.php', array_merge($variables, compact('navigation','footerNavigation','content','siteName','accountView')));
 }
 
+function villa_iyzico_sandbox_payment_url(string $url): ?string {
+    $parts=parse_url(trim($url));
+    if(!is_array($parts)||strtolower((string)($parts['scheme']??''))!=='https'||strtolower((string)($parts['host']??''))!=='sandbox-api.iyzipay.com'||isset($parts['user'])||isset($parts['pass']))return null;
+    $path=(string)($parts['path']??'');
+    if(!str_starts_with($path,'/checkoutform/')||strlen($path)>2048)return null;
+    return 'https://sandbox-api.iyzipay.com'.$path.(isset($parts['query'])?'?'.$parts['query']:'');
+}
 function villa_safe_return_url(string $url): string { $path=parse_url($url,PHP_URL_PATH)?:'/'; if(!str_starts_with($path,'/')||str_starts_with($path,'//'))return '/'; $query=parse_url($url,PHP_URL_QUERY); return $path.($query!==null?'?'.$query:''); }
 function villa_return_with_status(string $url,string $key,string $value): string { $back=villa_safe_return_url($url); return $back.(str_contains($back,'?')?'&':'?').rawurlencode($key).'='.rawurlencode($value); }
 
@@ -738,6 +745,8 @@ $router->post('/checkout/{bookingCode}/iyzico/start', static function (array $pa
             if(is_string($decodedForm)&&$decodedForm!==''&&stripos($decodedForm,'<script')!==false){
                 redirect('/checkout/'.rawurlencode((string)$booking['booking_code']));
             }
+            $hostedUrl=is_array($storedResponse)?villa_iyzico_sandbox_payment_url((string)($storedResponse['paymentPageUrl']??'')):null;
+            if($hostedUrl!==null){header('Location: '.$hostedUrl,true,303);exit;}
         }
         if(str_starts_with((string)$activePayment['provider_reference'],'init:')){http_response_code(409);exit('Ödeme oturumu hazırlanıyor. Lütfen birkaç saniye sonra tekrar deneyin.');}
         $expire=$pdo->prepare("UPDATE payment_transactions SET status='expired',updated_at=NOW() WHERE provider='iyzico' AND provider_reference=? AND status='pending'");
@@ -796,22 +805,28 @@ $router->post('/checkout/{bookingCode}/iyzico/start', static function (array $pa
         $response=\App\Core\IyzicoApiClient::initializeCheckoutForm($config,$payload);
         $token=trim((string)($response['token']??''));
         $checkoutFormContent=trim((string)($response['checkoutFormContent']??''));
+        $paymentPageUrl=villa_iyzico_sandbox_payment_url((string)($response['paymentPageUrl']??''));
         $secret=(string)($config['credentials']['secret_key']??'');
-        if(!\App\Core\PaymentSignatureVerifier::verifyIyzicoCheckoutFormInitialize($response,$secret)
+        if(!\\App\\Core\\PaymentSignatureVerifier::verifyIyzicoCheckoutFormInitialize($response,$secret)
             ||!hash_equals($conversationId,(string)($response['conversationId']??''))) {
             throw new RuntimeException('iyzico ödeme oturumu yanıtı imza veya işlem referansı doğrulamasından geçmedi.');
         }
         $decodedCheckoutForm=$checkoutFormContent!==''?base64_decode($checkoutFormContent,true):false;
-        if($token===''||!is_string($decodedCheckoutForm)||$decodedCheckoutForm===''||stripos($decodedCheckoutForm,'<script')===false){
-            throw new RuntimeException('iyzico güvenli ödeme bileşeni yanıtı eksik veya geçersiz.');
+        $hasEmbeddedForm=is_string($decodedCheckoutForm)&&$decodedCheckoutForm!==''&&stripos($decodedCheckoutForm,'<script')!==false;
+        if($token===''||(!$hasEmbeddedForm&&$paymentPageUrl===null)){
+            $responseFields=array_keys($response);
+            sort($responseFields);
+            throw new RuntimeException('iyzico yanıtında geçerli ödeme formu bulunamadı (alanlar: '.implode(',',$responseFields).').');
         }
+        $renderMode=$hasEmbeddedForm?'embedded':'redirect';
         $storedResponse=json_encode([
-            'token'=>$token,'conversationId'=>$conversationId,'checkoutFormContent'=>$checkoutFormContent,
-            'render_mode'=>'embedded','environment'=>'sandbox',
+            'token'=>$token,'conversationId'=>$conversationId,'checkoutFormContent'=>$hasEmbeddedForm?$checkoutFormContent:'',
+            'paymentPageUrl'=>$paymentPageUrl,'render_mode'=>$renderMode,'environment'=>'sandbox',
         ],JSON_UNESCAPED_UNICODE|JSON_UNESCAPED_SLASHES);
-        $update=$pdo->prepare("UPDATE payment_transactions SET provider_reference=?,checkout_url=NULL,response_payload=?,expires_at=DATE_ADD(NOW(),INTERVAL 30 MINUTE),updated_at=NOW() WHERE id=? AND status='pending'");
-        $update->execute([$token,$storedResponse,$transactionId]);
+        $update=$pdo->prepare("UPDATE payment_transactions SET provider_reference=?,checkout_url=?,response_payload=?,expires_at=DATE_ADD(NOW(),INTERVAL 30 MINUTE),updated_at=NOW() WHERE id=? AND status='pending'");
+        $update->execute([$token,$paymentPageUrl,$storedResponse,$transactionId]);
         if($update->rowCount()!==1)throw new RuntimeException('Ödeme oturumu yerel kayda bağlanamadı.');
+        if(!$hasEmbeddedForm&&$paymentPageUrl!==null){header('Location: '.$paymentPageUrl,true,303);exit;}
         redirect('/checkout/'.rawurlencode((string)$booking['booking_code']));
     }catch(Throwable $e){
         $errorReference='VILLA-IYZ-'.(string)($transactionId??'UNKNOWN');
