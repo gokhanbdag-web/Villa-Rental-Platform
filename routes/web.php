@@ -699,6 +699,15 @@ $router->post('/checkout/{bookingCode}/iyzico/start', static function (array $pa
     $stmt->execute([$params['bookingCode']??'',(int)$user['id']]);$booking=$stmt->fetch();
     if(!$booking){http_response_code(404);exit('Rezervasyon bulunamadı.');}
     if(!in_array((string)$booking['status'],['pending'],true)){http_response_code(409);exit('Yalnızca ödeme bekleyen rezervasyonlar için ödeme başlatılabilir.');}
+    $existingPayment=$pdo->prepare("SELECT provider_reference,checkout_url,status,expires_at FROM payment_transactions WHERE booking_id=? AND provider='iyzico' AND status IN ('pending','processing') ORDER BY id DESC LIMIT 1");
+    $existingPayment->execute([(int)$booking['id']]);$activePayment=$existingPayment->fetch();
+    if($activePayment&&$activePayment['status']==='processing')redirect('/checkout/'.rawurlencode((string)$booking['booking_code']).'?payment=review');
+    if($activePayment&&$activePayment['status']==='pending'){
+        if(!empty($activePayment['checkout_url'])&&(!empty($activePayment['expires_at'])&&strtotime((string)$activePayment['expires_at'])>time()))redirect((string)$activePayment['checkout_url']);
+        if(str_starts_with((string)$activePayment['provider_reference'],'init:')){http_response_code(409);exit('Ödeme oturumu hazırlanıyor. Lütfen birkaç saniye sonra tekrar deneyin.');}
+        $expire=$pdo->prepare("UPDATE payment_transactions SET status='expired',updated_at=NOW() WHERE provider='iyzico' AND provider_reference=? AND status='pending'");
+        $expire->execute([(string)$activePayment['provider_reference']]);
+    }
 
     $identityNumber=preg_replace('/\D+/','',(string)($_POST['identity_number']??''))??'';
     $address=trim((string)($_POST['billing_address']??''));
