@@ -88,7 +88,6 @@ $images = $property['images'] ?? [];
 <h2 class="booking-step-title">Tarihlerinizi seçin</h2>
 <input id="bookingCheckIn" type="hidden" name="check_in" value="<?= e((string)($_GET['check_in']??'')) ?>" required>
 <input id="bookingCheckOut" type="hidden" name="check_out" value="<?= e((string)($_GET['check_out']??'')) ?>" required>
-<label>Misafir sayısı<select name="guests" id="bookingGuests"><?php for($guestCount=1;$guestCount<=(int)$property['max_guests'];$guestCount++): ?><option value="<?= $guestCount ?>" <?= (int)($_GET['guests']??1)===$guestCount?'selected':'' ?>><?= $guestCount ?> misafir</option><?php endfor; ?></select></label>
 <div class="booking-calendar-wrap"><h3 class="booking-calendar-title">Müsaitlik takvimi</h3><section class="availability-panel" id="villaAvailability" data-calendar-url="<?= e(app_url('/villa/' . rawurlencode((string)$property['slug']) . '/calendar')) ?>" data-price-url="<?= e(app_url('/villa/' . rawurlencode((string)$property['slug']) . '/availability')) ?>" data-reserve-url="<?= e(app_url('/villa/' . rawurlencode((string)$property['slug']) . '/reserve')) ?>">
 <div class="availability-heading"><div><p class="muted">Dolu ve kapalı günleri görüntüleyin.</p></div><div class="calendar-nav"><button type="button" id="calendarPrev" aria-label="Önceki ay">‹</button><strong id="calendarMonth">Takvim</strong><button type="button" id="calendarNext" aria-label="Sonraki ay">›</button></div></div>
 <div class="calendar-legend"><span><i class="available"></i>Müsait</span><span><i class="booked"></i>Rezerve</span><span><i class="blocked"></i>Kapalı</span><span><i class="selected"></i>Seçiminiz</span></div>
@@ -102,6 +101,7 @@ $images = $property['images'] ?? [];
 <section class="booking-step-panel" id="bookingStepDetails" data-booking-step="2" hidden>
 <h2 class="booking-step-title">Rezervasyon bilgileri</h2>
 <p class="booking-selected-summary" id="bookingSelectedSummary"></p>
+<label>Misafir sayısı<select name="guests" id="bookingGuests"><?php for($guestCount=1;$guestCount<=(int)$property['max_guests'];$guestCount++): ?><option value="<?= $guestCount ?>" <?= (int)($_GET['guests']??1)===$guestCount?'selected':'' ?>><?= $guestCount ?> misafir</option><?php endfor; ?></select></label>
 <label>Adınız<input type="text" name="first_name" autocomplete="given-name" maxlength="90" required></label>
 <label>Soyadınız<input type="text" name="last_name" autocomplete="family-name" maxlength="90" required></label>
 <label>E-posta adresiniz<input type="email" name="email" autocomplete="email" maxlength="190" required></label>
