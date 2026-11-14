@@ -770,7 +770,13 @@ final class ThemeManager
         if (!$allowed || strtolower(pathinfo($relative, PATHINFO_EXTENSION)) !== 'php') {
             throw new RuntimeException('Tema bileşen yolu geçersiz.');
         }
+        // Theme partials are stored under templates/partials, while layouts
+        // and components remain theme-root relative. Keep the public partial
+        // API stable and resolve its conventional template directory first.
         $file = self::resolveFile($relative);
+        if ($file === null && str_starts_with($relative, 'partials/')) {
+            $file = self::resolveFile('templates/' . $relative);
+        }
         if ($file === null) throw new RuntimeException('Tema bileşeni bulunamadı: ' . $relative);
         (static function (string $__file, array $__variables): void {
             extract($__variables, EXTR_SKIP);
