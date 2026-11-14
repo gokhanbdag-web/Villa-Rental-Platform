@@ -1763,13 +1763,13 @@ body[data-villa-theme] .site-header .nav{margin-left:auto!important}
     display:flex!important;align-items:center!important;justify-content:space-between!important;
     flex-direction:row!important;gap:12px!important;
   }
-  body[data-villa-theme] .site-header-mobile-brand{
-    order:1!important;display:inline-flex!important;align-items:center!important;justify-content:flex-start!important;
-    flex:0 1 auto!important;min-width:0!important;max-width:calc(100% - 60px)!important;margin-right:auto!important;
-    text-decoration:none!important;
-  }
   body[data-villa-theme] .site-header .mobile-menu-toggle{
-    order:2!important;flex:0 0 44px!important;margin:0 0 0 auto!important;
+    order:1!important;flex:0 0 44px!important;margin:0 auto 0 0!important;
+  }
+  body[data-villa-theme] .site-header-mobile-brand{
+    order:2!important;display:inline-flex!important;align-items:center!important;justify-content:flex-end!important;
+    flex:0 1 auto!important;min-width:0!important;max-width:calc(100% - 60px)!important;margin-left:auto!important;
+    text-decoration:none!important;
   }
   body[data-villa-theme] .site-header-mobile-brand img{
     display:block!important;width:auto!important;height:auto!important;max-width:100%!important;
