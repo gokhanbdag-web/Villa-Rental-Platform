@@ -248,12 +248,12 @@ try {
     assertSmoke(str_contains($typographyViewSource, 'name="typography[') && str_contains($typographyViewSource, '][family]') && str_contains($typographyViewSource, '][color]') && str_contains($typographyViewSource, 'topbar_height'), 'Theme typography controls must expose font family, size, color and topbar height.');
     assertSmoke(!str_contains($themeManagerSource, 'PageBuilder') && !str_contains($themeManagerSource, 'ThemeDemoImporter') && !str_contains($themeManagerSource, 'ZipArchive'), 'Theme manager must not contain builder, demo importer or theme package upload dependencies.');
 
-    $logoHeaderPath = $root . '/themes/default/templates/partials/header.php';
-    assertSmoke(is_file($logoHeaderPath), 'The shared logo-only topbar and site header partial must remain available.');
-    $logoHeaderSource = (string)file_get_contents($logoHeaderPath);
-    assertSmoke(str_contains($logoHeaderSource, 'site-logo-topbar') && str_contains($logoHeaderSource, 'site-logo-topbar__brand') && str_contains($logoHeaderSource, 'site-header'), 'The reusable top area must contain the centered logo above the navigation header.');
-    assertSmoke(!str_contains($logoHeaderSource, 'villa-social-bar') && !str_contains($logoHeaderSource, 'villa-social-address') && !str_contains($logoHeaderSource, 'villa-social-call-center'), 'The logo-only topbar must not restore the removed contact and social information strip.');
-    assertSmoke(str_contains($themeManagerSource, 'public static function renderPartial') && !str_contains($themeManagerSource, "renderPartial('partials/shared-topbar.php'") && !str_contains($themeManagerSource, 'villa-mobile-single-column-global'), 'The removed information strip must stay out of shared theme rendering and global responsive CSS must not be duplicated in ThemeManager.');
+    $sharedTopbarPath = $root . '/themes/default/partials/shared-topbar.php';
+    assertSmoke(is_file($sharedTopbarPath), 'The shared logo-only topbar must live in one reusable theme partial.');
+    $sharedTopbarSource = (string)file_get_contents($sharedTopbarPath);
+    assertSmoke(str_contains($sharedTopbarSource, 'site-logo-topbar') && str_contains($sharedTopbarSource, 'site-logo-topbar__brand'), 'The reusable topbar must render the centered site logo.');
+    assertSmoke(!str_contains($sharedTopbarSource, 'villa-social-bar') && !str_contains($sharedTopbarSource, 'villa-social-address') && !str_contains($sharedTopbarSource, 'villa-social-call-center'), 'The logo-only topbar must not restore the removed contact and social information strip.');
+    assertSmoke(str_contains($themeManagerSource, "renderPartial('partials/shared-topbar.php'") && str_contains($themeManagerSource, 'public static function renderPartial') && !str_contains($themeManagerSource, 'villa-mobile-single-column-global'), 'The logo-only topbar must use the reusable component resolver and global responsive CSS must not be duplicated in ThemeManager.');
     $obsoleteTables = (int)$pdo->query("SELECT COUNT(*) FROM information_schema.TABLES WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME IN ('page_builder_layouts','theme_demo_imports','theme_demo_layouts')")->fetchColumn();
     assertSmoke($obsoleteTables === 0, 'Obsolete Page Builder and theme demo tables must be removed by migrations.');
     $archiveTable = (int)$pdo->query("SELECT COUNT(*) FROM information_schema.TABLES WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='legacy_cleanup_archive'")->fetchColumn();
