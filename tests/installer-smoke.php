@@ -7,6 +7,7 @@ use App\Core\Auth;
 use App\Core\Installer;
 use App\Core\Migrator;
 use App\Core\PaymentWebhookInbox;
+use App\Core\PaymentCallbackProcessor;
 use App\Core\ThemeManager;
 use App\Core\Router;
 
