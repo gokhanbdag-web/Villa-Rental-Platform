@@ -641,9 +641,10 @@ $router->post('/villa/{slug}/reserve', static function (array $params): void {
     }
     try{
         $pdo->beginTransaction();
-        $lock=$pdo->prepare('SELECT id,base_nightly_price,weekend_nightly_price,cleaning_fee,currency FROM properties WHERE id=? AND status=\'published\' FOR UPDATE');
+        $lock=$pdo->prepare('SELECT id,base_nightly_price,weekend_nightly_price,cleaning_fee,currency,max_guests FROM properties WHERE id=? AND status=\'published\' FOR UPDATE');
         $lock->execute([(int)$property['id']]);$current=$lock->fetch();
         if(!$current){$pdo->rollBack();http_response_code(404);exit('Konaklama artık yayında değil.');}
+        if($guests<1||$guests>(int)$current['max_guests']){$pdo->rollBack();http_response_code(422);exit('Misafir sayısı konaklamanın güncel kapasitesini aşıyor.');}
         $conflict=$pdo->prepare("SELECT id FROM bookings WHERE property_id=? AND status IN ('pending','confirmed') AND check_in < ? AND check_out > ? LIMIT 1");
         $conflict->execute([(int)$property['id'],$outRaw,$inRaw]);
         $calendar=$pdo->prepare('SELECT date_from,date_to,status,nightly_price FROM availability WHERE property_id=? AND date_from < ? AND date_to > ?');
