@@ -1289,7 +1289,7 @@ body[data-villa-theme] .theme-menu-toggle{display:none}
 /* Shared header: identical structure and dimensions to the homepage header. */
 body[data-villa-theme] .site-header{
   height:78px!important;min-height:78px!important;display:flex!important;align-items:center!important;
-  border-bottom:1px solid var(--villa-primary,#176b50)!important;background:#fff!important;
+  border-bottom:1px solid var(--villa-primary,#176b50)!important;background:var(--villa-primary,#176b50)!important;
   position:relative!important;z-index:10010!important;padding:0!important
 }
 body[data-villa-theme] .site-header .head{
