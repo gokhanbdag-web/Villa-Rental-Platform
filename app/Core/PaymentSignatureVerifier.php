@@ -36,6 +36,36 @@ final class PaymentSignatureVerifier
         return hash_equals($expected, (string)$payload['hash']);
     }
 
+    public static function verifyIyzicoCheckoutFormRetrieve(array $response, string $secretKey): bool
+    {
+        if ($secretKey === '') return false;
+        $fields = ['paymentStatus','paymentId','currency','basketId','conversationId','paidPrice','price','token','signature'];
+        foreach ($fields as $field) {
+            if (!isset($response[$field]) || !is_scalar($response[$field]) || (string)$response[$field] === '') return false;
+        }
+        $normalizeAmount = static function (string $amount): string {
+            $amount = trim($amount);
+            if (!preg_match('/^[0-9]+(?:\\.[0-9]+)?$/', $amount)) return '';
+            if (str_contains($amount, '.')) $amount = rtrim(rtrim($amount, '0'), '.');
+            return $amount;
+        };
+        $paidPrice = $normalizeAmount((string)$response['paidPrice']);
+        $price = $normalizeAmount((string)$response['price']);
+        if ($paidPrice === '' || $price === '') return false;
+        $message = implode(':', [
+            (string)$response['paymentStatus'],
+            (string)$response['paymentId'],
+            (string)$response['currency'],
+            (string)$response['basketId'],
+            (string)$response['conversationId'],
+            $paidPrice,
+            $price,
+            (string)$response['token'],
+        ]);
+        $expected = hash_hmac('sha256', $message, $secretKey);
+        return hash_equals(strtolower($expected), strtolower((string)$response['signature']));
+    }
+
     public static function verifyIyzicoV3(array $payload, string $signature, string $secretKey): bool
     {
         if ($signature === '' || $secretKey === '') return false;
