@@ -89,27 +89,35 @@ document.addEventListener('DOMContentLoaded',function(){const video=document.que
 (function(){
  const frame=document.querySelector('.hero-video-youtube');
  if(!frame)return;
+ const box=frame.closest('.hero-card');
+ if(!box)return;
  const fit=()=>{
-  const box=frame.parentElement;
-  if(!box)return;
-  const w=box.clientWidth,h=box.clientHeight;
+  const rect=box.getBoundingClientRect();
+  const w=rect.width,h=rect.height;
   if(!w||!h)return;
   const scale=Math.max(w/16,h/9);
-  const videoWidth=scale*16,videoHeight=scale*9;
-  frame.style.position='absolute';
-  frame.style.width=videoWidth+'px';
-  frame.style.height=videoHeight+'px';
-  frame.style.left='50%';
-  frame.style.top='50%';
-  frame.style.right='auto';
-  frame.style.bottom='auto';
-  frame.style.marginLeft=(-videoWidth/2)+'px';
-  frame.style.marginTop=(-videoHeight/2)+'px';
-  frame.style.transform='none';
+  const videoWidth=Math.ceil(scale*16),videoHeight=Math.ceil(scale*9);
+  // Override theme-wide iframe sizing rules: the YouTube player must cover
+  // the complete hero, not inherit a content-width or intrinsic iframe size.
+  frame.style.setProperty('position','absolute','important');
+  frame.style.setProperty('display','block','important');
+  frame.style.setProperty('width',videoWidth+'px','important');
+  frame.style.setProperty('height',videoHeight+'px','important');
+  frame.style.setProperty('max-width','none','important');
+  frame.style.setProperty('max-height','none','important');
+  frame.style.setProperty('min-width','0','important');
+  frame.style.setProperty('min-height','0','important');
+  frame.style.setProperty('left','50%','important');
+  frame.style.setProperty('top','50%','important');
+  frame.style.setProperty('right','auto','important');
+  frame.style.setProperty('bottom','auto','important');
+  frame.style.setProperty('margin','0','important');
+  frame.style.setProperty('transform','translate(-50%,-50%)','important');
  };
  fit();
- if('ResizeObserver' in window){new ResizeObserver(fit).observe(frame.parentElement);}
+ if('ResizeObserver' in window)new ResizeObserver(fit).observe(box);
  window.addEventListener('resize',fit,{passive:true});
+ window.addEventListener('orientationchange',fit,{passive:true});
 })();
 </script><?php endif; ?>
 <div class="hero-inner"><div class="hero-copy"><span class="eyebrow villa-hero-eyebrow"><?= e($content['home_eyebrow']??'TATİLİNİZİ GÜZELLEŞTİRİN') ?></span><h1><?= e($content['home_title']??'Hayalinizdeki tatil sizi bekliyor') ?></h1><p><?= e($content['home_subtitle']??'Deniz, doğa ve huzur… Size en uygun tatil evini keşfedin.') ?></p></div></div>
