@@ -276,6 +276,7 @@ try {
     $themeCssSource = (string)file_get_contents($root . '/themes/default/style.css');
     assertSmoke(str_contains($themeCssSource, 'min-height:64px') && str_contains($themeCssSource, 'padding:10px 22px'), 'Shared top information bar must use the increased height and spacing.');
     assertSmoke(str_contains($themeRoutesSource, "villa_theme_message_type") && str_contains($themeRoutesSource, 'Shared header settings save failed'), 'Header settings save failures must be logged and surfaced to the administrator.');
+    $themeSettingsViewSource = (string)file_get_contents($root . '/themes/default/templates/pages/admin/header-settings.php');
     assertSmoke(str_contains($themeSettingsViewSource, 'role="status"') && str_contains($themeSettingsViewSource, '.notice.error'), 'Header settings must visibly distinguish a failed save from a successful save.');
 
     $iyzicoClientSource = (string)file_get_contents($root . '/app/Core/IyzicoApiClient.php');
