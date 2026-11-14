@@ -772,7 +772,7 @@ $router->post('/checkout/{bookingCode}/iyzico/start', static function (array $pa
         $urlParts=parse_url($paymentUrl);
         $actualHost=strtolower((string)($urlParts['host']??''));
         $query=[];parse_str((string)($urlParts['query']??''),$query);
-        if($token===''||($urlParts['scheme']??'')!=='https'||($urlParts['user']??'')!==null
+        if($token===''||!is_array($urlParts)||($urlParts['scheme']??'')!=='https'||isset($urlParts['user'])
             ||$actualHost!=='sandbox-cpp.iyzipay.com'||!hash_equals($token,(string)($query['token']??''))) {
             throw new RuntimeException('iyzico Sandbox ödeme sayfası adresi doğrulanamadı.');
         }
