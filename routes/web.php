@@ -772,9 +772,12 @@ $router->post('/checkout/{bookingCode}/iyzico/start', static function (array $pa
             throw new RuntimeException('iyzico ödeme oturumu yanıtı imza veya işlem referansı doğrulamasından geçmedi.');
         }
         $urlParts=parse_url($paymentUrl);
-        $actualHost=strtolower((string)($urlParts['host']??''));
-        $query=[];parse_str((string)($urlParts['query']??''),$query);
+        $actualHost=is_array($urlParts)?strtolower((string)($urlParts['host']??'')):'';
+        $query=[];
+        if(is_array($urlParts))parse_str((string)($urlParts['query']??''),$query);
         if($token===''||!is_array($urlParts)||($urlParts['scheme']??'')!=='https'||isset($urlParts['user'])
+            ||isset($urlParts['pass'])||isset($urlParts['fragment'])
+            ||(isset($urlParts['port'])&&(int)$urlParts['port']!==443)
             ||$actualHost!=='sandbox-cpp.iyzipay.com'||!hash_equals($token,(string)($query['token']??''))) {
             throw new RuntimeException('iyzico Sandbox ödeme sayfası adresi doğrulanamadı.');
         }
