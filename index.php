@@ -40,11 +40,21 @@ try {
 
 $router = new Router();
 require APP_ROOT . '/routes/web.php';
-$requestPath = parse_url($_SERVER['REQUEST_URI'] ?? '/', PHP_URL_PATH) ?: '/';
+
+$requestedPath = parse_url($_SERVER['REQUEST_URI'] ?? '/', PHP_URL_PATH) ?: '/';
 $basePath = app_base_path();
-if ($basePath !== '' && ($requestPath === $basePath || str_starts_with($requestPath, $basePath . '/'))) {
-    $requestPath = substr($requestPath, strlen($basePath)) ?: '/';
+
+// Prefer the literal URL first. This matters when a valid application route
+// (such as /villa/{slug}) has the same prefix as the physical install folder.
+// Only try the prefix-stripped path when the literal URL has no matching route.
+$pathCandidates = [$requestedPath];
+if ($basePath !== '' && ($requestedPath === $basePath || str_starts_with($requestedPath, $basePath . '/'))) {
+    $strippedPath = substr($requestedPath, strlen($basePath)) ?: '/';
+    if ($strippedPath !== $requestedPath) {
+        $pathCandidates[] = $strippedPath;
+    }
 }
+
 $platformMode = 'single_vendor';
 try {
     $modeStmt = Database::connection()->prepare('SELECT setting_value FROM settings WHERE setting_key = ? LIMIT 1');
@@ -54,19 +64,34 @@ try {
     error_log('Platform mode lookup failed: ' . $e->getMessage());
 }
 
-// Vendor-only endpoints must not be reachable in single-vendor installations,
-// even if an old vendor account or a bookmarked URL exists.
-if ($platformMode !== 'multi_vendor' &&
-    ($requestPath === '/vendor' || str_starts_with($requestPath, '/vendor/') ||
-     $requestPath === '/admin/vendors' || str_starts_with($requestPath, '/admin/vendors/'))) {
-    http_response_code(404);
-    exit('Bu özellik mevcut platform modelinde etkin değil.');
+$method = $_SERVER['REQUEST_METHOD'] ?? 'GET';
+foreach ($pathCandidates as $requestPath) {
+    // Vendor-only endpoints must not be reachable in single-vendor installs.
+    if ($platformMode !== 'multi_vendor' &&
+        ($requestPath === '/vendor' || str_starts_with($requestPath, '/vendor/') ||
+         $requestPath === '/admin/vendors' || str_starts_with($requestPath, '/admin/vendors/'))) {
+        http_response_code(404);
+        exit('Bu özellik mevcut platform modelinde etkin değil.');
+    }
+
+    $isAdminPage = $requestPath === '/admin' || str_starts_with($requestPath, '/admin/');
+    if ($isAdminPage) {
+        ob_start(static function (string $html) use ($requestPath, $platformMode): string {
+            return ThemeManager::wrapAdminHtml($html, $requestPath, $platformMode);
+        });
+    }
+
+    if ($router->dispatch($method, $requestPath)) {
+        // A matching route owns the response; do not try another path.
+        exit;
+    }
+
+    // No route matched this candidate. Discard any empty admin output buffer
+    // before trying the alternate path representation.
+    if ($isAdminPage && ob_get_level() > 0) {
+        ob_end_clean();
+    }
 }
 
-$isAdminPage = $requestPath === '/admin' || str_starts_with($requestPath, '/admin/');
-if ($isAdminPage) {
-    ob_start(static function (string $html) use ($requestPath, $platformMode): string {
-        return ThemeManager::wrapAdminHtml($html, $requestPath, $platformMode);
-    });
-}
-$router->dispatch($_SERVER['REQUEST_METHOD'] ?? 'GET', $requestPath);
+http_response_code(404);
+echo 'Sayfa bulunamadı.';
