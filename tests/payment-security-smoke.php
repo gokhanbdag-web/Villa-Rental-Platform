@@ -85,6 +85,12 @@ paymentAssert(PaymentSignatureVerifier::verifyIyzicoV3($iyzicoPayload, $signatur
 $iyzicoPayload['status'] = 'FAILURE';
 paymentAssert(!PaymentSignatureVerifier::verifyIyzicoV3($iyzicoPayload, $signature, $secret), 'Tampered iyzico callback was accepted.');
 
+$initializeResponse = ['conversationId'=>'VILLA-TEST-0002','token'=>'init-token'];
+$initializeResponse['signature'] = hash_hmac('sha256','VILLA-TEST-0002:init-token',$secret);
+paymentAssert(PaymentSignatureVerifier::verifyIyzicoCheckoutFormInitialize($initializeResponse,$secret), 'Valid iyzico Checkout Form initialize signature was rejected.');
+$initializeResponse['token'] = 'tampered-token';
+paymentAssert(!PaymentSignatureVerifier::verifyIyzicoCheckoutFormInitialize($initializeResponse,$secret), 'Tampered iyzico Checkout Form initialize response was accepted.');
+
 $retrieveResponse = [
     'paymentStatus'=>'SUCCESS','paymentId'=>'99887766','currency'=>'TRY','basketId'=>'VILLA-TEST-0002',
     'conversationId'=>'VILLA-TEST-0002','paidPrice'=>'1250.00','price'=>'1250.00','token'=>'test-token',
