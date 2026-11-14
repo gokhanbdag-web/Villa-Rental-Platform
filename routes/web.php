@@ -684,11 +684,13 @@ $router->get('/checkout/{bookingCode}', static function(array $params):void {
     if(!$booking){http_response_code(404);exit('Rezervasyon bulunamadı.');}
     $iyzicoConfig=\App\Core\PaymentGatewayConfig::forProvider('iyzico');
     $iyzicoPaymentAvailable=!empty($iyzicoConfig['enabled'])&&!empty($iyzicoConfig['configured'])&&($iyzicoConfig['environment']??'')==='sandbox';
-    $paymentStatus=(string)($_GET['payment']??'');
+    $requestedPaymentStatus=(string)($_GET['payment']??'');
+    $paymentStatus=in_array($requestedPaymentStatus,['failed','verify_error'],true)?$requestedPaymentStatus:'';
     $latestPayment=$pdo->prepare("SELECT status FROM payment_transactions WHERE booking_id=? AND provider='iyzico' ORDER BY id DESC LIMIT 1");
     $latestPayment->execute([(int)$booking['id']]);$latestPaymentStatus=(string)($latestPayment->fetchColumn()?:'');
     if($latestPaymentStatus==='processing')$paymentStatus='review';
-    if($latestPaymentStatus==='paid')$paymentStatus='paid';
+    elseif($latestPaymentStatus==='paid')$paymentStatus='paid';
+    elseif($latestPaymentStatus==='failed')$paymentStatus='failed';
     ThemeManager::renderTemplate('templates/pages/checkout.php',get_defined_vars());
 });
 
@@ -826,7 +828,10 @@ $router->post('/payments/iyzico/callback', static function (): void {
         $processed=(new \App\Core\PaymentCallbackProcessor($pdo))->processVerified(
             'iyzico',$eventId,'CHECKOUT_FORM_AUTH',$token,$eventPayload,$callback
         );
-        $suffix=($processed['payment_status']??'')==='paid'?'paid':(($normalizedStatus==='processing')?'review':'failed');
+        $currentPayment=$pdo->prepare('SELECT status FROM payment_transactions WHERE id=? LIMIT 1');
+        $currentPayment->execute([(int)$transaction['id']]);
+        $storedStatus=(string)($currentPayment->fetchColumn()?:'');
+        $suffix=match($storedStatus){'paid'=>'paid','processing'=>'review','failed'=>'failed',default=>'verify_error'};
         redirect('/checkout/'.rawurlencode((string)$transaction['booking_code']).'?payment='.$suffix);
     }catch(Throwable $e){
         error_log('iyzico callback verification failed: '.$e->getMessage());
