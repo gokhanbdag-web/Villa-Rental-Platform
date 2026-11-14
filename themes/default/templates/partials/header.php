@@ -14,6 +14,8 @@ $topPhone = trim((string) ($content['home_support_phone'] ?? ''));
 $topPhoneDigits = preg_replace('/\\D+/', '', $topPhone);
 ?>
 <style>
+/* Eski iletişim/sosyal bilgi şeridi bu tasarımda gösterilmez. */
+.villa-social-bar{display:none!important}
 /* VillaCMS centered brand strip: isolated from the existing navigation/header */
 .villacms-brand-strip{position:relative;z-index:2;display:flex;align-items:center;justify-content:center;box-sizing:border-box;width:100%;min-height:108px;padding:13px 20px;background:linear-gradient(112deg,#fbf8f1 0%,#f4eee2 48%,#fbf8f1 100%);border-bottom:1px solid rgba(176,132,57,.24);overflow:hidden}
 .villacms-brand-strip:before,.villacms-brand-strip:after{content:"";position:absolute;top:50%;width:min(25vw,300px);height:1px;background:linear-gradient(90deg,transparent,rgba(174,130,57,.55))}
