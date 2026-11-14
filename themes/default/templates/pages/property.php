@@ -68,13 +68,13 @@ $images = $property['images'] ?? [];
 
 
 
-<?php if(!empty($propertyAmenities)): ?><section class="property-feature-section"><h2 class="property-section-title">Villa özellikleri</h2><ul class="property-amenities property-facts">
+<section class="property-feature-section"><h2 class="property-section-title">Villa özellikleri</h2><ul class="property-amenities property-facts">
 <li><span class="feature-icon" aria-hidden="true">♙</span><span><?= (int)$property['max_guests'] ?> misafir</span></li>
 <li><span class="feature-icon" aria-hidden="true">▤</span><span><?= (int)$property['bedrooms'] ?> yatak odası</span></li>
 <li><span class="feature-icon" aria-hidden="true">▱</span><span><?= (int)$property['beds'] ?> yatak</span></li>
 <li><span class="feature-icon" aria-hidden="true">♨</span><span><?= e((string)$property['bathrooms']) ?> banyo</span></li>
 <?php foreach(($propertyAmenities??[]) as $amenity): ?><li><span class="feature-icon" aria-hidden="true"><?= e(trim((string)($amenity['icon']??'')) ?: '✓') ?></span><span><?= e($amenity['name']) ?></span></li><?php endforeach; ?>
-</ul></section><?php endif; ?>
+</ul></section>
 
 
 <section class="property-description-section"><h2 class="property-section-title"><?= e($content['property_about'] ?? 'Konaklama hakkında') ?></h2><p class="description"><?= e($property['description'] ?: $property['summary'] ?: '') ?></p></section><section class="property-location-section"><h2 class="property-section-title">Villa konumu</h2><p class="muted"><?= e(trim(($property['address']??'').' '.($property['district']??'').' '.($property['city']??'').' '.($property['country']??''))) ?></p><?php if(is_numeric($property['latitude']??null)&&is_numeric($property['longitude']??null)): ?><div id="propertyLocationMap" class="property-location-map" data-lat="<?= e((string)$property['latitude']) ?>" data-lng="<?= e((string)$property['longitude']) ?>" role="application" aria-label="Villa konumu haritası"></div><small class="map-attribution">© OpenStreetMap katkıda bulunanlar</small><?php else: ?><p class="property-map-empty">Bu villa için harita konumu henüz seçilmemiş.</p><?php endif; ?></section>
@@ -97,7 +97,7 @@ $images = $property['images'] ?? [];
 </section></div>
 <div class="booking-price-preview" id="bookingPricePreview" hidden><div><span id="bookingNightCount">0 gece</span><strong id="bookingNightSubtotal">—</strong></div><div><span>Temizlik ücreti</span><strong id="bookingCleaningFee">—</strong></div><div class="booking-total"><span>Toplam tutar</span><strong id="bookingGrandTotal">—</strong></div></div>
 <p class="booking-inline-status" id="bookingAvailabilityStatus" role="status" aria-live="polite">Giriş ve çıkış tarihlerinizi seçin.</p>
-<button type="button" class="booking-primary" id="bookingContinue" disabled>Rezervasyona Devam Et</button>
+<button type="button" class="booking-primary" id="bookingContinue" disabled>Müsaitliği Kontrol Et</button>
 </section>
 <section class="booking-step-panel" id="bookingStepDetails" data-booking-step="2" hidden>
 <h2 class="booking-step-title">Rezervasyon bilgileri</h2>
@@ -139,12 +139,12 @@ modal.addEventListener('touchstart',function(e){touchX=e.changedTouches[0].scree
  function money(n,c){return new Intl.NumberFormat('tr-TR',{minimumFractionDigits:2,maximumFractionDigits:2}).format(Number(n||0))+' '+c}
  function updateSummary(){if(!priceData)return;const html='<div><span>'+priceData.nights+' gece konaklama</span><strong>'+money(priceData.subtotal,priceData.currency)+'</strong></div><div><span>Temizlik ücreti</span><strong>'+money(priceData.fees,priceData.currency)+'</strong></div><div class="booking-total"><span>Toplam</span><strong>'+money(priceData.total,priceData.currency)+'</strong></div>';preview.innerHTML=html;detailsPreview.innerHTML=html;preview.hidden=false}
  function setStep(n){step1.hidden=n!==1;step2.hidden=n!==2;indicators.forEach(el=>el.classList.toggle('is-active',el.dataset.stepIndicator===String(n)));if(n===2){summary.textContent=checkIn.value+' giriş · '+checkOut.value+' çıkış · '+guests.value+' misafir';updateSummary();}}
- async function check(){verified=false;continueBtn.disabled=true;priceData=null;preview.hidden=true;if(!checkIn.value||!checkOut.value||checkOut.value<=checkIn.value){status.textContent='Geçerli giriş ve çıkış tarihlerini seçin.';return false;}status.textContent='Müsaitlik ve fiyat kontrol ediliyor…';checking=true;try{const url=new URL(document.getElementById('villaAvailability').dataset.priceUrl,location.origin);url.search=new URLSearchParams({check_in:checkIn.value,check_out:checkOut.value,guests:guests.value});const res=await fetch(url,{headers:{Accept:'application/json'},credentials:'same-origin'});const data=await res.json();if(!res.ok||!data.ok)throw new Error(data.message||'Seçilen tarihler müsait değil.');priceData=data;verified=true;verifiedKey=key();updateSummary();status.textContent=data.message||'Seçtiğiniz tarihler müsait.';continueBtn.disabled=false;return true;}catch(err){status.textContent=err.message||'Müsaitlik kontrol edilemedi.';return false;}finally{checking=false;}}
- [checkIn,checkOut,guests].forEach(el=>el.addEventListener('change',()=>{verified=false;continueBtn.disabled=true;status.textContent='Tarih veya misafir sayısı değişti. Yeniden kontrol edin.';}));
- continueBtn.addEventListener('click',async()=>{if(checking)return;if(!verified||verifiedKey!==key()){if(!await check())return;}setStep(2);});
+ async function check(){verified=false;continueBtn.disabled=true;priceData=null;preview.hidden=true;if(!checkIn.value||!checkOut.value||checkOut.value<=checkIn.value){status.textContent='Geçerli giriş ve çıkış tarihlerini seçin.';return false;}status.textContent='Müsaitlik ve fiyat kontrol ediliyor…';checking=true;try{const url=new URL(document.getElementById('villaAvailability').dataset.priceUrl,location.origin);url.search=new URLSearchParams({check_in:checkIn.value,check_out:checkOut.value,guests:guests.value});const res=await fetch(url,{headers:{Accept:'application/json'},credentials:'same-origin'});const data=await res.json();if(!res.ok||!data.ok)throw new Error(data.message||'Seçilen tarihler müsait değil.');priceData=data;verified=true;verifiedKey=key();updateSummary();status.textContent=data.message||'Seçtiğiniz tarihler müsait.';continueBtn.disabled=false;continueBtn.textContent='Rezervasyon Yap';return true;}catch(err){status.textContent=err.message||'Müsaitlik kontrol edilemedi.';return false;}finally{checking=false;}}
+ [checkIn,checkOut,guests].forEach(el=>el.addEventListener('change',()=>{verified=false;continueBtn.disabled=true;continueBtn.textContent='Müsaitliği Kontrol Et';status.textContent='Tarih veya misafir sayısı değişti. Yeniden kontrol edin.';}));
+ continueBtn.addEventListener('click',async()=>{if(checking)return;if(!verified||verifiedKey!==key()){await check();return;}setStep(2);});
  backBtn.addEventListener('click',()=>setStep(1));
  form.addEventListener('submit',async e=>{if(!verified||verifiedKey!==key()){e.preventDefault();setStep(1);await check();return;}const password=form.querySelector('[name="password"]');if(password.value.length<10){e.preventDefault();password.focus();return;}const button=document.getElementById('bookingComplete');button.disabled=true;button.textContent='Rezervasyon kaydediliyor…';});
- const calendarContinue=document.getElementById('calendarReserve');if(calendarContinue){calendarContinue.addEventListener('click',async e=>{e.preventDefault();if(await check())setStep(2);});}
+ const calendarContinue=document.getElementById('calendarReserve');if(calendarContinue){calendarContinue.addEventListener('click',async e=>{e.preventDefault();await check();});}
  if(checkIn.value&&checkOut.value)check();
 })();
 </script></body></html>
