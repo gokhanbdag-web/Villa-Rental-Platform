@@ -85,7 +85,7 @@ final class ThemeManager
     {
         $slug = $slug ?: self::activeSlug();
         if (!preg_match('/^[a-z0-9_-]{1,60}$/', $slug) || !isset(self::installed()[$slug])) $slug = 'default';
-        $defaults = ['logo_path' => '', 'hero_video_path' => '', 'family_banner_path' => '', 'hero_youtube_url' => '', 'hero_overlay_opacity' => '58', 'hero_background_image_url' => ''];
+        $defaults = ['logo_path' => '', 'hero_video_path' => '', 'family_banner_path' => '', 'hero_youtube_url' => '', 'hero_overlay_opacity' => '58', 'hero_background_image_url' => '', 'hero_video_start_seconds' => '0', 'hero_video_loop' => '1'];
         try {
             $pdo = Database::connection();
             $stmt = $pdo->prepare('SELECT setting_value FROM settings WHERE setting_key=? LIMIT 1');
@@ -109,6 +109,8 @@ final class ThemeManager
             'hero_youtube_url' => $defaults['hero_youtube_url'],
             'hero_overlay_opacity' => max(0, min(100, (int)$defaults['hero_overlay_opacity'])),
             'hero_background_image_url' => $defaults['hero_background_image_url'],
+            'hero_video_start_seconds' => max(0, min(86400, (int)$defaults['hero_video_start_seconds'])),
+            'hero_video_loop' => $defaults['hero_video_loop'] !== '0',
             'logo_url' => $defaults['logo_path'] !== '' ? self::brandAssetUrl($defaults['logo_path'], $slug) : '',
             'hero_video_url' => $defaults['hero_video_path'] !== '' ? self::brandAssetUrl($defaults['hero_video_path'], $slug) : '',
             'family_banner_url' => $defaults['family_banner_path'] !== '' ? self::brandAssetUrl($defaults['family_banner_path'], $slug) : '',
@@ -153,7 +155,7 @@ final class ThemeManager
         $settings = self::brandSettings($slug);
         $old = (string)($settings[$rule['key']] ?? '');
         $settings[$rule['key']] = $relativeDir . '/' . $name;
-        $json = json_encode(['logo_path'=>$settings['logo_path'],'hero_video_path'=>$settings['hero_video_path'],'family_banner_path'=>$settings['family_banner_path'],'hero_youtube_url'=>$settings['hero_youtube_url'],'hero_overlay_opacity'=>(string)$settings['hero_overlay_opacity'],'hero_background_image_url'=>$settings['hero_background_image_url']], JSON_UNESCAPED_SLASHES | JSON_THROW_ON_ERROR);
+        $json = json_encode(['logo_path'=>$settings['logo_path'],'hero_video_path'=>$settings['hero_video_path'],'family_banner_path'=>$settings['family_banner_path'],'hero_youtube_url'=>$settings['hero_youtube_url'],'hero_overlay_opacity'=>(string)$settings['hero_overlay_opacity'],'hero_background_image_url'=>$settings['hero_background_image_url'],'hero_video_start_seconds'=>(string)$settings['hero_video_start_seconds'],'hero_video_loop'=>$settings['hero_video_loop']?'1':'0'], JSON_UNESCAPED_SLASHES | JSON_THROW_ON_ERROR);
         try {
             $pdo = Database::connection();
             $save = $pdo->prepare('INSERT INTO settings(setting_key,setting_value,autoload) VALUES(?,?,1) ON DUPLICATE KEY UPDATE setting_value=VALUES(setting_value),autoload=1');
@@ -168,7 +170,7 @@ final class ThemeManager
         }
     }
 
-    public static function saveHeroVideoSettings(string $youtubeUrl, int $overlayOpacity, string $backgroundImageUrl = '', ?string $slug = null): void
+    public static function saveHeroVideoSettings(string $youtubeUrl, int $overlayOpacity, string $backgroundImageUrl = '', int $startSeconds = 0, bool $loop = true, ?string $slug = null): void
     {
         $slug = $slug ?: self::activeSlug();
         if (!preg_match('/^[a-z0-9_-]{1,60}$/', $slug) || !isset(self::installed()[$slug])) throw new RuntimeException('Tema kodu geçersiz.');
@@ -199,7 +201,9 @@ final class ThemeManager
             'family_banner_path'=>$settings['family_banner_path'],
             'hero_youtube_url'=>$youtubeUrl,
             'hero_overlay_opacity'=>(string)max(0,min(100,$overlayOpacity)),
-            'hero_background_image_url'=>$backgroundImageUrl
+            'hero_background_image_url'=>$backgroundImageUrl,
+            'hero_video_start_seconds'=>(string)max(0,min(86400,$startSeconds)),
+            'hero_video_loop'=>$loop?'1':'0'
         ], JSON_UNESCAPED_SLASHES | JSON_THROW_ON_ERROR);
         $pdo = Database::connection();
         $save = $pdo->prepare('INSERT INTO settings(setting_key,setting_value,autoload) VALUES(?,?,1) ON DUPLICATE KEY UPDATE setting_value=VALUES(setting_value),autoload=1');
