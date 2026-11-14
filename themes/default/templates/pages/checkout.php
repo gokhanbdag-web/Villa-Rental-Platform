@@ -36,8 +36,6 @@ $navigation = is_array($navigation ?? null) ? $navigation : [];
 .checkout-payment{margin-top:28px;padding-top:26px;border-top:1px solid var(--villa-border)}
 .checkout-payment .checkout-section-title{margin-bottom:8px}
 .checkout-payment-copy{margin:0 0 20px 47px;color:var(--villa-muted);font-size:14px;line-height:1.7}
-.checkout-form-shell{min-height:120px;padding:14px;border:1px solid var(--villa-border);border-radius:15px;background:#fff;overflow:hidden}
-.checkout-form-shell #iyzipay-checkout-form{width:100%;min-height:100px}
 .checkout-notice{display:flex;gap:11px;align-items:flex-start;margin-top:16px;padding:14px 16px;border-radius:13px;background:color-mix(in srgb,var(--villa-primary,#176b50) 8%,white);color:var(--villa-text);font-size:13px;line-height:1.65}
 .checkout-notice strong{display:block;margin-bottom:2px}
 .checkout-notice.success{background:#eaf5ed;color:#176b50}
