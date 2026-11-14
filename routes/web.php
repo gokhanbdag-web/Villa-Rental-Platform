@@ -601,120 +601,84 @@ $router->get('/villa/{slug}/availability', static function (array $params): void
 });
 
 $router->get('/villa/{slug}/reserve', static function (array $params): void {
-    $user = Auth::user();
-    if (!$user) redirect('/register');
-    if (($user['role'] ?? '') !== 'customer') redirect('/login');
-    $stmt = Database::connection()->prepare("SELECT * FROM properties WHERE slug=? AND status='published' LIMIT 1");
-    $stmt->execute([$params['slug'] ?? '']);
-    $property = $stmt->fetch();
-    if (!$property) { http_response_code(404); echo 'Konaklama bulunamadı.'; return; }
-    $checkInDate = trim((string)($_GET['check_in'] ?? ''));
-    $checkOutDate = trim((string)($_GET['check_out'] ?? ''));
-    $checkInValue = \DateTimeImmutable::createFromFormat('!Y-m-d', $checkInDate);
-    $checkOutValue = \DateTimeImmutable::createFromFormat('!Y-m-d', $checkOutDate);
-    if (!$checkInValue || !$checkOutValue || $checkInValue->format('Y-m-d') !== $checkInDate || $checkOutValue->format('Y-m-d') !== $checkOutDate || $checkInValue < new \DateTimeImmutable('today') || $checkOutValue <= $checkInValue) {
-        $checkInDate = ''; $checkOutDate = '';
-    }
-    $pdo=Database::connection();
-    $contentStmt=$pdo->prepare('SELECT content_key,content_value FROM site_content WHERE language_code=?');$contentStmt->execute(['tr']);$content=$contentStmt->fetchAll(PDO::FETCH_KEY_PAIR);
-    $siteName=$content['site_name']??'VillaStay';
-    $footerNavigation=villa_navigation_tree($pdo,'footer','tr');
-    $pricePreview=null;
-    if($checkInDate!==''&&$checkOutDate!==''){
-        $nightRules=$pdo->prepare('SELECT date_from,date_to,status,nightly_price FROM availability WHERE property_id=? AND date_from < ? AND date_to > ?');$nightRules->execute([(int)$property['id'],$checkOutDate,$checkInDate]);$previewRules=$nightRules->fetchAll();
-        $previewSubtotal=0.0;$previewNights=0;$previewUnavailable=false;
-        for($night=$checkInValue;$night<$checkOutValue;$night=$night->modify('+1 day')){$day=$night->format('Y-m-d');$rate=(float)$property['base_nightly_price'];if((int)$night->format('N')>=6&&(float)($property['weekend_nightly_price']??0)>0)$rate=(float)$property['weekend_nightly_price'];foreach($previewRules as $rule){if($day>=$rule['date_from']&&$day<$rule['date_to']){if($rule['status']!=='available'){$previewUnavailable=true;break;}if($rule['nightly_price']!==null)$rate=(float)$rule['nightly_price'];}}if($previewUnavailable)break;$previewSubtotal+=$rate;$previewNights++;}
-        if(!$previewUnavailable){$pricePreview=['nights'=>$previewNights,'subtotal'=>$previewSubtotal,'fees'=>(float)($property['cleaning_fee']??0),'total'=>$previewSubtotal+(float)($property['cleaning_fee']??0)];}
-    }
-    ThemeManager::render('booking.php', get_defined_vars());
+    $query=http_build_query(array_intersect_key($_GET,array_flip(['check_in','check_out','guests'])));
+    redirect('/villa/'.rawurlencode((string)($params['slug']??'')).($query!==''?'?'.$query:''));
 });
 
 $router->post('/villa/{slug}/reserve', static function (array $params): void {
-    $user = Auth::user();
-    if (!$user) redirect('/register');
-    if (($user['role'] ?? '') !== 'customer') redirect('/login');
     verify_csrf();
-    $pdo = Database::connection();
-    $stmt = $pdo->prepare("SELECT * FROM properties WHERE slug=? AND status='published' LIMIT 1");
-    $stmt->execute([$params['slug'] ?? '']);
-    $property = $stmt->fetch();
-    if (!$property) { http_response_code(404); exit('Konaklama bulunamadı.'); }
-    $inRaw = (string)($_POST['check_in'] ?? '');
-    $outRaw = (string)($_POST['check_out'] ?? '');
-    $checkIn = \DateTimeImmutable::createFromFormat('!Y-m-d',$inRaw);
-    $checkOut = \DateTimeImmutable::createFromFormat('!Y-m-d',$outRaw);
-    $today = new \DateTimeImmutable('today');
-    $guests = (int)($_POST['guests'] ?? 0);
-    if (!$checkIn || !$checkOut || $checkIn->format('Y-m-d') !== $inRaw || $checkOut->format('Y-m-d') !== $outRaw || $checkIn < $today || $checkOut <= $checkIn || $guests < 1 || $guests > (int)$property['max_guests']) {
-        http_response_code(422); exit('Tarihleri ve misafir sayısını kontrol edin.');
+    $pdo=Database::connection();
+    $propertyStmt=$pdo->prepare("SELECT * FROM properties WHERE slug=? AND status='published' LIMIT 1");
+    $propertyStmt->execute([$params['slug']??'']);$property=$propertyStmt->fetch();
+    if(!$property){http_response_code(404);exit('Konaklama bulunamadı.');}
+    $first=trim((string)($_POST['first_name']??''));$last=trim((string)($_POST['last_name']??''));
+    $email=strtolower(trim((string)($_POST['email']??'')));$phone=trim((string)($_POST['phone']??''));$password=(string)($_POST['password']??'');
+    $inRaw=trim((string)($_POST['check_in']??''));$outRaw=trim((string)($_POST['check_out']??''));
+    $checkIn=DateTimeImmutable::createFromFormat('!Y-m-d',$inRaw);$checkOut=DateTimeImmutable::createFromFormat('!Y-m-d',$outRaw);
+    $guests=(int)($_POST['guests']??0);$fullName=trim($first.' '.$last);
+    if($first===''||$last===''||mb_strlen($first)>90||mb_strlen($last)>90||!filter_var($email,FILTER_VALIDATE_EMAIL)||strlen($email)>190||$phone===''||strlen($phone)>40||strlen($password)<10||strlen($password)>128||!$checkIn||!$checkOut||$checkIn->format('Y-m-d')!==$inRaw||$checkOut->format('Y-m-d')!==$outRaw||$checkIn<new DateTimeImmutable('today')||$checkOut<=$checkIn||(int)$checkIn->diff($checkOut)->days>365||$guests<1||$guests>(int)$property['max_guests']){
+        http_response_code(422);exit('Lütfen tüm bilgileri ve rezervasyon tarihlerini kontrol edin. Şifre en az 10 karakter olmalıdır.');
     }
-    $nights = (int)$checkIn->diff($checkOut)->days;
-    try {
+    $currentUser=Auth::user();$userId=0;
+    $existing=$pdo->prepare('SELECT id,username,email,password_hash,role,status FROM users WHERE email=? LIMIT 1');$existing->execute([$email]);$account=$existing->fetch();
+    if($currentUser){
+        if((int)$currentUser['id']!==(int)($account['id']??0)||strtolower((string)$currentUser['email'])!==$email){http_response_code(409);exit('Oturumunuzdaki hesap ile rezervasyon e-posta adresi aynı olmalıdır.');}
+        if(!password_verify($password,(string)$account['password_hash'])){http_response_code(422);exit('Mevcut hesabınızın şifresini doğru girin.');}
+        $userId=(int)$currentUser['id'];
+    }elseif($account){
+        if($account['role']!=='customer'||$account['status']!=='active'||!password_verify($password,(string)$account['password_hash'])){http_response_code(422);exit('Bu e-posta adresiyle kayıtlı hesabın şifresini doğrulayamadık. Giriş bilgilerinizi kontrol edin.');}
+        $userId=(int)$account['id'];
+        if(!Auth::attempt($email,$password)){http_response_code(429);exit('Giriş doğrulaması şu anda yapılamıyor. Lütfen biraz sonra tekrar deneyin.');}
+    }else{
+        $base=mb_strtolower($first.' '.$last,'UTF-8');
+        $base=strtr($base,['ı'=>'i','ğ'=>'g','ü'=>'u','ş'=>'s','ö'=>'o','ç'=>'c']);
+        $base=preg_replace('/[^a-z0-9]+/','.',iconv('UTF-8','ASCII//TRANSLIT//IGNORE',$base)?:$base)?:'misafir';
+        $base=trim(substr($base,0,65),'.');$username=$base;$suffix=1;
+        $checkUsername=$pdo->prepare('SELECT 1 FROM users WHERE username=? LIMIT 1');
+        while(true){$checkUsername->execute([$username]);if(!$checkUsername->fetchColumn())break;$username=substr($base,0,65).'.'.$suffix++;}
+        $create=$pdo->prepare("INSERT INTO users(username,email,password_hash,role,status,created_at) VALUES(?,?,?,'customer','active',NOW())");
+        $create->execute([$username,$email,password_hash($password,PASSWORD_DEFAULT)]);$userId=(int)$pdo->lastInsertId();
+    }
+    try{
         $pdo->beginTransaction();
-        $lock = $pdo->prepare('SELECT id,base_nightly_price,weekend_nightly_price,cleaning_fee,currency FROM properties WHERE id=? FOR UPDATE');
-        $lock->execute([(int)$property['id']]);
-        $current = $lock->fetch();
-        if (!$current) { $pdo->rollBack(); http_response_code(404); exit('Konaklama artık mevcut değil.'); }
-        $conflict = $pdo->prepare('SELECT id FROM bookings WHERE property_id=? AND status IN (?,?) AND check_in < ? AND check_out > ? LIMIT 1');
-        $conflict->execute([(int)$property['id'],'pending','confirmed',$outRaw,$inRaw]);
-        $calendar = $pdo->prepare('SELECT date_from,date_to,status,nightly_price FROM availability WHERE property_id=? AND date_from < ? AND date_to > ?');
-        $calendar->execute([(int)$property['id'],$outRaw,$inRaw]);
-        $rules = $calendar->fetchAll();
-        $unavailable = false;
-        $subtotal = 0.0;
-        for ($night = $checkIn; $night < $checkOut; $night = $night->modify('+1 day')) {
-            $day = $night->format('Y-m-d');
-            $nightPrice = (float)$current['base_nightly_price'];
-            if ((int)$night->format('N') >= 6 && (float)($current['weekend_nightly_price'] ?? 0) > 0) $nightPrice = (float)$current['weekend_nightly_price'];
-            foreach ($rules as $rule) {
-                if ($day >= $rule['date_from'] && $day < $rule['date_to']) {
-                    if ($rule['status'] !== 'available') { $unavailable = true; break; }
-                    if ($rule['nightly_price'] !== null) $nightPrice = (float)$rule['nightly_price'];
-                }
-            }
-            if ($unavailable) break;
-            $subtotal += $nightPrice;
+        $lock=$pdo->prepare('SELECT id,base_nightly_price,weekend_nightly_price,cleaning_fee,currency FROM properties WHERE id=? AND status=\'published\' FOR UPDATE');
+        $lock->execute([(int)$property['id']]);$current=$lock->fetch();
+        if(!$current){$pdo->rollBack();http_response_code(404);exit('Konaklama artık yayında değil.');}
+        $conflict=$pdo->prepare("SELECT id FROM bookings WHERE property_id=? AND status IN ('pending','confirmed') AND check_in < ? AND check_out > ? LIMIT 1");
+        $conflict->execute([(int)$property['id'],$outRaw,$inRaw]);
+        $calendar=$pdo->prepare('SELECT date_from,date_to,status,nightly_price FROM availability WHERE property_id=? AND date_from < ? AND date_to > ?');
+        $calendar->execute([(int)$property['id'],$outRaw,$inRaw]);$rules=$calendar->fetchAll();$subtotal=0.0;$unavailable=false;
+        for($night=$checkIn;$night<$checkOut;$night=$night->modify('+1 day')){
+            $day=$night->format('Y-m-d');$rate=(float)$current['base_nightly_price'];
+            if((int)$night->format('N')>=6&&(float)($current['weekend_nightly_price']??0)>0)$rate=(float)$current['weekend_nightly_price'];
+            foreach($rules as $rule){if($day>=$rule['date_from']&&$day<$rule['date_to']){if($rule['status']!=='available'){$unavailable=true;break;}if($rule['nightly_price']!==null)$rate=(float)$rule['nightly_price'];}}
+            if($unavailable)break;$subtotal+=$rate;
         }
-        if (!$current || $conflict->fetchColumn() || $unavailable) {
-            $pdo->rollBack(); http_response_code(409); exit('Seçtiğiniz tarihler şu anda müsait değil. Lütfen başka tarih seçin.');
+        if($conflict->fetchColumn()||$unavailable){$pdo->rollBack();http_response_code(409);exit('Seçtiğiniz tarihler artık müsait değil. Lütfen yeni tarih seçin.');}
+        $fees=(float)($current['cleaning_fee']??0);$total=round($subtotal+$fees,2);$code='VR'.date('Ymd').strtoupper(bin2hex(random_bytes(3)));
+        $save=$pdo->prepare("INSERT INTO bookings(booking_code,property_id,guest_user_id,guest_name,guest_email,guest_phone,booking_source,check_in,check_out,guests,subtotal,fees,total,currency,status,created_at) VALUES(?,?,?,?,?,?,'website',?,?,?,?,?,?,?,'pending',NOW())");
+        $save->execute([$code,(int)$property['id'],$userId,$fullName,$email,$phone,$inRaw,$outRaw,$guests,$subtotal,$fees,$total,$current['currency']]);
+        $bookingId=(int)$pdo->lastInsertId();
+        $vendorNet=$total;$platformFee=0.0;
+        if(!empty($property['vendor_id'])){
+            $vendorStmt=$pdo->prepare('SELECT user_id,commission_rate FROM vendors WHERE id=?');$vendorStmt->execute([(int)$property['vendor_id']]);$vendorInfo=$vendorStmt->fetch();
+            if($vendorInfo){$defaultRaw=$pdo->query("SELECT setting_value FROM settings WHERE setting_key='platform.commission_percent'")->fetchColumn();$rate=$vendorInfo['commission_rate']!==null?(float)$vendorInfo['commission_rate']:($defaultRaw===false?12.0:(float)$defaultRaw);$platformFee=round($total*max(0,min(50,$rate))/100,2);$vendorNet=$total-$platformFee;$notify=$pdo->prepare("INSERT INTO notifications(user_id,notification_type,title,body,created_at) VALUES(?,'booking.requested','Yeni rezervasyon talebi',?,NOW())");$notify->execute([(int)$vendorInfo['user_id'],'İlanınız için yeni rezervasyon: '.$code]);}
         }
-        $code = 'VR' . date('Ymd') . strtoupper(bin2hex(random_bytes(3)));
-        $fees = (float)($current['cleaning_fee'] ?? 0);
-        $total = $subtotal + $fees;
-        $save = $pdo->prepare("INSERT INTO bookings (booking_code,property_id,guest_user_id,check_in,check_out,guests,subtotal,fees,total,currency,status,created_at) VALUES (?,?,?,?,?,?,?,?,?,?, 'pending',NOW())");
-        $save->execute([$code,(int)$property['id'],(int)$user['id'],$inRaw,$outRaw,$guests,$subtotal,$fees,$total,$current['currency']]);
-        $bookingId = (int)$pdo->lastInsertId();
-        $vendorNet = $total;
-        $platformFee = 0.0;
-        if (!empty($property['vendor_id'])) {
-            $vendorStmt = $pdo->prepare('SELECT user_id,commission_rate FROM vendors WHERE id=?');
-            $vendorStmt->execute([(int)$property['vendor_id']]);
-            $vendorInfo = $vendorStmt->fetch();
-            if ($vendorInfo) {
-                $defaultRaw = $pdo->query("SELECT setting_value FROM settings WHERE setting_key='platform.commission_percent'")->fetchColumn();
-                $defaultRate = $defaultRaw === false ? 12.0 : (float)$defaultRaw;
-                $rate = $vendorInfo['commission_rate'] !== null ? (float)$vendorInfo['commission_rate'] : $defaultRate;
-                $platformFee = round($total * max(0,min(50,$rate)) / 100, 2);
-                $vendorNet = $total - $platformFee;
-                $notifyVendor = $pdo->prepare("INSERT INTO notifications(user_id,notification_type,title,body,created_at) VALUES(?,'booking.requested','Yeni rezervasyon talebi',?,NOW())");
-                $notifyVendor->execute([(int)$vendorInfo['user_id'],'İlanınız için yeni bir rezervasyon talebi alındı: '.$code]);
-            }
-        }
-        $financial = $pdo->prepare("INSERT INTO booking_financials(booking_id,gross_amount,platform_fee,vendor_net_amount,currency,payout_status,created_at) VALUES(?,?,?,?,?,'unpaid',NOW())");
-        $financial->execute([$bookingId,$total,$platformFee,$vendorNet,$current['currency']]);
-        $notifyGuest = $pdo->prepare("INSERT INTO notifications(user_id,notification_type,title,body,created_at) VALUES(?,'booking.created','Rezervasyon talebiniz alındı',?,NOW())");
-        $notifyGuest->execute([(int)$user['id'],'Rezervasyon kodunuz: '.$code]);
+        $financial=$pdo->prepare("INSERT INTO booking_financials(booking_id,gross_amount,platform_fee,vendor_net_amount,currency,payout_status,created_at) VALUES(?,?,?,?,?,'unpaid',NOW())");$financial->execute([$bookingId,$total,$platformFee,$vendorNet,$current['currency']]);
+        $notice=$pdo->prepare("INSERT INTO notifications(user_id,notification_type,title,body,created_at) VALUES(?,'booking.created','Rezervasyonunuz oluşturuldu',?,NOW())");$notice->execute([$userId,'Rezervasyon kodunuz: '.$code]);
         $pdo->commit();
-        redirect('/account/bookings');
-    } catch (Throwable $e) {
-        if ($pdo->inTransaction()) $pdo->rollBack();
-        error_log('Booking request failed: '.$e->getMessage());
-        http_response_code(500); exit('Rezervasyon talebi kaydedilemedi. Lütfen tekrar deneyin.');
-    }
+        if(!$currentUser&&!$account)Auth::attempt($email,$password);
+        redirect('/checkout/'.rawurlencode($code));
+    }catch(Throwable $e){if($pdo->inTransaction())$pdo->rollBack();error_log('Booking creation failed: '.$e->getMessage());http_response_code(500);exit('Rezervasyon kaydedilemedi. Lütfen tekrar deneyin.');}
 });
 
-
-
+$router->get('/checkout/{bookingCode}', static function(array $params):void {
+    $user=Auth::user();if(!$user)redirect('/login');
+    $pdo=Database::connection();$stmt=$pdo->prepare("SELECT b.*,p.title AS property_title,p.slug AS property_slug FROM bookings b JOIN properties p ON p.id=b.property_id WHERE b.booking_code=? AND b.guest_user_id=? LIMIT 1");
+    $stmt->execute([$params['bookingCode']??'',(int)$user['id']]);$booking=$stmt->fetch();
+    if(!$booking){http_response_code(404);exit('Rezervasyon bulunamadı.');}
+    ThemeManager::renderTemplate('templates/pages/checkout.php',get_defined_vars());
+});
 
 $router->get('/account/messages/{bookingId}', static function (array $params): void {
     $user=Auth::user();if(!$user)redirect('/login');$pdo=Database::connection();$bookingId=(int)$params['bookingId'];
