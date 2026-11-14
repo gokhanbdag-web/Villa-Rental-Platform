@@ -73,7 +73,7 @@ $navigation = is_array($navigation ?? null) ? $navigation : [];
 </style>
 </head>
 <body>
-<?php \App\Core\\ThemeManager::renderPartial('partials/header.php', get_defined_vars()); ?>
+<?php \App\Core\ThemeManager::renderPartial('partials/header.php', get_defined_vars()); ?>
 <main class="checkout-page">
 <div class="checkout-container">
 <nav class="checkout-breadcrumb" aria-label="Sayfa konumu"><a href="<?= e(app_url('/')) ?>">Ana sayfa</a><span>›</span><span>Güvenli ödeme</span></nav>
@@ -144,6 +144,6 @@ $navigation = is_array($navigation ?? null) ? $navigation : [];
 </div>
 </div>
 </main>
-<?php \App\Core\\ThemeManager::renderPartial('partials/footer.php', get_defined_vars()); ?>
+<?php \App\Core\ThemeManager::renderPartial('partials/footer.php', get_defined_vars()); ?>
 </body>
 </html>
