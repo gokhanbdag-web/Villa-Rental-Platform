@@ -69,20 +69,12 @@ function app_base_path(): string {
         }
     }
 
-    // Add-on domains and aliased document roots can make DOCUMENT_ROOT point
-    // outside APP_ROOT. In a subdirectory install, the physical application
-    // folder name is also the URL prefix produced by the supplied rewrite rules.
-    // Use it only when the current request actually starts with that exact segment.
-    if ($appRoot !== false) {
-        $appDirectory = basename($appRoot);
-        $requestPath = parse_url((string)($_SERVER['REQUEST_URI'] ?? '/'), PHP_URL_PATH) ?: '/';
-        if ($appDirectory !== '' && $appDirectory !== '.' &&
-            ($requestPath === '/' . $appDirectory || str_starts_with($requestPath, '/' . $appDirectory . '/'))) {
-            $base = '/' . $appDirectory;
-            return $base;
-        }
-    }
-
+    // Never infer a URL prefix from APP_ROOT's physical folder name. A route
+    // may legitimately begin with the same segment (for example /villa/{slug}),
+    // so that guess can strip part of the route and cause a false 404. For
+    // aliased document roots, the SCRIPT_NAME / front-controller fallback
+    // below is safer; hosts with unusual mappings can set an explicit base path.
+    
     // Last-resort fallback: only trust SCRIPT_NAME if it names a PHP entry file.
     $script = $normalize((string)($_SERVER['SCRIPT_NAME'] ?? ''));
     if (preg_match('#/(?:index|install)\.php$#i', $script)) {
