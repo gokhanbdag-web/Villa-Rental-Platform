@@ -40,7 +40,7 @@ function villa_resolve_location(PDO $pdo): array {
     $geoCity=trim((string)($_POST['geo_city']??''));
     if($geoCountry!==''&&$geoCity!==''){
         $resolve=static function(string $type,string $name,?int $parent) use($pdo): ?int {
-            $name=mb_substr(trim($name),0,190);
+            $name=trim($name);if(preg_match('/^.{0,190}/us',$name,$nameMatch))$name=$nameMatch[0];
             if($name==='')return null;
             $find=$pdo->prepare('SELECT id FROM locations WHERE parent_id <=> ? AND location_type=? AND name=? LIMIT 1');
             $find->execute([$parent,$type,$name]);$id=$find->fetchColumn();
