@@ -466,7 +466,7 @@ $router->get('/konaklamalar', static function (): void {
     if ($dateRangeValid) {
         // A property is returned only when no booking or blocked calendar rule overlaps any night of the stay.
         // Checkout is exclusive: a booking ending on check-in day does not conflict.
-        $sql .= " AND NOT EXISTS (SELECT 1 FROM bookings b WHERE b.property_id=p.id AND b.status IN ('pending','confirmed') AND b.check_in < ? AND b.check_out > ?)";
+        $sql .= " AND NOT EXISTS (SELECT 1 FROM bookings b WHERE b.property_id=p.id AND b.status='confirmed' AND b.check_in < ? AND b.check_out > ?)";
         $params[] = $checkOutDate; $params[] = $checkInDate;
         $sql .= " AND NOT EXISTS (SELECT 1 FROM availability a WHERE a.property_id=p.id AND a.status<>'available' AND a.date_from < ? AND a.date_to > ?)";
         $params[] = $checkOutDate; $params[] = $checkInDate;
@@ -562,7 +562,7 @@ $router->get('/villa/{slug}/calendar', static function (array $params): void {
     $month=(string)($_GET['month']??date('Y-m'));
     if(!preg_match('/^\d{4}-(0[1-9]|1[0-2])$/',$month)){http_response_code(422);echo json_encode(['ok'=>false,'message'=>'Ay bilgisi geçersiz.']);return;}
     $start=$month.'-01';$from=(new DateTimeImmutable($start))->modify('first day of this month')->format('Y-m-d');$to=(new DateTimeImmutable($from))->modify('first day of next month')->format('Y-m-d');
-    $b=$pdo->prepare("SELECT check_in,check_out,status FROM bookings WHERE property_id=? AND status IN ('pending','confirmed') AND check_in < ? AND check_out > ? ORDER BY check_in");
+    $b=$pdo->prepare("SELECT check_in,check_out,status FROM bookings WHERE property_id=? AND status='confirmed' AND check_in < ? AND check_out > ? ORDER BY check_in");
     $b->execute([$propertyId,$to,$from]);
     $a=$pdo->prepare("SELECT date_from,date_to,status FROM availability WHERE property_id=? AND date_from < ? AND date_to > ? ORDER BY date_from");
     $a->execute([$propertyId,$to,$from]);
@@ -593,7 +593,7 @@ $router->get('/villa/{slug}/availability', static function (array $params): void
     $nights = (int)$checkIn->diff($checkOut)->days;
     if ($nights > 365) { $fail(422, 'Tek rezervasyonda en fazla 365 gece seçilebilir.'); return; }
     if ($guests < 1 || $guests > (int)$property['max_guests']) { $fail(422, 'Misafir sayısı konaklama kapasitesini aşamaz.'); return; }
-    $conflict = $pdo->prepare("SELECT id FROM bookings WHERE property_id=? AND status IN ('pending','confirmed') AND check_in < ? AND check_out > ? LIMIT 1");
+    $conflict = $pdo->prepare("SELECT id FROM bookings WHERE property_id=? AND status='confirmed' AND check_in < ? AND check_out > ? LIMIT 1");
     $conflict->execute([(int)$property['id'], $outRaw, $inRaw]);
     if ($conflict->fetchColumn()) { $fail(409, 'Bu tarihlerde başka bir rezervasyon talebi veya onaylı rezervasyon bulunuyor.'); return; }
     $rulesStmt = $pdo->prepare('SELECT date_from,date_to,status,nightly_price FROM availability WHERE property_id=? AND date_from < ? AND date_to > ?');
@@ -668,7 +668,7 @@ $router->post('/villa/{slug}/reserve', static function (array $params): void {
         $lock->execute([(int)$property['id']]);$current=$lock->fetch();
         if(!$current){$pdo->rollBack();http_response_code(404);exit('Konaklama artık yayında değil.');}
         if($guests<1||$guests>(int)$current['max_guests']){$pdo->rollBack();http_response_code(422);exit('Misafir sayısı konaklamanın güncel kapasitesini aşıyor.');}
-        $conflict=$pdo->prepare("SELECT id FROM bookings WHERE property_id=? AND status IN ('pending','confirmed') AND check_in < ? AND check_out > ? LIMIT 1");
+        $conflict=$pdo->prepare("SELECT id FROM bookings WHERE property_id=? AND status='confirmed' AND check_in < ? AND check_out > ? LIMIT 1");
         $conflict->execute([(int)$property['id'],$outRaw,$inRaw]);
         $calendar=$pdo->prepare('SELECT date_from,date_to,status,nightly_price FROM availability WHERE property_id=? AND date_from < ? AND date_to > ?');
         $calendar->execute([(int)$property['id'],$outRaw,$inRaw]);$rules=$calendar->fetchAll();$subtotal=0.0;$unavailable=false;
@@ -1157,7 +1157,7 @@ $router->post('/vendor/bookings/status', static function (): void {
         $s->execute([$id,$vendorId]);$booking=$s->fetch();
         if(!$booking){$pdo->rollBack();http_response_code(404);exit('Rezervasyon bulunamadı.');}
         if($status==='confirmed'){
-            $conflict=$pdo->prepare("SELECT id FROM bookings WHERE property_id=? AND id<>? AND status IN ('pending','confirmed') AND check_in < ? AND check_out > ? LIMIT 1");
+            $conflict=$pdo->prepare("SELECT id FROM bookings WHERE property_id=? AND id<>? AND status='confirmed' AND check_in < ? AND check_out > ? LIMIT 1");
             $conflict->execute([(int)$booking['property_id'],$id,$booking['check_out'],$booking['check_in']]);
             if($conflict->fetchColumn()){$pdo->rollBack();http_response_code(409);exit('Bu tarihlerde başka bir rezervasyon talebi veya onaylı rezervasyon var.');}
             $blocked=$pdo->prepare("SELECT id FROM availability WHERE property_id=? AND status<>'available' AND date_from < ? AND date_to > ? LIMIT 1");
@@ -1239,7 +1239,7 @@ $router->get('/admin/properties/{id}/availability', static function (array $para
     if(!$monthDate||$monthDate->format('Y-m')!==$monthInput)$monthDate=new DateTimeImmutable('first day of this month');
     $calendarMonth=$monthDate->format('Y-m');$monthStart=$monthDate->format('Y-m-01');$monthEnd=$monthDate->modify('first day of next month')->format('Y-m-d');
     $s=$pdo->prepare('SELECT * FROM availability WHERE property_id=? AND date_from < ? AND date_to > ? ORDER BY date_from');$s->execute([(int)$property['id'],$monthEnd,$monthStart]);$ranges=$s->fetchAll();
-    $s=$pdo->prepare("SELECT id,check_in,check_out,status,booking_code,guest_user_id FROM bookings WHERE property_id=? AND status IN ('pending','confirmed') AND check_in < ? AND check_out > ? ORDER BY check_in");$s->execute([(int)$property['id'],$monthEnd,$monthStart]);$calendarBookings=$s->fetchAll();
+    $s=$pdo->prepare("SELECT id,check_in,check_out,status,booking_code,guest_user_id FROM bookings WHERE property_id=? AND status='confirmed' AND check_in < ? AND check_out > ? ORDER BY check_in");$s->execute([(int)$property['id'],$monthEnd,$monthStart]);$calendarBookings=$s->fetchAll();
     $calendarPrev=$monthDate->modify('-1 month')->format('Y-m');$calendarNext=$monthDate->modify('+1 month')->format('Y-m');
     $saveUrl='/admin/properties/availability/save';$deleteUrl='/admin/properties/availability/delete';$backUrl='/admin/properties';ThemeManager::renderTemplate('templates/pages/admin/availability.php', get_defined_vars());
 });
@@ -1262,7 +1262,7 @@ $router->get('/vendor/properties/{id}/availability', static function (array $par
     if(!$monthDate||$monthDate->format('Y-m')!==$monthInput)$monthDate=new DateTimeImmutable('first day of this month');
     $calendarMonth=$monthDate->format('Y-m');$monthStart=$monthDate->format('Y-m-01');$monthEnd=$monthDate->modify('first day of next month')->format('Y-m-d');
     $s=$pdo->prepare('SELECT * FROM availability WHERE property_id=? AND date_from < ? AND date_to > ? ORDER BY date_from');$s->execute([(int)$property['id'],$monthEnd,$monthStart]);$ranges=$s->fetchAll();
-    $s=$pdo->prepare("SELECT id,check_in,check_out,status,booking_code,guest_user_id FROM bookings WHERE property_id=? AND status IN ('pending','confirmed') AND check_in < ? AND check_out > ? ORDER BY check_in");$s->execute([(int)$property['id'],$monthEnd,$monthStart]);$calendarBookings=$s->fetchAll();
+    $s=$pdo->prepare("SELECT id,check_in,check_out,status,booking_code,guest_user_id FROM bookings WHERE property_id=? AND status='confirmed' AND check_in < ? AND check_out > ? ORDER BY check_in");$s->execute([(int)$property['id'],$monthEnd,$monthStart]);$calendarBookings=$s->fetchAll();
     $calendarPrev=$monthDate->modify('-1 month')->format('Y-m');$calendarNext=$monthDate->modify('+1 month')->format('Y-m');
     $saveUrl='/vendor/properties/availability/save';$deleteUrl='/vendor/properties/availability/delete';$backUrl='/vendor/properties';ThemeManager::renderTemplate('templates/pages/admin/availability.php', get_defined_vars());
 });
@@ -2039,7 +2039,7 @@ $router->post('/admin/bookings/manual', static function (): void {
         $lock=$pdo->prepare("SELECT id,base_nightly_price,weekend_nightly_price,cleaning_fee,currency,max_guests FROM properties WHERE id=? AND status<>'archived' FOR UPDATE");
         $lock->execute([$propertyId]);$property=$lock->fetch();
         if(!$property||$guests<1||$guests>(int)$property['max_guests']){$pdo->rollBack();http_response_code(422);exit('Konaklama veya misafir kapasitesi geçersiz.');}
-        $conflict=$pdo->prepare("SELECT id FROM bookings WHERE property_id=? AND status IN ('pending','confirmed') AND check_in < ? AND check_out > ? LIMIT 1");
+        $conflict=$pdo->prepare("SELECT id FROM bookings WHERE property_id=? AND status='confirmed' AND check_in < ? AND check_out > ? LIMIT 1");
         $conflict->execute([$propertyId,$outRaw,$inRaw]);
         if($conflict->fetchColumn()){$pdo->rollBack();http_response_code(409);exit('Bu tarihlerde başka bir rezervasyon bulunuyor.');}
         $calendar=$pdo->prepare("SELECT date_from,date_to,status,nightly_price FROM availability WHERE property_id=? AND date_from < ? AND date_to > ?");
@@ -2090,7 +2090,7 @@ $router->post('/admin/bookings/status', static function (): void {
         if($status==='confirmed'){
             // Locking reads see the latest committed rows after waiting for the
             // property lock; a snapshot read could otherwise miss a concurrent change.
-            $conflict=$pdo->prepare("SELECT id FROM bookings WHERE property_id=? AND id<>? AND status IN ('pending','confirmed') AND check_in < ? AND check_out > ? LIMIT 1 FOR UPDATE");
+            $conflict=$pdo->prepare("SELECT id FROM bookings WHERE property_id=? AND id<>? AND status='confirmed' AND check_in < ? AND check_out > ? LIMIT 1 FOR UPDATE");
             $conflict->execute([$propertyId,$id,$booking['check_out'],$booking['check_in']]);
             if($conflict->fetchColumn()){$pdo->rollBack();http_response_code(409);exit('Bu tarihlerde bekleyen veya onaylanmış başka bir rezervasyon var.');}
 
