@@ -131,4 +131,30 @@ $footerAccountLabel = in_array($footerRole, ['admin', 'super_admin'], true) ? 'Y
 })();
 </script>
 <?php endif; ?>
+<script>
+(function(){
+ if(document.documentElement.dataset.villaDrawerReady==='1')return;
+ document.documentElement.dataset.villaDrawerReady='1';
+ function elements(){
+  var button=document.getElementById('menuToggle'),nav=document.getElementById('siteNavigation'),overlay=document.getElementById('menuOverlay');
+  return button&&nav&&overlay?{button:button,nav:nav,overlay:overlay}:null;
+ }
+ function setOpen(open){
+  var p=elements();if(!p)return;
+  p.nav.classList.toggle('is-open',open);p.overlay.classList.toggle('is-open',open);
+  document.body.classList.toggle('menu-open',open);
+  p.button.setAttribute('aria-expanded',open?'true':'false');
+  p.button.setAttribute('aria-label',open?'Menüyü kapat':'Menüyü aç');
+  var openMark=p.button.querySelector('.menu-open-mark'),closeMark=p.button.querySelector('.menu-close-mark');
+  if(openMark)openMark.hidden=open;if(closeMark)closeMark.hidden=!open;
+ }
+ document.addEventListener('click',function(event){
+  var target=event.target;if(!target||typeof target.closest!=='function')return;
+  if(target.closest('#menuToggle')){event.preventDefault();var p=elements();if(p)setOpen(!p.nav.classList.contains('is-open'));return;}
+  if(target.closest('#menuOverlay')||target.closest('#siteNavigation a'))setOpen(false);
+ });
+ document.addEventListener('keydown',function(event){if(event.key==='Escape')setOpen(false);});
+ window.addEventListener('resize',function(){if(window.innerWidth>760)setOpen(false);});
+})();
+</script>
 <?php \App\Core\ThemeManager::renderPartial('partials/login-modal.php', get_defined_vars()); ?>
