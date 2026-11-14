@@ -1859,6 +1859,19 @@ $router->post('/admin/theme-design/family-banner-text', static function (): void
     redirect('/admin/theme-design');
 });
 
+$router->post('/admin/theme-design/hero-video-settings', static function (): void {
+    Auth::requireRole(['super_admin','admin']); verify_csrf();
+    try {
+        ThemeManager::saveHeroVideoSettings((string)($_POST['hero_youtube_url'] ?? ''), (int)($_POST['hero_overlay_opacity'] ?? 58), ThemeManager::activeSlug());
+        $_SESSION['villa_theme_brand_message'] = 'Hero video ayarları kaydedildi.';
+        $_SESSION['villa_theme_brand_message_type'] = 'success';
+    } catch (Throwable $e) {
+        $_SESSION['villa_theme_brand_message'] = 'Hero video ayarları kaydedilemedi: ' . $e->getMessage();
+        $_SESSION['villa_theme_brand_message_type'] = 'error';
+    }
+    redirect('/admin/theme-design');
+});
+
 $router->post('/admin/theme-design/brand-asset', static function (): void {
     Auth::requireRole(['super_admin','admin']); verify_csrf();
     try {
