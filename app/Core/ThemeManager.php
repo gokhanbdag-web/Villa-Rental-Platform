@@ -1022,7 +1022,10 @@ final class ThemeManager
             . $themeScope . ' .med-concept-copy small{color:var(--villa-image_overlay_muted,#f1f4ef)!important;font-weight:500!important}'
             . $themeScope . ' .destination-label small,' . $themeScope . ' .media-overlay p,' . $themeScope . ' .image-overlay p,' . $themeScope . ' .gallery-overlay p,' . $themeScope . ' [data-text-on-media] p{color:var(--villa-image_overlay_muted)!important}'
             . $themeScope . ' .premium-stay-card .card-gallery-count,' . $themeScope . ' .premium-stay-card .stay-badge{color:var(--villa-image_overlay_text)!important}'
-            . $themeScope . ' .premium-stay-card .card-gallery-count small,' . $themeScope . ' .premium-stay-card .stay-badge small{color:var(--villa-image_overlay_muted)!important}';
+            . $themeScope . ' .premium-stay-card .card-gallery-count small,' . $themeScope . ' .premium-stay-card .stay-badge small{color:var(--villa-image_overlay_muted)!important}'
+            . '@media(max-width:760px){'
+            . $themeScope . ' .site-header .nav a,' . $themeScope . ' .site-header .nav a:hover,' . $themeScope . ' .site-header .nav a:focus,' . $themeScope . ' .site-header .nav a:focus-visible,' . $themeScope . ' .site-header .nav a[aria-current="page"],' . $themeScope . ' .site-header .nav .nav-entry-top>a,' . $themeScope . ' .site-header .nav .nav-submenu-toggle{color:var(--villa-primary)!important;background:transparent!important}'
+            . '}' ;
         $cardSettings = self::cardSettings($renderSlug);
         $paletteCss .=
             $themeScope . ' .premium-stay-card{border-radius:' . (int)$cardSettings['radius'] . 'px!important;border:' . (int)$cardSettings['border_width'] . 'px solid ' . $cardSettings['border_color'] . '!important}'
