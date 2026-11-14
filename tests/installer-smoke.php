@@ -200,7 +200,7 @@ try {
     assertSmoke(ThemeManager::wrapAdminHtml('content', '/admin', 'single_vendor') === 'theme-admin:content', 'The active theme admin layout was not applied.');
     assertSmoke(ThemeManager::resolveFile('assets/icons/active.svg', 'smoke-theme') === realpath($smokeThemeDir . '/assets/icons/active.svg'), 'Active theme assets did not receive priority.');
     assertSmoke(ThemeManager::resolveFile('assets/smoke-fallback.svg', 'smoke-theme') === realpath($defaultAssetsDir . '/smoke-fallback.svg'), 'Missing active assets did not fall back to default.');
-    assertSmoke(ThemeManager::resolveFile('partials/login-modal.php', 'smoke-theme') === realpath($root . '/themes/default/partials/shared-topbar.php'), 'Missing active PHP components did not fall back to default.');
+    assertSmoke(ThemeManager::resolveFile('partials/login-modal.php', 'smoke-theme') === realpath($root . '/themes/default/partials/login-modal.php'), 'Missing active PHP components did not fall back to default.');
     $capturedRoute = [];
     $testRouter = new Router();
     $testRouter->get('/theme-assets/{slug}/{file*}', static function (array $params) use (&$capturedRoute): void { $capturedRoute = $params; });
