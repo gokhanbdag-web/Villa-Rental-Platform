@@ -107,7 +107,7 @@ final class PaymentCallbackProcessor
                 throw new \RuntimeException('Ödeme kaydı eşzamanlı olarak değişti; bildirim tekrar denenmeli.');
             }
             if ($targetStatus === 'paid' && (string)$booking['status'] === 'pending') {
-                $confirm = $this->pdo->prepare("UPDATE bookings SET status='confirmed',updated_at=NOW() WHERE id=? AND status='pending'");
+                $confirm = $this->pdo->prepare("UPDATE bookings SET status='confirmed' WHERE id=? AND status='pending'");
                 $confirm->execute([(int)$booking['id']]);
                 if ($confirm->rowCount() !== 1) {
                     throw new \RuntimeException('Ödeme sonrası rezervasyon onaylanamadı; bildirim tekrar denenmeli.');
