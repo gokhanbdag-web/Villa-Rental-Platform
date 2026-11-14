@@ -36,6 +36,17 @@ final class PaymentSignatureVerifier
         return hash_equals($expected, (string)$payload['hash']);
     }
 
+    public static function verifyIyzicoCheckoutFormInitialize(array $response, string $secretKey): bool
+    {
+        foreach (['conversationId','token','signature'] as $field) {
+            if (!isset($response[$field]) || !is_scalar($response[$field]) || (string)$response[$field] === '') return false;
+        }
+        if ($secretKey === '') return false;
+        $message = (string)$response['conversationId'] . ':' . (string)$response['token'];
+        $expected = hash_hmac('sha256', $message, $secretKey);
+        return hash_equals(strtolower($expected), strtolower((string)$response['signature']));
+    }
+
     public static function verifyIyzicoCheckoutFormRetrieve(array $response, string $secretKey): bool
     {
         if ($secretKey === '') return false;
