@@ -35,7 +35,7 @@ final class PaymentGatewayConfig
         }
 
         $keys = array_merge(
-            [$definitions[$provider]['environment']],
+            [$definitions[$provider]['environment'], 'payments.' . $provider . '.enabled'],
             array_values($definitions[$provider]['credentials'])
         );
         $placeholders = implode(',', array_fill(0, count($keys), '?'));
