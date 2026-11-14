@@ -775,10 +775,24 @@ $router->post('/checkout/{bookingCode}/iyzico/start', static function (array $pa
         $actualHost=is_array($urlParts)?strtolower((string)($urlParts['host']??'')):'';
         $query=[];
         if(is_array($urlParts))parse_str((string)($urlParts['query']??''),$query);
-        if($token===''||!is_array($urlParts)||($urlParts['scheme']??'')!=='https'||isset($urlParts['user'])
-            ||isset($urlParts['pass'])||isset($urlParts['fragment'])
-            ||(isset($urlParts['port'])&&(int)$urlParts['port']!==443)
-            ||!in_array($actualHost,['sandbox-api.iyzipay.com','sandbox-cpp.iyzipay.com'],true)||!hash_equals($token,(string)($query['token']??''))) {
+        $urlValidation = [
+            'scheme' => (string)($urlParts['scheme'] ?? ''),
+            'host' => $actualHost,
+            'port' => (int)($urlParts['port'] ?? 443),
+            'has_userinfo' => isset($urlParts['user']) || isset($urlParts['pass']),
+            'has_fragment' => isset($urlParts['fragment']),
+            'token_present' => $token !== '',
+            'token_query_present' => isset($query['token']),
+            'token_matches' => $token !== '' && hash_equals($token, (string)($query['token'] ?? '')),
+        ];
+        $validPaymentHost = in_array($actualHost, ['sandbox-api.iyzipay.com', 'sandbox-cpp.iyzipay.com'], true);
+        $validPaymentUrl = $token !== '' && is_array($urlParts)
+            && $urlValidation['scheme'] === 'https'
+            && !$urlValidation['has_userinfo'] && !$urlValidation['has_fragment']
+            && $urlValidation['port'] === 443
+            && $validPaymentHost && $urlValidation['token_matches'];
+        if (!$validPaymentUrl) {
+            error_log('iyzico Checkout URL validation details: ' . json_encode($urlValidation, JSON_UNESCAPED_SLASHES));
             throw new RuntimeException('iyzico Sandbox ödeme sayfası adresi doğrulanamadı.');
         }
         $update=$pdo->prepare("UPDATE payment_transactions SET provider_reference=?,checkout_url=?,response_payload=?,expires_at=DATE_ADD(NOW(),INTERVAL 30 MINUTE),updated_at=NOW() WHERE id=? AND status='pending'");
