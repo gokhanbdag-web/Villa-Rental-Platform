@@ -99,8 +99,8 @@ $navigation = is_array($navigation ?? null) ? $navigation : [];
 <div class="checkout-notice success"><span class="checkout-notice-icon">✓</span><div><strong>Ödemeniz doğrulandı</strong>Rezervasyonunuz onaylandı. Rezervasyon kodunuz: <?= e($booking['booking_code']) ?></div></div>
 <?php elseif(($paymentStatus??'')==='review'): ?>
 <div class="checkout-notice"><span class="checkout-notice-icon">◷</span><div><strong>Ödeme güvenlik incelemesinde</strong>iyzico ek güvenlik kontrolü yapıyor. İnceleme tamamlanmadan rezervasyon onaylanmayacaktır.</div></div>
-<?php elseif(in_array(($paymentStatus??''),['failed','verify_error'],true)): ?>
-<div class="checkout-notice error"><span class="checkout-notice-icon">!</span><div><strong>Ödeme tamamlanamadı</strong>Rezervasyonunuz beklemede kaldı. Bilgilerinizi kontrol ederek yeniden deneyebilirsiniz.</div></div>
+<?php elseif(in_array(($paymentStatus??''),['failed','verify_error','init_error'],true)): ?>
+<div class="checkout-notice error"><span class="checkout-notice-icon">!</span><div><strong>Ödeme formu başlatılamadı</strong>Rezervasyonunuz beklemede kaldı. Lütfen tekrar deneyin.<?php if(!empty($iyzicoInitializationError)): ?><small style="display:block;margin-top:8px">Teknik açıklama: <?= e($iyzicoInitializationError) ?></small><?php endif; ?></div></div>
 <?php endif; ?>
 <?php if(!empty($iyzicoPaymentAvailable)&&$booking['status']==='pending'&&($paymentStatus??'')!=='review'): ?>
 <section class="checkout-payment">
