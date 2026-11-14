@@ -682,6 +682,9 @@ $router->get('/checkout/{bookingCode}', static function(array $params):void {
     $pdo=Database::connection();$stmt=$pdo->prepare("SELECT b.*,p.title AS property_title,p.slug AS property_slug FROM bookings b JOIN properties p ON p.id=b.property_id WHERE b.booking_code=? AND b.guest_user_id=? LIMIT 1");
     $stmt->execute([$params['bookingCode']??'',(int)$user['id']]);$booking=$stmt->fetch();
     if(!$booking){http_response_code(404);exit('Rezervasyon bulunamadı.');}
+    $iyzicoConfig=\\App\\Core\\PaymentGatewayConfig::forProvider('iyzico');
+    $iyzicoPaymentAvailable=!empty($iyzicoConfig['enabled'])&&!empty($iyzicoConfig['configured']);
+    $paymentStatus=(string)($_GET['payment']??'');
     ThemeManager::renderTemplate('templates/pages/checkout.php',get_defined_vars());
 });
 
@@ -785,8 +788,6 @@ $router->post('/payments/iyzico/callback', static function (): void {
         $processed=(new \App\Core\PaymentCallbackProcessor($pdo))->processVerified(
             'iyzico',$paymentId,'CHECKOUT_FORM_AUTH',$token,$eventPayload,$callback
         );
-        $user=Auth::user();
-        if($user&&(int)$user['id']===(int)$transaction['booking_id']){} // no session dependency; redirect below uses booking code.
         $suffix=($processed['payment_status']??'')==='paid'?'paid':(($normalizedStatus==='processing')?'review':'failed');
         redirect('/checkout/'.rawurlencode((string)$transaction['booking_code']).'?payment='.$suffix);
     }catch(Throwable $e){
