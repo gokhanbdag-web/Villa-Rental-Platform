@@ -65,6 +65,21 @@ try {
 }
 
 $method = $_SERVER['REQUEST_METHOD'] ?? 'GET';
+
+// Across all URL representations, prefer literal routes before parameterized
+// routes. For example, /villa/register must resolve to /register on a
+// /villa subdirectory install, rather than treating "register" as a villa slug.
+$exactCandidates = [];
+$dynamicCandidates = [];
+foreach ($pathCandidates as $candidate) {
+    if ($router->hasExactRoute($method, $candidate)) {
+        $exactCandidates[] = $candidate;
+    } else {
+        $dynamicCandidates[] = $candidate;
+    }
+}
+$pathCandidates = array_merge($exactCandidates, $dynamicCandidates);
+
 foreach ($pathCandidates as $requestPath) {
     // Vendor-only endpoints must not be reachable in single-vendor installs.
     if ($platformMode !== 'multi_vendor' &&
