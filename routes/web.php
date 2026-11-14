@@ -685,14 +685,14 @@ $router->get('/checkout/{bookingCode}', static function(array $params):void {
     $iyzicoConfig=\App\Core\PaymentGatewayConfig::forProvider('iyzico');
     $iyzicoPaymentAvailable=!empty($iyzicoConfig['enabled'])&&!empty($iyzicoConfig['configured'])&&($iyzicoConfig['environment']??'')==='sandbox';
     $requestedPaymentStatus=(string)($_GET['payment']??'');
-    $paymentStatus=in_array($requestedPaymentStatus,['failed','verify_error'],true)?$requestedPaymentStatus:'';
+    $paymentStatus=in_array($requestedPaymentStatus,['failed','verify_error','init_error'],true)?$requestedPaymentStatus:'';
     $latestPayment=$pdo->prepare("SELECT status,response_payload,expires_at FROM payment_transactions WHERE booking_id=? AND provider='iyzico' ORDER BY id DESC LIMIT 1");
     $latestPayment->execute([(int)$booking['id']]);$latestPaymentRow=$latestPayment->fetch(PDO::FETCH_ASSOC)?:[];
     $latestPaymentStatus=(string)($latestPaymentRow['status']??'');
     $iyzicoCheckoutFormHtml='';
     if($latestPaymentStatus==='processing')$paymentStatus='review';
     elseif($latestPaymentStatus==='paid')$paymentStatus='paid';
-    elseif($latestPaymentStatus==='failed')$paymentStatus='failed';
+    elseif($latestPaymentStatus==='failed'&&$paymentStatus!=='init_error')$paymentStatus='failed';
     elseif($latestPaymentStatus==='pending'&&!empty($latestPaymentRow['expires_at'])&&strtotime((string)$latestPaymentRow['expires_at'])>time()){
         $storedResponse=json_decode((string)($latestPaymentRow['response_payload']??''),true);
         $encodedForm=is_array($storedResponse)?(string)($storedResponse['checkoutFormContent']??''):'';
@@ -809,11 +809,21 @@ $router->post('/checkout/{bookingCode}/iyzico/start', static function (array $pa
         if($update->rowCount()!==1)throw new RuntimeException('Ödeme oturumu yerel kayda bağlanamadı.');
         redirect('/checkout/'.rawurlencode((string)$booking['booking_code']));
     }catch(Throwable $e){
+        $errorReference='VILLA-IYZ-'.(string)($transactionId??'UNKNOWN');
+        $diagnostic=trim((string)$e->getMessage());
+        $diagnostic=preg_replace('/(api[_-]?key|secret[_-]?key)\\s*[:=]\\s*\\S+/i','$1=[gizlendi]',$diagnostic)??'Ödeme sağlayıcısı hatası.';
+        $diagnostic=mb_substr($diagnostic,0,240);
         if(isset($transactionId)){
-            $fail=$pdo->prepare("UPDATE payment_transactions SET status='failed',updated_at=NOW() WHERE id=? AND status='pending'");$fail->execute([$transactionId]);
+            $failurePayload=json_encode([
+                'initialization_error'=>$diagnostic,
+                'error_reference'=>$errorReference,
+                'environment'=>'sandbox',
+            ],JSON_UNESCAPED_UNICODE|JSON_UNESCAPED_SLASHES);
+            $fail=$pdo->prepare("UPDATE payment_transactions SET status='failed',response_payload=?,updated_at=NOW() WHERE id=? AND status='pending'");
+            $fail->execute([$failurePayload,$transactionId]);
         }
-        error_log('iyzico Checkout Form initialize failed: '.$e->getMessage());
-        http_response_code(502);exit('iyzico ödeme formu başlatılamadı. Lütfen rezervasyon sayfasına dönüp tekrar deneyin.');
+        error_log('iyzico Checkout Form initialize failed ['.$errorReference.']: '.$diagnostic);
+        redirect('/checkout/'.rawurlencode((string)$booking['booking_code']).'?payment=init_error');
     }
 });
 
