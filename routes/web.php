@@ -1621,6 +1621,44 @@ $router->post('/admin/users/status', static function (): void {
     $s=Database::connection()->prepare("UPDATE users SET status=? WHERE id=? AND role<>'super_admin'");$s->execute([$status,$id]);redirect('/admin/users');
 });
 
+$router->post('/admin/users/delete', static function (): void {
+    Auth::requireRole(['super_admin','admin']);
+    verify_csrf();
+    $id=(int)($_POST['id']??0);
+    $currentUser=Auth::user();
+    if($id<1||$id===(int)$currentUser['id']){
+        http_response_code(422);
+        exit('Geçersiz işlem: kendi hesabınızı silemezsiniz.');
+    }
+    $pdo=Database::connection();
+    try{
+        $pdo->beginTransaction();
+        $lookup=$pdo->prepare('SELECT id,role FROM users WHERE id=? FOR UPDATE');
+        $lookup->execute([$id]);
+        $target=$lookup->fetch(PDO::FETCH_ASSOC);
+        if(!$target||!in_array((string)$target['role'],['customer','vendor'],true)){
+            $pdo->rollBack();
+            http_response_code(422);
+            exit('Yalnızca müşteri veya ev sahibi üyelikleri silinebilir. Yönetici hesapları korunur.');
+        }
+        // Keep reservation and payment history; detach the account before deleting it.
+        $bookings=$pdo->prepare('UPDATE bookings SET guest_user_id=NULL WHERE guest_user_id=?');
+        $bookings->execute([$id]);
+        $delete=$pdo->prepare("DELETE FROM users WHERE id=? AND role IN ('customer','vendor')");
+        $delete->execute([$id]);
+        if($delete->rowCount()!==1){
+            throw new RuntimeException('Üye kaydı silinemedi.');
+        }
+        $pdo->commit();
+        redirect('/admin/users?deleted=1');
+    }catch(Throwable $e){
+        if($pdo->inTransaction())$pdo->rollBack();
+        error_log('Admin member deletion failed: '.$e->getMessage());
+        http_response_code(409);
+        exit('Üye silinemedi. İlişkili kayıtlar korunarak işlem güvenli şekilde durduruldu.');
+    }
+});
+
 
 $router->get('/brand-assets/{slug}/{filename}', static function (array $params): void {
     $slug = (string)($params['slug'] ?? '');
