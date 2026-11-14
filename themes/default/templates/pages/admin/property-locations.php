@@ -18,7 +18,7 @@
 <div class="stats">
 <div class="stat"><strong><?= (int)$missingCount ?></strong><span>Koordinatı eksik villa</span></div>
 <div class="stat"><strong><?= (int)$partialCount ?></strong><span>Tek koordinatı eksik kayıt (korunur)</span></div>
-<div class="stat"><strong><?= (int)$noAddressCount ?></strong><span>Adres/şehir bilgisi olmayan kayıt</span></div>
+<div class="stat"><strong><?= (int)$noAddressCount ?></strong><span>Yeterli adres ayrıntısı olmayan kayıt</span></div>
 </div>
 <p class="muted"><strong>Güvenlik:</strong> Yalnızca hem enlem hem boylamı boş olan kayıtlar işlenir. Önceden konum girilmiş villaların koordinatları değiştirilmez. Adres bulunamayan kayıtlar hata listesinde gösterilir.</p>
 <button class="btn" id="start" type="button" <?= $missingCount < 1 ? 'disabled' : '' ?>>Eksik konumları tamamla</button>
