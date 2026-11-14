@@ -272,6 +272,12 @@ try {
     assertSmoke(str_contains($iyzicoClientSource, 'sandbox-api.iyzipay.com') && str_contains($iyzicoClientSource, 'CURLOPT_SSL_VERIFYPEER => true'), 'iyzico Sandbox client must target the sandbox host and verify TLS certificates.');
     assertSmoke(str_contains($iyzicoClientSource, 'function testSandboxConnection') && str_contains($iyzicoClientSource, 'binNumber'), 'iyzico admin connection test must use a non-payment BIN lookup.');
     assertSmoke(str_contains($themeRoutesSource, 'test_iyzico_sandbox') && str_contains($themeRoutesSource, 'IyzicoApiClient::testSandboxConnection'), 'Admin settings must expose the iyzico Sandbox connection test.');
+    assertSmoke(str_contains($themeRoutesSource, "/checkout/{bookingCode}/iyzico/start") && str_contains($themeRoutesSource, "/payments/iyzico/callback"), 'iyzico Checkout Form start and callback routes must be registered.');
+    assertSmoke(str_contains($themeRoutesSource, 'IyzicoApiClient::initializeCheckoutForm') && str_contains($themeRoutesSource, 'IyzicoApiClient::retrieveCheckoutForm'), 'iyzico checkout must initialize and retrieve the result from the provider.');
+    assertSmoke(str_contains($themeRoutesSource, "fraudStatus") && str_contains($themeRoutesSource, "environment']!=='sandbox"), 'iyzico checkout must honor fraud review and remain Sandbox-only.');
+    $checkoutViewSource = (string)file_get_contents($root . '/themes/default/templates/pages/checkout.php');
+    assertSmoke(str_contains($checkoutViewSource, 'iyzico ile güvenli ödeme') && str_contains($checkoutViewSource, 'identity_number') && str_contains($checkoutViewSource, 'billing_address'), 'Booking checkout must collect required iyzico buyer billing details and show the hosted payment action.');
+
     $paymentSimulatorSource = (string)file_get_contents($root . '/app/Core/PaymentSandboxSimulator.php');
     assertSmoke(str_contains($paymentSimulatorSource, 'LOCAL-ONLY-TEST-MERCHANT-KEY') && str_contains($paymentSimulatorSource, 'LOCAL-ONLY-TEST-MERCHANT-SALT'), 'PayTR local sandbox must use isolated synthetic credentials.');
     assertSmoke(str_contains($paymentSimulatorSource, 'amount_mismatch') && str_contains($paymentSimulatorSource, 'wrong_order') && str_contains($paymentSimulatorSource, 'PaymentSignatureVerifier::verifyPaytr'), 'PayTR local sandbox must test callback signatures, amount mismatch and order mismatch.');
