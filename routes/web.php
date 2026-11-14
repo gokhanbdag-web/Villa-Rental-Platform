@@ -893,26 +893,26 @@ $router->post('/payments/iyzico/callback', static function (): void {
         $currentPayment->execute([(int)$transaction['id']]);
         $storedStatus=(string)($currentPayment->fetchColumn()?:'');
         $suffix=match($storedStatus){'paid'=>'success','processing'=>'review','failed'=>'failed',default=>'review'};
-        redirect('/payment/'.$suffix.'/'.rawurlencode((string)$transaction['booking_code']));
+        redirect('/payment/'.$suffix.'/'.rawurlencode($token));
     }catch(Throwable $e){
         error_log('iyzico callback verification failed: '.$e->getMessage());
-        redirect('/payment/review/'.rawurlencode((string)$transaction['booking_code']));
+        redirect('/payment/review/'.rawurlencode($token));
     }
 });
 
 foreach(['success','failed','review'] as $paymentResultType){
-    $router->get('/payment/'.$paymentResultType.'/{bookingCode}', static function(array $params) use($paymentResultType):void {
-        $user=Auth::user();if(!$user)redirect('/login');
+    $router->get('/payment/'.$paymentResultType.'/{paymentToken}', static function(array $params) use($paymentResultType):void {
+        $token=trim((string)($params['paymentToken']??''));
+        if($token===''||strlen($token)>128){http_response_code(404);exit('Ödeme sonucu bulunamadı.');}
         $pdo=Database::connection();
-        $stmt=$pdo->prepare("SELECT b.*,p.title AS property_title,p.slug AS property_slug FROM bookings b JOIN properties p ON p.id=b.property_id WHERE b.booking_code=? AND b.guest_user_id=? LIMIT 1");
-        $stmt->execute([$params['bookingCode']??'',(int)$user['id']]);$booking=$stmt->fetch();
-        if(!$booking){http_response_code(404);exit('Rezervasyon bulunamadı.');}
-        $latest=$pdo->prepare("SELECT status,provider_reference,updated_at FROM payment_transactions WHERE booking_id=? AND provider='iyzico' ORDER BY id DESC LIMIT 1");
-        $latest->execute([(int)$booking['id']]);$payment=$latest->fetch(PDO::FETCH_ASSOC)?:[];
-        $actualStatus=(string)($payment['status']??'');
-        if($paymentResultType==='success'&&$actualStatus!=='paid')redirect('/payment/review/'.rawurlencode((string)$booking['booking_code']));
-        if($paymentResultType==='failed'&&$actualStatus!=='failed')redirect('/payment/review/'.rawurlencode((string)$booking['booking_code']));
-        if($paymentResultType==='review'&&in_array($actualStatus,['paid','failed'],true))redirect('/payment/'.($actualStatus==='paid'?'success':'failed').'/'.rawurlencode((string)$booking['booking_code']));
+        $stmt=$pdo->prepare("SELECT b.*,p.title AS property_title,p.slug AS property_slug,pt.status AS payment_status,pt.provider_reference,pt.updated_at AS payment_updated_at FROM payment_transactions pt JOIN bookings b ON b.id=pt.booking_id JOIN properties p ON p.id=b.property_id WHERE pt.provider='iyzico' AND pt.provider_reference=? LIMIT 1");
+        $stmt->execute([$token]);$row=$stmt->fetch(PDO::FETCH_ASSOC);
+        if(!$row){http_response_code(404);exit('Ödeme sonucu bulunamadı.');}
+        $payment=['status'=>(string)$row['payment_status'],'provider_reference'=>(string)$row['provider_reference'],'updated_at'=>$row['payment_updated_at']];
+        $booking=$row;$actualStatus=(string)$payment['status'];
+        if($paymentResultType==='success'&&$actualStatus!=='paid')redirect('/payment/review/'.rawurlencode($token));
+        if($paymentResultType==='failed'&&$actualStatus!=='failed')redirect('/payment/review/'.rawurlencode($token));
+        if($paymentResultType==='review'&&in_array($actualStatus,['paid','failed'],true))redirect('/payment/'.($actualStatus==='paid'?'success':'failed').'/'.rawurlencode($token));
         $locale='tr';
         $navigation=villa_navigation_tree($pdo,'header',$locale);
         $footerNavigation=villa_navigation_tree($pdo,'footer',$locale);
