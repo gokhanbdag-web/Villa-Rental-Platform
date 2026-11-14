@@ -152,6 +152,9 @@ try {
     assertSmoke($bookingState->fetchColumn()==='confirmed','Successful payment did not confirm the booking.');
     $duplicatePayment = $paymentProcessor->processVerified('paytr',$paymentEventId,'payment_callback',$paymentReference,$paymentEventPayload,$paymentCallback);
     assertSmoke(($duplicatePayment['result']??'')==='duplicate'&&!($duplicatePayment['payment_updated']??true),'Duplicate payment callback changed the payment a second time.');
+    $secondProviderEvent = $paymentProcessor->processVerified('paytr','VILLA-SECOND-EVENT-' . strtoupper(bin2hex(random_bytes(4))),'payment_callback',$paymentReference,['reference'=>$paymentReference,'status'=>'success','amount'=>number_format($total,2,'.','')],$paymentCallback);
+    assertSmoke(($secondProviderEvent['result']??'')==='already_applied'&&!($secondProviderEvent['payment_updated']??true),'A second provider event for an already-paid transaction was not handled idempotently.');
+
 
     foreach (['vendors','properties','property_media','bookings','booking_financials','payment_transactions','vendor_payouts','reviews','notifications','cms_pages','navigation_items','contact_messages','newsletter_subscribers'] as $table) {
         $check = $pdo->prepare('SELECT COUNT(*) FROM information_schema.TABLES WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME=?');
