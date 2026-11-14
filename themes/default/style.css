@@ -1681,3 +1681,31 @@ body[data-villa-theme] .premium-stay-card:focus-within{
   outline-offset:0!important;
   box-shadow:none!important;
 }
+
+
+/* Mobile header stability: keep the navigation bar pinned to the viewport without relying on overlay locking. */
+body[data-villa-theme] .drawer-overlay{display:none!important;opacity:0!important;visibility:hidden!important;pointer-events:none!important}
+@media(max-width:760px){
+  body[data-villa-theme] .site-header{
+    position:-webkit-sticky!important;
+    position:sticky!important;
+    top:0!important;
+    inset-block-start:0!important;
+    z-index:10040!important;
+    transform:none!important;
+    translate:none!important;
+    will-change:auto!important;
+    backface-visibility:visible!important;
+    contain:none!important;
+    overflow:visible!important;
+  }
+  body[data-villa-theme] .site-header .nav{
+    position:fixed!important;
+    top:0!important;
+    bottom:0!important;
+    height:100vh!important;
+    height:100dvh!important;
+    z-index:10050!important;
+  }
+  body[data-villa-theme].menu-open{overflow:visible!important}
+}
