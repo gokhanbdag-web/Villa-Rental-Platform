@@ -1547,11 +1547,28 @@ $router->get('/admin/settings', static function (): void {
     $paytrEnabled=($settings['payments.paytr.enabled']??'0')==='1';
     $iyzicoConfigured=!empty($settings['payments.iyzico.api_key'])&&!empty($settings['payments.iyzico.secret_key']);
     $paytrConfigured=!empty($settings['payments.paytr.merchant_id'])&&!empty($settings['payments.paytr.merchant_key'])&&!empty($settings['payments.paytr.merchant_salt']);
+    $iyzicoTestMessage=(string)($_SESSION['villa_iyzico_test_message']??'');
+    $iyzicoTestMessageType=(string)($_SESSION['villa_iyzico_test_message_type']??'success');
+    unset($_SESSION['villa_iyzico_test_message'],$_SESSION['villa_iyzico_test_message_type']);
     unset($settings['payments.iyzico.api_key'],$settings['payments.iyzico.secret_key'],$settings['payments.paytr.merchant_id'],$settings['payments.paytr.merchant_key'],$settings['payments.paytr.merchant_salt']);
     ThemeManager::renderTemplate('templates/pages/admin/settings.php',get_defined_vars());
 });
 $router->post('/admin/settings', static function (): void {
     Auth::requireRole(['super_admin','admin']);verify_csrf();
+    if (!empty($_POST['test_iyzico_sandbox'])) {
+        try {
+            $config=\App\Core\PaymentGatewayConfig::forProvider('iyzico');
+            if (!$config['configured']) throw new RuntimeException('Önce iyzico API Key ve Secret Key bilgilerini kaydedin.');
+            $result=\App\Core\IyzicoApiClient::testSandboxConnection($config);
+            $_SESSION['villa_iyzico_test_message']='iyzico Sandbox bağlantısı başarılı. BIN kontrolü yanıtı alındı; ödeme veya tahsilat oluşturulmadı.';
+            $_SESSION['villa_iyzico_test_message_type']='success';
+        } catch (Throwable $e) {
+            error_log('iyzico sandbox connection test failed: '.$e->getMessage());
+            $_SESSION['villa_iyzico_test_message']='Sandbox bağlantı testi başarısız: '.$e->getMessage();
+            $_SESSION['villa_iyzico_test_message_type']='error';
+        }
+        redirect('/admin/settings');
+    }
     $commission=(float)($_POST['commission']??12);$currency=strtoupper(trim((string)($_POST['currency']??'TRY')));$timezone=trim((string)($_POST['timezone']??'Europe/Istanbul'));
     $iyzicoEnvironment=(string)($_POST['iyzico_environment']??'sandbox');$paytrEnvironment=(string)($_POST['paytr_environment']??'sandbox');
     if($commission<0||$commission>50||!preg_match('/^[A-Z]{3}$/',$currency)||!in_array($timezone,DateTimeZone::listIdentifiers(),true)||!in_array($iyzicoEnvironment,['sandbox','production'],true)||!in_array($paytrEnvironment,['sandbox','production'],true)){http_response_code(422);exit('Ayar değerlerini kontrol edin.');}
