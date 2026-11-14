@@ -23,6 +23,11 @@ $topPhoneDigits = preg_replace('/\\D+/', '', $topPhone);
 <header class="site-header">
   <div class="wrap head">
     <button class="mobile-menu-toggle theme-menu-toggle" id="menuToggle" type="button" aria-label="Menüyü aç" aria-controls="siteNavigation" aria-expanded="false"><span class="menu-open-mark">☰</span><span class="menu-close-mark" hidden>×</span></button>
+    <?php if ($themeLogoUrl !== ''): ?>
+    <a class="site-header-mobile-brand" href="<?= e(app_url('/')) ?>" aria-label="<?= e($themeSiteName) ?>">
+      <img src="<?= e($themeLogoUrl) ?>" alt="<?= e($themeSiteName) ?>">
+    </a>
+    <?php endif; ?>
     <nav class="nav" id="siteNavigation"><?php \App\Core\ThemeManager::renderPartial('partials/navigation-items.php', get_defined_vars()); ?></nav>
   </div>
 </header>
