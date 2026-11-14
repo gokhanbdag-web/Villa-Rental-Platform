@@ -1727,3 +1727,86 @@ body[data-villa-theme] .premium-stay-card:focus-within{
     transform:translate(-50%,-50%) rotate(-45deg)!important;
   }
 }
+/* Animated burger-to-close transition: keep both marks mounted so CSS can animate them. */
+@media(max-width:760px){
+  body[data-villa-theme] .site-header .theme-menu-toggle{
+    position:relative!important;
+    overflow:visible!important;
+  }
+  body[data-villa-theme] .site-header .theme-menu-toggle .menu-open-mark{
+    display:block!important;
+    opacity:1!important;
+    transform:rotate(0deg) scale(1)!important;
+    transition:opacity .24s ease,transform .38s cubic-bezier(.22,1,.36,1)!important;
+  }
+  body[data-villa-theme] .site-header .theme-menu-toggle .menu-open-mark::before,
+  body[data-villa-theme] .site-header .theme-menu-toggle .menu-open-mark::after{
+    transition:top .38s cubic-bezier(.22,1,.36,1),transform .38s cubic-bezier(.22,1,.36,1)!important;
+  }
+  body[data-villa-theme] .site-header .theme-menu-toggle .menu-close-mark{
+    position:absolute!important;
+    inset:0!important;
+    display:block!important;
+    width:44px!important;
+    height:44px!important;
+    opacity:0!important;
+    transform:rotate(-90deg) scale(.55)!important;
+    transition:opacity .24s ease,transform .38s cubic-bezier(.22,1,.36,1)!important;
+    pointer-events:none!important;
+  }
+  body[data-villa-theme] .site-header .theme-menu-toggle .menu-close-mark::before,
+  body[data-villa-theme] .site-header .theme-menu-toggle .menu-close-mark::after{
+    content:""!important;
+    position:absolute!important;
+    top:50%!important;
+    left:50%!important;
+    width:3px!important;
+    height:25px!important;
+    margin:0!important;
+    border:0!important;
+    border-radius:999px!important;
+    background:#79c8eb!important;
+    transform-origin:center!important;
+    transition:transform .38s cubic-bezier(.22,1,.36,1)!important;
+  }
+  body[data-villa-theme] .site-header .theme-menu-toggle .menu-close-mark::before{
+    transform:translate(-50%,-50%) rotate(0deg)!important;
+  }
+  body[data-villa-theme] .site-header .theme-menu-toggle .menu-close-mark::after{
+    transform:translate(-50%,-50%) rotate(0deg)!important;
+  }
+  body[data-villa-theme] .site-header .theme-menu-toggle[aria-expanded="true"] .menu-open-mark{
+    opacity:0!important;
+    transform:rotate(90deg) scale(.55)!important;
+  }
+  body[data-villa-theme] .site-header .theme-menu-toggle[aria-expanded="true"] .menu-open-mark::before{
+    top:0!important;
+    transform:rotate(45deg)!important;
+    animation:none!important;
+  }
+  body[data-villa-theme] .site-header .theme-menu-toggle[aria-expanded="true"] .menu-open-mark::after{
+    top:0!important;
+    transform:rotate(-45deg)!important;
+    animation:none!important;
+  }
+  body[data-villa-theme] .site-header .theme-menu-toggle[aria-expanded="true"] .menu-close-mark{
+    opacity:1!important;
+    transform:rotate(0deg) scale(1)!important;
+  }
+  body[data-villa-theme] .site-header .theme-menu-toggle[aria-expanded="true"] .menu-close-mark::before{
+    transform:translate(-50%,-50%) rotate(45deg)!important;
+  }
+  body[data-villa-theme] .site-header .theme-menu-toggle[aria-expanded="true"] .menu-close-mark::after{
+    transform:translate(-50%,-50%) rotate(-45deg)!important;
+  }
+}
+@media(prefers-reduced-motion:reduce){
+  body[data-villa-theme] .site-header .theme-menu-toggle .menu-open-mark,
+  body[data-villa-theme] .site-header .theme-menu-toggle .menu-open-mark::before,
+  body[data-villa-theme] .site-header .theme-menu-toggle .menu-open-mark::after,
+  body[data-villa-theme] .site-header .theme-menu-toggle .menu-close-mark,
+  body[data-villa-theme] .site-header .theme-menu-toggle .menu-close-mark::before,
+  body[data-villa-theme] .site-header .theme-menu-toggle .menu-close-mark::after{
+    transition:none!important;
+  }
+}
