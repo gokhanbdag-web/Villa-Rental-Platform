@@ -685,6 +685,116 @@ $router->get('/checkout/{bookingCode}', static function(array $params):void {
     ThemeManager::renderTemplate('templates/pages/checkout.php',get_defined_vars());
 });
 
+$router->post('/checkout/{bookingCode}/iyzico/start', static function (array $params): void {
+    verify_csrf();
+    $user=Auth::user();if(!$user)redirect('/login');
+    $config=\App\Core\PaymentGatewayConfig::forProvider('iyzico');
+    if(!$config['enabled']||!$config['configured']){http_response_code(409);exit('iyzico ödeme altyapısı etkin değil veya API bilgileri eksik.');}
+    $pdo=Database::connection();
+    $stmt=$pdo->prepare("SELECT b.*,p.title AS property_title,p.slug AS property_slug,u.username,u.email AS account_email,u.created_at AS account_created FROM bookings b JOIN properties p ON p.id=b.property_id JOIN users u ON u.id=b.guest_user_id WHERE b.booking_code=? AND b.guest_user_id=? LIMIT 1");
+    $stmt->execute([$params['bookingCode']??'',(int)$user['id']]);$booking=$stmt->fetch();
+    if(!$booking){http_response_code(404);exit('Rezervasyon bulunamadı.');}
+    if(!in_array((string)$booking['status'],['pending'],true)){http_response_code(409);exit('Yalnızca ödeme bekleyen rezervasyonlar için ödeme başlatılabilir.');}
+
+    $identityNumber=preg_replace('/\D+/','',(string)($_POST['identity_number']??''))??'';
+    $address=trim((string)($_POST['billing_address']??''));
+    $city=trim((string)($_POST['billing_city']??''));
+    if(!preg_match('/^[0-9]{11}$/',$identityNumber)||$address===''||mb_strlen($address)>500||$city===''||mb_strlen($city)>100){
+        http_response_code(422);exit('Fatura adresi, şehir ve 11 haneli T.C. kimlik numarası alanlarını kontrol edin.');
+    }
+    $currency=strtoupper((string)$booking['currency']);
+    if($currency==='TL')$currency='TRY';
+    if(!in_array($currency,['TRY','USD','EUR','GBP','NOK','CHF'],true)){http_response_code(422);exit('iyzico bu rezervasyonun para birimini desteklemiyor.');}
+    $amount=number_format((float)$booking['total'],2,'.','');
+    if((float)$amount<=0){http_response_code(422);exit('Ödeme tutarı geçersiz.');}
+
+    $nameParts=preg_split('/\s+/u',trim((string)$booking['guest_name']),2)?:[];
+    $firstName=trim((string)($nameParts[0]??'Misafir'));
+    $lastName=trim((string)($nameParts[1]??'Misafir'));
+    $phone=preg_replace('/[^0-9+]/','',(string)$booking['guest_phone'])?:'+905000000000';
+    if(!str_starts_with($phone,'+'))$phone='+'.$phone;
+    $now=date('Y-m-d H:i:s');
+    $ip=(string)($_SERVER['REMOTE_ADDR']??'127.0.0.1');
+    $conversationId='VR'.$booking['id'].'-'.bin2hex(random_bytes(8));
+    $callbackUrl=app_url('/payments/iyzico/callback');
+    $payload=[
+        'locale'=>'tr','conversationId'=>$conversationId,'price'=>$amount,'paidPrice'=>$amount,
+        'currency'=>$currency,'basketId'=>(string)$booking['booking_code'],'paymentGroup'=>'PRODUCT',
+        'callbackUrl'=>$callbackUrl,'enabledInstallments'=>[1],
+        'buyer'=>[
+            'id'=>(string)$booking['guest_user_id'],'name'=>$firstName,'surname'=>$lastName,
+            'identityNumber'=>$identityNumber,'email'=>(string)$booking['guest_email'],'gsmNumber'=>$phone,
+            'registrationDate'=>!empty($booking['account_created'])?date('Y-m-d H:i:s',strtotime((string)$booking['account_created'])):$now,
+            'lastLoginDate'=>$now,'registrationAddress'=>$address,'city'=>$city,'country'=>'Turkey','ip'=>$ip,
+        ],
+        'shippingAddress'=>['address'=>$address,'contactName'=>(string)$booking['guest_name'],'city'=>$city,'country'=>'Turkey'],
+        'billingAddress'=>['address'=>$address,'contactName'=>(string)$booking['guest_name'],'city'=>$city,'country'=>'Turkey'],
+        'basketItems'=>[[
+            'id'=>(string)$booking['id'],'price'=>$amount,'name'=>mb_substr((string)$booking['property_title'],0,100),
+            'category1'=>'Konaklama','category2'=>'Villa rezervasyonu','itemType'=>'VIRTUAL',
+        ]],
+    ];
+
+    $idempotency=hash('sha256','iyzico:'.$conversationId);
+    $placeholder='init:'.$conversationId;
+    try{
+        $insert=$pdo->prepare("INSERT INTO payment_transactions(booking_id,provider,provider_reference,idempotency_key,amount,currency,status,request_payload,created_at,updated_at) VALUES(?,'iyzico',?,?,?,?, 'pending',?,NOW(),NOW())");
+        $insert->execute([(int)$booking['id'],$placeholder,$idempotency,$amount,$currency,json_encode(['conversationId'=>$conversationId,'basketId'=>$booking['booking_code']],JSON_UNESCAPED_UNICODE)]);
+        $transactionId=(int)$pdo->lastInsertId();
+        $response=\App\Core\IyzicoApiClient::initializeCheckoutForm($config,$payload);
+        $token=trim((string)($response['token']??''));$paymentUrl=trim((string)($response['paymentPageUrl']??''));
+        if($token===''||$paymentUrl===''||!str_starts_with($paymentUrl,'https://'))throw new RuntimeException('iyzico ödeme formu güvenli bir ödeme adresi döndürmedi.');
+        $expectedHost=$config['environment']==='production'?'api.iyzipay.com':'sandbox-api.iyzipay.com';
+        $actualHost=(string)(parse_url($paymentUrl,PHP_URL_HOST)??'');
+        if($actualHost!==$expectedHost)throw new RuntimeException('iyzico ödeme adresinin alan adı doğrulanamadı.');
+        $update=$pdo->prepare("UPDATE payment_transactions SET provider_reference=?,checkout_url=?,response_payload=?,expires_at=DATE_ADD(NOW(),INTERVAL 30 MINUTE),updated_at=NOW() WHERE id=? AND status='pending'");
+        $update->execute([$token,$paymentUrl,json_encode(['token'=>$token,'conversationId'=>$conversationId],JSON_UNESCAPED_UNICODE),$transactionId]);
+        if($update->rowCount()!==1)throw new RuntimeException('Ödeme oturumu yerel kayda bağlanamadı.');
+        redirect($paymentUrl);
+    }catch(Throwable $e){
+        if(isset($transactionId)){
+            $fail=$pdo->prepare("UPDATE payment_transactions SET status='failed',updated_at=NOW() WHERE id=? AND status='pending'");$fail->execute([$transactionId]);
+        }
+        error_log('iyzico Checkout Form initialize failed: '.$e->getMessage());
+        http_response_code(502);exit('iyzico ödeme formu başlatılamadı. Lütfen rezervasyon sayfasına dönüp tekrar deneyin.');
+    }
+});
+
+$router->post('/payments/iyzico/callback', static function (): void {
+    $token=trim((string)($_POST['token']??''));
+    if($token===''||strlen($token)>128){http_response_code(400);exit('Ödeme bildirimi geçersiz.');}
+    $pdo=Database::connection();
+    $find=$pdo->prepare("SELECT pt.id,pt.booking_id,pt.amount,pt.currency,pt.status,b.booking_code FROM payment_transactions pt JOIN bookings b ON b.id=pt.booking_id WHERE pt.provider='iyzico' AND pt.provider_reference=? LIMIT 1");
+    $find->execute([$token]);$transaction=$find->fetch();
+    if(!$transaction){http_response_code(404);exit('Ödeme işlemi bulunamadı.');}
+    try{
+        $config=\App\Core\PaymentGatewayConfig::forProvider('iyzico');
+        $result=\App\Core\IyzicoApiClient::retrieveCheckoutForm($config,$token);
+        if(strtolower((string)($result['status']??''))!=='success')throw new RuntimeException('iyzico ödeme sonucu doğrulanamadı.');
+        $paymentStatus=strtoupper((string)($result['paymentStatus']??''));
+        $fraudStatus=(int)($result['fraudStatus']??-1);
+        $normalizedStatus=($paymentStatus==='SUCCESS'&&$fraudStatus===1)?'paid':(($paymentStatus==='SUCCESS'&&$fraudStatus===0)?'processing':'failed');
+        $paymentId=trim((string)($result['paymentId']??''));
+        if($paymentId==='')throw new RuntimeException('iyzico ödeme referansı eksik.');
+        $callback=[
+            'provider'=>'iyzico','provider_reference'=>$token,'booking_id'=>(int)$transaction['booking_id'],
+            'amount'=>(string)($result['paidPrice']??''),'currency'=>strtoupper((string)($result['currency']??'')),
+            'status'=>$normalizedStatus,
+        ];
+        $eventPayload=['token'=>$token,'paymentId'=>$paymentId,'paymentStatus'=>$paymentStatus,'fraudStatus'=>$fraudStatus,'paidPrice'=>$callback['amount'],'currency'=>$callback['currency']];
+        $processed=(new \App\Core\PaymentCallbackProcessor($pdo))->processVerified(
+            'iyzico',$paymentId,'CHECKOUT_FORM_AUTH',$token,$eventPayload,$callback
+        );
+        $user=Auth::user();
+        if($user&&(int)$user['id']===(int)$transaction['booking_id']){} // no session dependency; redirect below uses booking code.
+        $suffix=($processed['payment_status']??'')==='paid'?'paid':(($normalizedStatus==='processing')?'review':'failed');
+        redirect('/checkout/'.rawurlencode((string)$transaction['booking_code']).'?payment='.$suffix);
+    }catch(Throwable $e){
+        error_log('iyzico callback verification failed: '.$e->getMessage());
+        redirect('/checkout/'.rawurlencode((string)$transaction['booking_code']).'?payment=verify_error');
+    }
+});
+
 $router->get('/account/messages/{bookingId}', static function (array $params): void {
     $user=Auth::user();if(!$user)redirect('/login');$pdo=Database::connection();$bookingId=(int)$params['bookingId'];
     $s=$pdo->prepare('SELECT b.*,p.title,p.vendor_id,g.username AS guest_name,v.user_id AS vendor_user_id FROM bookings b JOIN properties p ON p.id=b.property_id JOIN users g ON g.id=b.guest_user_id LEFT JOIN vendors v ON v.id=p.vendor_id WHERE b.id=?');
