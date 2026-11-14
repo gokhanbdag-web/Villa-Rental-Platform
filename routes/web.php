@@ -798,9 +798,11 @@ $router->post('/payments/iyzico/callback', static function (): void {
         $normalizedStatus=($paymentStatus==='SUCCESS'&&$fraudStatus===1)?'paid':(($paymentStatus==='SUCCESS'&&$fraudStatus===0)?'processing':'failed');
         $paymentId=trim((string)($result['paymentId']??''));
         $eventId=$paymentId!==''?$paymentId:'token-'.$token;
+        $paidPriceValue=$result['paidPrice']??null;
+        $verifiedPaidAmount=is_numeric($paidPriceValue)&&is_finite((float)$paidPriceValue)?number_format((float)$paidPriceValue,2,'.',''):'';
         $callback=[
             'provider'=>'iyzico','provider_reference'=>$token,'booking_id'=>(int)$transaction['booking_id'],
-            'amount'=>$normalizedStatus==='failed'?(string)$transaction['amount']:(string)($result['paidPrice']??''),
+            'amount'=>$normalizedStatus==='failed'?(string)$transaction['amount']:$verifiedPaidAmount,
             'currency'=>$normalizedStatus==='failed'?strtoupper((string)$transaction['currency']):strtoupper((string)($result['currency']??'')),
             'status'=>$normalizedStatus,
         ];
@@ -851,9 +853,11 @@ $router->post('/payments/iyzico/webhook', static function (): void {
         $fraudStatus=(int)($result['fraudStatus']??-1);
         $paymentStatus=strtoupper((string)($result['paymentStatus']??$eventStatus));
         $normalizedStatus=($paymentStatus==='SUCCESS'&&$eventStatus==='SUCCESS'&&$fraudStatus===1)?'paid':(($paymentStatus==='SUCCESS'&&$eventStatus==='SUCCESS'&&$fraudStatus===0)?'processing':'failed');
+        $paidPriceValue=$result['paidPrice']??null;
+        $verifiedPaidAmount=is_numeric($paidPriceValue)&&is_finite((float)$paidPriceValue)?number_format((float)$paidPriceValue,2,'.',''):'';
         $callback=[
             'provider'=>'iyzico','provider_reference'=>$token,'booking_id'=>(int)$transaction['booking_id'],
-            'amount'=>$normalizedStatus==='failed'?(string)$transaction['amount']:(string)($result['paidPrice']??''),
+            'amount'=>$normalizedStatus==='failed'?(string)$transaction['amount']:$verifiedPaidAmount,
             'currency'=>$normalizedStatus==='failed'?strtoupper((string)$transaction['currency']):strtoupper((string)($result['currency']??'')),
             'status'=>$normalizedStatus,
         ];
