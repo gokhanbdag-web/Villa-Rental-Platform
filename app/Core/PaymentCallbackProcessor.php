@@ -78,6 +78,20 @@ final class PaymentCallbackProcessor
                 return ['result' => 'rejected', 'payment_updated' => false];
             }
 
+            $bookingLock = $this->pdo->prepare('SELECT id,status FROM bookings WHERE id=? LIMIT 1 FOR UPDATE');
+            $bookingLock->execute([(int)$transaction['booking_id']]);
+            $booking = $bookingLock->fetch(PDO::FETCH_ASSOC);
+            if (!$booking) {
+                $inbox->markFailed($provider, $eventId, 'Ödemeye bağlı rezervasyon bulunamadı.');
+                $this->pdo->commit();
+                return ['result' => 'rejected_booking', 'payment_updated' => false];
+            }
+            if ($targetStatus === 'paid' && !in_array((string)$booking['status'], ['pending','confirmed'], true)) {
+                $inbox->markFailed($provider, $eventId, 'İptal edilmiş veya tamamlanmış rezervasyon için ödeme kabul edilmedi.');
+                $this->pdo->commit();
+                return ['result' => 'rejected_booking_status', 'payment_updated' => false];
+            }
+
             $currentStatus = (string)$transaction['status'];
             if (!PaymentTransactionGuard::canTransition($currentStatus, $targetStatus)) {
                 $inbox->markFailed($provider, $eventId, 'İzin verilmeyen ödeme durum geçişi.');
@@ -91,6 +105,13 @@ final class PaymentCallbackProcessor
             $update->execute([$targetStatus, $targetStatus, (int)$transaction['id'], $currentStatus]);
             if ($update->rowCount() !== 1) {
                 throw new \RuntimeException('Ödeme kaydı eşzamanlı olarak değişti; bildirim tekrar denenmeli.');
+            }
+            if ($targetStatus === 'paid' && (string)$booking['status'] === 'pending') {
+                $confirm = $this->pdo->prepare("UPDATE bookings SET status='confirmed',updated_at=NOW() WHERE id=? AND status='pending'");
+                $confirm->execute([(int)$booking['id']]);
+                if ($confirm->rowCount() !== 1) {
+                    throw new \RuntimeException('Ödeme sonrası rezervasyon onaylanamadı; bildirim tekrar denenmeli.');
+                }
             }
             if (!$inbox->markProcessed($provider, $eventId)) {
                 throw new \RuntimeException('Ödeme bildirimi tamamlandı olarak işaretlenemedi.');
