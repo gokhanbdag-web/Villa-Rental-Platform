@@ -1736,3 +1736,21 @@ body[data-villa-theme] .theme-header,
 body[data-villa-theme] .site-header{
   box-shadow:0 4px 14px rgba(24,36,29,.14)!important;
 }
+
+
+/* Centered logo strip above the main navigation header. */
+body[data-villa-theme] .site-logo-topbar{
+  width:100%;min-height:88px;padding:12px 20px;display:flex;align-items:center;justify-content:center;
+  background:var(--villa-surface,#fff);position:relative;z-index:10011;
+  border-bottom:1px solid rgba(24,36,29,.06);
+}
+body[data-villa-theme] .site-logo-topbar__brand{display:inline-flex;align-items:center;justify-content:center;max-width:min(320px,80vw);text-decoration:none}
+body[data-villa-theme] .site-logo-topbar__brand img{display:block;width:auto;height:auto;max-width:100%;max-height:64px;object-fit:contain}
+body[data-villa-theme] .site-header .head{justify-content:flex-end!important}
+body[data-villa-theme] .site-header .nav{margin-left:auto!important}
+@media(max-width:760px){
+  body[data-villa-theme] .site-logo-topbar{min-height:76px;padding:10px 16px}
+  body[data-villa-theme] .site-logo-topbar__brand{max-width:min(240px,78vw)}
+  body[data-villa-theme] .site-logo-topbar__brand img{max-height:54px}
+  body[data-villa-theme] .site-header .head{justify-content:space-between!important}
+}
