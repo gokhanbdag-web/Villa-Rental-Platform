@@ -97,86 +97,13 @@ $medBlocks = '';
           <div class="med-support-heading">
             <span class="pill villa-eyebrow"><?= e($content['home_support_eyebrow'] ?? 'TATİLİNİZİ PLANLAYIN') ?></span>
             <h2><?= e($content['home_support_title'] ?? 'Tatilinizi birlikte planlayalım') ?></h2>
-            <p><?= e($content['home_support_subtitle'] ?? 'Giriş ve çıkış tarihlerinizi seçin, size uygun villaları hemen listeleyelim.') ?></p>
+            <p><?= e($content['home_support_subtitle'] ?? 'Villa seçimi, rezervasyon ve tatil planınız için ekibimiz size yardımcı olsun.') ?></p>
           </div>
-          <form class="med-support-date-form" id="homeAvailabilitySearch" action="<?= e(app_url('/konaklamalar')) ?>" method="get">
-            <input type="hidden" id="homeCheckIn" name="check_in" required>
-            <input type="hidden" id="homeCheckOut" name="check_out" required>
-            <div class="med-calendar-toolbar">
-              <button type="button" class="med-calendar-nav med-calendar-prev" aria-label="Önceki ay">‹</button>
-              <div class="med-calendar-selection"><span>GİRİŞ</span><strong id="homeCheckInLabel">Tarih seçin</strong><i></i><span>ÇIKIŞ</span><strong id="homeCheckOutLabel">Tarih seçin</strong></div>
-              <button type="button" class="med-calendar-nav med-calendar-next" aria-label="Sonraki ay">›</button>
-            </div>
-            <div class="med-calendar-months" id="homeCalendarMonths" aria-label="Konaklama tarihleri takvimi">
-              <div class="med-calendar-month" data-calendar-month="0"></div>
-              <div class="med-calendar-month med-calendar-month-next" data-calendar-month="1"></div>
-            </div>
-            <p class="med-support-date-hint" id="homeAvailabilityHint" aria-live="polite">Önce giriş, ardından çıkış tarihinizi seçin.</p>
-          </form>
+
           <?php if($phoneDigits || $waDigits): ?><div class="med-support-actions"><?php if($phoneDigits): ?><a class="med-support-phone" href="tel:<?= e($phoneDigits) ?>">☎ <?= e($phone) ?></a><?php endif; ?><?php if($waDigits): ?><a class="med-support-whatsapp" href="https://wa.me/<?= e($waDigits) ?>" target="_blank" rel="noopener noreferrer"><?= e($content['home_support_whatsapp_label'] ?? 'WhatsApp ile yazın ↗') ?></a><?php endif; ?></div><?php endif; ?>
         </div>
       </div>
-      <script>
-      (function(){
-        var form=document.getElementById('homeAvailabilitySearch');
-        if(!form)return;
-        var checkIn=document.getElementById('homeCheckIn'),checkOut=document.getElementById('homeCheckOut');
-        var hint=document.getElementById('homeAvailabilityHint'),months=Array.prototype.slice.call(form.querySelectorAll('[data-calendar-month]'));
-        var today=new Date();today.setHours(0,0,0,0);
-        var firstMonth=new Date(today.getFullYear(),today.getMonth(),1);
-        var mobileMonth=new Date(firstMonth);
-        var start=null,end=null,monthNames=['Ocak','Şubat','Mart','Nisan','Mayıs','Haziran','Temmuz','Ağustos','Eylül','Ekim','Kasım','Aralık'];
-        function iso(d){return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');}
-        function parse(value){var p=value.split('-');return new Date(Number(p[0]),Number(p[1])-1,Number(p[2]));}
-        function label(d){return d.toLocaleDateString('tr-TR',{day:'numeric',month:'long',year:'numeric'});}
-        function same(a,b){return a&&b&&iso(a)===iso(b);}
-        function renderMonth(container,date){
-          var year=date.getFullYear(),month=date.getMonth(),first=new Date(year,month,1),days=new Date(year,month+1,0).getDate();
-          var offset=(first.getDay()+6)%7;
-          var html='<div class="med-calendar-month-title">'+monthNames[month]+' '+year+'</div><div class="med-calendar-weekdays"><span>Pzt</span><span>Sal</span><span>Çar</span><span>Per</span><span>Cum</span><span>Cmt</span><span>Paz</span></div><div class="med-calendar-days">';
-          for(var blank=0;blank<offset;blank++)html+='<span class="med-calendar-empty"></span>';
-          for(var n=1;n<=days;n++){
-            var day=new Date(year,month,n),key=iso(day),past=day<today,selectedStart=same(day,start),selectedEnd=same(day,end),inside=start&&end&&day>start&&day<end;
-            var cls='med-calendar-day'+(past?' is-past':'')+(selectedStart?' is-start':'')+(selectedEnd?' is-end':'')+(inside?' is-between':'')+(same(day,today)?' is-today':'');
-            html+='<button type="button" class="'+cls+'" data-date="'+key+'" '+(past?'disabled':'')+' aria-label="'+label(day)+'">'+n+'</button>';
-          }
-          html+='</div>';container.innerHTML=html;
-        }
-        function render(){
-          renderMonth(months[0],window.matchMedia('(max-width:600px)').matches?mobileMonth:firstMonth);
-          renderMonth(months[1],new Date(firstMonth.getFullYear(),firstMonth.getMonth()+1,1));
-          var mobile=window.matchMedia('(max-width:600px)').matches;
-          months[0].style.display='';months[1].style.display=mobile?'none':'';
-          form.querySelector('.med-calendar-prev').disabled=mobile?mobileMonth<=firstMonth:firstMonth<=new Date(today.getFullYear(),today.getMonth(),1);
-          form.querySelector('.med-calendar-next').disabled=mobile?false:false;
-          document.getElementById('homeCheckInLabel').textContent=start?label(start):'Tarih seçin';
-          document.getElementById('homeCheckOutLabel').textContent=end?label(end):'Tarih seçin';
-        }
-        function selectDate(value){
-          var chosen=parse(value);
-          if(!start||end||chosen<=start){start=chosen;end=null;checkIn.value=iso(start);checkOut.value='';hint.textContent='Şimdi çıkış tarihinizi seçin.';render();return;}
-          end=chosen;checkOut.value=iso(end);render();
-          hint.textContent='Müsait villalar listeleniyor…';
-          window.location.assign(form.action+'?'+new URLSearchParams({check_in:checkIn.value,check_out:checkOut.value}).toString());
-        }
-        form.addEventListener('click',function(event){
-          var button=event.target.closest('[data-date]');
-          if(button&&!button.disabled){selectDate(button.getAttribute('data-date'));return;}
-          if(event.target.closest('.med-calendar-prev')){
-            if(window.matchMedia('(max-width:600px)').matches){if(mobileMonth>firstMonth)mobileMonth=new Date(mobileMonth.getFullYear(),mobileMonth.getMonth()-1,1);}
-            else if(firstMonth>new Date(today.getFullYear(),today.getMonth(),1))firstMonth=new Date(firstMonth.getFullYear(),firstMonth.getMonth()-1,1);
-            render();
-          }
-          if(event.target.closest('.med-calendar-next')){
-            if(window.matchMedia('(max-width:600px)').matches)mobileMonth=new Date(mobileMonth.getFullYear(),mobileMonth.getMonth()+1,1);
-            else firstMonth=new Date(firstMonth.getFullYear(),firstMonth.getMonth()+1,1);
-            render();
-          }
-        });
-        window.addEventListener('resize',render);
-        render();
-      })();
-      </script>
+
     </section>
     <?php endif;
     $medBlocks = (string)ob_get_clean();
