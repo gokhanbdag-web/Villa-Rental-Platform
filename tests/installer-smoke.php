@@ -3,6 +3,7 @@ declare(strict_types=1);
 
 require_once dirname(__DIR__) . '/app/bootstrap.php';
 
+use App\Core\Auth;
 use App\Core\Installer;
 use App\Core\Migrator;
 use App\Core\PaymentWebhookInbox;
@@ -72,6 +73,44 @@ try {
 
     $villaCount = (int)$pdo->query("SELECT COUNT(*) FROM properties WHERE status='published'")->fetchColumn();
     assertSmoke($villaCount >= 30, 'Demo villa seed did not create at least 30 published villas.');
+
+    // Exercise the database side of the guest account -> booking -> checkout flow.
+    $property = $pdo->query("SELECT id,title,slug,currency,base_nightly_price,cleaning_fee FROM properties WHERE status='published' ORDER BY id LIMIT 1")->fetch(PDO::FETCH_ASSOC);
+    assertSmoke(is_array($property), 'A published property is required for the booking flow smoke test.');
+    $customerEmail = 'booking.customer@example.test';
+    $customerPassword = 'BookingSmokePassword!2026';
+    $customerHash = password_hash($customerPassword, PASSWORD_DEFAULT);
+    $createCustomer = $pdo->prepare("INSERT INTO users(username,email,password_hash,role,status,created_at) VALUES(?,?,?,'customer','active',NOW())");
+    $createCustomer->execute(['booking.smoke.customer',$customerEmail,$customerHash]);
+    $customerId = (int)$pdo->lastInsertId();
+    assertSmoke(password_verify($customerPassword, $customerHash), 'New customer password hash did not verify.');
+    assertSmoke(Auth::attempt($customerEmail, $customerPassword), 'A newly created customer could not sign in after booking registration.');
+    $authenticatedCustomer = Auth::user();
+    assertSmoke(is_array($authenticatedCustomer) && (int)$authenticatedCustomer['id'] === $customerId, 'The newly registered customer session was not established.');
+
+    $bookingCode = 'VRSMOKE' . strtoupper(bin2hex(random_bytes(4)));
+    $checkIn = (new DateTimeImmutable('+30 days'))->format('Y-m-d');
+    $checkOut = (new DateTimeImmutable('+32 days'))->format('Y-m-d');
+    $nightly = (float)$property['base_nightly_price'];
+    $fees = (float)($property['cleaning_fee'] ?? 0);
+    $subtotal = round($nightly * 2, 2);
+    $total = round($subtotal + $fees, 2);
+    $createBooking = $pdo->prepare("INSERT INTO bookings(booking_code,property_id,guest_user_id,guest_name,guest_email,guest_phone,booking_source,check_in,check_out,guests,subtotal,fees,total,currency,status,created_at) VALUES(?,?,?,?,?,?,'website',?,?,?,?,?,?,?,'pending',NOW())");
+    $createBooking->execute([$bookingCode,(int)$property['id'],$customerId,'Booking Smoke Customer',$customerEmail,'+905551112233',$checkIn,$checkOut,1,$subtotal,$fees,$total,$property['currency']]);
+    $bookingId = (int)$pdo->lastInsertId();
+    $createFinancial = $pdo->prepare("INSERT INTO booking_financials(booking_id,gross_amount,platform_fee,vendor_net_amount,currency,payout_status,created_at) VALUES(?,?,0,?,?,'unpaid',NOW())");
+    $createFinancial->execute([$bookingId,$total,$total,$property['currency']]);
+
+    $checkoutLookup = $pdo->prepare("SELECT b.*,p.title AS property_title,p.slug AS property_slug FROM bookings b JOIN properties p ON p.id=b.property_id WHERE b.booking_code=? AND b.guest_user_id=? LIMIT 1");
+    $checkoutLookup->execute([$bookingCode,$customerId]);
+    $checkoutBooking = $checkoutLookup->fetch(PDO::FETCH_ASSOC);
+    assertSmoke(is_array($checkoutBooking) && (int)$checkoutBooking['id'] === $bookingId && $checkoutBooking['status'] === 'pending', 'The authenticated booking owner could not load the checkout summary.');
+    $checkoutLookup->execute([$bookingCode,(int)$admin['id']]);
+    assertSmoke($checkoutLookup->fetch(PDO::FETCH_ASSOC) === false, 'A different account was able to load another guest checkout.');
+    $financialLookup = $pdo->prepare('SELECT gross_amount,payout_status FROM booking_financials WHERE booking_id=?');
+    $financialLookup->execute([$bookingId]);
+    $financial = $financialLookup->fetch(PDO::FETCH_ASSOC);
+    assertSmoke(is_array($financial) && (float)$financial['gross_amount'] === $total && $financial['payout_status'] === 'unpaid', 'The booking financial record was not saved correctly.');
 
     $migrationCount = (int)$pdo->query('SELECT COUNT(*) FROM schema_migrations')->fetchColumn();
     assertSmoke($migrationCount >= 20, 'Expected database migrations were not applied.');
@@ -206,7 +245,7 @@ try {
     $migrationCountAfter = (int)$pdo->query('SELECT COUNT(*) FROM schema_migrations')->fetchColumn();
     assertSmoke($migrationCountAfter === $migrationCount, 'Second migration pass changed the migration ledger.');
 
-    echo "Installer smoke tests passed: admin, platform mode, {$villaCount} demo villas, {$migrationCount} migrations, required tables, default theme fallback architecture, removed builder/widget code, shared top information settings, and repeat migration.\n";
+    echo "Installer smoke tests passed: admin, platform mode, {$villaCount} demo villas, customer account authentication, booking persistence, financial record, checkout ownership, {$migrationCount} migrations, required tables, theme fallback architecture, and repeat migration.\n";
 } finally {
     if (is_file($configFile)) unlink($configFile);
     if (is_file($lockFile)) unlink($lockFile);
