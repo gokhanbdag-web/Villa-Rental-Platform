@@ -33,10 +33,6 @@ $topPhoneDigits = preg_replace('/\\D+/', '', $topPhone);
     menu.classList.toggle('is-open',open);
     button.setAttribute('aria-expanded',open?'true':'false');
     button.setAttribute('aria-label',open?'Menüyü kapat':'Menüyü aç');
-    var openMark=button.querySelector('.menu-open-mark');
-    var closeMark=button.querySelector('.menu-close-mark');
-    if(openMark)openMark.hidden=open;
-    if(closeMark)closeMark.hidden=!open;
   }
   button.addEventListener('click',function(event){
     event.preventDefault();
