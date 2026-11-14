@@ -4,14 +4,13 @@ declare(strict_types=1);
 $footerSettings = \App\Core\ThemeManager::footerSettings();
 $mobileBarSettings = [];
 try {
-    $mobileBarQuery = \App\Core\Database::connection()->prepare("SELECT setting_key,setting_value FROM settings WHERE setting_key IN ('mobile_bar.enabled','mobile_bar.whatsapp','mobile_bar.phone')");
+    $mobileBarQuery = \App\Core\Database::connection()->prepare("SELECT setting_key,setting_value FROM settings WHERE setting_key IN ('mobile_bar.enabled','mobile_bar.phone')");
     $mobileBarQuery->execute();
     $mobileBarSettings = $mobileBarQuery->fetchAll(PDO::FETCH_KEY_PAIR);
 } catch (Throwable $mobileBarError) {
     $mobileBarSettings = [];
 }
 $mobileBarEnabled = ($mobileBarSettings['mobile_bar.enabled'] ?? '1') === '1';
-$mobileWhatsapp = preg_replace('/\\D+/', '', (string)($mobileBarSettings['mobile_bar.whatsapp'] ?? '')) ?: '';
 $mobilePhone = preg_replace('/\\D+/', '', (string)($mobileBarSettings['mobile_bar.phone'] ?? '')) ?: '';
 ?>
 <footer class="site-footer" aria-label="Alt bilgi"
@@ -100,8 +99,8 @@ $mobilePhone = preg_replace('/\\D+/', '', (string)($mobileBarSettings['mobile_ba
 <nav class="villa-mobile-bar" aria-label="Mobil hızlı menü">
  <a href="<?= e(app_url('/')) ?>" aria-label="Ana Sayfa"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m3 10 9-7 9 7"></path><path d="M5 9.5V21h14V9.5M9 21v-7h6v7"></path></svg><span>Ana Sayfa</span></a>
  <button type="button" data-villa-search-open aria-label="Villa adıyla ara"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="10.8" cy="10.8" r="6.8"></circle><path d="m16 16 5 5"></path></svg><span>Villa Ara</span></button>
- <?php if ($mobileWhatsapp !== ''): ?><a class="villa-mobile-whatsapp" href="https://wa.me/<?= e($mobileWhatsapp) ?>" target="_blank" rel="noopener noreferrer" aria-label="WhatsApp ile iletişim"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20.2 11.7a8.2 8.2 0 0 1-12.1 7.2L3 20l1.2-4.8a8.2 8.2 0 1 1 16-3.5Z"></path><path d="M8.4 8.1c.3-.6.6-.6.9-.6h.5c.2 0 .4.1.5.4l.8 1.8c.1.2.1.4-.1.6l-.6.7c-.2.2-.2.4 0 .7.5.9 1.3 1.6 2.2 2.1.2.1.4.1.6-.1l.8-.9c.2-.2.4-.2.6-.1l1.7.8c.3.1.4.3.4.5 0 .3-.2 1.1-.7 1.5-.5.5-1.2.7-1.9.6-1.1-.2-2.4-.8-3.7-2-1.1-1-2.1-2.5-2.3-3.5-.2-.8 0-1.6.3-2.1Z"></path></svg><span>WhatsApp</span></a><?php else: ?><span aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M20.2 11.7a8.2 8.2 0 0 1-12.1 7.2L3 20l1.2-4.8a8.2 8.2 0 1 1 16-3.5Z"></path></svg><span>WhatsApp</span></span><?php endif; ?>
  <?php if ($mobilePhone !== ''): ?><a class="villa-mobile-phone" href="tel:<?= e($mobilePhone) ?>" aria-label="Telefonla ara"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 3H4.8A1.8 1.8 0 0 0 3 4.8C3 13.7 10.3 21 19.2 21a1.8 1.8 0 0 0 1.8-1.8V17l-4.7-2-1.4 2a14.7 14.7 0 0 1-6-6l2-1.4L9 3H7Z"></path></svg><span>Ara</span></a><?php else: ?><span aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M7 3H4.8A1.8 1.8 0 0 0 3 4.8C3 13.7 10.3 21 19.2 21a1.8 1.8 0 0 0 1.8-1.8V17l-4.7-2-1.4 2a14.7 14.7 0 0 1-6-6l2-1.4L9 3H7Z"></path></svg><span>Ara</span></span><?php endif; ?>
+ <button type="button" class="villa-mobile-login" data-login-trigger aria-label="Giriş yap"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4M10 17l5-5-5-5m5 5H3"></path></svg><span>Giriş</span></button>
 </nav>
 <div class="villa-mobile-search-overlay" data-villa-search-overlay aria-hidden="true"><section class="villa-mobile-search-card" role="dialog" aria-modal="true" aria-labelledby="villaMobileSearchTitle"><div class="villa-mobile-search-head"><div class="villa-mobile-search-heading"><span class="villa-mobile-search-kicker">Konaklama keşfi</span><strong id="villaMobileSearchTitle">Size uygun villayı bulun</strong></div><button type="button" class="villa-mobile-search-close" data-villa-search-close aria-label="Kapat">×</button></div><form class="villa-mobile-search-form" method="get" action="<?= e(app_url('/konaklamalar')) ?>"><input type="search" name="q" maxlength="120" placeholder="Villa adını yazmaya başlayın..." aria-label="Villa adıyla ara" autocomplete="off" required><button type="submit">Ara</button></form><div class="villa-mobile-search-meta"><strong data-villa-result-heading>Önerilen villalar</strong><span data-villa-result-count></span></div><div class="villa-mobile-search-results" data-villa-search-results aria-live="polite"><div class="villa-mobile-search-state"><strong>Hayalinizdeki villayı keşfedin</strong>Villa adını yazdığınızda eşleşen seçenekler burada listelenir.</div></div></section></div>
 <script>
@@ -124,3 +123,4 @@ $mobilePhone = preg_replace('/\\D+/', '', (string)($mobileBarSettings['mobile_ba
 })();
 </script>
 <?php endif; ?>
+<?php \App\Core\ThemeManager::renderPartial('partials/login-modal.php', get_defined_vars()); ?>
