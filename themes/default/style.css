@@ -1780,3 +1780,16 @@ body[data-villa-theme] .site-header .nav{margin-left:auto!important}
 @media(min-width:761px){
   body[data-villa-theme] .site-header-mobile-brand{display:none!important}
 }
+
+
+/* Desktop: align the primary navigation to the left edge of the header container. */
+@media(min-width:761px){
+  body[data-villa-theme] .site-header .head{
+    justify-content:flex-start!important;
+  }
+  body[data-villa-theme] .site-header .nav{
+    margin-left:0!important;
+    margin-right:auto!important;
+    justify-content:flex-start!important;
+  }
+}
