@@ -785,7 +785,7 @@ $router->post('/payments/iyzico/callback', static function (): void {
     $token=trim((string)($_POST['token']??''));
     if($token===''||strlen($token)>128){http_response_code(400);exit('Ödeme bildirimi geçersiz.');}
     $pdo=Database::connection();
-    $find=$pdo->prepare("SELECT pt.id,pt.booking_id,pt.amount,pt.currency,pt.status,b.booking_code FROM payment_transactions pt JOIN bookings b ON b.id=pt.booking_id WHERE pt.provider='iyzico' AND pt.provider_reference=? LIMIT 1");
+    $find=$pdo->prepare("SELECT pt.id,pt.booking_id,pt.amount,pt.currency,pt.status,pt.request_payload,b.booking_code FROM payment_transactions pt JOIN bookings b ON b.id=pt.booking_id WHERE pt.provider='iyzico' AND pt.provider_reference=? LIMIT 1");
     $find->execute([$token]);$transaction=$find->fetch();
     if(!$transaction){http_response_code(404);exit('Ödeme işlemi bulunamadı.');}
     try{
@@ -793,6 +793,14 @@ $router->post('/payments/iyzico/callback', static function (): void {
         $config['environment']='sandbox';
         $result=\App\Core\IyzicoApiClient::retrieveCheckoutForm($config,$token);
         if(strtolower((string)($result['status']??''))!=='success')throw new RuntimeException('iyzico ödeme sonucu doğrulanamadı.');
+        $secret=(string)($config['credentials']['secret_key']??'');
+        if(!\App\Core\PaymentSignatureVerifier::verifyIyzicoCheckoutFormRetrieve($result,$secret))throw new RuntimeException('iyzico ödeme yanıtı imza doğrulamasından geçmedi.');
+        $requestData=json_decode((string)$transaction['request_payload'],true);
+        if(!is_array($requestData)
+            ||!hash_equals((string)($requestData['conversationId']??''),(string)($result['conversationId']??''))
+            ||!hash_equals((string)($requestData['basketId']??''),(string)($result['basketId']??''))) {
+            throw new RuntimeException('iyzico ödeme yanıtı rezervasyon referanslarıyla eşleşmedi.');
+        }
         $paymentStatus=strtoupper((string)($result['paymentStatus']??''));
         $fraudStatus=(int)($result['fraudStatus']??-1);
         $normalizedStatus=($paymentStatus==='SUCCESS'&&$fraudStatus===1)?'paid':(($paymentStatus==='SUCCESS'&&$fraudStatus===0)?'processing':'failed');
@@ -849,7 +857,10 @@ $router->post('/payments/iyzico/webhook', static function (): void {
     try{
         $result=\App\Core\IyzicoApiClient::retrieveCheckoutForm($config,$token);
         if(strtolower((string)($result['status']??''))!=='success'){http_response_code(503);exit('Retrieve failed');}
+        $secret=(string)($config['credentials']['secret_key']??'');
+        if(!\App\Core\PaymentSignatureVerifier::verifyIyzicoCheckoutFormRetrieve($result,$secret)){http_response_code(401);exit('Invalid retrieve signature');}
         if((string)($result['paymentId']??'')!==$iyziPaymentId){http_response_code(409);exit('Payment reference mismatch');}
+        if(!hash_equals($conversationId,(string)($result['conversationId']??''))||!hash_equals((string)$transaction['booking_code'],(string)($result['basketId']??''))){http_response_code(409);exit('Retrieve reference mismatch');}
         $fraudStatus=(int)($result['fraudStatus']??-1);
         $paymentStatus=strtoupper((string)($result['paymentStatus']??$eventStatus));
         $normalizedStatus=($paymentStatus==='SUCCESS'&&$eventStatus==='SUCCESS'&&$fraudStatus===1)?'paid':(($paymentStatus==='SUCCESS'&&$eventStatus==='SUCCESS'&&$fraudStatus===0)?'processing':'failed');
