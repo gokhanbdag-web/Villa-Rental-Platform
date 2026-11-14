@@ -99,9 +99,13 @@ function app_url(string $path = '/'): string {
 }
 
 function app_absolute_url(string $path = '/'): string {
-    $host = trim((string)($_SERVER['HTTP_HOST'] ?? $_SERVER['SERVER_NAME'] ?? ''));
+    $host = trim((string)($_SERVER['SERVER_NAME'] ?? $_SERVER['HTTP_HOST'] ?? ''));
     if ($host === '' || !preg_match('/^(?=.{1,253}$)[a-z0-9.-]+(?::[0-9]{1,5})?$/i', $host)) {
         throw new RuntimeException('Ödeme bildirimi için geçerli site alan adı belirlenemedi.');
+    }
+    $hostName = (string)(parse_url('https://' . $host, PHP_URL_HOST) ?? '');
+    if ($hostName === '' || (filter_var($hostName, FILTER_VALIDATE_IP) === false && filter_var($hostName, FILTER_VALIDATE_DOMAIN, FILTER_FLAG_HOSTNAME) === false)) {
+        throw new RuntimeException('Ödeme bildirimi için site alan adı doğrulanamadı.');
     }
     $https = (!empty($_SERVER['HTTPS']) && strtolower((string)$_SERVER['HTTPS']) !== 'off')
         || (int)($_SERVER['SERVER_PORT'] ?? 0) === 443;
