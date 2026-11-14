@@ -41,13 +41,14 @@ function villa_iyzico_checkout_form_html(string $content): ?string {
 function villa_iyzico_checkout_iframe_url(string $url): ?string {
     if($url===''||strlen($url)>2048)return null;
     $parts=parse_url($url);
+    $host=strtolower((string)($parts['host']??''));
     if(!is_array($parts)||strtolower((string)($parts['scheme']??''))!=='https'
-        ||strtolower((string)($parts['host']??''))!=='sandbox-api.iyzipay.com'
+        ||!in_array($host,['sandbox-api.iyzipay.com','sandbox-cpp.iyzipay.com'],true)
         ||isset($parts['user'])||isset($parts['pass'])||isset($parts['fragment'])
         ||!str_starts_with((string)($parts['path']??''),'/checkoutform/'))return null;
     parse_str((string)($parts['query']??''),$query);
     $query['iframe']='true';
-    return 'https://sandbox-api.iyzipay.com'.(string)$parts['path'].'?'.http_build_query($query,'','&',PHP_QUERY_RFC3986);
+    return 'https://'.$host.(string)$parts['path'].'?'.http_build_query($query,'','&',PHP_QUERY_RFC3986);
 }
 function villa_safe_return_url(string $url): string { $path=parse_url($url,PHP_URL_PATH)?:'/'; if(!str_starts_with($path,'/')||str_starts_with($path,'//'))return '/'; $query=parse_url($url,PHP_URL_QUERY); return $path.($query!==null?'?'.$query:''); }
 function villa_return_with_status(string $url,string $key,string $value): string { $back=villa_safe_return_url($url); return $back.(str_contains($back,'?')?'&':'?').rawurlencode($key).'='.rawurlencode($value); }
