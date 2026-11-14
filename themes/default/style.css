@@ -1730,3 +1730,9 @@ body[data-villa-theme] .premium-stay-card:focus-within{
     transition:none!important;animation:none!important;
   }
 }
+
+/* Header: subtle separation from the page content. */
+body[data-villa-theme] .theme-header,
+body[data-villa-theme] .site-header{
+  box-shadow:0 3px 12px rgba(24,36,29,.075);
+}
