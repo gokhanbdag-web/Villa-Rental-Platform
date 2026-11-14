@@ -12,7 +12,7 @@ $renderVillaNav = function(array $entries) use (&$renderVillaNav, &$villaHasAuth
             elseif($role==='vendor'){$url='/vendor';$label='Ev Sahibi Paneli';}
             else{$url='/account/bookings';$label='Hesabım';}
         }
-        $isLogin=in_array(rtrim($url,'/'),['/login'],true);if($isLogin&&!$navAllowAuth)continue;
+        $isLogin=in_array(rtrim($url,'/'),['/login','/logout'],true);if($isLogin)continue;
         $isAuthUser=!empty($user);
         $hasChildren=!empty($entry['children']);
         if($isLogin){$villaHasAuthLink=true;$url=$isAuthUser?(($user['role']??'')==='customer'?'/account/bookings':((($user['role']??'')==='vendor')?'/vendor':'/admin')):'#login';$label=$isAuthUser?(in_array(($user['role']??''),['admin','super_admin'],true)?'Yönetim Paneli':((($user['role']??'')==='vendor')?'Ev Sahibi Paneli':'Hesabım')):'Giriş Yap';}
@@ -26,13 +26,4 @@ $renderVillaNav = function(array $entries) use (&$renderVillaNav, &$villaHasAuth
     }
 };
 $renderVillaNav($navItems??$navigation??[]);
-if((!isset($navAllowAuth)||$navAllowAuth)&&!$villaHasAuthLink){
-    $role=(string)($user['role']??'');$logged=!empty($user);
-    $authUrl=$logged?($role==='customer'?'/account/bookings':($role==='vendor'?'/vendor':'/admin')):'#login';
-    $authLabel=$logged?(in_array($role,['admin','super_admin'],true)?'Yönetim Paneli':($role==='vendor'?'Ev Sahibi Paneli':'Hesabım')):'Giriş Yap';
-    echo '<div class="nav-entry"><div class="nav-entry-top"><a data-auth-link="1" '.(!$logged?'data-login-trigger="1"':'').' href="'.e($logged?app_url($authUrl):'#login').'">'.e($authLabel).'</a></div></div>';
-}
 
-if (!empty($navAllowAuth) && !empty($user)) {
-    echo '<div class="nav-entry nav-logout-entry"><form method="post" action="' . e(app_url('/logout')) . '" class="villa-logout-form"><input type="hidden" name="_csrf" value="' . e(csrf_token()) . '"><button type="submit" class="villa-logout-button">Çıkış Yap</button></form></div>';
-}
