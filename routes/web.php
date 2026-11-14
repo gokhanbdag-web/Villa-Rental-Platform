@@ -778,7 +778,7 @@ $router->post('/checkout/{bookingCode}/iyzico/start', static function (array $pa
         if($token===''||!is_array($urlParts)||($urlParts['scheme']??'')!=='https'||isset($urlParts['user'])
             ||isset($urlParts['pass'])||isset($urlParts['fragment'])
             ||(isset($urlParts['port'])&&(int)$urlParts['port']!==443)
-            ||$actualHost!=='sandbox-cpp.iyzipay.com'||!hash_equals($token,(string)($query['token']??''))) {
+            ||$actualHost!=='sandbox-api.iyzipay.com'||!hash_equals($token,(string)($query['token']??''))) {
             throw new RuntimeException('iyzico Sandbox ödeme sayfası adresi doğrulanamadı.');
         }
         $update=$pdo->prepare("UPDATE payment_transactions SET provider_reference=?,checkout_url=?,response_payload=?,expires_at=DATE_ADD(NOW(),INTERVAL 30 MINUTE),updated_at=NOW() WHERE id=? AND status='pending'");
