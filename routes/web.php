@@ -511,13 +511,22 @@ $router->get('/api/villas/suggest', static function (): void {
         return;
     }
     $pdo = Database::connection();
+    $like = '%' . $term . '%';
     $stmt = $pdo->prepare("SELECT p.title,p.slug,p.city,p.district,p.base_nightly_price,p.max_guests,
         (SELECT pm.file_path FROM property_media pm WHERE pm.property_id=p.id ORDER BY pm.is_cover DESC,pm.sort_order,pm.id LIMIT 1) AS cover_image
         FROM properties p
-        WHERE p.status='published' AND p.title LIKE ?
-        ORDER BY p.title ASC,p.id ASC
+        WHERE p.status='published'
+          AND (p.title LIKE ? OR p.district LIKE ? OR p.city LIKE ?)
+        ORDER BY
+          CASE
+            WHEN p.district LIKE ? THEN 0
+            WHEN p.city LIKE ? THEN 1
+            WHEN p.title LIKE ? THEN 2
+            ELSE 3
+          END,
+          p.title ASC,p.id ASC
         LIMIT 15");
-    $stmt->execute(['%' . $term . '%']);
+    $stmt->execute([$like, $like, $like, $like, $like, $like]);
     $items = [];
     foreach ($stmt->fetchAll(PDO::FETCH_ASSOC) as $property) {
         $image = trim((string)($property['cover_image'] ?? ''));
