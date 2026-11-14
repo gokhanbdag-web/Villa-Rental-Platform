@@ -764,10 +764,18 @@ $router->post('/checkout/{bookingCode}/iyzico/start', static function (array $pa
         $transactionId=(int)$pdo->lastInsertId();
         $response=\App\Core\IyzicoApiClient::initializeCheckoutForm($config,$payload);
         $token=trim((string)($response['token']??''));$paymentUrl=trim((string)($response['paymentPageUrl']??''));
-        if($token===''||$paymentUrl===''||!str_starts_with($paymentUrl,'https://'))throw new RuntimeException('iyzico ödeme formu güvenli bir ödeme adresi döndürmedi.');
-        $expectedHost=$config['environment']==='production'?'api.iyzipay.com':'sandbox-api.iyzipay.com';
-        $actualHost=(string)(parse_url($paymentUrl,PHP_URL_HOST)??'');
-        if($actualHost!==$expectedHost)throw new RuntimeException('iyzico ödeme adresinin alan adı doğrulanamadı.');
+        $secret=(string)($config['credentials']['secret_key']??'');
+        if(!\App\Core\PaymentSignatureVerifier::verifyIyzicoCheckoutFormInitialize($response,$secret)
+            ||!hash_equals($conversationId,(string)($response['conversationId']??''))) {
+            throw new RuntimeException('iyzico ödeme oturumu yanıtı imza veya işlem referansı doğrulamasından geçmedi.');
+        }
+        $urlParts=parse_url($paymentUrl);
+        $actualHost=strtolower((string)($urlParts['host']??''));
+        $query=[];parse_str((string)($urlParts['query']??''),$query);
+        if($token===''||($urlParts['scheme']??'')!=='https'||($urlParts['user']??'')!==null
+            ||$actualHost!=='sandbox-cpp.iyzipay.com'||!hash_equals($token,(string)($query['token']??''))) {
+            throw new RuntimeException('iyzico Sandbox ödeme sayfası adresi doğrulanamadı.');
+        }
         $update=$pdo->prepare("UPDATE payment_transactions SET provider_reference=?,checkout_url=?,response_payload=?,expires_at=DATE_ADD(NOW(),INTERVAL 30 MINUTE),updated_at=NOW() WHERE id=? AND status='pending'");
         $update->execute([$token,$paymentUrl,json_encode(['token'=>$token,'conversationId'=>$conversationId],JSON_UNESCAPED_UNICODE),$transactionId]);
         if($update->rowCount()!==1)throw new RuntimeException('Ödeme oturumu yerel kayda bağlanamadı.');
