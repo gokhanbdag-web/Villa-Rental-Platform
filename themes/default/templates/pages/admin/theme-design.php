@@ -48,6 +48,27 @@ $labels = [
 @media(max-width:560px){.footer-logo-dropzone{align-items:flex-start;flex-wrap:wrap}.footer-logo-upload-copy{flex-basis:calc(100% - 64px)}.footer-logo-choose-button{margin-left:60px}.footer-logo-uploader{padding:13px}.footer-logo-preview-image{align-items:flex-start;flex-direction:column}}
 .footer-widget-modal-body .design-field{display:grid;align-items:start;gap:8px}.footer-widget-modal-body .design-field input[type=text],.footer-widget-modal-body textarea{width:100%;min-width:0;max-width:none;box-sizing:border-box;padding:11px;border:1px solid #dce5df;border-radius:8px;background:#fff;color:#26352e;font:inherit}.footer-modal-description textarea{resize:vertical}.footer-rich-editor-wrap{display:grid;gap:9px}.footer-rich-toolbar{display:flex;flex-wrap:wrap;gap:6px;padding:8px;border:1px solid #dce5df;border-bottom:0;border-radius:9px 9px 0 0;background:#f5f8f6}.footer-rich-toolbar button{min-width:34px;height:32px;padding:0 9px;border:1px solid #dce5df;border-radius:6px;background:#fff;color:#34483c;font-size:12px;font-weight:700;cursor:pointer}.footer-rich-toolbar button:hover{background:#eaf1ec;border-color:#176b50}.footer-rich-editor{min-height:170px;max-height:360px;overflow:auto;padding:13px;border:1px solid #dce5df;border-radius:0 0 9px 9px;background:#fff;color:#26352e;font:inherit;line-height:1.6;outline:none}.footer-rich-editor:focus{border-color:#176b50;box-shadow:0 0 0 3px rgba(23,107,80,.10)}.footer-rich-editor:empty:before{content:attr(data-placeholder);color:#9aa69e;pointer-events:none}.footer-rich-editor ul,.footer-rich-editor ol{padding-left:24px}.footer-rich-editor p{margin:0 0 8px}.footer-rich-editor-wrap .design-help{font-size:12px;color:#77847c}.footer-widget-empty-note{margin:0;padding:12px;border-radius:9px;background:#f6f8f6;color:#77847c;font-size:13px}.footer-widget-modal-actions{display:flex;justify-content:flex-end;padding:0 22px 20px}.footer-payment-order{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:8px;min-width:0}.footer-payment-order .design-field{min-width:0;padding:9px 7px}.footer-payment-order .design-field label{font-size:11px}.footer-payment-order select{width:100%;max-width:none!important;font-size:11px;padding:6px 3px!important}
 @media(max-width:520px){.theme-design [data-design-tab-panel="footer"] .footer-widget-row.footer-widget-four{grid-template-columns:repeat(4,minmax(0,1fr))!important}.theme-design [data-design-tab-panel="footer"] .footer-widget-row.footer-widget-two{grid-template-columns:minmax(0,7fr) minmax(0,5fr)!important}.theme-design [data-design-tab-panel="footer"] .footer-widget-tile{min-height:68px;padding:8px 3px}.theme-design [data-design-tab-panel="footer"] .footer-widget-tile span{font-size:11px}.theme-design [data-design-tab-panel="footer"] .footer-widget-tile small{font-size:9px}.footer-widget-modal-head,.footer-widget-modal-body{padding-left:16px;padding-right:16px}.footer-payment-order{grid-template-columns:repeat(5,minmax(0,1fr));gap:4px}.footer-payment-order .design-field{padding:7px 3px}.footer-payment-order .design-field label{font-size:10px}.footer-payment-order select{font-size:10px!important}.footer-widget-modal-actions{padding:0 16px 16px}}
+
+.theme-file-uploader{display:grid;gap:10px;margin-top:4px;padding:15px;border:1px solid #dce8df;border-radius:13px;background:linear-gradient(180deg,#fbfdfb 0%,#f4f8f5 100%)}
+.theme-file-drop{position:relative;display:flex;align-items:center;gap:13px;min-height:86px;padding:14px;border:2px dashed #b8cdbf;border-radius:11px;background:#fff;cursor:pointer;transition:border-color .16s,background .16s,box-shadow .16s}
+.theme-file-drop:hover{border-color:#176b50;background:#f8fcf9}
+.theme-file-drop:focus-within{outline:3px solid rgba(23,107,80,.18);outline-offset:2px}
+.theme-file-input{position:absolute!important;width:1px!important;height:1px!important;padding:0!important;margin:-1px!important;overflow:hidden!important;clip:rect(0,0,0,0)!important;white-space:nowrap!important;clip-path:inset(50%)!important;border:0!important}
+.theme-file-icon{display:grid;place-items:center;flex:0 0 42px;width:42px;height:42px;border-radius:11px;background:#eaf4ed;color:#176b50;font-size:23px;font-weight:800}
+.theme-file-copy{display:grid;gap:4px;min-width:0;flex:1}
+.theme-file-copy strong{font-size:13px;color:#2e4437}
+.theme-file-copy small{font-size:11px;line-height:1.45;color:#7a887f}
+.theme-file-button{display:inline-flex;align-items:center;justify-content:center;min-height:38px;padding:0 14px;border-radius:8px;background:#176b50;color:#fff;font-size:12px;font-weight:800;white-space:nowrap}
+.theme-file-drop:hover .theme-file-button{background:#10563f}
+.theme-file-preview{display:flex;align-items:center;gap:13px;min-height:72px;padding:11px;border:1px solid #e1e9e3;border-radius:10px;background:#fff}
+.theme-file-preview[hidden]{display:none}
+.theme-file-preview img,.theme-file-preview video{display:block;width:auto;max-width:min(100%,260px);max-height:132px;object-fit:contain;border-radius:7px;background:#17251f}
+.theme-file-preview video{width:min(100%,260px)}
+.theme-file-preview-copy{display:grid;gap:4px;min-width:0;overflow-wrap:anywhere}
+.theme-file-preview-copy strong{font-size:12px;color:#35483c}
+.theme-file-preview-copy span{font-size:11px;color:#78867d}
+.theme-file-status{margin:0!important;color:#708077!important;font-size:11px!important;line-height:1.5}
+@media(max-width:560px){.theme-file-drop{align-items:flex-start;flex-wrap:wrap}.theme-file-copy{flex-basis:calc(100% - 60px)}.theme-file-button{margin-left:55px}.theme-file-preview{align-items:flex-start;flex-direction:column}}
 </style></head><body><main class="theme-design">
 <h1>Tema Ayarları</h1>
 <p class="intro">Aktif tema: <strong><?= e((string)($themeDesignSlug ?? 'default')) ?></strong>. Renkler yalnızca bu temaya kaydedilir; site metinleri ve içerikleri etkilenmez.</p>
@@ -260,7 +281,7 @@ $labels = [
 <?php endif; ?>
 <form method="post" enctype="multipart/form-data" action="<?= e(app_url('/admin/theme-design/brand-asset')) ?>">
 <?= csrf_field() ?><input type="hidden" name="asset_type" value="logo">
-<div class="design-actions"><input type="file" name="brand_logo" accept="image/png,image/jpeg,image/webp" required><button class="design-save" type="submit">Logoyu yükle ve uygula</button></div>
+<div class="theme-file-uploader" data-theme-file-uploader><label class="theme-file-drop" for="brandLogoFile"><input id="brandLogoFile" class="theme-file-input" type="file" name="brand_logo" accept="image/png,image/jpeg,image/webp" required data-theme-file-kind="image" data-theme-file-max="4194304"><span class="theme-file-icon" aria-hidden="true">↑</span><span class="theme-file-copy"><strong>Header logosu seç</strong><small>PNG, JPG veya WebP · En fazla 4 MB</small></span><span class="theme-file-button">Dosya seç</span></label><div class="theme-file-preview" data-theme-file-preview hidden></div><p class="theme-file-status" data-theme-file-status aria-live="polite">Henüz yeni bir logo seçilmedi.</p><div class="design-actions"><button class="design-save" type="submit">Logoyu yükle ve uygula</button></div></div>
 </form>
 <form method="post" action="<?= e(app_url('/admin/theme-design/logo-settings')) ?>" style="margin-top:16px;padding:16px;border:1px solid #e5ebe7;border-radius:12px">
 <?= csrf_field() ?>
@@ -318,7 +339,7 @@ $labels = [
 <?php endif; ?>
 <form method="post" enctype="multipart/form-data" action="<?= e(app_url('/admin/theme-design/brand-asset')) ?>">
 <?= csrf_field() ?><input type="hidden" name="asset_type" value="hero_video">
-<div class="design-actions"><input type="file" name="hero_video" accept="video/mp4,video/webm" required><button class="design-save" type="submit">Videoyu yükle ve uygula</button></div>
+<div class="theme-file-uploader" data-theme-file-uploader><label class="theme-file-drop" for="heroVideoFile"><input id="heroVideoFile" class="theme-file-input" type="file" name="hero_video" accept="video/mp4,video/webm" required data-theme-file-kind="video"><span class="theme-file-icon" aria-hidden="true">▶</span><span class="theme-file-copy"><strong>Hero videosu seç</strong><small>MP4 veya WebM video dosyası</small></span><span class="theme-file-button">Video seç</span></label><div class="theme-file-preview" data-theme-file-preview hidden></div><p class="theme-file-status" data-theme-file-status aria-live="polite">Henüz yeni bir video seçilmedi.</p><div class="design-actions"><button class="design-save" type="submit">Videoyu yükle ve uygula</button></div></div>
 </form>
 </section>
 
@@ -474,4 +495,47 @@ $labels = [
  form.addEventListener('submit',sync);
  sync();
 })();
-</script></body></html>
+</script>
+<script>
+(function(){
+ document.querySelectorAll('[data-theme-file-uploader]').forEach(function(uploader){
+  const input=uploader.querySelector('.theme-file-input');
+  const preview=uploader.querySelector('[data-theme-file-preview]');
+  const status=uploader.querySelector('[data-theme-file-status]');
+  if(!input||!preview||!status||input.dataset.themePreviewReady==='1')return;
+  input.dataset.themePreviewReady='1';
+  let objectUrl='';
+  input.addEventListener('change',function(){
+   if(objectUrl){URL.revokeObjectURL(objectUrl);objectUrl='';}
+   preview.replaceChildren();
+   const file=input.files&&input.files[0];
+   if(!file){preview.hidden=true;status.textContent='Henüz dosya seçilmedi.';return;}
+   const maxSize=parseInt(input.dataset.themeFileMax||'0',10);
+   if(maxSize>0&&file.size>maxSize){
+    input.value='';preview.hidden=true;status.textContent='Dosya boyutu 4 MB sınırını aşıyor.';return;
+   }
+   const kind=input.dataset.themeFileKind||'';
+   const mime=(file.type||'').toLowerCase();
+   if(kind==='image'&&mime.indexOf('image/')!==0){input.value='';preview.hidden=true;status.textContent='Lütfen geçerli bir görsel dosyası seçin.';return;}
+   if(kind==='video'&&mime.indexOf('video/')!==0){input.value='';preview.hidden=true;status.textContent='Lütfen MP4 veya WebM video dosyası seçin.';return;}
+   objectUrl=URL.createObjectURL(file);
+   const media=document.createElement(kind==='video'?'video':'img');
+   media.src=objectUrl;
+   if(kind==='video'){media.controls=true;media.muted=true;media.playsInline=true;media.preload='metadata';}
+   else media.alt='Seçilen header logosu önizlemesi';
+   preview.appendChild(media);
+   const copy=document.createElement('div');
+   copy.className='theme-file-preview-copy';
+   const name=document.createElement('strong');
+   name.textContent=file.name;
+   const details=document.createElement('span');
+   details.textContent=(file.size/1024/1024).toFixed(2)+' MB · '+(file.type||'Dosya türü belirlenemedi');
+   copy.append(name,details);
+   preview.appendChild(copy);
+   preview.hidden=false;
+   status.textContent='Dosya hazır. Yüklemek için ilgili "yükle ve uygula" düğmesine basın.';
+  });
+ });
+})();
+</script>
+</body></html>
