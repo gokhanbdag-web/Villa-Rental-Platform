@@ -308,6 +308,38 @@ return static function (string $html, string $requestPath, string $platformMode)
             burger&&burger.addEventListener("click",function(){const open=layout.classList.toggle("menu-open");burger.setAttribute("aria-expanded",open?"true":"false")});
             overlay&&overlay.addEventListener("click",closeMenu);
             function activate(url){document.querySelectorAll("[data-admin-link]").forEach(a=>{const u=new URL(a.href,location.href);a.classList.toggle("is-active",u.pathname===url|| (url!=="/admin"&&u.pathname!=="/admin"&&url.startsWith(u.pathname+"/")));});}
+            // Re-apply the server-side green-to-theme-primary mapping to AJAX fragments.
+            // The initial page is transformed in PHP, but subsequent admin navigation replaces
+            // the content directly in the browser and must receive the same treatment.
+            function mapAdminGreenMarkup(markup){
+                function mapCss(css){
+                    return css.replace(/#(?:[0-9a-f]{3}|[0-9a-f]{6})\\b/gi,function(match){
+                        let hex=match.toLowerCase();
+                        if(hex.length===4)hex='#'+hex[1]+hex[1]+hex[2]+hex[2]+hex[3]+hex[3];
+                        const r=parseInt(hex.slice(1,3),16)/255,g=parseInt(hex.slice(3,5),16)/255,b=parseInt(hex.slice(5,7),16)/255;
+                        const max=Math.max(r,g,b),min=Math.min(r,g,b),delta=max-min,light=(max+min)/2;
+                        if(delta<0.0001)return match;
+                        let hue;
+                        if(max===r)hue=60*(((g-b)/delta)%6);
+                        else if(max===g)hue=60*((b-r)/delta+2);
+                        else hue=60*((r-g)/delta+4);
+                        if(hue<0)hue+=360;
+                        const saturation=delta/(1-Math.abs(2*light-1));
+                        if(hue<72||hue>170||saturation<0.10)return match;
+                        if(light>=0.78){const weight=Math.max(10,Math.min(35,Math.round((1-light)*180)));return 'color-mix(in srgb,var(--villa-admin-primary) '+weight+'%,white)';}
+                        if(light>=0.55)return 'color-mix(in srgb,var(--villa-admin-primary) 55%,white)';
+                        if(light>=0.38)return 'color-mix(in srgb,var(--villa-admin-primary) 82%,white)';
+                        if(light>=0.25)return 'var(--villa-admin-primary)';
+                        return 'color-mix(in srgb,var(--villa-admin-primary) 82%,black)';
+                    });
+                }
+                markup=markup.replace(/(<style\\b[^>]*>)([\\s\\S]*?)(<\\/style>)/gi,function(all,open,css,close){return open+mapCss(css)+close;});
+                markup=markup.replace(/(\\bstyle\\s*=\\s*")([^"]*)(")/gi,function(all,open,css,close){return open+mapCss(css)+close;});
+                markup=markup.replace(/(\\bstyle\\s*=\\s*')([^']*)(')/gi,function(all,open,css,close){return open+mapCss(css)+close;});
+                markup=markup.replace(/(\\b(?:fill|stroke)\\s*=\\s*")([^"]*)(")/gi,function(all,open,color,close){return open+mapCss(color)+close;});
+                markup=markup.replace(/(\\b(?:fill|stroke)\\s*=\\s*')([^']*)(')/gi,function(all,open,color,close){return open+mapCss(color)+close;});
+                return markup;
+            }
             async function navigate(url,push=true){
                 closeMenu();content.style.opacity=".58";
                 try{
@@ -326,7 +358,7 @@ return static function (string $html, string $requestPath, string $platformMode)
                         next=holder;
                     }
                     if(!next||!next.innerHTML.trim())throw new Error("Sayfa içeriği alınamadı. Oturum veya sunucu yanıtını kontrol edin.");
-                    content.innerHTML=next.innerHTML;
+                    content.innerHTML=mapAdminGreenMarkup(next.innerHTML);
                     enhanceResponsiveTables(content);
                     enhanceRichTextColors(content);
                     enhanceFileUploaders(content);
