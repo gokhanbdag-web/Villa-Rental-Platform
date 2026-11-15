@@ -1,5 +1,8 @@
 # Changelog
 
+## 1.1.4 - 2026-11-15
+- Place the mobile premium search button in the second column beside the guest selector in the first column.
+
 ## 1.1.3 - 2026-11-15
 - Align the mobile premium search button in the same column as the guest selector.
 

@@ -32,7 +32,7 @@ $mobileForm = ($mobileFormStart !== false && $mobileFormEnd !== false)
     : '';
 if ($mobileForm === '' || !str_contains($mobileForm, '<select name="guests"')
     || !str_contains($mobileForm, '<button type="submit"')
-    || !str_contains($landing, '.mobile-premium-search__form button{grid-column:1;')) {
-    throw new RuntimeException('Mobile search button must sit in the same column as the guest selector.');
+    || !str_contains($landing, '.mobile-premium-search__form button{grid-column:2;')) {
+    throw new RuntimeException('Mobile search button must sit in the second column beside the guest selector in the first column.');
 }
 echo "Mobile premium search placement and responsive visibility smoke test passed.\n";
