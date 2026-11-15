@@ -37,7 +37,7 @@ $topPhoneDigits = preg_replace('/\\D+/', '', $topPhone);
         $headerAccountLabel = in_array($headerRole, ['admin', 'super_admin'], true) ? 'Yönetim Paneli' : ($headerRole === 'vendor' ? 'Ev Sahibi Paneli' : 'Hesabım');
       ?>
       <?php if ($headerUser !== null): ?>
-        <a class="site-header-auth-link" data-auth-link href="<?= e(app_url($headerAccountPath)) ?>" aria-label="<?= e($headerAccountLabel) ?>" title="<?= e($headerAccountLabel) ?>">
+        <a class="site-header-auth-link" data-auth-link data-account-drawer-trigger href="<?= e(app_url($headerAccountPath)) ?>" aria-label="<?= e($headerAccountLabel) ?>" title="<?= e($headerAccountLabel) ?>">
           <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></svg>
         </a>
       <?php else: ?>
