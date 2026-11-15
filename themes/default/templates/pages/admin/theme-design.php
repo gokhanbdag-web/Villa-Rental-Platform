@@ -312,7 +312,7 @@ $labels = [
   const url=window.prompt('Bağlantı adresini girin (https://, mailto: veya tel:):','https://');
   if(url===null)return;
   const value=url.trim();
-  if(!/^(https?:|mailto:|tel:|\\/|#)/i.test(value)){window.alert('Lütfen geçerli bir https://, http://, mailto:, tel: veya site içi bağlantı girin.');return;}
+  if(!/^(https?:|mailto:|tel:|\/|#)/i.test(value)){window.alert('Lütfen geçerli bir https://, http://, mailto:, tel: veya site içi bağlantı girin.');return;}
   document.execCommand('createLink',false,value);
   sync();
  });
