@@ -31,6 +31,9 @@ $topPhoneDigits = preg_replace('/\\D+/', '', $topPhone);
       <?php endif; ?>
     </nav>
     <div class="site-header-auth">
+      <button type="button" class="site-header-auth-link villa-explore-trigger" data-explore-drawer-trigger aria-controls="villaExploreDrawer" aria-expanded="false" aria-label="Keşfet" title="Keşfet">
+        <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="9"/><path d="m15.8 8.2-2.5 5.1-5.1 2.5 2.5-5.1 5.1-2.5Z"/></svg>
+      </button>
       <?php
         $headerRole = (string) ($headerUser['role'] ?? '');
         $headerAccountPath = $headerRole === 'customer' ? '/account/bookings' : ($headerRole === 'vendor' ? '/vendor' : '/admin');
@@ -49,6 +52,7 @@ $topPhoneDigits = preg_replace('/\\D+/', '', $topPhone);
   </div>
 </header>
 <div class="drawer-overlay" id="menuOverlay"></div>
+<?php \\App\\Core\\ThemeManager::renderPartial('partials/explore-drawer.php', get_defined_vars()); ?>
 
 
 
