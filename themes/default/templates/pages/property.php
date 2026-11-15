@@ -192,4 +192,47 @@ modal.addEventListener('touchstart',function(e){touchX=e.changedTouches[0].scree
  if(calendarContinue){calendarContinue.addEventListener('click',async e=>{e.preventDefault();if(checking)return;if(await check())setStep(2);});}
  if(checkIn.value&&checkOut.value)check();
 })();
-</script><?php \App\Core\ThemeManager::renderPartial('partials/compare-bar.php', get_defined_vars()); ?></body></html>
+</script><?php \App\Core\ThemeManager::renderPartial('partials/compare-bar.php', get_defined_vars()); ?><style>
+/* Mobile villa availability calendar: give each day room and keep prices readable. */
+@media (max-width: 560px) {
+  .property-booking .availability-panel,
+  .property-booking .calendar-grid {
+    width: 100%;
+    min-width: 0;
+  }
+  .property-booking .calendar-grid {
+    grid-template-columns: repeat(7, minmax(0, 1fr));
+    gap: 5px;
+  }
+  .property-booking .calendar-weekday {
+    min-width: 0;
+    padding: 8px 0;
+    font-size: 10px;
+    line-height: 1.2;
+  }
+  .property-booking .calendar-day {
+    min-width: 0;
+    min-height: 54px;
+    padding: 5px 1px;
+    gap: 5px;
+    border-radius: 9px;
+    font-size: 14px;
+    line-height: 1;
+  }
+  .property-booking .calendar-day .day-number {
+    font-size: 14px;
+    line-height: 1;
+    font-variant-numeric: tabular-nums;
+  }
+  .property-booking .calendar-day .day-state {
+    max-width: 100%;
+    font-size: 8px;
+    line-height: 1.05;
+    letter-spacing: -.25px;
+    white-space: normal;
+    overflow-wrap: normal;
+    text-align: center;
+    font-variant-numeric: tabular-nums;
+  }
+}
+</style></body></html>
