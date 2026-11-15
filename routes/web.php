@@ -465,7 +465,7 @@ $router->get('/', static function (): void {
         $mediaStmt->execute($homeCardPropertyIds);
         foreach($mediaStmt->fetchAll(PDO::FETCH_ASSOC) as $mediaRow){
             $propertyId=(int)$mediaRow['property_id'];
-            if(count($homeCardImages[$propertyId]??[])<5){$filePath=(string)$mediaRow['file_path'];$homeCardImages[$propertyId][]=preg_match('~^https?://~i',$filePath)?$filePath:app_url('/'.ltrim($filePath,'/'));}
+            if(count($homeCardImages[$propertyId]??[])<5){$filePath=(string)$mediaRow['file_path'];$homeCardImages[$propertyId][]=preg_match('~^https?://~i',$filePath)?$filePath:uploaded_media_url($filePath);}
         }
         if($user && ($user['role']??'')==='customer'){
             $favStmt=$pdo->prepare("SELECT property_id FROM favorites WHERE user_id=? AND property_id IN ($marks)");
