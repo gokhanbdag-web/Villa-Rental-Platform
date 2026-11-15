@@ -1909,8 +1909,8 @@ $router->get('/blog', static function (): void {
     $archiveDescription='Villa tatili, destinasyonlar, seyahat önerileri ve konaklama rehberleri.';
     ThemeManager::render('blog-index.php',get_defined_vars());
 });
-$router->get('/blog/kategori/{slug}', static function (array $params): void {$_GET['kategori']=(string)$params['slug'];$handler=null;});
-$router->get('/blog/etiket/{slug}', static function (array $params): void {$_GET['etiket']=(string)$params['slug'];$handler=null;});
+$router->get('/blog/kategori/{slug}', static function (array $params): void {redirect('/blog?kategori='.rawurlencode((string)$params['slug']));});
+$router->get('/blog/etiket/{slug}', static function (array $params): void {redirect('/blog?etiket='.rawurlencode((string)$params['slug']));});
 $router->get('/blog/{slug}', static function (array $params): void {
     $pdo=Database::connection();$s=$pdo->prepare("SELECT * FROM blog_posts WHERE slug=? AND status='published' AND (published_at IS NULL OR published_at<=NOW()) LIMIT 1");$s->execute([(string)$params['slug']]);$post=$s->fetch(PDO::FETCH_ASSOC);
     if(!$post){http_response_code(404);echo 'Yazı bulunamadı.';return;}
@@ -1963,6 +1963,18 @@ $router->post('/admin/blog/save', static function (): void {
 });
 $router->post('/admin/blog/delete', static function (): void {
     Auth::requireRole(['super_admin','admin']);verify_csrf();$pdo=Database::connection();$s=$pdo->prepare('DELETE FROM blog_posts WHERE id=?');$s->execute([(int)($_POST['id']??0)]);redirect('/admin/blog');
+});
+$router->get('/admin/blog/categories', static function (): void {
+    Auth::requireRole(['super_admin','admin']);$categories=Database::connection()->query("SELECT c.*,COUNT(pc.post_id) post_count FROM blog_categories c LEFT JOIN blog_post_category pc ON pc.category_id=c.id GROUP BY c.id ORDER BY c.sort_order,c.name")->fetchAll(PDO::FETCH_ASSOC);ThemeManager::renderTemplate('templates/pages/admin/blog-categories.php',get_defined_vars());
+});
+$router->post('/admin/blog/categories/save', static function (): void {
+    Auth::requireRole(['super_admin','admin']);verify_csrf();$pdo=Database::connection();$id=(int)($_POST['id']??0);$name=trim((string)($_POST['name']??''));$slug=strtolower(trim((string)($_POST['slug']??'')));$slug=trim(preg_replace('/[^a-z0-9-]+/','-',iconv('UTF-8','ASCII//TRANSLIT//IGNORE',$slug)?:$slug),'-');$description=trim((string)($_POST['description']??''));$sort=max(0,(int)($_POST['sort_order']??0));
+    if($name===''||$slug===''||mb_strlen($name)>120||mb_strlen($slug)>140||mb_strlen($description)>500){http_response_code(422);exit('Kategori bilgilerini kontrol edin.');}
+    try{if($id){$s=$pdo->prepare('UPDATE blog_categories SET name=?,slug=?,description=?,sort_order=? WHERE id=?');$s->execute([$name,$slug,$description,$sort,$id]);}else{$s=$pdo->prepare('INSERT INTO blog_categories(name,slug,description,sort_order) VALUES(?,?,?,?)');$s->execute([$name,$slug,$description,$sort]);}}catch(PDOException $e){http_response_code(409);exit('Bu kategori adı veya bağlantısı zaten kullanılıyor.');}
+    redirect('/admin/blog/categories');
+});
+$router->post('/admin/blog/categories/delete', static function (): void {
+    Auth::requireRole(['super_admin','admin']);verify_csrf();$id=(int)($_POST['id']??0);Database::connection()->prepare('DELETE FROM blog_categories WHERE id=?')->execute([$id]);redirect('/admin/blog/categories');
 });
 $router->get('/admin/newsletter', static function (): void {
     Auth::requireRole(['super_admin','admin']);$pdo=Database::connection();$subscribers=$pdo->query('SELECT id,email,status,source,created_at FROM newsletter_subscribers ORDER BY created_at DESC,id DESC')->fetchAll(PDO::FETCH_ASSOC);$activeCount=(int)$pdo->query("SELECT COUNT(*) FROM newsletter_subscribers WHERE status='active'")->fetchColumn();ThemeManager::renderTemplate('templates/pages/admin/newsletter.php', get_defined_vars());
