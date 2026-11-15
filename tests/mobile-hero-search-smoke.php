@@ -29,9 +29,10 @@ $required = [
     'min-height:64px!important',
     'background:var(--villa-primary)!important',
     'body .hero-copy{',
-    'body .hero-copy h1{font-size:clamp(27px,7.2vw,34px)!important;line-height:1.12!important}',
-    'body .hero-copy p{font-size:13px!important;line-height:1.45!important}',
-    'body .hero-copy .eyebrow{font-size:11px!important;letter-spacing:1.5px!important}',
+    'body .hero-card{padding:17px 13px 20px!important;gap:12px!important}',
+    'body .hero-copy h1{margin:4px auto 6px!important;font-size:clamp(24px,6.4vw,30px)!important;line-height:1.08!important}',
+    'body .hero-copy p{font-size:12px!important;line-height:1.35!important}',
+    'body .hero-copy .eyebrow{font-size:10px!important;letter-spacing:1.3px!important}',
 ];
 foreach ($required as $rule) {
     if (!str_contains($mobileRules, $rule)) {
