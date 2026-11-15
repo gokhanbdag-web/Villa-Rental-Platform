@@ -14,8 +14,10 @@ if (PHP_SAPI !== 'cli') {
 
 $base = '/opt/villa-deploy';
 $deployScript = $base . '/deploy.sh';
-$statusWriter = __DIR__ . '/deploy-status.php';
 $live = '/home/kodvadisi.com.tr/public_html/villa';
+// Deployment status must be written into the LIVE application storage,
+// because the Update Center reads storage/deploy-status.json from this path.
+$statusWriter = $live . '/scripts/deploy-status.php';
 $commit = strtolower((string)($argv[1] ?? ''));
 $healthUrl = (string)($argv[2] ?? '');
 
