@@ -1531,6 +1531,9 @@ body[data-villa-theme] .villa-back-to-top.is-returning svg{animation:villa-back-
 @media(max-width:760px){
   body[data-villa-theme] .villa-back-to-top{width:54px!important;height:54px!important;right:16px!important;bottom:20px!important;top:auto!important}
 }
+@media(max-width:760px){
+  body[data-villa-theme] .villa-back-to-top{display:none!important;visibility:hidden!important;opacity:0!important;pointer-events:none!important}
+}
 @media(prefers-reduced-motion:reduce){
   body[data-villa-theme] .villa-back-to-top,body[data-villa-theme] .villa-back-to-top *{transition:none!important;animation:none!important}
 }
