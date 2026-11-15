@@ -14,6 +14,28 @@ $headerUser = is_array($user ?? null) ? $user : \App\Core\Auth::user();
 $topPhone = trim((string) ($content['home_support_phone'] ?? ''));
 $topPhoneDigits = preg_replace('/\\D+/', '', $topPhone);
 ?>
+<style>
+.site-header{position:relative;z-index:1003;height:76px;background:#fbfcf7;border-bottom:1px solid #e4e9dc}
+.site-header .head{width:min(1200px,calc(100% - 40px));height:100%;margin:0 auto;display:flex;align-items:center;justify-content:space-between;gap:18px}
+.site-header .nav{display:flex;align-items:center;gap:23px;font-size:var(--villa-body-size,14px);font-weight:var(--villa-body-weight,500)}
+.site-header .mobile-menu-toggle{display:none;align-items:center;justify-content:center;width:43px;height:43px;padding:0;border:1px solid var(--line,#dfe6e0);border-radius:12px;background:#fff;color:var(--villa-text,#23352d)!important;font-size:25px;line-height:1;cursor:pointer;appearance:none;-webkit-appearance:none}
+.site-header .mobile-menu-toggle .menu-open-mark,.site-header .mobile-menu-toggle .menu-close-mark{color:var(--villa-text,#23352d)!important}
+.site-header .mobile-menu-toggle [hidden]{display:none!important}
+.site-header-mobile-brand img{display:block;max-width:180px;max-height:54px;object-fit:contain}
+.drawer-overlay{display:none}
+@media(max-width:760px){
+ .site-header{height:68px}
+ .site-header .head{width:calc(100% - 28px)}
+ .site-header .mobile-menu-toggle{display:inline-flex;position:relative;z-index:1004;flex:0 0 43px}
+ .site-header .nav{position:fixed;z-index:1002;top:0;right:0;bottom:0;width:min(86vw,360px);height:100dvh;overflow-y:auto;box-sizing:border-box;padding:85px 24px 30px;display:flex;flex-direction:column;align-items:stretch;justify-content:flex-start;gap:0;background:#fff;color:var(--villa-text,#23352d);transform:translateX(105%);visibility:hidden;transition:transform .25s ease,visibility .25s ease;box-shadow:-15px 0 40px #102d2520}
+ .site-header .nav.is-open{transform:translateX(0);visibility:visible}
+ .site-header .nav a{color:var(--villa-text,#23352d)}
+ .drawer-overlay{display:block;position:fixed;inset:0;z-index:1001;background:#10251f80;opacity:0;visibility:hidden;transition:opacity .25s ease,visibility .25s ease}
+ .drawer-overlay.is-open{opacity:1;visibility:visible}
+ body.menu-open{overflow:hidden}
+}
+@media(prefers-reduced-motion:reduce){.site-header .nav,.drawer-overlay{transition:none}}
+</style>
 <header class="site-header">
   <div class="wrap head">
     <button class="mobile-menu-toggle theme-menu-toggle" id="menuToggle" type="button" aria-label="Menüyü aç" aria-controls="siteNavigation" aria-expanded="false"><span class="menu-open-mark">☰</span><span class="menu-close-mark" hidden>×</span></button>
