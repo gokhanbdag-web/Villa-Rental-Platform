@@ -484,12 +484,14 @@ final class ThemeManager
     /** Theme-scoped footer layout and appearance settings. */
     private static function footerSettingsDefaults(): array
     {
-        return ['background'=>'#20352e','text'=>'#ffffff','padding_top'=>42,'padding_bottom'=>42,'margin_top'=>55,'content_width'=>1180,'about_title'=>'','about_description'=>'','copyright_html'=>'','payment_order'=>['mastercard','visa','troy','diners_club','american_express']];
+        return ['background'=>'#20352e','text'=>'#ffffff','padding_top'=>42,'padding_bottom'=>42,'margin_top'=>55,'content_width'=>1180,'logo_path'=>'','about_title'=>'','about_description'=>'','copyright_html'=>'','payment_order'=>['mastercard','visa','troy','diners_club','american_express']];
     }
 
     private static function normalizeFooterSettings(array $input): array
     {
         $clean = self::footerSettingsDefaults();
+        $logoPath = trim((string)($input['logo_path'] ?? ''));
+        $clean['logo_path'] = preg_match('~^uploads/themes/[a-z0-9_-]{1,60}/branding/footer-logo-[a-f0-9]{24}\.(?:png|jpg|webp)$~i', $logoPath) ? $logoPath : '';
         $clean['about_title'] = mb_substr(trim(strip_tags((string)($input['about_title'] ?? ''))), 0, 150);
         $clean['about_description'] = mb_substr(trim(strip_tags((string)($input['about_description'] ?? ''))), 0, 3000);
         $copyrightHtml = (string)($input['copyright_html'] ?? '');
@@ -538,7 +540,9 @@ final class ThemeManager
             $stmt = Database::connection()->prepare('SELECT setting_value FROM settings WHERE setting_key=? LIMIT 1');
             $stmt->execute(['theme.' . $slug . '.footer']);
             $saved = json_decode((string)($stmt->fetchColumn() ?: '{}'), true);
-            return self::normalizeFooterSettings(is_array($saved) ? $saved : []);
+            $settings = self::normalizeFooterSettings(is_array($saved) ? $saved : []);
+            $settings['logo_url'] = $settings['logo_path'] !== '' ? self::brandAssetUrl($settings['logo_path'], $slug) : '';
+            return $settings;
         } catch (\Throwable $e) {
             error_log('Theme footer settings read failed: ' . $e->getMessage());
             return self::footerSettingsDefaults();
@@ -847,6 +851,38 @@ final class ThemeManager
         $verify = $pdo->prepare('SELECT setting_value FROM settings WHERE setting_key=? LIMIT 1');
         $verify->execute([$key]);
         if ((string)$verify->fetchColumn() !== $json) throw new RuntimeException('Tema tipografi ayarları veritabanına kaydedilemedi.');
+    }
+
+
+    /** Upload a footer-specific logo without changing the header brand logo. */
+    public static function saveFooterLogoAsset(array $upload, ?string $slug = null): string
+    {
+        $slug = $slug ?: self::activeSlug();
+        if (!preg_match('/^[a-z0-9_-]{1,60}$/', $slug) || !isset(self::installed()[$slug])) throw new RuntimeException('Tema bulunamadı.');
+        if (($upload['error'] ?? UPLOAD_ERR_NO_FILE) !== UPLOAD_ERR_OK || empty($upload['tmp_name']) || !is_uploaded_file((string)$upload['tmp_name'])) {
+            throw new RuntimeException('Footer logosu yüklenemedi. Lütfen yeniden deneyin.');
+        }
+        $size = (int)($upload['size'] ?? 0);
+        if ($size < 1 || $size > 4194304) throw new RuntimeException('Footer logosu en fazla 4 MB olabilir.');
+        $finfo = new \finfo(FILEINFO_MIME_TYPE);
+        $mime = $finfo->file((string)$upload['tmp_name']);
+        $extensions = ['image/png'=>'png','image/jpeg'=>'jpg','image/webp'=>'webp'];
+        if (!is_string($mime) || !isset($extensions[$mime]) || @getimagesize((string)$upload['tmp_name']) === false) {
+            throw new RuntimeException('Footer logosu PNG, JPG veya WebP formatında geçerli bir görsel olmalıdır.');
+        }
+        $relativeDir = 'uploads/themes/' . $slug . '/branding';
+        $dir = APP_ROOT . '/public/' . $relativeDir;
+        \ensure_upload_directory($dir);
+        $name = 'footer-logo-' . bin2hex(random_bytes(12)) . '.' . $extensions[$mime];
+        $target = $dir . '/' . $name;
+        if (!move_uploaded_file((string)$upload['tmp_name'], $target)) throw new RuntimeException('Footer logosu kaydedilemedi. Upload klasörünün yazma izinlerini kontrol edin.');
+        try {
+            \normalize_uploaded_file_permissions($target);
+        } catch (\Throwable $e) {
+            @unlink($target);
+            throw $e;
+        }
+        return $relativeDir . '/' . $name;
     }
 
     public static function saveFooterSettings(array $input, ?string $slug = null): void
