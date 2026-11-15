@@ -236,7 +236,16 @@ $labels = [
 <small style="display:block;color:#718078;margin:6px 0 14px">Örneğin 15 yazarsanız video 15. saniyeden başlar. 0 videonun başından başlatır.</small>
 <input type="hidden" name="hero_video_loop" value="0">
 <label style="display:flex;align-items:center;gap:9px;font-weight:700;margin:12px 0 14px"><input type="checkbox" name="hero_video_loop" value="1" <?= !empty($themeBrandSettings['hero_video_loop'])?'checked':'' ?>> Video bittiğinde başa sarıp tekrar oynat</label>
-<label for="heroOverlayOpacity" style="display:block;font-weight:700;margin-bottom:7px">Video overlay opacity: <strong id="heroOverlayOpacityValue"><?= (int)($themeBrandSettings['hero_overlay_opacity']??58) ?>%</strong></label>
+<label for="heroOverlayColor" style="display:block;font-weight:700;margin:14px 0 7px">Overlay rengi</label>
+<div style="display:flex;align-items:center;gap:12px"><input id="heroOverlayColor" type="color" name="hero_overlay_color" value="<?= e($themeBrandSettings['hero_overlay_color']??'#081d19') ?>" style="width:64px;height:42px;padding:3px;border:1px solid #dce5df;border-radius:8px;background:#fff"><small style="color:#718078">Video ve yedek görselin üzerine uygulanır.</small></div>
+<label for="heroOverlayTexture" style="display:block;font-weight:700;margin:14px 0 7px">Overlay dokusu</label>
+<select id="heroOverlayTexture" name="hero_overlay_texture" style="width:100%;padding:11px;border:1px solid #dce5df;border-radius:8px;background:#fff">
+<option value="none" <?= ($themeBrandSettings['hero_overlay_texture']??'none')==='none'?'selected':'' ?>>Düz renk</option>
+<option value="diagonal" <?= ($themeBrandSettings['hero_overlay_texture']??'none')==='diagonal'?'selected':'' ?>>Diyagonal çizgiler</option>
+<option value="grid" <?= ($themeBrandSettings['hero_overlay_texture']??'none')==='grid'?'selected':'' ?>>İnce kare desen</option>
+<option value="dots" <?= ($themeBrandSettings['hero_overlay_texture']??'none')==='dots'?'selected':'' ?>>Noktalı doku</option>
+</select>
+<label for="heroOverlayOpacity" style="display:block;font-weight:700;margin:14px 0 7px">Overlay opaklığı: <strong id="heroOverlayOpacityValue"><?= (int)($themeBrandSettings['hero_overlay_opacity']??58) ?>%</strong></label>
 <input id="heroOverlayOpacity" type="range" name="hero_overlay_opacity" min="0" max="100" step="1" value="<?= (int)($themeBrandSettings['hero_overlay_opacity']??58) ?>" oninput="document.getElementById('heroOverlayOpacityValue').textContent=this.value+'%'" style="width:100%">
 <small style="display:block;color:#718078;margin:6px 0 14px">0%: karartma yok · 100%: en koyu görünüm. Bu ayar video ve yedek görselin üzerindeki katmanı kontrol eder.</small>
 <button class="design-save" type="submit">YouTube ve overlay ayarlarını kaydet</button>
