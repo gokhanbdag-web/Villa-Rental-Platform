@@ -1,5 +1,8 @@
 # Changelog
 
+## 1.1.6 - 2026-11-16
+- Further compact mobile hero typography and vertical spacing by about 20px so the full search panel is more likely to fit within the initial viewport; desktop remains unchanged.
+
 ## 1.1.5 - 2026-11-16
 - Slightly reduce the eyebrow, headline and subtitle font sizes inside the mobile homepage hero; desktop typography remains unchanged.
 
