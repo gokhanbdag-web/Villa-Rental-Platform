@@ -4,6 +4,34 @@ declare(strict_types=1);
 define('APP_ROOT', dirname(__DIR__));
 define('APP_STORAGE', APP_ROOT . '/storage');
 
+// Lightweight, privacy-safe slow-request diagnostics. Only requests taking
+// at least one second are written to the PHP error log; no query strings,
+// cookies, session IDs, credentials, or request bodies are recorded.
+$GLOBALS['villa_perf_started_at'] = microtime(true);
+$GLOBALS['villa_perf_session_wait_ms'] = 0.0;
+$GLOBALS['villa_perf_stage'] = 'bootstrap';
+register_shutdown_function(static function (): void {
+    $started = (float)($GLOBALS['villa_perf_started_at'] ?? microtime(true));
+    $totalMs = (microtime(true) - $started) * 1000;
+    if ($totalMs < 1000) return;
+    $path = parse_url((string)($_SERVER['REQUEST_URI'] ?? '/'), PHP_URL_PATH) ?: '/';
+    $path = substr($path, 0, 180);
+    $method = (string)($_SERVER['REQUEST_METHOD'] ?? 'CLI');
+    $stage = (string)($GLOBALS['villa_perf_stage'] ?? 'unknown');
+    $sessionWait = (float)($GLOBALS['villa_perf_session_wait_ms'] ?? 0);
+    $record = [
+        'type' => 'villa_slow_request',
+        'method' => $method,
+        'path' => $path,
+        'total_ms' => round($totalMs, 1),
+        'session_start_ms' => round($sessionWait, 1),
+        'last_stage' => $stage,
+        'peak_memory_mb' => round(memory_get_peak_usage(true) / 1048576, 1),
+        'http_status' => http_response_code(),
+    ];
+    error_log('[VILLA_PERF] ' . json_encode($record, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE));
+});
+
 if (is_file(APP_ROOT . '/config/config.php')) {
     $config = require APP_ROOT . '/config/config.php';
     date_default_timezone_set($config['app']['timezone'] ?? 'Europe/Istanbul');
@@ -46,5 +74,5 @@ if (session_status() !== PHP_SESSION_ACTIVE) {
         'httponly' => true,
         'samesite' => 'Lax',
     ]);
-    session_start();
+    $sessionStartedAt = microtime(true);\n    session_start();\n    $GLOBALS['villa_perf_session_wait_ms'] = (microtime(true) - $sessionStartedAt) * 1000;\n    $GLOBALS['villa_perf_stage'] = 'session_started';
 }
