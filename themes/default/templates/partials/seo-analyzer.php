@@ -36,11 +36,12 @@
    add('İçerik H2/H3 alt başlıklarla bölünmüş',10,h2+h3>=2,'İçeriği en az iki anlamlı alt başlığa ayırın.');
    add('İçerik yeterli uzunlukta (300+ kelime)',10,words>=300,'Özgün ve faydalı en az 300 kelimelik içerik hazırlayın.');
    var box=document.createElement('div');box.innerHTML=raw;var imgs=Array.from(box.querySelectorAll('img')),missing=imgs.filter(function(el){return !el.getAttribute('alt')||!el.getAttribute('alt').trim()}).length;
-   add('Görsellerin alternatif metinleri tamam',10,imgs.length?missing===0:(image&&image.value.trim()?!!(imageAlt&&imageAlt.value.trim()):true),'Görsellere açıklayıcı alt metin ekleyin.');
+   add('Görsellerin alternatif metinleri tamam',10,(!image||!image.value.trim()||(imageAlt&&imageAlt.value.trim()))&&(imgs.length?missing===0:true),'Görsellere açıklayıcı alt metin ekleyin.');
    var links=Array.from(box.querySelectorAll('a[href]')),internal=links.some(function(a){return a.getAttribute('href').startsWith('/')||a.hostname===location.hostname}),external=links.some(function(a){return /^https?:/i.test(a.href)&&a.hostname!==location.hostname});
    add('İç ve dış bağlantılar mevcut',5,internal&&external,'İlgili site içi ve güvenilir dış bağlantı ekleyin.');
    add('URL kısa ve anahtar kelimeyle ilişkili',5,s.length>=3&&s.length<=75&&(!k||s.includes(k.replace(/\s+/g,'-'))),'Kısa URL kullanın ve mümkünse odak kelimeyi ekleyin.');
    add('Başlık ve içerik okunabilir',5,t.length>=15&&words>=100&&h2+h3>=1,'Açıklayıcı başlık ve taranabilir paragraflar kullanın.');
+   add('Canonical ve indexability etiketleri otomatik hazırlanıyor',5,true,'Yayınlanan sayfalarda canonical ve robots etiketleri sistem tarafından eklenir.');
    score=Math.max(0,Math.min(100,score));scoreNode.textContent=String(score);progress.style.width=score+'%';progress.style.background=score>=80?'var(--villa-admin-primary,#176b50)':(score>=50?'#b88635':'#b45b50');
    list.innerHTML='';checks.forEach(function(c){var li=document.createElement('li');if(c.ok)li.className='pass';li.textContent=(c.ok?'Tamamlandı: ':'İyileştir: ')+c.label+(c.ok?'':' — '+c.tip);list.appendChild(li)});
    previewTitle.textContent=st||t||'Sayfa başlığı';previewUrl.textContent=(location.host||'site.com')+'/'+(s||'sayfa');previewUrl.href='#';previewDescription.textContent=d||txt.slice(0,155)||'Meta açıklaması burada görünecek.';
