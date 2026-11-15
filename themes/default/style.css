@@ -1919,3 +1919,48 @@ body[data-villa-theme] .site-header .nav{margin-left:auto!important}
 @media (max-width:760px) {
   body[data-villa-theme] .site-logo-topbar__social {display:none!important}
 }
+
+
+/* Compact social icons on desktop logo bar and at the bottom of the mobile navigation drawer. */
+@media (min-width:761px) {
+  body[data-villa-theme] .site-logo-topbar__social {gap:7px!important}
+}
+@media (max-width:760px) {
+  body[data-villa-theme] .site-header .nav .site-drawer-social {
+    display:flex!important;
+    align-items:center!important;
+    justify-content:flex-start!important;
+    flex-wrap:wrap!important;
+    gap:8px!important;
+    margin-top:auto!important;
+    padding:22px 0 8px!important;
+    border-top:1px solid rgba(23,107,80,.14)!important;
+  }
+  body[data-villa-theme] .site-header .nav .site-drawer-social a.site-logo-topbar__social-link {
+    display:inline-flex!important;
+    align-items:center!important;
+    justify-content:center!important;
+    width:36px!important;
+    height:36px!important;
+    min-width:36px!important;
+    padding:0!important;
+    margin:0!important;
+    border:0!important;
+    border-radius:50%!important;
+    background:#f3f6f2!important;
+    color:var(--villa-primary,#176b50)!important;
+    text-decoration:none!important;
+  }
+  body[data-villa-theme] .site-header .nav .site-drawer-social a.site-logo-topbar__social-link svg {
+    display:block!important;
+    width:var(--social-icon-size,20px)!important;
+    height:var(--social-icon-size,20px)!important;
+  }
+  body[data-villa-theme] .site-header .nav .site-drawer-social a.site-logo-topbar__social-link:hover {
+    background:var(--villa-primary,#176b50)!important;
+    color:#fff!important;
+  }
+}
+@media (min-width:761px) {
+  body[data-villa-theme] .site-drawer-social {display:none!important}
+}
