@@ -1,5 +1,8 @@
 # Changelog
 
+## 1.0.9 - 2026-11-15
+- Display the current application version from the root VERSION file at the bottom of the admin sidebar, so the admin panel reflects each release.
+
 ## 1.0.8 - 2026-11-15
 - Remove the redundant standalone mobile hero search form. Keep one canonical booking form inside the hero so the search controls appear in the intended prominent position; desktop layout is unchanged.
 
