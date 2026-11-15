@@ -77,6 +77,8 @@ if ($drawerUser !== null) {
   <?php else: ?>
     <form id="villaLoginForm" class="villa-account-drawer-login" method="post" action="<?= e(app_url('/login')) ?>">
       <input type="hidden" name="_csrf" value="<?= e((string)($loginCsrfToken ?? csrf_token())) ?>">
+      <input type="hidden" name="return_to" value="">
+      <input type="hidden" name="favorite_property_id" value="">
       <label for="villaLoginIdentity">E-posta veya kullanıcı adı</label>
       <input id="villaLoginIdentity" name="identity" autocomplete="username" required>
       <label for="villaLoginPassword">Şifre</label>
@@ -142,7 +144,19 @@ body.villa-account-drawer-open{overflow:hidden!important}
  }
  document.addEventListener('click',function(event){
   var trigger=event.target.closest('[data-login-trigger], [data-account-drawer-trigger]');
-  if(trigger){event.preventDefault();openDrawer();return;}
+  if(trigger){
+   event.preventDefault();
+   if(trigger.hasAttribute('data-favorite-login-trigger')){
+    var loginForm=drawer.querySelector('#villaLoginForm');
+    if(loginForm){
+     var returnField=loginForm.querySelector('input[name="return_to"]');
+     var favoriteField=loginForm.querySelector('input[name="favorite_property_id"]');
+     if(returnField)returnField.value=window.location.pathname+window.location.search;
+     if(favoriteField)favoriteField.value=trigger.getAttribute('data-favorite-property-id')||'';
+    }
+   }
+   openDrawer();return;
+  }
   if(event.target===backdrop||event.target.closest('#villaAccountDrawerClose'))closeDrawer();
  });
  document.addEventListener('keydown',function(event){
