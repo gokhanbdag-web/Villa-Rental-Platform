@@ -1,5 +1,8 @@
 # Changelog
 
+## 1.0.7 - 2026-11-15
+- Make the mobile homepage hero search unmistakably prominent: move the search panel above the hero copy, add a clear heading, distinct full-width fields and a high-contrast primary search action. Desktop styles remain unchanged.
+
 ## 1.0.6 - 2026-11-15
 - Stack all footer widgets into one full-width column on mobile and center footer content; leave desktop layout unchanged.
 
