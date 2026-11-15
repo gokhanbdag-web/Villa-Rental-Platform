@@ -1852,3 +1852,19 @@ body[data-villa-theme] .site-header .nav{margin-left:auto!important}
     color:#fff!important;
   }
 }
+
+
+/* Desktop only: align the standalone site logo with the main header container. */
+@media (min-width:761px) {
+  body[data-villa-theme] .site-logo-topbar {
+    justify-content:flex-start!important;
+    padding-left:max(24px,calc((100% - 1200px)/2))!important;
+    padding-right:24px!important;
+  }
+  body[data-villa-theme] .site-logo-topbar__brand {
+    width:100%!important;
+    max-width:1200px!important;
+    margin:0!important;
+    justify-content:flex-start!important;
+  }
+}
