@@ -37,7 +37,7 @@ $accountNav .= '</nav>';
 $html = preg_replace_callback('~(<main\\b[^>]*>)~i', static fn(array $match): string => $match[1] . $accountNav, $html, 1) ?? $html;
 
 ob_start();
-$footerTemplate = \App\Core\\ThemeManager::resolveFile('templates/partials/footer.php');
+$footerTemplate = \App\Core\ThemeManager::resolveFile('templates/partials/footer.php');
 if ($footerTemplate !== null) {
     require $footerTemplate;
 }
