@@ -13,10 +13,10 @@
 .favorite-card-price{font-weight:var(--villa-body-weight);font-size:var(--villa-body-size);}
 .favorite-card-actions{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:14px}
 .favorite-card-actions a{font-size:var(--villa-body-size);font-weight:var(--villa-body-weight);text-decoration:none}
-.favorite-remove{border:1px solid rgba(100,120,100,.25);border-radius:999px;padding:9px 12px;background:transparent;color:var(--villa-text);font:inherit;font-size:var(--villa-body-size);font-weight:var(--villa-body-weight);cursor:pointer}
+.favorite-remove{border:1px solid rgba(100,120,100,.25);border-radius:999px;padding:9px 12px;background:var(--villa-primary,#176b50);color:#fff;border-color:var(--villa-primary,#176b50);font:inherit;font-size:var(--villa-body-size);font-weight:var(--villa-body-weight);cursor:pointer}
 .favorites-empty{padding:42px 22px;text-align:center;border:1px dashed rgba(100,120,100,.35);border-radius:18px}
 .favorites-empty strong{display:block;font-size:var(--villa-body-size);margin-bottom:8px}.favorites-empty p{opacity:.7;margin:0 0 18px}
-.favorites-empty a{display:inline-flex;padding:11px 17px;border-radius:999px;background:#456d50;color:var(--villa-text);text-decoration:none;font-weight:var(--villa-body-weight);}
+.favorites-empty a{display:inline-flex;padding:11px 17px;border-radius:999px;background:var(--villa-primary,#176b50);color:#fff;text-decoration:none;font-weight:var(--villa-body-weight);}
 @media(max-width:850px){.favorites-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media(max-width:560px){.favorites-page{padding:0 14px;margin-top:20px}.favorites-heading{align-items:start;flex-direction:column}.favorites-grid{grid-template-columns:1fr;gap:14px}.favorite-card{display:grid;grid-template-columns:112px minmax(0,1fr)}.favorite-card-image{height:100%;min-height:150px}.favorite-card-body{padding:13px}.favorite-card-title{font-size:var(--villa-body-size);}.favorite-card-actions{align-items:flex-start;flex-direction:column}.favorite-remove{padding:8px 10px}}
 </style><?php require APP_ROOT . '/views/site/partials/account-theme.php'; ?></head><body>
