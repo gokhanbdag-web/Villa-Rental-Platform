@@ -263,6 +263,13 @@ final class ThemeManager
         $pdo = Database::connection();
         $save = $pdo->prepare('INSERT INTO settings(setting_key,setting_value,autoload) VALUES(?,?,1) ON DUPLICATE KEY UPDATE setting_value=VALUES(setting_value),autoload=1');
         $save->execute(['theme.' . $slug . '.branding', $json]);
+        $verify = $pdo->prepare('SELECT setting_value FROM settings WHERE setting_key=? LIMIT 1');
+        $verify->execute(['theme.' . $slug . '.branding']);
+        $stored = json_decode((string)$verify->fetchColumn(), true);
+        $expectedStart = max(0, min(86400, $startSeconds));
+        if (!is_array($stored) || (int)($stored['hero_video_start_seconds'] ?? -1) !== $expectedStart) {
+            throw new RuntimeException('Video başlangıç saniyesi veritabanına kaydedilemedi. Lütfen tekrar deneyin.');
+        }
     }
 
     public static function removeBrandAsset(string $type, ?string $slug = null): void
