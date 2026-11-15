@@ -296,6 +296,37 @@ $homeCss .= <<<'CSS'
 }
 CSS;
 
+/* Lightweight viewport reveal: content remains visible unless the observer is available. */
+$homeCss .= <<<'CSS'
+body.villa-home-mediterranean.villa-reveal-ready .villa-reveal-item{
+  opacity:0;
+  transform:translate3d(0,22px,0);
+  transition:opacity .68s cubic-bezier(.2,.65,.25,1),transform .68s cubic-bezier(.2,.65,.25,1);
+  transition-delay:var(--villa-reveal-delay,0ms);
+  will-change:opacity,transform;
+}
+body.villa-home-mediterranean.villa-reveal-ready .villa-reveal-item.is-revealed{
+  opacity:1;
+  transform:translate3d(0,0,0);
+}
+@media(max-width:600px){
+  body.villa-home-mediterranean.villa-reveal-ready .villa-reveal-item{
+    transform:translate3d(0,14px,0);
+    transition-duration:.48s;
+    will-change:auto;
+  }
+}
+@media(prefers-reduced-motion:reduce){
+  body.villa-home-mediterranean.villa-reveal-ready .villa-reveal-item,
+  body.villa-home-mediterranean.villa-reveal-ready .villa-reveal-item.is-revealed{
+    opacity:1!important;
+    transform:none!important;
+    transition:none!important;
+    will-change:auto!important;
+  }
+}
+CSS;
+
 $html = str_replace('</head>', '<style>' . $homeCss . '</style></head>', $html);
 $cardGalleryScript = <<<'JS'
 <script>(function(){document.querySelectorAll('[data-card-gallery]').forEach(function(card){if(card.dataset.galleryReady)return;card.dataset.galleryReady='1';var data=card.querySelector('.card-gallery-data'),image=card.querySelector('.card-gallery-image'),count=card.querySelector('.card-gallery-count');if(!data||!image)return;var images=[];try{images=JSON.parse(data.textContent||'[]')}catch(e){}var index=0;card.querySelectorAll('[data-gallery-step]').forEach(function(button){button.addEventListener('click',function(event){event.preventDefault();event.stopPropagation();if(images.length<2)return;index=(index+Number(button.dataset.galleryStep)+images.length)%images.length;image.src=images[index];if(count)count.textContent=(index+1)+' / '+images.length})})})})();</script>
@@ -303,8 +334,54 @@ JS;
 $homeCounterScript = <<<'JS'
 <script>(function(){var counters=document.querySelectorAll('[data-home-counter]');if(!counters.length)return;var format=new Intl.NumberFormat('tr-TR');function run(el){if(el.dataset.counterDone)return;el.dataset.counterDone='1';var target=Math.max(0,Number(el.dataset.homeCounter)||0);if(window.matchMedia&&window.matchMedia('(prefers-reduced-motion: reduce)').matches){el.textContent=format.format(target);return;}var start=null,duration=950;function frame(now){if(start===null)start=now;var progress=Math.min(1,(now-start)/duration);var eased=1-Math.pow(1-progress,3);el.textContent=format.format(Math.round(target*eased));if(progress<1)window.requestAnimationFrame(frame);}window.requestAnimationFrame(frame);}if('IntersectionObserver' in window){var observer=new IntersectionObserver(function(entries){entries.forEach(function(entry){if(entry.isIntersecting){run(entry.target);observer.unobserve(entry.target);}});},{threshold:.25});counters.forEach(function(el){observer.observe(el);});}else{counters.forEach(run);}})();</script>
 JS;
+$scrollRevealScript = <<<'JS'
+<script>(function(){
+  var body=document.body;
+  if(!body||!('IntersectionObserver' in window))return;
+  if(window.matchMedia&&window.matchMedia('(prefers-reduced-motion: reduce)').matches)return;
+  var selectors=[
+    '.home-sections > .section',
+    '.med-trust',
+    '.destination-editorial-item',
+    '.destination-grid > .destination',
+    '.cards > .stay',
+    '.styles > .style-card',
+    '.med-property-card',
+    '.med-concept-card',
+    '.med-review-card',
+    '.med-home-stat',
+    '.gallery-strip img',
+    '.host-banner'
+  ];
+  var items=[];
+  selectors.forEach(function(selector){
+    document.querySelectorAll(selector).forEach(function(el){
+      if(items.indexOf(el)===-1)items.push(el);
+    });
+  });
+  if(!items.length)return;
+  items.forEach(function(el){
+    el.classList.add('villa-reveal-item');
+    var parent=el.parentElement;
+    if(parent){
+      var siblings=Array.prototype.filter.call(parent.children,function(child){return child.classList.contains('villa-reveal-item');});
+      var index=siblings.indexOf(el);
+      if(index>0)el.style.setProperty('--villa-reveal-delay',Math.min(index,4)*75+'ms');
+    }
+  });
+  body.classList.add('villa-reveal-ready');
+  var observer=new IntersectionObserver(function(entries){
+    entries.forEach(function(entry){
+      if(!entry.isIntersecting)return;
+      entry.target.classList.add('is-revealed');
+      observer.unobserve(entry.target);
+    });
+  },{root:null,rootMargin:'0px 0px -7% 0px',threshold:0.08});
+  items.forEach(function(el){observer.observe(el);});
+})();</script>
+JS;
 if (stripos($html, '</body>') !== false) {
-    $html = preg_replace('~</body>~i', $cardGalleryScript . $homeCounterScript . '</body>', $html, 1) ?? $html;
+    $html = preg_replace('~</body>~i', $cardGalleryScript . $homeCounterScript . $scrollRevealScript . '</body>', $html, 1) ?? $html;
 }
 
 ob_start();
