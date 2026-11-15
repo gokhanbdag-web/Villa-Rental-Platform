@@ -1588,6 +1588,18 @@ body[data-villa-theme] .site-footer .footer-payment-logo img{display:block;width
  body[data-villa-theme] .site-footer .footer-row-secondary{grid-template-columns:minmax(0,1fr)}
 }
 
+/* Mobile footer: all six footer widgets stack in one full-width column. */
+@media(max-width:760px){
+  body[data-villa-theme] .site-footer .footer-row-primary,
+  body[data-villa-theme] .site-footer .footer-row-secondary{
+    grid-template-columns:minmax(0,1fr)!important;
+  }
+  body[data-villa-theme] .site-footer .footer-widget{
+    width:100%;
+    min-width:0;
+  }
+}
+
 /* Remove unwanted decorative borders from public search, mobile drawer and villa cards. */
 body[data-villa-theme] .hero-filter-panel,
 body[data-villa-theme] .search-enhanced,
