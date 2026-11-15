@@ -42,8 +42,9 @@ try{
 while(true){
 const form=new FormData();form.append('_csrf',document.getElementById('csrf').value);form.append('after_id',String(afterId));
 const response=await fetch(root.dataset.processUrl,{method:'POST',body:form,credentials:'same-origin',headers:{'Accept':'application/json'}});
-if(!response.ok)throw new Error('Sunucu işlemi tamamlayamadı (HTTP '+response.status+').');
-const data=await response.json();if(!data.ok)throw new Error(data.message||'İşlem başarısız.');
+const responseText=await response.text();let data;
+try{data=JSON.parse(responseText);}catch(parseError){const preview=responseText.replace(/\\s+/g,' ').slice(0,180);throw new Error('Sunucu JSON yerine farklı bir yanıt döndürdü (HTTP '+response.status+'). '+preview);}
+if(!response.ok||!data.ok)throw new Error(data.message||'Sunucu işlemi tamamlayamadı (HTTP '+response.status+').');
 processed+=Number(data.processed||0);updated+=Number(data.updated||0);failures=failures.concat(data.failed||[]);afterId=Number(data.last_id||afterId);
 const percent=initialMissing?Math.min(100,Math.round(processed/initialMissing*100)):100;bar.style.width=percent+'%';
 status.textContent='Taranan: '+processed+' / '+initialMissing+' · Güncellenen: '+updated+' · Kalan: '+Number(data.remaining||0);
