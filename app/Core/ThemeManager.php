@@ -1166,7 +1166,7 @@ final class ThemeManager
         foreach (['h1','h2','h3','h4','h5','h6'] as $level) {
             $levelSize = (int)$heading['sizes'][$level];
             $levelLineHeight = rtrim(rtrim(number_format((float)$heading['line_heights'][$level], 2, '.', ''), '0'), '.');
-            $headingSelector = $themeScope . ' ' . $level . ':not([data-villa-overlay-text] *)';
+            $headingSelector = $themeScope . ' ' . $level . ':not([data-villa-overlay-text] *):not(.site-footer *)';
             if ($level === 'h1') $headingSelector .= ':not(.hero-copy h1)';
             $headingRules .= $headingSelector . '{'
                 . 'font-family:' . json_encode($heading['family']) . ',system-ui,sans-serif!important;'
@@ -1193,7 +1193,7 @@ final class ThemeManager
             . 'font-style:' . $paragraph['style'] . '!important}'
             . $themeScope . ' .villa-social-inner{min-height:' . (int)$typography['topbar_height'] . 'px}'
             . $headingRules
-            . $themeScope . ' p:not(.hero-copy p):not([data-villa-overlay-text] *){'
+            . $themeScope . ' p:not(.hero-copy p):not([data-villa-overlay-text] *):not(.site-footer p){'
             . 'font-family:' . json_encode($paragraph['family']) . ',system-ui,sans-serif!important;'
             . 'font-size:' . (int)$paragraph['size'] . 'px!important;'
             . 'color:' . $paragraph['color'] . '!important;'
@@ -1215,7 +1215,7 @@ final class ThemeManager
             . 'font-weight:' . (int)$span['weight'] . '!important;'
             . 'font-style:' . $span['style'] . '!important;'
             . 'letter-spacing:.075em!important;line-height:' . $span['line_height'] . '!important}'
-            . $themeScope . ' p a:not(.button):not(.btn):not([class*="button"]):not([class*="btn"]):not([class*="cta"]):not(.search-submit):not([role="button"]):not([data-villa-overlay-text] *){'
+            . $themeScope . ' p a:not(.button):not(.btn):not([class*="button"]):not([class*="btn"]):not([class*="cta"]):not(.search-submit):not([role="button"]):not([data-villa-overlay-text] *):not(.site-footer a){'
             . 'font-family:' . json_encode($paragraphLinks['family']) . ',system-ui,sans-serif!important;'
             . 'font-size:inherit!important;line-height:' . $paragraphLinks['line_height'] . '!important;'
             . 'color:' . $paragraphLinks['color'] . '!important;'
@@ -1275,8 +1275,7 @@ final class ThemeManager
             . $themeScope . ' a:not(.search-submit):not(.button-primary):not(.med-support-whatsapp),' . $themeScope . ' .brand{--link-color:var(--villa-primary)}'
             . $themeScope . ' .theme-header .nav a:hover,' . $themeScope . ' .theme-header .nav a[aria-current="page"],' . $themeScope . ' .pill,' . $themeScope . ' .med-trust-icon,' . $themeScope . ' .rating-score{background:var(--villa-accent)!important;color:var(--villa-text)!important}'
             . $themeScope . ' input,' . $themeScope . ' select,' . $themeScope . ' textarea,' . $themeScope . ' .search-enhanced,' . $themeScope . ' .search-field,' . $themeScope . ' .med-faq-item{border-color:var(--villa-primary)!important}'
-            . $themeScope . ' footer,' . $themeScope . ' .site-footer{background:var(--footer-bg,var(--villa-primary))!important;border-color:var(--footer-bg,var(--villa-primary))!important;color:var(--footer-text,#fff)!important}'
-            . $themeScope . ' footer a,' . $themeScope . ' .site-footer a{color:var(--footer-text,#fff)!important}'
+            . $themeScope . ' footer,' . $themeScope . ' .site-footer{background:var(--footer-bg,var(--villa-primary))!important;border-color:var(--footer-bg,var(--villa-primary))!important;color:initial!important}'
 
             . $themeScope . ' .theme-header .nav a,' . $themeScope . ' .theme-header .nav-submenu-toggle{color:var(--villa-primary)!important}'
             . $themeScope . ' .theme-header .nav a:hover,' . $themeScope . ' .theme-header .nav a:focus-visible,' . $themeScope . ' .theme-header .nav a[aria-current="page"],' . $themeScope . ' .theme-header .nav-entry.is-open>.nav-entry-top>a{background:var(--villa-primary)!important;color:#fff!important}'
