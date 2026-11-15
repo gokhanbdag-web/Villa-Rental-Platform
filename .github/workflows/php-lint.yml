@@ -1,4 +1,65 @@
+name: PHP checks
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+
+jobs:
+  php-lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.2'
+          extensions: pdo_mysql, fileinfo
+          tools: none
+      - name: Lint all PHP files
+        run: |
+          find . -type f -name '*.php' -not -path './.git/*' -print0 | xargs -0 -n1 php -l
+
+  installer-smoke:
+    runs-on: ubuntu-latest
+    services:
+      mysql:
+        image: mysql:8.0
+        env:
+          MYSQL_ROOT_PASSWORD: root
+          MYSQL_DATABASE: villa_test
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mysqladmin ping -h 127.0.0.1 -uroot -proot"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=10
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.2'
+          extensions: pdo_mysql, fileinfo
+          tools: none
+      - name: Run router dispatch smoke test
+        run: php tests/router-smoke.php
+      - name: Run user role boundary smoke test
+        run: php tests/auth-authorization-smoke.php
+      - name: Run payment signature and secret security smoke tests
+        run: php tests/payment-security-smoke.php
+      - name: Run villa detail booking flow smoke test
+        run: php tests/property-detail-booking-smoke.php
       - name: Run homepage statistic settings smoke test
         run: php tests/homepage-stats-smoke.php
       - name: Run mobile footer layout smoke test
         run: php tests/footer-mobile-layout-smoke.php
+      - name: Run browser-installer backend smoke test
+        env:
+          DB_HOST: 127.0.0.1
+          DB_PORT: 3306
+          DB_NAME: villa_test
+          DB_USER: root
+          DB_PASSWORD: root
+        run: php tests/installer-smoke.php
