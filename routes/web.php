@@ -447,11 +447,23 @@ $router->get('/', static function (): void {
       if($activeHomeTheme==='default'){
          $categories=$pdo->query("SELECT c.id,c.name,c.slug,COUNT(DISTINCT p.id) AS property_count,(SELECT pm.file_path FROM property_media pm JOIN properties p2 ON p2.id=pm.property_id WHERE p2.category_id=c.id AND p2.status='published' ORDER BY pm.is_cover DESC,pm.sort_order,pm.id LIMIT 1) AS cover_image FROM property_categories c LEFT JOIN properties p ON p.category_id=c.id AND p.status='published' WHERE c.is_active=1 GROUP BY c.id,c.name,c.slug,c.sort_order ORDER BY c.sort_order,c.name LIMIT 8")->fetchAll(PDO::FETCH_ASSOC);
          $homeCategoryCollections=[];
-         foreach(array_slice($categories,0,4) as $homeCategory){
-             $categoryProperties=$pdo->prepare("SELECT p.*,(SELECT pm.file_path FROM property_media pm WHERE pm.property_id=p.id ORDER BY pm.is_cover DESC,pm.sort_order,pm.id LIMIT 1) AS cover_image,(SELECT AVG(r.rating) FROM reviews r WHERE r.property_id=p.id AND r.status='approved') AS rating_average,(SELECT COUNT(*) FROM reviews r WHERE r.property_id=p.id AND r.status='approved') AS rating_count,(SELECT COUNT(*) FROM bookings b WHERE b.property_id=p.id AND b.status NOT IN ('cancelled','rejected')) AS booking_count FROM properties p WHERE p.status='published' AND p.category_id=? ORDER BY p.created_at DESC,p.id DESC LIMIT 3");
-             $categoryProperties->execute([(int)$homeCategory['id']]);
-             $categoryRows=$categoryProperties->fetchAll(PDO::FETCH_ASSOC);
-             if($categoryRows)$homeCategoryCollections[]=['category'=>$homeCategory,'properties'=>$categoryRows];
+         $homeCategoryIds=array_map(static fn(array $category):int=>(int)$category['id'],array_slice($categories,0,4));
+         if($homeCategoryIds){
+             $categoryBranches=[];$categoryParams=[];
+             foreach($homeCategoryIds as $homeCategoryId){
+                 $categoryBranches[]="(SELECT p.*,(SELECT pm.file_path FROM property_media pm WHERE pm.property_id=p.id ORDER BY pm.is_cover DESC,pm.sort_order,pm.id LIMIT 1) AS cover_image,(SELECT AVG(r.rating) FROM reviews r WHERE r.property_id=p.id AND r.status='approved') AS rating_average,(SELECT COUNT(*) FROM reviews r WHERE r.property_id=p.id AND r.status='approved') AS rating_count,(SELECT COUNT(*) FROM bookings b WHERE b.property_id=p.id AND b.status NOT IN ('cancelled','rejected')) AS booking_count FROM properties p WHERE p.status='published' AND p.category_id=? ORDER BY p.created_at DESC,p.id DESC LIMIT 3)";
+                 $categoryParams[]=$homeCategoryId;
+             }
+             $categoryProperties=$pdo->prepare(implode(' UNION ALL ',$categoryBranches));
+             $categoryProperties->execute($categoryParams);
+             $categoryRowsById=[];
+             foreach($categoryProperties->fetchAll(PDO::FETCH_ASSOC) as $categoryProperty){
+                 $categoryRowsById[(int)$categoryProperty['category_id']][]=$categoryProperty;
+             }
+             foreach(array_slice($categories,0,4) as $homeCategory){
+                 $categoryRows=$categoryRowsById[(int)$homeCategory['id']]??[];
+                 if($categoryRows)$homeCategoryCollections[]=['category'=>$homeCategory,'properties'=>$categoryRows];
+             }
          }
          $homeReviews=$pdo->query("SELECT r.rating,r.body,r.created_at,u.username,p.title AS property_title FROM reviews r JOIN users u ON u.id=r.guest_user_id JOIN properties p ON p.id=r.property_id WHERE r.status='approved' AND r.body IS NOT NULL AND TRIM(r.body)<>'' AND p.status='published' ORDER BY r.created_at DESC,r.id DESC LIMIT 6")->fetchAll(PDO::FETCH_ASSOC);
      }else{
@@ -1897,12 +1909,23 @@ $router->get('/blog', static function (): void {
     $siteName=$content['site_name']??'VillaStay';$navigation=villa_navigation_tree($pdo,'header','tr');$footerNavigation=villa_navigation_tree($pdo,'footer','tr');
     $q=trim((string)($_GET['q']??''));$pageNo=max(1,(int)($_GET['page']??1));$perPage=9;
     $where=["p.status='published'","(p.published_at IS NULL OR p.published_at<=NOW())"];$params=[];
-    if($q!==''){$where[]="(p.title LIKE ? OR p.excerpt LIKE ? OR p.content LIKE ?)";$like='%'.$q.'%';array_push($params,$like,$like,$like);}
+    if($q!==''){
+         $searchWords=preg_split('/[^\\pL\\pN]+/u',$q,-1,PREG_SPLIT_NO_EMPTY)?:[];
+         $searchWords=array_values(array_filter($searchWords,static fn(string $word):bool=>mb_strlen($word)>=3));
+         if(mb_strlen($q)>=3&&$searchWords){
+             $booleanSearch=implode(' ',array_map(static fn(string $word):string=>'+'.$word.'*',$searchWords));
+             $where[]="MATCH(p.title,p.excerpt,p.content) AGAINST (? IN BOOLEAN MODE)";
+             $params[]=$booleanSearch;
+         }else{
+             $where[]="(p.title LIKE ? OR p.excerpt LIKE ? OR p.content LIKE ?)";
+             $like='%'.$q.'%';array_push($params,$like,$like,$like);
+         }
+     }
     $categorySlug=trim((string)($_GET['kategori']??''));$tagSlug=trim((string)($_GET['etiket']??''));
     if($categorySlug!==''){$where[]="EXISTS (SELECT 1 FROM blog_post_category pc JOIN blog_categories c ON c.id=pc.category_id WHERE pc.post_id=p.id AND c.slug=?)";$params[]=$categorySlug;}
     if($tagSlug!==''){$where[]="EXISTS (SELECT 1 FROM blog_post_tag pt JOIN blog_tags t ON t.id=pt.tag_id WHERE pt.post_id=p.id AND t.slug=?)";$params[]=$tagSlug;}
     $sqlWhere=implode(' AND ',$where);$count=$pdo->prepare("SELECT COUNT(*) FROM blog_posts p WHERE $sqlWhere");$count->execute($params);$totalPosts=(int)$count->fetchColumn();$totalPages=max(1,(int)ceil($totalPosts/$perPage));$pageNo=min($pageNo,$totalPages);$offset=($pageNo-1)*$perPage;
-    $stmt=$pdo->prepare("SELECT p.*, (SELECT c.name FROM blog_post_category pc JOIN blog_categories c ON c.id=pc.category_id WHERE pc.post_id=p.id ORDER BY c.name LIMIT 1) AS category_name,(SELECT c.slug FROM blog_post_category pc JOIN blog_categories c ON c.id=pc.category_id WHERE pc.post_id=p.id ORDER BY c.name LIMIT 1) AS category_slug FROM blog_posts p WHERE $sqlWhere ORDER BY p.is_featured DESC,COALESCE(p.published_at,p.created_at) DESC,p.id DESC LIMIT $perPage OFFSET $offset");$stmt->execute($params);$posts=$stmt->fetchAll(PDO::FETCH_ASSOC);
+    $stmt=$pdo->prepare("SELECT p.id,p.title,p.slug,p.excerpt,p.featured_image,p.featured_image_alt,p.published_at,p.created_at,p.reading_time,p.is_featured, (SELECT c.name FROM blog_post_category pc JOIN blog_categories c ON c.id=pc.category_id WHERE pc.post_id=p.id ORDER BY c.name LIMIT 1) AS category_name,(SELECT c.slug FROM blog_post_category pc JOIN blog_categories c ON c.id=pc.category_id WHERE pc.post_id=p.id ORDER BY c.name LIMIT 1) AS category_slug FROM blog_posts p WHERE $sqlWhere ORDER BY p.is_featured DESC,COALESCE(p.published_at,p.created_at) DESC,p.id DESC LIMIT $perPage OFFSET $offset");$stmt->execute($params);$posts=$stmt->fetchAll(PDO::FETCH_ASSOC);
     $blogCategories=$pdo->query("SELECT c.*,COUNT(p.id) AS post_count FROM blog_categories c LEFT JOIN blog_post_category pc ON pc.category_id=c.id LEFT JOIN blog_posts p ON p.id=pc.post_id AND p.status='published' AND (p.published_at IS NULL OR p.published_at<=NOW()) WHERE c.is_active=1 GROUP BY c.id ORDER BY c.sort_order,c.name")->fetchAll(PDO::FETCH_ASSOC);
     $popularPosts=$pdo->query("SELECT id,title,slug,featured_image,published_at,views_count FROM blog_posts WHERE status='published' AND (published_at IS NULL OR published_at<=NOW()) ORDER BY views_count DESC,COALESCE(published_at,created_at) DESC LIMIT 5")->fetchAll(PDO::FETCH_ASSOC);
     $blogTags=$pdo->query("SELECT t.*,COUNT(pt.post_id) AS post_count FROM blog_tags t LEFT JOIN blog_post_tag pt ON pt.tag_id=t.id LEFT JOIN blog_posts p ON p.id=pt.post_id AND p.status='published' AND (p.published_at IS NULL OR p.published_at<=NOW()) GROUP BY t.id ORDER BY post_count DESC,t.name LIMIT 18")->fetchAll(PDO::FETCH_ASSOC);
@@ -1915,7 +1938,22 @@ $router->get('/blog/etiket/{slug}', static function (array $params): void {redir
 $router->get('/blog/{slug}', static function (array $params): void {
     $pdo=Database::connection();$s=$pdo->prepare("SELECT * FROM blog_posts WHERE slug=? AND status='published' AND (published_at IS NULL OR published_at<=NOW()) LIMIT 1");$s->execute([(string)$params['slug']]);$post=$s->fetch(PDO::FETCH_ASSOC);
     if(!$post){http_response_code(404);echo 'Yazı bulunamadı.';return;}
-    $pdo->prepare('UPDATE blog_posts SET views_count=views_count+1 WHERE id=?')->execute([(int)$post['id']]);
+    // Count a post view once per session (30-minute window) to avoid duplicate
+    // writes from refreshes, repeated requests and crawler retries.
+    $viewPostId=(int)$post['id'];
+    $viewNow=time();
+    if(session_status()===PHP_SESSION_ACTIVE){
+        $viewHistory=is_array($_SESSION['villa_blog_views']??null)?$_SESSION['villa_blog_views']:[];
+        foreach($viewHistory as $viewId=>$viewAt){if(!is_numeric($viewAt)||$viewNow-(int)$viewAt>1800)unset($viewHistory[$viewId]);}
+        if(!isset($viewHistory[$viewPostId])){
+            $pdo->prepare('UPDATE blog_posts SET views_count=views_count+1 WHERE id=?')->execute([$viewPostId]);
+            $viewHistory[$viewPostId]=$viewNow;
+        }
+        if(count($viewHistory)>50){asort($viewHistory);$viewHistory=array_slice($viewHistory,-50,null,true);}
+        $_SESSION['villa_blog_views']=$viewHistory;
+    }else{
+        $pdo->prepare('UPDATE blog_posts SET views_count=views_count+1 WHERE id=?')->execute([$viewPostId]);
+    }
     $content=$pdo->query("SELECT content_key,content_value FROM site_content WHERE language_code='tr'")->fetchAll(PDO::FETCH_KEY_PAIR);$siteName=$content['site_name']??'VillaStay';
     $navigation=villa_navigation_tree($pdo,'header','tr');$footerNavigation=villa_navigation_tree($pdo,'footer','tr');$user=Auth::user();$locale='tr';
     $blogCategories=$pdo->query("SELECT c.*,COUNT(pc.post_id) AS post_count FROM blog_categories c LEFT JOIN blog_post_category pc ON pc.category_id=c.id LEFT JOIN blog_posts p ON p.id=pc.post_id AND p.status='published' AND (p.published_at IS NULL OR p.published_at<=NOW()) WHERE c.is_active=1 GROUP BY c.id ORDER BY c.sort_order,c.name")->fetchAll(PDO::FETCH_ASSOC);

@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.4.0 - 2026-11-16
+- Unify responsive header drawer styling across public pages and keep the burger icon readable after repeated open/close interactions.
+- Remove the conflicting legacy listing-menu handler that replaced the shared icon markup.
+- Add indexed full-text blog search, narrow archive result columns, deduplicate repeat view-count writes per session, and batch homepage category-card queries.
+
+
 ## 1.3.1 - 2026-11-16
 - Add a selectable recent blog posts widget to footer column 2, with configurable heading, thumbnail/title links, and up to eight individually selected published posts.
 
