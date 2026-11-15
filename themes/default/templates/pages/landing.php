@@ -641,6 +641,14 @@ body .hero-filter-panel .guest-popover{left:auto;right:0;width:300px}
 }
 
 
+/* Slightly smaller hero copy on phones; desktop typography stays unchanged. */
+@media(max-width:600px){
+  body .hero-copy .eyebrow{font-size:11px!important;letter-spacing:1.5px!important}
+  body .hero-copy h1{font-size:clamp(27px,7.2vw,34px)!important;line-height:1.12!important}
+  body .hero-copy p{font-size:13px!important;line-height:1.45!important}
+}
+
+
 /* Premium search strip: mobile only, placed directly after the hero video. */
 .mobile-premium-search{display:none}
 @media(max-width:600px){
