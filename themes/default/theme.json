@@ -13,6 +13,7 @@
     "booking.php": "templates/booking.php",
     "page.php": "templates/page.php",
     "account.php": "templates/account.php",
-    "checkout.php": "templates/pages/checkout.php"
+    "checkout.php": "templates/pages/checkout.php",
+    "compare.php": "templates/pages/compare.php"
   }
 }
