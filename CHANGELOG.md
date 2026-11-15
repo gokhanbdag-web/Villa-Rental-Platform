@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.2.1 - 2026-11-16
+- Add the WordPress-style blog archive as a selectable system page in menu management, pre-filling its `/blog` URL.
+
+
 ## 1.2.0 - 2026-11-16
 - Expand blog into a WordPress-style CMS with SEO metadata, focus keyword, author, reading time, scheduled publishing, featured posts, categories, tags, and view counts.
 - Add responsive blog archive and single-post templates with sidebar search, categories, popular posts, tags, newsletter signup, related posts, social sharing, breadcrumbs, and BlogPosting structured data.
