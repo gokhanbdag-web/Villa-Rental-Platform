@@ -67,7 +67,7 @@ $medBlocks = '';
       <?php endforeach; ?></div>
     </div></section>
     <?php endif;
-    $familyBannerAsset = \App\Core\ThemeManager::brandSettings();
+    $familyBannerAsset = $brandSettings ?? \App\Core\ThemeManager::brandSettings();
     $familyBannerText = \App\Core\ThemeManager::familyBannerTextSettings();
     $bannerFontFamilies = array_unique(array_map(static fn(array $row): string => (string)$row['family'], [$familyBannerText['eyebrow_typography'],$familyBannerText['title_typography'],$familyBannerText['description_typography']]));
     $bannerFontQuery = implode('&', array_map(static fn(string $font): string => 'family=' . str_replace('%20','+',rawurlencode($font)) . ':wght@400;500;600;700;800', $bannerFontFamilies));
