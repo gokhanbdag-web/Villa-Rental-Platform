@@ -33,7 +33,7 @@ $comparePageUrl = app_url('/karsilastir');
    items.push({id:id,title:button.dataset.propertyTitle||'',url:button.dataset.propertyUrl||'',image:button.dataset.propertyImage||'',price:button.dataset.propertyPrice||'',currency:button.dataset.propertyCurrency||'TRY',location:button.dataset.propertyLocation||'',guests:button.dataset.propertyGuests||''});
    write(items);sync();toast('Villa karşılaştırma listenize eklendi.');return;
   }
-  if(event.target.closest('[data-compare-clear]')){write([]);sync();toast('Karşılaştırma listeniz temizlendi.');}
+  if(event.target.closest('[data-compare-clear]')){write([]);sync();if(bar&&window.location.pathname===new URL(bar.dataset.compareUrl,window.location.origin).pathname){window.location.href=url([]);return}toast('Karşılaştırma listeniz temizlendi.');}
   var remove=event.target.closest('[data-compare-remove-id]');
   if(remove){var rid=Number(remove.dataset.compareRemoveId),next=read().filter(function(x){return Number(x.id)!==rid});write(next);window.location.href=url(next)}
  });
