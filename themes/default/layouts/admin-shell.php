@@ -179,7 +179,7 @@ return static function (string $html, string $requestPath, string $platformMode)
             }
             enhanceResponsiveTables(content);
             function enhanceRichTextColors(root){
-                (root||content).querySelectorAll('[contenteditable="true"]:not([data-admin-color-ready])').forEach(function(editor){
+                (root||content).querySelectorAll("[contenteditable=\"true\"]:not([data-admin-color-ready])").forEach(function(editor){
                     if(editor.hasAttribute("data-footer-rich-editor"))return;
                     editor.setAttribute("data-admin-color-ready","1");
                     const toolbar=document.createElement("div");
