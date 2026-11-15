@@ -1,5 +1,8 @@
 # Changelog
 
+## 1.0.4 - 2026-11-15
+- Replace the mobile villa photo carousel with a compact desktop-style collage showing three photos at once; remove the partial next-photo preview and mobile photo counter.
+
 ## 1.0.3 - 2026-11-15
 - Remove mobile villa-feature tooltips and show feature names beside icons in a balanced two-column layout.
 
