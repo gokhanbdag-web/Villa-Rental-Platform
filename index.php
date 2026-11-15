@@ -11,21 +11,25 @@ use App\Core\Router;
 use App\Core\Translator;
 use App\Core\ThemeManager;
 
-$GLOBALS['villa_perf_stage'] = 'installer_check';
+villa_perf_mark('front:installer_check_begin');
 if (!Installer::isInstalled()) {
     header('Location: ' . app_url('/install/'));
     exit;
 }
 
+villa_perf_mark('front:installer_check_done');
+
 try {
+    villa_perf_mark('front:migrations_begin');
     Migrator::run(Database::connection());
+    villa_perf_mark('front:migrations_done');
 } catch (Throwable $e) {
     error_log('Database migration failed: ' . $e->getMessage());
     http_response_code(503);
     exit('Veritabanı güncellemesi tamamlanamadı. Lütfen sistem yöneticisine başvurun.');
 }
 
-$GLOBALS['villa_perf_stage'] = 'locale_and_settings';
+villa_perf_mark('front:locale_settings_begin');
 $locale = 'tr';
 try {
     $tzStmt = Database::connection()->prepare('SELECT setting_value FROM settings WHERE setting_key = ? LIMIT 1');
@@ -40,6 +44,7 @@ try {
     error_log('Locale initialization failed: ' . $e->getMessage());
 }
 
+villa_perf_mark('front:routes_loading');
 $router = new Router();
 require APP_ROOT . '/routes/web.php';
 
@@ -98,7 +103,7 @@ foreach ($pathCandidates as $requestPath) {
         });
     }
 
-    $GLOBALS['villa_perf_stage'] = 'dispatch:' . $method . ':' . substr($requestPath, 0, 120);
+    villa_perf_mark('front:dispatch:' . $method . ':' . substr($requestPath, 0, 100));
     if ($router->dispatch($method, $requestPath)) {
         // A matching route owns the response; do not try another path.
         exit;
