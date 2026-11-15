@@ -293,6 +293,7 @@ final class ThemeManager
         $defaults['_address'] = ['text'=>'','active'=>false];
         $defaults['_call_center'] = ['title'=>'Çağrı Merkezi','phone'=>''];
         $defaults['_license'] = ['title'=>'','number'=>''];
+        $defaults['_appearance'] = ['icon_color'=>'#ffffff','icon_background_color'=>'#176b50'];
         try {
             $stmt = Database::connection()->prepare('SELECT setting_value FROM settings WHERE setting_key=? LIMIT 1');
             $stmt->execute(['theme.social_icons']);
@@ -347,6 +348,13 @@ final class ThemeManager
         if ($licenseTitleLength === false || $licenseTitleLength > 60) throw new RuntimeException('Lisans başlığı en fazla 60 karakter olabilir.');
         if ($licenseNumberLength === false || $licenseNumberLength > 40) throw new RuntimeException('Lisans numarası en fazla 40 karakter olabilir.');
         $clean['_license'] = ['title'=>$licenseTitle,'number'=>$licenseNumber];
+        $appearance = is_array($input['_appearance'] ?? null) ? $input['_appearance'] : [];
+        $iconColor = strtolower(trim((string)($appearance['icon_color'] ?? '#ffffff')));
+        $iconBackgroundColor = strtolower(trim((string)($appearance['icon_background_color'] ?? '#176b50')));
+        foreach (['ikon'=>$iconColor,'ikon arka plan'=>$iconBackgroundColor] as $label=>$color) {
+            if (!preg_match('/^#[0-9a-f]{6}$/', $color)) throw new RuntimeException('Sosyal medya '.$label.' rengi geçersiz.');
+        }
+        $clean['_appearance'] = ['icon_color'=>$iconColor,'icon_background_color'=>$iconBackgroundColor];
         $pdo = Database::connection();
         $json = json_encode($clean, JSON_UNESCAPED_UNICODE | JSON_THROW_ON_ERROR);
         $stmt = $pdo->prepare('INSERT INTO settings(setting_key,setting_value,autoload) VALUES(?,?,1) ON DUPLICATE KEY UPDATE setting_value=VALUES(setting_value),autoload=1');
@@ -394,10 +402,15 @@ final class ThemeManager
             $family = (string)($item['family'] ?? 'brand');
             if (!in_array($family, ['brand', 'circle'], true)) $family = 'brand';
             $size = max(14, min(36, (int)($item['size'] ?? 20)));
+            $appearance = is_array($settings['_appearance'] ?? null) ? $settings['_appearance'] : [];
+            $iconColor = strtolower((string)($appearance['icon_color'] ?? '#ffffff'));
+            $iconBackgroundColor = strtolower((string)($appearance['icon_background_color'] ?? '#176b50'));
+            if (!preg_match('/^#[0-9a-f]{6}$/', $iconColor)) $iconColor = '#ffffff';
+            if (!preg_match('/^#[0-9a-f]{6}$/', $iconBackgroundColor)) $iconBackgroundColor = '#176b50';
             $safeUrl = htmlspecialchars($url, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
             $safeLabel = htmlspecialchars($label, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
             $icon = self::renderSocialIcon($platform, $family);
-            $html .= '<a class="site-logo-topbar__social-link" href="' . $safeUrl . '" target="_blank" rel="noopener noreferrer" aria-label="' . $safeLabel . '" title="' . $safeLabel . '" style="--social-icon-size:' . $size . 'px">' . $icon . '</a>';
+            $html .= '<a class="site-logo-topbar__social-link" href="' . $safeUrl . '" target="_blank" rel="noopener noreferrer" aria-label="' . $safeLabel . '" title="' . $safeLabel . '" style="--social-icon-size:' . $size . 'px;--social-icon-color:' . $iconColor . ';--social-icon-background:' . $iconBackgroundColor . '">' . $icon . '</a>';
         }
         return $html;
     }
