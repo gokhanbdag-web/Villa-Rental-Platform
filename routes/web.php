@@ -2230,6 +2230,39 @@ $router->get('/admin/content', static function (): void {
         'home_guest_unit'=>'Misafir birimi ana sayfa',
         'home_bedroom_unit'=>'Yatak odası birimi ana sayfa',
         'home_night_unit'=>'Gece fiyat birimi',
+        'explore_hero_eyebrow'=>'Keşfet drawer · Karşılama üst etiketi',
+        'explore_hero_title'=>'Keşfet drawer · Karşılama başlığı',
+        'explore_hero_text'=>'Keşfet drawer · Karşılama açıklaması',
+        'explore_hero_image'=>'Keşfet drawer · Karşılama görsel URL',
+        'explore_hero_cta'=>'Keşfet drawer · Karşılama buton metni',
+        'explore_hero_link'=>'Keşfet drawer · Karşılama bağlantısı',
+        'explore_card_1_title'=>'Keşfet kart 1 · Başlık',
+        'explore_card_1_text'=>'Keşfet kart 1 · Açıklama',
+        'explore_card_1_image'=>'Keşfet kart 1 · Görsel URL',
+        'explore_card_1_link'=>'Keşfet kart 1 · Bağlantı',
+        'explore_card_2_title'=>'Keşfet kart 2 · Başlık',
+        'explore_card_2_text'=>'Keşfet kart 2 · Açıklama',
+        'explore_card_2_image'=>'Keşfet kart 2 · Görsel URL',
+        'explore_card_2_link'=>'Keşfet kart 2 · Bağlantı',
+        'explore_card_3_title'=>'Keşfet kart 3 · Başlık',
+        'explore_card_3_text'=>'Keşfet kart 3 · Açıklama',
+        'explore_card_3_image'=>'Keşfet kart 3 · Görsel URL',
+        'explore_card_3_link'=>'Keşfet kart 3 · Bağlantı',
+        'explore_card_4_title'=>'Keşfet kart 4 · Başlık',
+        'explore_card_4_text'=>'Keşfet kart 4 · Açıklama',
+        'explore_card_4_image'=>'Keşfet kart 4 · Görsel URL',
+        'explore_card_4_link'=>'Keşfet kart 4 · Bağlantı',
+        'explore_destination_eyebrow'=>'Keşfet · Destinasyon üst etiketi',
+        'explore_destination_title'=>'Keşfet · Destinasyon başlığı',
+        'explore_destination_text'=>'Keşfet · Destinasyon açıklaması',
+        'explore_destination_image'=>'Keşfet · Destinasyon görsel URL',
+        'explore_destination_cta'=>'Keşfet · Destinasyon buton metni',
+        'explore_destination_link'=>'Keşfet · Destinasyon bağlantısı',
+        'explore_support_title'=>'Keşfet · Destek başlığı',
+        'explore_support_text'=>'Keşfet · Destek açıklaması',
+        'explore_support_phone'=>'Keşfet · Telefon numarası',
+        'explore_support_whatsapp'=>'Keşfet · WhatsApp numarası',
+        'explore_support_cta'=>'Keşfet · WhatsApp buton metni',
         'home_empty_photo'=>'Görsel bulunamadı metni'
     ];
     ThemeManager::renderTemplate('templates/pages/admin/content.php', get_defined_vars());
@@ -2238,7 +2271,7 @@ $router->get('/admin/content', static function (): void {
 $router->post('/admin/content', static function (): void {
     Auth::requireRole(['super_admin', 'admin']);
     verify_csrf();
-    $allowed = ['site_name','home_eyebrow','home_title','home_subtitle','home_search_placeholder','featured_title','featured_subtitle','empty_properties','search_button','guest_select_label','guest_unit','all_categories','property_about','property_reserve','property_no_images','booking_notice','footer_text','home_latest_title','home_latest_subtitle','home_trust_1_title','home_trust_1_text','home_trust_2_title','home_trust_2_text','home_trust_3_title','home_trust_3_text','home_trust_4_title','home_trust_4_text','home_concepts_title','home_concepts_subtitle','home_collections_title','home_collections_subtitle','home_regions_title','home_regions_subtitle','home_reviews_title','home_reviews_subtitle','home_faq_title','home_faq_subtitle','home_faq_1_question','home_faq_1_answer','home_faq_2_question','home_faq_2_answer','home_faq_3_question','home_faq_3_answer','home_faq_4_question','home_faq_4_answer','home_faq_5_question','home_faq_5_answer','home_support_title','home_support_subtitle','home_support_phone','home_support_whatsapp','home_host_title','home_host_subtitle','home_host_cta','home_latest_eyebrow','home_latest_link','home_concepts_eyebrow','home_concepts_count_label','home_collections_eyebrow','home_collection_count_suffix','home_collection_link','home_regions_eyebrow','home_reviews_eyebrow','home_review_verified_label','home_faq_eyebrow','home_support_eyebrow','home_support_whatsapp_label','home_footer_regions_title','home_footer_categories_title','home_footer_contact_title','home_guest_unit','home_bedroom_unit','home_night_unit','home_empty_photo'];
+    $allowed = ['site_name','home_eyebrow','home_title','home_subtitle','home_search_placeholder','featured_title','featured_subtitle','empty_properties','search_button','guest_select_label','guest_unit','all_categories','property_about','property_reserve','property_no_images','booking_notice','footer_text','home_latest_title','home_latest_subtitle','home_trust_1_title','home_trust_1_text','home_trust_2_title','home_trust_2_text','home_trust_3_title','home_trust_3_text','home_trust_4_title','home_trust_4_text','home_concepts_title','home_concepts_subtitle','home_collections_title','home_collections_subtitle','home_regions_title','home_regions_subtitle','home_reviews_title','home_reviews_subtitle','home_faq_title','home_faq_subtitle','home_faq_1_question','home_faq_1_answer','home_faq_2_question','home_faq_2_answer','home_faq_3_question','home_faq_3_answer','home_faq_4_question','home_faq_4_answer','home_faq_5_question','home_faq_5_answer','home_support_title','home_support_subtitle','home_support_phone','home_support_whatsapp','home_host_title','home_host_subtitle','home_host_cta','home_latest_eyebrow','home_latest_link','home_concepts_eyebrow','home_concepts_count_label','home_collections_eyebrow','home_collection_count_suffix','home_collection_link','home_regions_eyebrow','home_reviews_eyebrow','home_review_verified_label','home_faq_eyebrow','home_support_eyebrow','home_support_whatsapp_label','home_footer_regions_title','home_footer_categories_title','home_footer_contact_title','home_guest_unit','home_bedroom_unit','home_night_unit','home_empty_photo','explore_hero_eyebrow','explore_hero_title','explore_hero_text','explore_hero_image','explore_hero_cta','explore_hero_link','explore_card_1_title','explore_card_1_text','explore_card_1_image','explore_card_1_link','explore_card_2_title','explore_card_2_text','explore_card_2_image','explore_card_2_link','explore_card_3_title','explore_card_3_text','explore_card_3_image','explore_card_3_link','explore_card_4_title','explore_card_4_text','explore_card_4_image','explore_card_4_link','explore_destination_eyebrow','explore_destination_title','explore_destination_text','explore_destination_image','explore_destination_cta','explore_destination_link','explore_support_title','explore_support_text','explore_support_phone','explore_support_whatsapp','explore_support_cta'];
     $stmt = Database::connection()->prepare('INSERT INTO site_content (content_key,language_code,content_value,updated_at) VALUES (?,\'tr\',?,NOW()) ON DUPLICATE KEY UPDATE content_value=VALUES(content_value),updated_at=NOW()');
     foreach ((array)($_POST['content'] ?? []) as $key=>$value) {
         if (in_array($key,$allowed,true)) $stmt->execute([$key,trim((string)$value)]);
