@@ -115,6 +115,21 @@ if ($basePath !== '' && !$isThemeAssetRequest) {
     });
 }
 
+// Keep PHP sessions inside this application's writable storage instead of the
+// hosting account's shared LiteSpeed session directory. Shared-hosting PHP pools
+// may not have permission to run garbage collection in that global directory.
+$sessionStorage = APP_STORAGE . '/sessions';
+if (!is_dir($sessionStorage)) {
+    @mkdir($sessionStorage, 0700, true);
+}
+if (is_dir($sessionStorage) && is_writable($sessionStorage)) {
+    // Must be configured before session_start(); the storage/.htaccess file
+    // prevents direct HTTP access to session files.
+    ini_set('session.save_path', $sessionStorage);
+} else {
+    error_log('[VILLA_SESSION] Application session directory is not writable: ' . $sessionStorage);
+}
+
 // Public theme assets are read-only and never use session state. Do not open a PHP
 // session for them: this avoids waiting on an unrelated page request's session lock.
 if (!$isThemeAssetRequest && session_status() !== PHP_SESSION_ACTIVE) {
