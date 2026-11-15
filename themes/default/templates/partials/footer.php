@@ -18,7 +18,7 @@ $footerAccountPath = $footerRole === 'customer' ? '/account/bookings' : ($footer
 $footerAccountLabel = in_array($footerRole, ['admin', 'super_admin'], true) ? 'Yönetim' : ($footerRole === 'vendor' ? 'Ev Sahibi' : 'Hesabım');
 ?>
 <footer class="site-footer" aria-label="Alt bilgi"
-    style="--footer-bg:<?= e($footerSettings['background']) ?>;--footer-text:<?= e($footerSettings['text']) ?>;--footer-padding-top:<?= (int)$footerSettings['padding_top'] ?>px;--footer-padding-bottom:<?= (int)$footerSettings['padding_bottom'] ?>px;--footer-margin-top:<?= (int)$footerSettings['margin_top'] ?>px;--footer-content-width:<?= (int)$footerSettings['content_width'] ?>px">
+    style="--footer-bg:<?= e($footerSettings['background']) ?>;--footer-padding-top:<?= (int)$footerSettings['padding_top'] ?>px;--footer-padding-bottom:<?= (int)$footerSettings['padding_bottom'] ?>px;--footer-margin-top:<?= (int)$footerSettings['margin_top'] ?>px;--footer-content-width:<?= (int)$footerSettings['content_width'] ?>px">
     <div class="footer-inner">
         <div class="footer-row footer-row-primary" aria-label="Üst widget satırı">
             <div class="footer-widget footer-widget-1" data-footer-widget="1">
