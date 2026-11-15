@@ -11,12 +11,36 @@ try {
     $mobileBarSettings = [];
 }
 $mobileBarEnabled = ($mobileBarSettings['mobile_bar.enabled'] ?? '1') === '1';
+$footerRecentBlogPosts = [];
+$footerRecentBlogIds = array_values(array_unique(array_filter(array_map('intval', (array)($footerSettings['recent_blog_post_ids'] ?? [])), static fn(int $id): bool => $id > 0)));
+if ($footerRecentBlogIds) {
+    try {
+        $placeholders = implode(',', array_fill(0, count($footerRecentBlogIds), '?'));
+        $recentStmt = \\App\\Core\\Database::connection()->prepare("SELECT id,title,slug,featured_image,featured_image_alt FROM blog_posts WHERE id IN ($placeholders) AND status='published' AND (published_at IS NULL OR published_at<=NOW())");
+        $recentStmt->execute($footerRecentBlogIds);
+        $recentRows = $recentStmt->fetchAll(PDO::FETCH_ASSOC);
+        $recentById = [];
+        foreach ($recentRows as $recentRow) $recentById[(int)$recentRow['id']] = $recentRow;
+        foreach ($footerRecentBlogIds as $recentId) if (isset($recentById[$recentId])) $footerRecentBlogPosts[] = $recentById[$recentId];
+    } catch (Throwable $footerBlogError) {
+        error_log('Footer recent blog widget query failed: ' . $footerBlogError->getMessage());
+    }
+}
 $mobilePhone = preg_replace('/\\D+/', '', (string)($mobileBarSettings['mobile_bar.phone'] ?? '')) ?: '';
 $footerUser = is_array($user ?? null) ? $user : null;
 $footerRole = (string)($footerUser['role'] ?? '');
 $footerAccountPath = $footerRole === 'customer' ? '/account/bookings' : ($footerRole === 'vendor' ? '/vendor' : '/admin');
 $footerAccountLabel = in_array($footerRole, ['admin', 'super_admin'], true) ? 'Yönetim' : ($footerRole === 'vendor' ? 'Ev Sahibi' : 'Hesabım');
 ?>
+<style>
+.site-footer .footer-recent-blog h2{margin:0 0 14px;color:inherit;font-size:16px;line-height:1.35;font-weight:750}
+.site-footer .footer-recent-blog ul{display:grid;gap:10px;margin:0;padding:0;list-style:none}
+.site-footer .footer-recent-blog li{min-width:0;margin:0;padding:0}
+.site-footer .footer-recent-blog a{display:flex;align-items:center;gap:10px;min-width:0;color:inherit;text-decoration:none;font-size:13px;line-height:1.4;font-weight:600}
+.site-footer .footer-recent-blog a:hover{opacity:.82}
+.site-footer .footer-recent-blog img{display:block;flex:0 0 54px;width:54px;height:44px;object-fit:cover;border-radius:6px}
+.site-footer .footer-recent-blog a span{min-width:0;overflow-wrap:anywhere}
+</style>
 <footer class="site-footer" aria-label="Alt bilgi"
     style="--footer-bg:<?= e($footerSettings['background']) ?>;--footer-text:<?= e($footerSettings['text'] ?? '#ffffff') ?>;--footer-padding-top:<?= (int)$footerSettings['padding_top'] ?>px;--footer-padding-bottom:<?= (int)$footerSettings['padding_bottom'] ?>px;--footer-margin-top:<?= (int)$footerSettings['margin_top'] ?>px;--footer-content-width:<?= (int)$footerSettings['content_width'] ?>px">
     <div class="footer-inner">
@@ -29,7 +53,21 @@ $footerAccountLabel = in_array($footerRole, ['admin', 'super_admin'], true) ? 'Y
                     </section>
                 <?php endif; ?>
             </div>
-            <div class="footer-widget footer-widget-2" data-footer-widget="2"></div>
+            <div class="footer-widget footer-widget-2" data-footer-widget="2">
+                <?php if ($footerRecentBlogPosts): ?>
+                    <section class="footer-recent-blog" aria-label="<?= e((string)($footerSettings['recent_blog_title'] ?? 'Son Blog Yazıları')) ?>">
+                        <h2><?= e((string)($footerSettings['recent_blog_title'] ?? 'Son Blog Yazıları')) ?></h2>
+                        <ul>
+                            <?php foreach ($footerRecentBlogPosts as $recentPost): ?>
+                                <li><a href="<?= e(app_url('/blog/' . rawurlencode((string)$recentPost['slug']))) ?>">
+                                    <?php if (trim((string)($recentPost['featured_image'] ?? '')) !== ''): ?><img src="<?= e((string)$recentPost['featured_image']) ?>" alt="<?= e((string)($recentPost['featured_image_alt'] ?? $recentPost['title'])) ?>" loading="lazy" decoding="async"><?php endif; ?>
+                                    <span><?= e((string)$recentPost['title']) ?></span>
+                                </a></li>
+                            <?php endforeach; ?>
+                        </ul>
+                    </section>
+                <?php endif; ?>
+            </div>
             <div class="footer-widget footer-widget-3" data-footer-widget="3"></div>
             <div class="footer-widget footer-widget-4" data-footer-widget="4"></div>
         </div>
