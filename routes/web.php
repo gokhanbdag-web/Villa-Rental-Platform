@@ -1338,7 +1338,7 @@ $router->post('/login/ajax', static function (): void {
         $respond(200, [
             'ok' => true,
             'user' => ['id'=>(int)$user['id'], 'label'=>$label, 'role'=>$role, 'role_label'=>$roleLabel],
-            'menus' => $menus,
+            'menus' => array_map(static fn(array $item): array => ['label'=>$item['label'], 'url'=>app_url($item['url']), 'icon'=>$item['icon']], $menus),
             'csrf' => $logoutToken,
             'home_url' => app_url('/'),
             'logout_url' => app_url('/logout'),
