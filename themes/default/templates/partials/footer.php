@@ -22,9 +22,9 @@ $footerAccountLabel = in_array($footerRole, ['admin', 'super_admin'], true) ? 'Y
     <div class="footer-inner">
         <div class="footer-row footer-row-primary" aria-label="Üst widget satırı">
             <div class="footer-widget footer-widget-1" data-footer-widget="1">
-                <?php if (trim((string)($footerSettings['about_title'] ?? '')) !== '' || trim((string)($footerSettings['about_description'] ?? '')) !== ''): ?>
+                <?php if (trim((string)($footerSettings['logo_url'] ?? '')) !== '' || trim((string)($footerSettings['about_title'] ?? '')) !== '' || trim((string)($footerSettings['about_description'] ?? '')) !== ''): ?>
                     <section class="footer-about" aria-label="Hakkında">
-                        <?php if (trim((string)($footerSettings['about_title'] ?? '')) !== ''): ?><h2><?= e($footerSettings['about_title']) ?></h2><?php endif; ?>
+                        <?php if (trim((string)($footerSettings['logo_url'] ?? '')) !== ''): ?><img class="footer-about-logo" src="<?= e((string)$footerSettings['logo_url']) ?>" alt="Footer logosu" loading="lazy" decoding="async" style="display:block;width:auto;max-width:min(100%,220px);max-height:80px;object-fit:contain;object-position:left center;margin:0 0 14px"><?php elseif (trim((string)($footerSettings['about_title'] ?? '')) !== ''): ?><h2><?= e($footerSettings['about_title']) ?></h2><?php endif; ?>
                         <?php if (trim((string)($footerSettings['about_description'] ?? '')) !== ''): ?><p><?= nl2br(e($footerSettings['about_description'])) ?></p><?php endif; ?>
                     </section>
                 <?php endif; ?>
