@@ -1337,7 +1337,7 @@ $router->post('/login/ajax', static function (): void {
         if (session_status() === PHP_SESSION_ACTIVE) session_write_close();
         $respond(200, [
             'ok' => true,
-            'user' => ['id'=>(int)$user['id'], 'label'=>$label, 'role'=>$role, 'role_label'=>$roleLabel],
+            'user' => ['id'=>(int)$user['id'], 'label'=>$label, 'role'=>$role, 'role_label'=>$roleLabel, 'url'=>app_url($role === 'customer' ? '/account/bookings' : ($role === 'vendor' ? '/vendor' : '/admin'))],
             'menus' => array_map(static fn(array $item): array => ['label'=>$item['label'], 'url'=>app_url($item['url']), 'icon'=>$item['icon']], $menus),
             'csrf' => $logoutToken,
             'home_url' => app_url('/'),
