@@ -139,6 +139,175 @@ $stylePhotos=['https://images.unsplash.com/photo-1613490493576-7fde63acd811?auto
  body .hero-filter-panel .guest-popover{left:0;right:0;width:100%}
 }
 
+
+/* Active default-theme hero: give the real search form the full visual priority. */
+body.villa-home-mediterranean .hero-card{
+  display:flex!important;
+  flex-direction:column!important;
+  align-items:center!important;
+  justify-content:center!important;
+  min-height:680px!important;
+  padding:clamp(48px,6vw,82px) clamp(22px,5vw,64px)!important;
+}
+body.villa-home-mediterranean .hero-inner{
+  display:block!important;
+  width:100%!important;
+  max-width:1160px!important;
+  margin:0 auto!important;
+}
+body.villa-home-mediterranean .hero-copy{
+  width:100%!important;
+  max-width:none!important;
+  padding:0!important;
+  text-align:center!important;
+}
+body.villa-home-mediterranean .hero-copy h1{
+  max-width:980px!important;
+  margin:12px auto 14px!important;
+  font-size:clamp(40px,5.4vw,70px)!important;
+  line-height:1.06!important;
+  letter-spacing:-1.8px!important;
+  text-wrap:balance;
+}
+body.villa-home-mediterranean .hero-copy p{
+  max-width:760px!important;
+  margin:0 auto!important;
+  font-size:clamp(16px,1.5vw,19px)!important;
+  line-height:1.55!important;
+}
+body.villa-home-mediterranean .hero-filter-panel{
+  width:100%!important;
+  max-width:1160px!important;
+  margin:34px auto 0!important;
+  padding:14px!important;
+  justify-self:auto!important;
+  border:1px solid rgba(255,255,255,.9)!important;
+  border-radius:24px!important;
+  background:#fff!important;
+  box-shadow:0 24px 68px rgba(5,25,22,.34),0 0 0 7px rgba(255,255,255,.15)!important;
+  backdrop-filter:none!important;
+}
+body.villa-home-mediterranean .hero-filter-panel .search-enhanced{
+  display:grid!important;
+  grid-template-columns:minmax(210px,1.45fr) repeat(3,minmax(145px,1fr)) minmax(160px,.9fr)!important;
+  align-items:stretch!important;
+  gap:0!important;
+  width:100%!important;
+  max-width:none!important;
+  min-height:96px!important;
+  padding:0!important;
+  border:0!important;
+  border-radius:0!important;
+  background:transparent!important;
+  box-shadow:none!important;
+}
+body.villa-home-mediterranean .hero-filter-panel .search-field{
+  min-width:0!important;
+  min-height:88px!important;
+  padding:15px 17px!important;
+  border:0!important;
+  border-right:1px solid #e5ebe6!important;
+  border-bottom:0!important;
+  background:transparent!important;
+}
+body.villa-home-mediterranean .hero-filter-panel .search-label{
+  margin-bottom:5px!important;
+  color:#53645b!important;
+  font-size:12px!important;
+  font-weight:800!important;
+  letter-spacing:.45px!important;
+}
+body.villa-home-mediterranean .hero-filter-panel .search-icon{
+  color:var(--villa-primary)!important;
+  font-size:18px!important;
+}
+body.villa-home-mediterranean .hero-filter-panel .destination-field input,
+body.villa-home-mediterranean .hero-filter-panel .date-display,
+body.villa-home-mediterranean .hero-filter-panel .guest-trigger{
+  min-height:30px!important;
+  color:#24362e!important;
+  font-size:16px!important;
+  font-weight:700!important;
+}
+body.villa-home-mediterranean .hero-filter-panel .destination-field input::placeholder{
+  color:#77857d!important;
+  font-weight:500!important;
+}
+body.villa-home-mediterranean .hero-filter-panel .search-submit{
+  align-self:stretch!important;
+  min-width:0!important;
+  min-height:78px!important;
+  margin:0 0 0 12px!important;
+  padding:0 20px!important;
+  border:0!important;
+  border-radius:16px!important;
+  background:var(--villa-primary)!important;
+  color:#fff!important;
+  font-size:17px!important;
+  font-weight:850!important;
+  box-shadow:0 10px 24px color-mix(in srgb,var(--villa-primary) 28%,transparent)!important;
+}
+body.villa-home-mediterranean .hero-filter-panel .search-submit:hover{
+  filter:brightness(.96);
+  transform:translateY(-1px);
+}
+@media(max-width:1050px){
+  body.villa-home-mediterranean .hero-card{min-height:640px!important;padding:48px 24px!important}
+  body.villa-home-mediterranean .hero-filter-panel{margin-top:28px!important}
+  body.villa-home-mediterranean .hero-filter-panel .search-enhanced{
+    grid-template-columns:repeat(2,minmax(0,1fr))!important;
+    min-height:0!important;
+  }
+  body.villa-home-mediterranean .hero-filter-panel .search-field{
+    min-height:78px!important;
+    border-bottom:1px solid #e5ebe6!important;
+  }
+  body.villa-home-mediterranean .hero-filter-panel .destination-field,
+  body.villa-home-mediterranean .hero-filter-panel .guest-field{
+    grid-column:1/-1!important;
+    border-right:0!important;
+  }
+  body.villa-home-mediterranean .hero-filter-panel .date-field:nth-of-type(3){border-right:0!important}
+  body.villa-home-mediterranean .hero-filter-panel .search-submit{
+    grid-column:1/-1!important;
+    min-height:60px!important;
+    margin:12px 0 0!important;
+  }
+}
+@media(max-width:600px){
+  body.villa-home-mediterranean .hero-card{
+    min-height:0!important;
+    padding:38px 14px 24px!important;
+  }
+  body.villa-home-mediterranean .hero-copy h1{
+    margin:8px auto 10px!important;
+    font-size:clamp(30px,8vw,38px)!important;
+    letter-spacing:-.9px!important;
+  }
+  body.villa-home-mediterranean .hero-copy p{font-size:14px!important}
+  body.villa-home-mediterranean .hero-filter-panel{
+    margin-top:22px!important;
+    padding:13px!important;
+    border-radius:20px!important;
+    box-shadow:0 18px 46px rgba(0,0,0,.34),0 0 0 5px rgba(255,255,255,.14)!important;
+  }
+  body.villa-home-mediterranean .hero-filter-panel .search-field{
+    min-height:72px!important;
+    padding:10px 9px!important;
+  }
+  body.villa-home-mediterranean .hero-filter-panel .search-label{font-size:11px!important}
+  body.villa-home-mediterranean .hero-filter-panel .destination-field input,
+  body.villa-home-mediterranean .hero-filter-panel .date-display,
+  body.villa-home-mediterranean .hero-filter-panel .guest-trigger{font-size:14px!important}
+  body.villa-home-mediterranean .hero-filter-panel .search-submit{
+    min-height:56px!important;
+    font-size:16px!important;
+  }
+}
+@media(prefers-reduced-motion:reduce){
+  body.villa-home-mediterranean .hero-filter-panel .search-submit{transition:none!important}
+}
+
 </style></head><body>
 <?php \App\Core\ThemeManager::renderPartial('partials/header.php', get_defined_vars()); ?>
 <main class="home-sections"><?php if($active('hero')): ?><section class="hero" style="order:<?= $order('hero',1) ?>"><div class="hero-card" style="<?= $heroBackgroundImageUrl!==''?'background-image:url(&quot;'.e($heroBackgroundImageUrl).'&quot;)':'' ?>">
