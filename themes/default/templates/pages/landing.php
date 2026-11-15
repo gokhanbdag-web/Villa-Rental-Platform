@@ -497,6 +497,149 @@ body .hero-filter-panel .guest-popover{left:auto;right:0;width:300px}
     padding-left:12px!important;padding-right:12px!important;
   }
 }
+
+/* Mobile-only hero search emphasis. Desktop rules above remain untouched. */
+@media(max-width:600px){
+  body .hero-card{
+    min-height:0!important;
+    padding:22px 13px 28px!important;
+    gap:15px!important;
+  }
+  body .hero-filter-panel{
+    order:-1!important;
+    width:100%!important;
+    max-width:none!important;
+    margin:0 auto!important;
+    padding:15px!important;
+    border:2px solid var(--villa-primary)!important;
+    border-radius:21px!important;
+    background:#fff!important;
+    box-shadow:0 18px 46px rgba(0,0,0,.38),0 0 0 4px rgba(255,255,255,.28)!important;
+    overflow:visible!important;
+  }
+  body .hero-filter-panel::before{
+    content:"VİLLANI BUL";
+    display:block!important;
+    margin:0 0 3px!important;
+    color:#20332c!important;
+    font-size:19px!important;
+    line-height:1.2!important;
+    font-weight:900!important;
+    letter-spacing:.2px!important;
+    text-align:left!important;
+  }
+  body .hero-filter-panel::after{
+    content:"Konumunu, tarihlerini ve misafir sayısını seç";
+    display:block!important;
+    margin:0 0 12px!important;
+    color:#65736b!important;
+    font-size:12px!important;
+    line-height:1.4!important;
+    font-weight:500!important;
+    text-align:left!important;
+  }
+  body .hero-filter-panel .search-enhanced{
+    display:grid!important;
+    grid-template-columns:repeat(2,minmax(0,1fr))!important;
+    gap:8px!important;
+    width:100%!important;
+    min-height:0!important;
+    padding:0!important;
+    border:0!important;
+    background:transparent!important;
+    box-shadow:none!important;
+  }
+  body .hero-filter-panel .search-field{
+    box-sizing:border-box!important;
+    min-width:0!important;
+    min-height:74px!important;
+    margin:0!important;
+    padding:11px 12px!important;
+    border:1px solid #e1e9e3!important;
+    border-radius:13px!important;
+    background:#f7faf8!important;
+  }
+  body .hero-filter-panel .destination-field,
+  body .hero-filter-panel .guest-field{
+    grid-column:1/-1!important;
+  }
+  body .hero-filter-panel .date-field{
+    border-right:1px solid #e1e9e3!important;
+  }
+  body .hero-filter-panel .date-field:nth-of-type(3){
+    border-right:1px solid #e1e9e3!important;
+  }
+  body .hero-filter-panel .search-label{
+    display:block!important;
+    margin:0 0 6px!important;
+    color:#58685f!important;
+    font-size:12px!important;
+    line-height:1.2!important;
+    font-weight:800!important;
+    letter-spacing:.25px!important;
+  }
+  body .hero-filter-panel .search-icon{
+    color:var(--villa-primary)!important;
+    font-size:16px!important;
+  }
+  body .hero-filter-panel .destination-field input,
+  body .hero-filter-panel .date-display,
+  body .hero-filter-panel .guest-trigger{
+    box-sizing:border-box!important;
+    width:100%!important;
+    min-width:0!important;
+    min-height:27px!important;
+    margin:0!important;
+    color:#20332c!important;
+    font-size:15px!important;
+    line-height:1.35!important;
+    font-weight:700!important;
+  }
+  body .hero-filter-panel .destination-field input::placeholder{
+    color:#69776f!important;
+    font-size:14px!important;
+    font-weight:500!important;
+  }
+  body .hero-filter-panel .search-submit{
+    grid-column:1/-1!important;
+    display:flex!important;
+    align-items:center!important;
+    justify-content:center!important;
+    width:100%!important;
+    min-width:0!important;
+    min-height:64px!important;
+    margin:2px 0 0!important;
+    padding:12px 16px!important;
+    border:0!important;
+    border-radius:14px!important;
+    background:var(--villa-primary)!important;
+    color:#fff!important;
+    font-size:17px!important;
+    line-height:1.2!important;
+    font-weight:900!important;
+    letter-spacing:.2px!important;
+    box-shadow:0 9px 20px rgba(0,0,0,.2)!important;
+  }
+  body .hero-filter-panel .search-submit span{
+    margin-right:8px!important;
+    font-size:22px!important;
+  }
+  body .hero-filter-panel .guest-popover{
+    left:0!important;
+    right:0!important;
+    width:100%!important;
+  }
+  body .hero-copy{
+    order:0!important;
+    width:100%!important;
+    max-width:100%!important;
+    margin:0!important;
+    padding:0 4px!important;
+    text-align:center!important;
+  }
+  body .hero-filter-panel .home-calendar{grid-column:1/-1!important}
+}
+
 </style></head><body>
 <?php \App\Core\ThemeManager::renderPartial('partials/header.php', get_defined_vars()); ?>
 <main class="home-sections"><?php if($active('hero')): ?><section class="hero" style="order:<?= $order('hero',1) ?>"><div class="hero-card" style="<?= $heroBackgroundImageUrl!==''?'background-image:url(&quot;'.e($heroBackgroundImageUrl).'&quot;)':'' ?>">
