@@ -30,7 +30,7 @@ $propertyCount = count($properties);
    <tr><th>Yatak sayısı</th><?php foreach($properties as $p): ?><td><?= (int)$p['beds'] ?></td><?php endforeach; ?></tr>
    <tr><th>Banyo</th><?php foreach($properties as $p): ?><td><?= e((string)$p['bathrooms']) ?></td><?php endforeach; ?></tr>
    <tr><th>Misafir puanı</th><?php foreach($properties as $p): ?><td class="compare-rating"><?php if((int)$p['rating_count']>0): ?>★ <?= number_format((float)$p['rating_average'],1,',','.') ?>/10 <small>(<?= (int)$p['rating_count'] ?> değerlendirme)</small><?php else: ?>Henüz değerlendirme yok<?php endif; ?></td><?php endforeach; ?></tr>
-   <tr><th>Açıklama</th><?php foreach($properties as $p): ?><td><?= e((string)($p['summary']?:$p['description']??'')) ?></td><?php endforeach; ?></tr>
+   <tr><th>Açıklama</th><?php foreach($properties as $p): ?><td><?= e((string)($p['summary'] ?? $p['description'] ?? '')) ?></td><?php endforeach; ?></tr>
    <tr><th>Öne çıkan özellikler</th><?php foreach($properties as $p): ?><td><?php $items=$compareAmenities[(int)$p['id']]??[]; if($items): ?><ul class="compare-amenities"><?php foreach(array_slice($items,0,12) as $item): ?><li><?= e($item) ?></li><?php endforeach; ?></ul><?php else: ?>Belirtilmemiş<?php endif; ?></td><?php endforeach; ?></tr>
   </tbody></table></div>
   <p class="compare-add-more">En fazla 4 villayı aynı anda karşılaştırabilirsiniz. Yeni villa eklemek için konaklama listesine dönün.</p>
