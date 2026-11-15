@@ -75,6 +75,28 @@ final class Auth
         return self::user() !== null;
     }
 
+    /**
+     * Enforce the user-management hierarchy independently of route/UI checks.
+     * Admins may manage customers and vendors; only super-admins may manage
+     * admin accounts. Super-admin accounts are never changed through this flow.
+     */
+    public static function canManageUserRole(string $actorRole, string $targetRole): bool
+    {
+        if ($targetRole === 'super_admin') {
+            return false;
+        }
+
+        if ($actorRole === 'super_admin') {
+            return in_array($targetRole, ['admin', 'customer', 'vendor'], true);
+        }
+
+        if ($actorRole === 'admin') {
+            return in_array($targetRole, ['customer', 'vendor'], true);
+        }
+
+        return false;
+    }
+
     public static function requireRole(array $roles): void
     {
         $user = self::user();
