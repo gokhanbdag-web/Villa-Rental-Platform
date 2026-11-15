@@ -178,7 +178,7 @@ return static function (string $html, string $requestPath, string $platformMode)
             }
             enhanceResponsiveTables(content);
             function enhanceFileUploaders(root){
-                (root||content).querySelectorAll("input[type='file']:not([data-vr-upload-enhanced])").forEach(function(input){
+                (root||content).querySelectorAll("input[type=file]:not([data-vr-upload-enhanced])").forEach(function(input){
                     if(input.classList.contains("footer-logo-file-input")||input.classList.contains("theme-file-input")||input.id==="propertyImages"||input.closest(".drop-zone"))return;
                     input.setAttribute("data-vr-upload-enhanced","1");
                     const preview=document.createElement("div");
