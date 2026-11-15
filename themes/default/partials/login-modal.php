@@ -2,11 +2,10 @@
 <section class="villa-login-modal" id="villaLoginModal" role="dialog" aria-modal="true" aria-labelledby="villaLoginTitle" hidden>
 <div class="villa-login-card"><button type="button" class="villa-login-close" id="villaLoginClose" aria-label="Kapat">×</button>
 <h2 id="villaLoginTitle">Tekrar hoş geldiniz</h2><p>Hesabınıza giriş yapın.</p>
-<form id="villaAjaxLogin" method="post" action="<?= e(app_url('/login')) ?>" data-endpoint="<?= e(app_url('/login/ajax')) ?>">
+<form id="villaLoginForm" method="post" action="<?= e(app_url('/login')) ?>">
 <input type="hidden" name="_csrf" value="<?= e((string)($loginCsrfToken ?? csrf_token())) ?>">
 <label for="villaLoginIdentity">E-posta veya kullanıcı adı</label><input id="villaLoginIdentity" name="identity" autocomplete="username" required>
 <label for="villaLoginPassword">Şifre</label><input id="villaLoginPassword" name="password" type="password" autocomplete="current-password" required>
-<div class="villa-login-error" id="villaLoginError" role="alert" hidden></div>
 <button type="submit" class="villa-login-submit" id="villaLoginSubmit">Giriş Yap</button>
 </form><div class="villa-login-foot">Hesabınız yok mu? <a href="<?= e(app_url('/register')) ?>">Misafir hesabı oluşturun</a></div>
 </div></section>
@@ -22,8 +21,8 @@
 .villa-login-card label{display:block;margin:14px 0 6px;font-size:13px;font-weight:650}
 .villa-login-card input{width:100%;box-sizing:border-box;padding:13px;border:1px solid #dfe8e2;border-radius:10px;font:inherit}
 .villa-login-submit{width:100%;margin-top:20px;padding:14px;border:0;border-radius:11px;background:#167c80;color:#fff;font-weight:700;cursor:pointer}
+.villa-login-submit:disabled{opacity:.65;cursor:wait}
 .villa-login-close{position:absolute;right:14px;top:12px;width:36px;height:36px;border:0;border-radius:50%;background:#f1f5f2;color:#20332c;font-size:24px;cursor:pointer}
-.villa-login-error{margin-top:12px;padding:10px 12px;border-radius:9px;background:#fff0ef;color:#a32b20;font-size:13px}
 .villa-login-foot{margin-top:17px;text-align:center;font-size:13px;color:#718078}
 .villa-login-foot a{color:#167c80;font-weight:700}
 @media(max-width:600px){.villa-login-modal{align-items:end;padding:0 12px calc(76px + env(safe-area-inset-bottom))}.villa-login-card{width:100%;max-width:480px;padding:26px 21px 22px;border-radius:22px 22px 18px 18px;transform:translateY(calc(100% + 24px));max-height:calc(100dvh - 112px);overflow-y:auto}.villa-login-open .villa-login-card{transform:translateY(0)}}
@@ -38,44 +37,14 @@
 </style>
 <script>
 (function(){
-var modal=document.getElementById('villaLoginModal'),overlay=document.getElementById('villaLoginOverlay'),form=document.getElementById('villaAjaxLogin'),closeBtn=document.getElementById('villaLoginClose'),error=document.getElementById('villaLoginError'),submit=document.getElementById('villaLoginSubmit');
+var modal=document.getElementById('villaLoginModal'),overlay=document.getElementById('villaLoginOverlay'),closeBtn=document.getElementById('villaLoginClose');
 document.querySelectorAll('.nav-submenu-toggle').forEach(function(button){button.addEventListener('click',function(e){e.preventDefault();e.stopPropagation();var entry=button.closest('.nav-entry'),open=!entry.classList.contains('is-open');var siblings=entry.parentElement?entry.parentElement.querySelectorAll(':scope > .nav-entry.is-open'):[];siblings.forEach(function(item){if(item!==entry){item.classList.remove('is-open');var b=item.querySelector(':scope > .nav-entry-top .nav-submenu-toggle');if(b)b.setAttribute('aria-expanded','false')}});entry.classList.toggle('is-open',open);button.setAttribute('aria-expanded',open?'true':'false');});});
 document.addEventListener('click',function(e){if(!e.target.closest('.nav-entry'))document.querySelectorAll('.nav-entry.is-open').forEach(function(item){item.classList.remove('is-open');var b=item.querySelector(':scope > .nav-entry-top .nav-submenu-toggle');if(b)b.setAttribute('aria-expanded','false')});});
-if(!modal||!overlay||!form)return;
-function open(){modal.hidden=false;overlay.hidden=false;document.body.classList.add('villa-login-open');error.hidden=true;window.setTimeout(function(){var el=document.getElementById('villaLoginIdentity');if(el)el.focus()},30)}
+if(!modal||!overlay||!closeBtn)return;
+function open(){modal.hidden=false;overlay.hidden=false;document.body.classList.add('villa-login-open');window.setTimeout(function(){var el=document.getElementById('villaLoginIdentity');if(el)el.focus()},30)}
 function close(){modal.hidden=true;overlay.hidden=true;document.body.classList.remove('villa-login-open')}
 document.addEventListener('click',function(e){var trigger=e.target.closest('[data-login-trigger]');if(trigger){e.preventDefault();open();}});
 overlay.addEventListener('click',close);closeBtn.addEventListener('click',close);
 document.addEventListener('keydown',function(e){if(e.key==='Escape'&&!modal.hidden)close()});
-form.addEventListener('submit',async function(e){
- e.preventDefault();error.hidden=true;submit.disabled=true;submit.textContent='Kontrol ediliyor…';
- try{
-  var response=await fetch(form.dataset.endpoint,{method:'POST',body:new FormData(form),credentials:'same-origin',headers:{'X-Requested-With':'XMLHttpRequest','Accept':'application/json'}});
-  var contentType=(response.headers.get('content-type')||'').toLowerCase();
-  if(!contentType.includes('application/json'))throw new Error('Giriş servisi beklenen yanıtı vermedi. Sayfa yenilenmedi; lütfen tekrar deneyin.');
-  var data;
-  try{data=await response.json()}catch(parseError){throw new Error('Sunucudan geçerli yanıt alınamadı. Sayfa yenilenmedi; tekrar deneyin.');}
-  if(!response.ok||!data.ok)throw new Error(data.message||'Giriş yapılamadı.');
-  document.querySelectorAll('[data-auth-link], [data-login-trigger]').forEach(function(link){
-   var accountLink=link;
-   if(link.tagName==='BUTTON'){
-    accountLink=document.createElement('a');
-    accountLink.className=link.className;
-    accountLink.innerHTML=link.innerHTML;
-    link.replaceWith(accountLink);
-   }
-   accountLink.href=data.user.url;
-   accountLink.setAttribute('data-auth-link','');
-   accountLink.removeAttribute('data-login-trigger');
-   accountLink.setAttribute('aria-label',data.user.label);
-   accountLink.setAttribute('title',data.user.label);
-   var label=accountLink.querySelector('span');
-   if(label)label.textContent=data.user.label;
-  });
-  close();form.reset();
-  document.dispatchEvent(new CustomEvent('villa:login',{detail:data.user}));
- }catch(err){error.textContent=err.message||'Bir hata oluştu. Tekrar deneyin.';error.hidden=false;}
- finally{submit.disabled=false;submit.textContent='Giriş Yap';}
-});
 })();
 </script>
