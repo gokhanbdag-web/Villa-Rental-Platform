@@ -93,24 +93,13 @@ $medBlocks = '';
     if ($medSectionActive('support')): $phone=trim((string)($content['home_support_phone']??''));$wa=trim((string)($content['home_support_whatsapp']??$phone));$phoneDigits=preg_replace('/\D+/','',$phone);$waDigits=preg_replace('/\D+/','',$wa); ?>
     <section class="section med-support" style="order:<?= $medSectionOrder('support',10) ?>">
       <div class="wrap">
-        <div class="med-support-panel">
-          <div class="med-support-heading">
-            <span class="pill villa-eyebrow"><?= e($content['home_support_eyebrow'] ?? 'TATİLİNİZİ PLANLAYIN') ?></span>
-            <h2><?= e($content['home_support_title'] ?? 'Tatilinizi birlikte planlayalım') ?></h2>
-            <p><?= e($content['home_support_subtitle'] ?? 'Villa seçimi, rezervasyon ve tatil planınız için ekibimiz size yardımcı olsun.') ?></p>
-          </div>
-
-          <?php $homeStatLabels=['villas'=>'Yayındaki villa','destinations'=>'Destinasyon','customers'=>'Müşteri','reviews'=>'Onaylı yorum']; ?>
-          <div class="med-home-stats" aria-label="Villa platformu istatistikleri">
-            <?php foreach($homeStatLabels as $statKey=>$statLabel): $statCount=max(0,(int)($homepageStats[$statKey]??0)); ?>
-              <div class="med-home-stat"><strong data-home-counter="<?= $statCount ?>"><?= number_format($statCount,0,',','.') ?></strong><span><?= e($statLabel) ?></span></div>
-            <?php endforeach; ?>
-          </div>
-
-          <?php if($phoneDigits || $waDigits): ?><div class="med-support-actions"><?php if($phoneDigits): ?><a class="med-support-phone" href="tel:<?= e($phoneDigits) ?>">☎ <?= e($phone) ?></a><?php endif; ?><?php if($waDigits): ?><a class="med-support-whatsapp" href="https://wa.me/<?= e($waDigits) ?>" target="_blank" rel="noopener noreferrer"><?= e($content['home_support_whatsapp_label'] ?? 'WhatsApp ile yazın ↗') ?></a><?php endif; ?></div><?php endif; ?>
+        <?php $homeStatLabels=['villas'=>'Yayındaki villa','destinations'=>'Destinasyon','customers'=>'Müşteri','reviews'=>'Onaylı yorum']; ?>
+        <div class="med-home-stats" aria-label="Villa platformu istatistikleri">
+          <?php foreach($homeStatLabels as $statKey=>$statLabel): $statCount=max(0,(int)($homepageStats[$statKey]??0)); ?>
+            <div class="med-home-stat"><strong data-home-counter="<?= $statCount ?>"><?= number_format($statCount,0,',','.') ?></strong><span><?= e($statLabel) ?></span></div>
+          <?php endforeach; ?>
         </div>
       </div>
-
     </section>
     <?php endif;
     $medBlocks = (string)ob_get_clean();
@@ -232,11 +221,11 @@ body.villa-home-mediterranean .destination-editorial-item:hover .destination-edi
 .med-faq-item summary span{color:var(--villa-text);font:inherit;}
 .med-faq-item[open] summary span{transform:rotate(45deg)}
 .med-faq-item p{max-width:680px;color:var(--villa-text);font:inherit;}
-.med-support{padding-top:20px!important}
-.med-support-panel{max-width:1080px;margin:0 auto;display:grid;grid-template-columns:minmax(0,1fr);gap:24px;padding:38px 42px;border-radius:22px;background:#fff;border:1px solid var(--villa-primary,#315a43);box-shadow:0 12px 34px rgba(20,45,30,.07);color:var(--villa-primary,#315a43)}
-.med-support-heading h2{margin:10px 0;color:var(--villa-primary,#315a43);font-size:var(--villa-body-size);}
-.med-support-heading p{max-width:720px;margin:0;color:var(--villa-primary,#315a43);font:inherit;}
-.med-home-stats{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:14px;margin:2px 0 4px}.med-home-stat{min-width:0;padding:17px 14px;border:1px solid #e7ece5;border-radius:14px;background:#f8faf6;text-align:center}.med-home-stat strong{display:block;color:var(--villa-primary,#315a43);font-size:clamp(25px,3vw,36px);font-weight:800;line-height:1.15;font-variant-numeric:tabular-nums}.med-home-stat span{display:block;margin-top:7px;color:var(--villa-primary,#315a43);font-size:12px;font-weight:650;letter-spacing:.02em}
+.med-support{padding:24px 0!important}
+.med-home-stats{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:16px;margin:0}
+.med-home-stat{min-width:0;min-height:112px;display:flex;flex-direction:column;justify-content:center;padding:18px 14px;border:1px solid #e7ece5;border-radius:16px;background:#fff;box-shadow:0 8px 24px rgba(35,57,39,.06);text-align:center}
+.med-home-stat strong{display:block;color:var(--villa-primary,#315a43);font-size:clamp(25px,3vw,36px);font-weight:800;line-height:1.15;font-variant-numeric:tabular-nums}
+.med-home-stat span{display:block;margin-top:7px;color:var(--villa-primary,#315a43);font-size:12px;font-weight:650;letter-spacing:.02em}
 .med-support-date-form{display:grid;grid-template-columns:minmax(0,1fr);gap:14px}
 .med-calendar-toolbar{display:flex;align-items:center;justify-content:space-between;gap:14px}
 .med-calendar-nav{width:42px;height:42px;flex:0 0 42px;border:1px solid var(--villa-primary,#315a43);border-radius:50%;background:#fff;color:var(--villa-primary,#315a43);font-size:27px;line-height:1;cursor:pointer}
@@ -271,7 +260,7 @@ body.villa-home-mediterranean .destination-editorial-item:hover .destination-edi
 .med-footer-columns a,.med-footer-columns li{color:var(--villa-text);font:inherit;}
 @media(max-width:760px){body.villa-home-mediterranean .destination-section .destination-editorial-grid{grid-template-columns:minmax(0,1fr)!important;column-gap:0!important;row-gap:0!important}body.villa-home-mediterranean .destination-section .destination-editorial-item{grid-column:1/-1!important;min-width:0!important}}
 @media(max-width:900px){.med-trust-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.destination-editorial-grid{column-gap:30px}.med-property-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.med-concept-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.med-review-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.med-faq-layout{grid-template-columns:1fr;gap:22px}}
-@media(max-width:600px){body.villa-home-mediterranean .hero-card{min-height:560px;}.med-trust{padding:24px 0!important}.destination-editorial-grid{grid-template-columns:1fr;column-gap:0}.destination-editorial-item{grid-template-columns:38px minmax(0,1fr) 32px;padding:19px 2px}.destination-editorial-copy strong{font-size:22px}.med-trust-grid{grid-template-columns:1fr 1fr;gap:18px 12px}.med-trust-item{align-items:flex-start;gap:9px}.med-trust-icon{flex-basis:36px;width:36px;height:36px;font-size:var(--villa-body-size);}.med-trust-item h3{font-size:var(--villa-body-size);}.med-trust-item p{font-size:var(--villa-body-size);}.med-property-grid,.med-property-grid--compact{grid-template-columns:1fr;gap:15px}.med-property-photo,.med-property-grid--compact .med-property-photo{height:225px}.med-concept-grid{grid-template-columns:1fr 1fr;gap:10px}.med-concept-card{height:170px;border-radius:14px}.med-concept-copy{left:11px;bottom:12px}.med-concept-copy strong{font-size:var(--villa-body-size);}.med-collection-heading h3{font-size:var(--villa-body-size);}.med-review-grid{grid-template-columns:1fr}.med-review-card>p{min-height:0}.med-faq-intro h2{font-size:var(--villa-body-size);}.med-faq-item summary{font-size:var(--villa-body-size);}.med-support-panel{display:block;padding:27px 22px;border-radius:19px}.med-support h2{font-size:var(--villa-body-size);}.med-home-stats{grid-template-columns:repeat(2,minmax(0,1fr));gap:9px}.med-home-stat{padding:14px 8px}.med-home-stat strong{font-size:27px}.med-support-actions{margin-top:22px}.med-footer-columns{grid-template-columns:1fr 1fr;gap:22px}.med-footer-columns>div:last-child{grid-column:1/-1}}
+@media(max-width:600px){body.villa-home-mediterranean .hero-card{min-height:560px;}.med-trust{padding:24px 0!important}.destination-editorial-grid{grid-template-columns:1fr;column-gap:0}.destination-editorial-item{grid-template-columns:38px minmax(0,1fr) 32px;padding:19px 2px}.destination-editorial-copy strong{font-size:22px}.med-trust-grid{grid-template-columns:1fr 1fr;gap:18px 12px}.med-trust-item{align-items:flex-start;gap:9px}.med-trust-icon{flex-basis:36px;width:36px;height:36px;font-size:var(--villa-body-size);}.med-trust-item h3{font-size:var(--villa-body-size);}.med-trust-item p{font-size:var(--villa-body-size);}.med-property-grid,.med-property-grid--compact{grid-template-columns:1fr;gap:15px}.med-property-photo,.med-property-grid--compact .med-property-photo{height:225px}.med-concept-grid{grid-template-columns:1fr 1fr;gap:10px}.med-concept-card{height:170px;border-radius:14px}.med-concept-copy{left:11px;bottom:12px}.med-concept-copy strong{font-size:var(--villa-body-size);}.med-collection-heading h3{font-size:var(--villa-body-size);}.med-review-grid{grid-template-columns:1fr}.med-review-card>p{min-height:0}.med-faq-intro h2{font-size:var(--villa-body-size);}.med-faq-item summary{font-size:var(--villa-body-size);}.med-home-stats{grid-template-columns:repeat(2,minmax(0,1fr));gap:9px}.med-home-stat{padding:14px 8px}.med-home-stat strong{font-size:27px}.med-support-actions{margin-top:22px}.med-footer-columns{grid-template-columns:1fr 1fr;gap:22px}.med-footer-columns>div:last-child{grid-column:1/-1}}
 CSS;
 
 $html = str_replace('</head>', '<style>' . $homeCss . '</style></head>', $html);
