@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.1.8 - 2026-11-16
+- Tighten destination autocomplete regression coverage to count the two actual form controls separately from the shared JavaScript selector.
+
+## 1.1.7 - 2026-11-16
+- Wire the mobile destination field into the shared location autocomplete, render selectable suggestions, and submit the selected canonical location ID; keep desktop autocomplete working.
+
 ## 1.1.6 - 2026-11-16
 - Further compact mobile hero typography and vertical spacing by about 20px so the full search panel is more likely to fit within the initial viewport; desktop remains unchanged.
 
