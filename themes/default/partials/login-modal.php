@@ -75,10 +75,11 @@ if ($drawerUser !== null) {
       </form>
     </div>
   <?php else: ?>
-    <form id="villaLoginForm" class="villa-account-drawer-login" method="post" action="<?= e(app_url('/login')) ?>">
+    <form id="villaLoginForm" class="villa-account-drawer-login" method="post" action="<?= e(app_url('/login')) ?>" data-endpoint="<?= e(app_url('/login/ajax')) ?>">
       <input type="hidden" name="_csrf" value="<?= e((string)($loginCsrfToken ?? csrf_token())) ?>">
       <input type="hidden" name="return_to" value="">
       <input type="hidden" name="favorite_property_id" value="">
+      <div class="villa-login-ajax-error" id="villaLoginAjaxError" role="alert" hidden></div>
       <label for="villaLoginIdentity">E-posta veya kullanıcı adı</label>
       <input id="villaLoginIdentity" name="identity" autocomplete="username" required>
       <label for="villaLoginPassword">Şifre</label>
@@ -88,6 +89,99 @@ if ($drawerUser !== null) {
     <div class="villa-login-foot">Hesabınız yok mu? <a href="<?= e(app_url('/register')) ?>">Misafir hesabı oluşturun</a></div>
   <?php endif; ?>
 </aside>
+<script id="villa-ajax-login-handler">
+(function(){
+ var form=document.getElementById('villaLoginForm');
+ var drawer=document.getElementById('villaAccountDrawer');
+ if(!form||!drawer||form.dataset.ajaxBound==='1')return;
+ form.dataset.ajaxBound='1';
+ var submit=form.querySelector('button[type="submit"]');
+ var errorBox=document.getElementById('villaLoginAjaxError');
+ function appPath(path){
+  var base=form.action.replace(/\/login(?:\?.*)?$/,'');
+  return base+path;
+ }
+ function element(tag,className,text){
+  var node=document.createElement(tag);
+  if(className)node.className=className;
+  if(text!==undefined)node.textContent=text;
+  return node;
+ }
+ function renderAccount(data){
+  var head=drawer.querySelector('.villa-account-drawer-head');
+  var kicker=head.querySelector('.villa-account-drawer-kicker');
+  var title=head.querySelector('#villaAccountDrawerTitle');
+  var name=head.querySelector('.villa-account-drawer-heading p');
+  kicker.textContent='HESAP MENÜSÜ';
+  title.textContent='Hoş geldiniz';
+  name.textContent=data.user.label||'Hesabınız';
+
+  Array.from(drawer.children).forEach(function(child){if(child!==head)child.remove();});
+  var role=element('div','villa-account-drawer-role',data.user.role_label||'Misafir');
+  drawer.appendChild(role);
+  var nav=element('nav','villa-account-drawer-menu');
+  nav.setAttribute('aria-label','Hesap menüsü');
+  (data.menus||[]).forEach(function(item){
+   var link=element('a','');
+   link.href=item.url;
+   var icon=element('span','villa-account-drawer-icon',item.icon||'');
+   icon.setAttribute('aria-hidden','true');
+   var label=element('span','',item.label||'');
+   var arrow=element('span','villa-account-drawer-arrow','›');
+   arrow.setAttribute('aria-hidden','true');
+   link.append(icon,label,arrow);nav.appendChild(link);
+  });
+  drawer.appendChild(nav);
+  var footer=element('div','villa-account-drawer-footer');
+  var home=element('a','villa-account-drawer-home');
+  home.href=data.home_url;
+  home.append(document.createTextNode('Siteyi görüntüle '),element('span','', '↗'));
+  footer.appendChild(home);
+  var logout=element('form','villa-account-drawer-logout');
+  logout.method='post';logout.action=data.logout_url;
+  var token=element('input');token.type='hidden';token.name='_csrf';token.value=data.csrf||'';
+  var button=element('button','');
+  button.type='submit';button.append(element('span','', '↪'),document.createTextNode(' Güvenli Çıkış Yap'));
+  logout.append(token,button);footer.appendChild(logout);drawer.appendChild(footer);
+
+  document.querySelectorAll('[data-auth-link]').forEach(function(link){
+   var label=data.user.label||'Hesabım';
+   var textNodes=Array.from(link.childNodes).filter(function(node){return node.nodeType===Node.TEXT_NODE&&node.textContent.trim()!=='';});
+   if(textNodes.length){textNodes[0].textContent=' '+label+' ';textNodes.slice(1).forEach(function(node){node.remove();});}
+   else if(!link.querySelector('[data-auth-label]'))link.appendChild(element('span','',label));
+   link.setAttribute('aria-label',label);
+   link.href=appPath(data.user.role==='customer'?'/account/bookings':(data.user.role==='vendor'?'/vendor':'/admin'));
+   link.removeAttribute('data-login-trigger');
+   link.setAttribute('data-account-drawer-trigger','');
+  });
+  form.reset();
+  document.dispatchEvent(new CustomEvent('villa:login',{detail:data.user}));
+ }
+ form.addEventListener('submit',async function(event){
+  event.preventDefault();
+  if(errorBox){errorBox.hidden=true;errorBox.textContent='';}
+  if(submit){submit.disabled=true;submit.dataset.originalText=submit.textContent;submit.textContent='Kontrol ediliyor…';}
+  try{
+   var response=await fetch(form.dataset.endpoint,{method:'POST',body:new FormData(form),credentials:'same-origin',headers:{'X-Requested-With':'XMLHttpRequest','Accept':'application/json'}});
+   var data=await response.json();
+   if(!response.ok||!data.ok)throw new Error(data.message||'Giriş yapılamadı. Bilgilerinizi kontrol edin.');
+   renderAccount(data);
+   var close=drawer.querySelector('#villaAccountDrawerClose');
+   if(close)close.click();
+  }catch(error){
+   if(errorBox){errorBox.textContent=error.message||'Bağlantı hatası. Lütfen tekrar deneyin.';errorBox.hidden=false;}
+  }finally{
+   if(submit){submit.disabled=false;submit.textContent=submit.dataset.originalText||'Giriş Yap';}
+  }
+ });
+})();
+</script>
+<style id="villa-ajax-login-error-style">
+.villa-login-ajax-error{margin:0 0 12px;padding:11px 13px;border:1px solid #f1d2cf;border-radius:9px;background:#fff5f4;color:#a43e35;font-size:13px;line-height:1.45}
+.villa-login-ajax-error[hidden]{display:none!important}
+.villa-account-drawer-login button[disabled]{opacity:.65;cursor:wait}
+</style>
+
 
 <style>
 .villa-account-drawer-backdrop{position:fixed;inset:0;z-index:2147482000;background:rgba(10,24,18,.48);backdrop-filter:blur(3px);opacity:0;visibility:hidden;transition:opacity .28s ease,visibility .28s ease}

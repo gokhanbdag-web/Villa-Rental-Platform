@@ -1259,6 +1259,96 @@ $router->get('/login', static function (): void {
     ThemeManager::renderTemplate('templates/pages/auth/login.php', get_defined_vars());
 });
 
+$router->post('/login/ajax', static function (): void {
+    header('Content-Type: application/json; charset=utf-8');
+    header('Cache-Control: private, no-store, no-cache, must-revalidate, max-age=0');
+    header('Pragma: no-cache');
+    header('X-Content-Type-Options: nosniff');
+
+    $respond = static function (int $status, array $payload): void {
+        http_response_code($status);
+        echo json_encode($payload, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+        exit;
+    };
+
+    try {
+        verify_csrf();
+        $identity = trim((string)($_POST['identity'] ?? ''));
+        $password = (string)($_POST['password'] ?? '');
+        if ($identity === '' || $password === '' || !Auth::attempt($identity, $password)) {
+            $respond(401, ['ok' => false, 'message' => 'E-posta/kullanıcı adı veya şifre hatalı.']);
+        }
+
+        $user = Auth::user();
+        if (!$user) {
+            $respond(401, ['ok' => false, 'message' => 'Oturum doğrulanamadı. Lütfen tekrar deneyin.']);
+        }
+
+        $favoritePropertyId = (int)($_POST['favorite_property_id'] ?? 0);
+        if (($user['role'] ?? '') === 'customer' && $favoritePropertyId > 0) {
+            $pdo = Database::connection();
+            $published = $pdo->prepare("SELECT id FROM properties WHERE id=? AND status='published' LIMIT 1");
+            $published->execute([$favoritePropertyId]);
+            if ($published->fetchColumn()) {
+                $exists = $pdo->prepare('SELECT 1 FROM favorites WHERE user_id=? AND property_id=? LIMIT 1');
+                $exists->execute([(int)$user['id'], $favoritePropertyId]);
+                if (!$exists->fetchColumn()) {
+                    $add = $pdo->prepare('INSERT INTO favorites(user_id,property_id,created_at) VALUES(?,?,NOW())');
+                    $add->execute([(int)$user['id'], $favoritePropertyId]);
+                }
+            }
+        }
+
+        $role = (string)($user['role'] ?? 'customer');
+        if (in_array($role, ['super_admin', 'admin'], true)) {
+            $menus = [
+                ['label'=>'Genel Bakış','url'=>'/admin','icon'=>'⌂'],
+                ['label'=>'Rezervasyonlar','url'=>'/admin/bookings','icon'=>'▣'],
+                ['label'=>'Villalar','url'=>'/admin/properties','icon'=>'⌂'],
+                ['label'=>'Ev Sahipleri','url'=>'/admin/vendors','icon'=>'♧'],
+                ['label'=>'Kullanıcılar','url'=>'/admin/users','icon'=>'♙'],
+                ['label'=>'Mesajlar','url'=>'/admin/messages','icon'=>'✉'],
+                ['label'=>'İçerik Yönetimi','url'=>'/admin/content','icon'=>'▤'],
+                ['label'=>'Ayarlar','url'=>'/admin/settings','icon'=>'⚙'],
+            ];
+            if ($role === 'super_admin') $menus[] = ['label'=>'Sistem Tanılama','url'=>'/admin/performance/diagnostics','icon'=>'⌁'];
+            $roleLabel = $role === 'super_admin' ? 'Süper Yönetici' : 'Yönetici';
+        } elseif ($role === 'vendor') {
+            $menus = [
+                ['label'=>'Ev Sahibi Paneli','url'=>'/vendor','icon'=>'⌂'],
+                ['label'=>'Rezervasyonlarım','url'=>'/vendor/bookings','icon'=>'▣'],
+                ['label'=>'Villalarım','url'=>'/vendor/properties','icon'=>'⌂'],
+                ['label'=>'Yeni Villa Ekle','url'=>'/vendor/properties/new','icon'=>'+'],
+            ];
+            $roleLabel = 'Ev Sahibi';
+        } else {
+            $menus = [
+                ['label'=>'Hesabım','url'=>'/account/bookings','icon'=>'♙'],
+                ['label'=>'Rezervasyonlarım','url'=>'/account/bookings','icon'=>'▣'],
+                ['label'=>'Favorilerim','url'=>'/favorites','icon'=>'♡'],
+                ['label'=>'Bildirimler','url'=>'/account/notifications','icon'=>'♧'],
+                ['label'=>'Yorumlarım','url'=>'/account/reviews','icon'=>'☆'],
+            ];
+            $roleLabel = 'Misafir';
+        }
+
+        $label = trim((string)($user['username'] ?? $user['email'] ?? 'Hesabım'));
+        $logoutToken = csrf_token();
+        if (session_status() === PHP_SESSION_ACTIVE) session_write_close();
+        $respond(200, [
+            'ok' => true,
+            'user' => ['id'=>(int)$user['id'], 'label'=>$label, 'role'=>$role, 'role_label'=>$roleLabel, 'url'=>app_url($role === 'customer' ? '/account/bookings' : ($role === 'vendor' ? '/vendor' : '/admin'))],
+            'menus' => array_map(static fn(array $item): array => ['label'=>$item['label'], 'url'=>app_url($item['url']), 'icon'=>$item['icon']], $menus),
+            'csrf' => $logoutToken,
+            'home_url' => app_url('/'),
+            'logout_url' => app_url('/logout'),
+        ]);
+    } catch (Throwable $error) {
+        error_log('AJAX login failed: ' . $error->getMessage());
+        $respond(500, ['ok'=>false, 'message'=>'Giriş sırasında bir sunucu hatası oluştu. Lütfen tekrar deneyin.']);
+    }
+});
+
 $router->post('/login', static function (): void {
     header('Cache-Control: private, no-store, no-cache, must-revalidate, max-age=0');
     header('Pragma: no-cache');
