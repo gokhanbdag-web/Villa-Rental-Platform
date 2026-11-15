@@ -1413,7 +1413,7 @@ $router->post('/admin/properties/availability/delete', static function (): void 
     Auth::requireRole(['super_admin','admin']);verify_csrf();$pid=(int)($_POST['property_id']??0);$s=Database::connection()->prepare('DELETE FROM availability WHERE id=? AND property_id=?');$s->execute([(int)($_POST['id']??0),$pid]);redirect('/admin/properties/'.$pid.'/availability');
 });
 $router->get('/vendor/properties/{id}/availability', static function (array $params): void {
-    Auth::requireRole(['vendor']);$pdo=Database::connection();$v=$pdo->prepare('SELECT id FROM vendors WHERE user_id=?');$v->execute([(int)Auth::user()['id']]);$vid=(int)$v->fetchColumn();$s=$pdo->prepare('SELECT * FROM properties WHERE id=? AND vendor_id=?');$s->execute([(int)$params['id'],$vid]);$property=$s->fetch();
+    Auth::requireRole(['vendor']);$pdo=Database::connection();$v=$pdo->prepare('SELECT id,status FROM vendors WHERE user_id=?');$v->execute([(int)Auth::user()['id']]);$vendor=$v->fetch();if(!$vendor){http_response_code(403);return;}if(!Auth::canManageVendorBookings((string)$vendor['status'])){http_response_code(403);exit('Rezervasyon takvimine erişmek için işletme hesabınızın onaylanması gerekiyor.');}$vid=(int)$vendor['id'];$s=$pdo->prepare('SELECT * FROM properties WHERE id=? AND vendor_id=?');$s->execute([(int)$params['id'],$vid]);$property=$s->fetch();
     if(!$property){http_response_code(404);return;}
     $monthInput=(string)($_GET['month']??date('Y-m'));$monthDate=DateTimeImmutable::createFromFormat('!Y-m-d',$monthInput.'-01');
     if(!$monthDate||$monthDate->format('Y-m')!==$monthInput)$monthDate=new DateTimeImmutable('first day of this month');
