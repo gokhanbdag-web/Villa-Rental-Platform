@@ -216,7 +216,7 @@ $labels = [
 <button class="design-save" type="submit">YouTube ve overlay ayarlarını kaydet</button>
 </form>
 <?php if(!empty($themeBrandSettings['hero_video_url'])): ?>
-<div style="margin:12px 0"><video src="<?= e($themeBrandSettings['hero_video_url']) ?>" muted playsinline controls style="display:block;width:min(100%,520px);max-height:180px;background:#17251f;border-radius:10px"></video>
+<div style="margin:12px 0"><video src="<?= e($themeBrandSettings['hero_video_url']) ?>" muted playsinline controls preload="metadata" style="display:block;width:min(100%,520px);max-height:180px;background:#17251f;border-radius:10px"></video>
 <form method="post" action="<?= e(app_url('/admin/theme-design/brand-asset/remove')) ?>" style="margin-top:10px"><?= csrf_field() ?><input type="hidden" name="asset_type" value="hero_video"><button class="design-save" type="submit" style="background:#a43e35">Videoyu kaldır</button></form></div>
 <?php endif; ?>
 <form method="post" enctype="multipart/form-data" action="<?= e(app_url('/admin/theme-design/brand-asset')) ?>">
