@@ -45,5 +45,7 @@ $footer = (string) ob_get_clean();
 $html = preg_replace_callback('~</body>~i', static fn(array $match): string => $footer . $match[0], $html, 1) ?? $html;
 
 $accountStyles = '<style id="villa-account-shell-styles">.villa-account-nav{display:flex;flex-wrap:wrap;gap:8px;margin:0 0 26px;padding:12px 0;border-bottom:1px solid color-mix(in srgb,currentColor 13%,transparent)}.villa-account-nav a{display:inline-flex;align-items:center;padding:9px 14px;border:1px solid color-mix(in srgb,currentColor 16%,transparent);border-radius:999px;color:inherit;text-decoration:none;font-size:13px;font-weight:700;opacity:.82}.villa-account-nav a:hover,.villa-account-nav a.is-active{opacity:1;background:color-mix(in srgb,currentColor 8%,transparent)}/* Burger appearance, shape, colors and drawer geometry intentionally come from the active theme stylesheet. */@media(max-width:650px){.villa-account-nav{gap:6px;margin-bottom:20px}.villa-account-nav a{padding:8px 11px;font-size:12px}}</style>';
-$html = preg_replace_callback('~</body>~i', static fn(array $match): string => $menuScript . $accountStyles . $match[0], $html, 1) ?? $html;
+// The mobile bar and navigation handlers are emitted by the shared footer.
+// Do not reference the old, undefined $menuScript variable here.
+$html = preg_replace_callback('~</body>~i', static fn(array $match): string => $accountStyles . $match[0], $html, 1) ?? $html;
 echo $html;
