@@ -17,6 +17,19 @@ $cases = [
     ['customer', 'vendor', false],
 ];
 
+$vendorBookingCases = [
+    ['approved', true],
+    ['pending', false],
+    ['rejected', false],
+    ['', false],
+];
+foreach ($vendorBookingCases as [$vendorStatus, $expected]) {
+    $actual = \App\Core\Auth::canManageVendorBookings($vendorStatus);
+    if ($actual !== $expected) {
+        throw new RuntimeException('Unexpected vendor booking access for status ' . $vendorStatus);
+    }
+}
+
 foreach ($cases as [$actorRole, $targetRole, $expected]) {
     $actual = \App\Core\Auth::canManageUserRole($actorRole, $targetRole);
     if ($actual !== $expected) {

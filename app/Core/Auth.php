@@ -97,6 +97,12 @@ final class Auth
         return false;
     }
 
+    /** Pending vendors may prepare drafts, but cannot access guest bookings until approved. */
+    public static function canManageVendorBookings(string $vendorStatus): bool
+    {
+        return $vendorStatus === 'approved';
+    }
+
     public static function requireRole(array $roles): void
     {
         $user = self::user();

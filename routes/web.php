@@ -1288,8 +1288,10 @@ $router->get('/vendor', static function (): void {
 $router->get('/vendor/bookings', static function (): void {
     Auth::requireRole(['vendor']);$pdo=Database::connection();
     if((string)$pdo->query("SELECT setting_value FROM settings WHERE setting_key='app.mode'")->fetchColumn()!=='multi_vendor'){http_response_code(404);return;}
-    $v=$pdo->prepare('SELECT id FROM vendors WHERE user_id=?');$v->execute([(int)Auth::user()['id']]);$vendorId=(int)$v->fetchColumn();
-    if(!$vendorId){http_response_code(403);return;}
+    $v=$pdo->prepare('SELECT id,status FROM vendors WHERE user_id=?');$v->execute([(int)Auth::user()['id']]);$vendor=$v->fetch();
+    if(!$vendor){http_response_code(403);return;}
+    if(!Auth::canManageVendorBookings((string)$vendor['status'])){http_response_code(403);exit('Rezervasyonlara erişmek için işletme hesabınızın onaylanması gerekiyor.');}
+    $vendorId=(int)$vendor['id'];
     $status=(string)($_GET['status']??'');$allowed=['pending','confirmed','cancelled','completed'];
     $sql="SELECT b.*,p.title,COALESCE(NULLIF(b.guest_name,''),u.username,'Misafir') AS guest_name,COALESCE(NULLIF(b.guest_email,''),u.email,'') AS guest_email,COALESCE(b.guest_phone,'') AS guest_phone FROM bookings b JOIN properties p ON p.id=b.property_id LEFT JOIN users u ON u.id=b.guest_user_id WHERE p.vendor_id=?";
     if(in_array($status,$allowed,true)){$sql.=' AND b.status=?';$s=$pdo->prepare($sql.' ORDER BY b.created_at DESC LIMIT 250');$s->execute([$vendorId,$status]);$bookings=$s->fetchAll();}
@@ -1300,8 +1302,10 @@ $router->get('/vendor/bookings', static function (): void {
 
 $router->post('/vendor/bookings/status', static function (): void {
     Auth::requireRole(['vendor']);verify_csrf();$pdo=Database::connection();
-    $vendor=$pdo->prepare('SELECT id FROM vendors WHERE user_id=?');$vendor->execute([(int)Auth::user()['id']]);$vendorId=(int)$vendor->fetchColumn();
-    if(!$vendorId){http_response_code(403);return;}
+    $vendor=$pdo->prepare('SELECT id,status FROM vendors WHERE user_id=?');$vendor->execute([(int)Auth::user()['id']]);$vendorRow=$vendor->fetch();
+    if(!$vendorRow){http_response_code(403);return;}
+    if(!Auth::canManageVendorBookings((string)$vendorRow['status'])){http_response_code(403);exit('Rezervasyonları yönetmek için işletme hesabınızın onaylanması gerekiyor.');}
+    $vendorId=(int)$vendorRow['id'];
     $id=(int)($_POST['id']??0);$status=(string)($_POST['status']??'');
     if(!in_array($status,['confirmed','cancelled','completed'],true)){http_response_code(422);exit('Rezervasyon durumu geçersiz.');}
     try{
