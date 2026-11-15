@@ -502,8 +502,14 @@ final class ThemeManager
             if (str_starts_with($match[0], '</')) return '</' . $tag . '>';
             if ($tag === 'span') {
                 if (preg_match("~\\bstyle\\s*=\\s*(['\"])(.*?)\\1~is", $match[0], $styleMatch)
-                    && preg_match('~(?:^|;)\\s*color\\s*:\\s*(#[0-9a-f]{6})\\s*(?:;|$)~i', $styleMatch[2], $colorMatch)) {
-                    return '<span style="color:' . strtolower($colorMatch[1]) . '">';
+                    && preg_match('~(?:^|;)\\s*color\\s*:\\s*(#[0-9a-f]{6}|rgb\\(\\s*(\\d{1,3})\\s*,\\s*(\\d{1,3})\\s*,\\s*(\\d{1,3})\\s*\\))\\s*(?:;|$)~i', $styleMatch[2], $colorMatch)) {
+                    if (isset($colorMatch[2], $colorMatch[3], $colorMatch[4]) && $colorMatch[2] !== '') {
+                        $rgb = array_map(static fn(string $value): int => max(0, min(255, (int)$value)), [$colorMatch[2], $colorMatch[3], $colorMatch[4]]);
+                        $safeColor = sprintf('#%02x%02x%02x', $rgb[0], $rgb[1], $rgb[2]);
+                    } else {
+                        $safeColor = strtolower($colorMatch[1]);
+                    }
+                    return '<span style="color:' . $safeColor . '">';
                 }
                 return '<span>';
             }
