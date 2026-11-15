@@ -641,11 +641,12 @@ body .hero-filter-panel .guest-popover{left:auto;right:0;width:300px}
 }
 
 
-/* Slightly smaller hero copy on phones; desktop typography stays unchanged. */
+/* Compact mobile hero copy and vertical spacing to bring the complete search panel into view. */
 @media(max-width:600px){
-  body .hero-copy .eyebrow{font-size:11px!important;letter-spacing:1.5px!important}
-  body .hero-copy h1{font-size:clamp(27px,7.2vw,34px)!important;line-height:1.12!important}
-  body .hero-copy p{font-size:13px!important;line-height:1.45!important}
+  body .hero-card{padding:17px 13px 20px!important;gap:12px!important}
+  body .hero-copy .eyebrow{font-size:10px!important;letter-spacing:1.3px!important}
+  body .hero-copy h1{margin:4px auto 6px!important;font-size:clamp(24px,6.4vw,30px)!important;line-height:1.08!important}
+  body .hero-copy p{font-size:12px!important;line-height:1.35!important}
 }
 
 
