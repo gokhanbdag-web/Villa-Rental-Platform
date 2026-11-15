@@ -126,7 +126,7 @@ $hostSubtitle=trim((string)($content['home_host_subtitle']??''));
 $hostCta=trim((string)($content['home_host_cta']??''));
 if($hostTitle!==''||$hostSubtitle!==''||$hostCta!==''){
     $html=preg_replace_callback('~<div class="host-copy"><h2>.*?</h2><p>.*?</p><a href="[^"]*">.*?</a></div>~s',static function()use($hostTitle,$hostSubtitle,$hostCta):string{
-        return '<div class="host-copy"><h2>'.e($hostTitle).'</h2><p>'.e($hostSubtitle).'</p><a href="'.e(app_url('/vendor/register')).'">'.e($hostCta!==''?$hostCta:'Ev sahibi olarak katılın').' ↗</a></div>';
+        return '<div class="host-copy" data-villa-overlay-text><h2>'.e($hostTitle).'</h2><p>'.e($hostSubtitle).'</p><a href="'.e(app_url('/vendor/register')).'">'.e($hostCta!==''?$hostCta:'Ev sahibi olarak katılın').' ↗</a></div>';
     },$html,1)??$html;
 }
 // Footer content is rendered only by the shared six-slot footer partial.
