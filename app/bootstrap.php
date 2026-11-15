@@ -115,7 +115,9 @@ if ($basePath !== '' && !$isThemeAssetRequest) {
     });
 }
 
-if (session_status() !== PHP_SESSION_ACTIVE) {
+// Public theme assets are read-only and never use session state. Do not open a PHP
+// session for them: this avoids waiting on an unrelated page request's session lock.
+if (!$isThemeAssetRequest && session_status() !== PHP_SESSION_ACTIVE) {
     ini_set('session.use_strict_mode', '1');
     session_name('villa_platform_session');
     session_set_cookie_params([
