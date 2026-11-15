@@ -47,7 +47,7 @@ $exploreMode = (string)($mode ?? $appMode ?? '');
     <a class="villa-explore-hero" href="<?= e($exploreLink('explore_hero_link','/konaklamalar')) ?>">
       <?php if ($exploreHeroImage !== ''): ?><img src="<?= e($exploreHeroImage) ?>" alt="" loading="eager" decoding="async"><?php endif; ?>
       <span class="villa-explore-hero-shade"></span>
-      <span class="villa-explore-hero-copy"><span><?= e($exploreText('explore_hero_eyebrow','VILLACMS · TATİLİ KEŞFET')) ?></span><strong><?= e($exploreText('explore_hero_title','Bir sonraki kaçamağınız burada başlıyor.')) ?></strong><em><?= e($exploreText('explore_hero_cta','Villaları keşfet')) ?> <b aria-hidden="true">↗</b></em></span>
+      <span class="villa-explore-hero-copy" data-villa-overlay-text><span><?= e($exploreText('explore_hero_eyebrow','VILLACMS · TATİLİ KEŞFET')) ?></span><strong><?= e($exploreText('explore_hero_title','Bir sonraki kaçamağınız burada başlıyor.')) ?></strong><em><?= e($exploreText('explore_hero_cta','Villaları keşfet')) ?> <b aria-hidden="true">↗</b></em></span>
     </a>
 
     <section class="villa-explore-section" aria-labelledby="villaExploreConceptTitle">
@@ -64,7 +64,7 @@ $exploreMode = (string)($mode ?? $appMode ?? '');
 
     <section class="villa-explore-destination" aria-label="Destinasyon keşfi">
       <?php if ($exploreDestinationImage !== ''): ?><img src="<?= e($exploreDestinationImage) ?>" alt="" loading="lazy" decoding="async"><?php endif; ?>
-      <div class="villa-explore-destination-copy"><span><?= e($exploreText('explore_destination_eyebrow','AKDENİZ’İN GİZLİ GÜZELLİKLERİ')) ?></span><h3><?= e($exploreText('explore_destination_title','Yeni bir rota, bambaşka bir hikâye.')) ?></h3><p><?= e($exploreText('explore_destination_text','Kıyı kasabalarını, gün batımını ve size iyi gelecek tatil duraklarını keşfedin.')) ?></p><a href="<?= e($exploreLink('explore_destination_link','/destinasyonlar')) ?>"><?= e($exploreText('explore_destination_cta','Destinasyonları keşfet')) ?> <b aria-hidden="true">→</b></a></div>
+      <div class="villa-explore-destination-copy" data-villa-overlay-text><span><?= e($exploreText('explore_destination_eyebrow','AKDENİZ’İN GİZLİ GÜZELLİKLERİ')) ?></span><h3><?= e($exploreText('explore_destination_title','Yeni bir rota, bambaşka bir hikâye.')) ?></h3><p><?= e($exploreText('explore_destination_text','Kıyı kasabalarını, gün batımını ve size iyi gelecek tatil duraklarını keşfedin.')) ?></p><a href="<?= e($exploreLink('explore_destination_link','/destinasyonlar')) ?>"><?= e($exploreText('explore_destination_cta','Destinasyonları keşfet')) ?> <b aria-hidden="true">→</b></a></div>
     </section>
 
     <section class="villa-explore-support" aria-label="Yardım ve rezervasyon">
