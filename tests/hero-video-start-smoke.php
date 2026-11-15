@@ -26,11 +26,11 @@ $checks = [
         'public static function saveHeroVideoSettings',
         "'hero_video_start_seconds'=>(string)max(0,min(86400,",
         'max(0, min(86400, $startSeconds));',
-        "($stored['hero_video_start_seconds'] ?? -1)",
+        "(\$stored['hero_video_start_seconds'] ?? -1)",
     ],
     'routes' => [
         "'/admin/theme-design/hero-video-settings'",
-        "(int)($_POST['hero_video_start_seconds'] ?? 0)",
+        "(int)(\$_POST['hero_video_start_seconds'] ?? 0)",
     ],
     'admin' => [
         'name="hero_video_start_seconds"',
