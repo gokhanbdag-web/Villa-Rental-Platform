@@ -371,6 +371,28 @@ final class ThemeManager
         return '<svg viewBox="0 0 24 24" aria-hidden="true" '.$stroke.'>'.$shape.'</svg>';
     }
 
+    /** Render only configured social profiles for the desktop logo bar. */
+    public static function desktopSocialLinks(): string
+    {
+        $settings = self::socialSettings();
+        $labels = ['instagram'=>'Instagram','facebook'=>'Facebook','youtube'=>'YouTube','tiktok'=>'TikTok','x'=>'X','whatsapp'=>'WhatsApp','pinterest'=>'Pinterest','telegram'=>'Telegram','linkedin'=>'LinkedIn'];
+        $html = '';
+        foreach ($labels as $platform => $label) {
+            $item = is_array($settings[$platform] ?? null) ? $settings[$platform] : [];
+            $url = trim((string)($item['url'] ?? ''));
+            if ($url === '' || !filter_var($url, FILTER_VALIDATE_URL)) continue;
+            $scheme = strtolower((string)parse_url($url, PHP_URL_SCHEME));
+            if (!in_array($scheme, ['http', 'https'], true)) continue;
+            $family = (string)($item['family'] ?? 'brand');
+            if (!in_array($family, ['brand', 'circle'], true)) $family = 'brand';
+            $size = max(14, min(36, (int)($item['size'] ?? 20)));
+            $safeUrl = htmlspecialchars($url, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
+            $safeLabel = htmlspecialchars($label, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
+            $icon = self::renderSocialIcon($platform, $family);
+            $html .= '<a class="site-logo-topbar__social-link" href="' . $safeUrl . '" target="_blank" rel="noopener noreferrer" aria-label="' . $safeLabel . '" title="' . $safeLabel . '" style="--social-icon-size:' . $size . 'px">' . $icon . '</a>';
+        }
+        return $html;
+    }
     private static function typographyFonts(): array
     {
         return [
