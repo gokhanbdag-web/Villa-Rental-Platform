@@ -375,7 +375,11 @@ $router->post('/admin/locations/toggle', static function (): void {
 });
 
 $router->get('/', static function (): void {
-    $pdo=Database::connection();$user=Auth::user();$locale='tr';
+    $pdo=Database::connection();$user=Auth::user();
+    // The landing page is read-only: persist any Auth::user() session refresh
+    // and release PHP's per-session file lock before running homepage queries/rendering.
+    if (session_status() === PHP_SESSION_ACTIVE) session_write_close();
+    $locale='tr';
     try{$locale=(string)($pdo->query("SELECT setting_value FROM settings WHERE setting_key='app.locale' LIMIT 1")->fetchColumn() ?: 'tr');}catch(Throwable $e){}
     $mode=(string)($pdo->query("SELECT setting_value FROM settings WHERE setting_key='app.mode' LIMIT 1")->fetchColumn() ?: 'single_vendor');
     $contentStmt=$pdo->prepare('SELECT content_key,content_value FROM site_content WHERE language_code=?');$contentStmt->execute([$locale]);$content=$contentStmt->fetchAll(PDO::FETCH_KEY_PAIR);
