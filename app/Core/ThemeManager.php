@@ -775,6 +775,62 @@ final class ThemeManager
         if ((string)$verify->fetchColumn() !== $json) throw new RuntimeException('Footer ayarları veritabanına kaydedilemedi.');
     }
 
+    /** Theme-scoped homepage statistic overrides. Null means use live database totals. */
+    private static function homepageStatsDefaults(): array
+    {
+        return ['villas'=>null,'destinations'=>null,'customers'=>null,'reviews'=>null];
+    }
+
+    private static function normalizeHomepageStats(array $input): array
+    {
+        $clean = self::homepageStatsDefaults();
+        foreach (array_keys($clean) as $key) {
+            $raw = $input[$key] ?? null;
+            if ($raw === null || trim((string)$raw) === '') {
+                $clean[$key] = null;
+                continue;
+            }
+            $value = filter_var($raw, FILTER_VALIDATE_INT);
+            if ($value === false || $value < 0 || $value > 999999999) {
+                throw new RuntimeException('Sayaç değerleri 0 ile 999.999.999 arasında tam sayı olmalıdır.');
+            }
+            $clean[$key] = $value;
+        }
+        return $clean;
+    }
+
+    public static function homepageStatsSettings(?string $slug = null): array
+    {
+        $slug = $slug ?: self::activeSlug();
+        if (!preg_match('/^[a-z0-9_-]{1,60}$/', $slug)) $slug = 'default';
+        try {
+            $stmt = Database::connection()->prepare('SELECT setting_value FROM settings WHERE setting_key=? LIMIT 1');
+            $stmt->execute(['theme.' . $slug . '.homepage_stats']);
+            $saved = json_decode((string)($stmt->fetchColumn() ?: '{}'), true);
+            return self::normalizeHomepageStats(is_array($saved) ? $saved : []);
+        } catch (\Throwable $e) {
+            error_log('Theme homepage statistic settings read failed: ' . $e->getMessage());
+            return self::homepageStatsDefaults();
+        }
+    }
+
+    public static function saveHomepageStatsSettings(array $input, ?string $slug = null): void
+    {
+        $slug = $slug ?: self::activeSlug();
+        if (!preg_match('/^[a-z0-9_-]{1,60}$/', $slug) || !isset(self::installed()[$slug])) {
+            throw new RuntimeException('Tema kodu geçersiz veya kurulu değil.');
+        }
+        $clean = self::normalizeHomepageStats($input);
+        $key = 'theme.' . $slug . '.homepage_stats';
+        $json = json_encode($clean, JSON_UNESCAPED_UNICODE | JSON_THROW_ON_ERROR);
+        $pdo = Database::connection();
+        $stmt = $pdo->prepare('INSERT INTO settings(setting_key,setting_value,autoload) VALUES(?,?,1) ON DUPLICATE KEY UPDATE setting_value=VALUES(setting_value),autoload=1');
+        $stmt->execute([$key, $json]);
+        $verify = $pdo->prepare('SELECT setting_value FROM settings WHERE setting_key=? LIMIT 1');
+        $verify->execute([$key]);
+        if ((string)$verify->fetchColumn() !== $json) throw new RuntimeException('Ana sayfa sayaç ayarları veritabanına kaydedilemedi.');
+    }
+
     public static function saveCardSettings(array $input, ?string $slug = null): void
     {
         $slug = $slug ?: self::activeSlug();

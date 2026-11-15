@@ -419,7 +419,17 @@ $router->get('/', static function (): void {
     villa_perf_mark('home:navigation_loaded');
     $navigation=villa_navigation_tree($pdo,'header',$locale);$footerNavigation=villa_navigation_tree($pdo,'footer',$locale);
     villa_perf_mark('home:destinations_query');
-    $destinations=$pdo->query("SELECT l.id AS location_id,l.name AS city,COUNT(DISTINCT p.id) AS property_count,(SELECT pm.file_path FROM property_media pm JOIN properties p2 ON p2.id=pm.property_id WHERE p2.status='published' AND p2.location_city_id=l.id ORDER BY pm.is_cover DESC,pm.sort_order,pm.id LIMIT 1) AS cover_image FROM locations l JOIN locations c ON c.id=l.parent_id AND c.location_type='country' AND c.is_active=1 JOIN properties p ON p.status='published' AND p.location_city_id=l.id WHERE l.location_type='city' AND l.is_active=1 GROUP BY l.id,l.name,l.sort_order ORDER BY property_count DESC,l.sort_order,l.name LIMIT 9")->fetchAll();
+    $destinations=$pdo->query("SELECT l.id AS location_id,l.name AS city,COUNT(DISTINCT p.id) AS property_count,(SELECT pm.file_path FROM property_media pm JOIN properties p2 ON p2.id=pm.property_id WHERE p2.status='published' AND p2.location_city_id=l.id ORDER BY pm.is_cover DESC,pm.sort_order,pm.id LIMIT 1) AS cover_image FROM locations l JOIN locations c ON c.id=l.parent_id AND c.location_type='country' AND c.is_active=1 JOIN properties p ON p.status='published' AND p.location_city_id=l.id WHERE l.location_type='city' AND l.is_active=1 GROUP BY l.id,l.name,l.sort_order ORDER BY property_count DESC,l.sort_order,l.name LIMIT 6")->fetchAll(PDO::FETCH_ASSOC);
+    $homepageStatsSettings=ThemeManager::homepageStatsSettings();
+    $homepageStatsLive=$pdo->query("SELECT
+        (SELECT COUNT(*) FROM properties WHERE status='published') AS villas,
+        (SELECT COUNT(DISTINCT l.id) FROM locations l JOIN locations c ON c.id=l.parent_id AND c.location_type='country' AND c.is_active=1 JOIN properties p ON p.location_city_id=l.id AND p.status='published' WHERE l.location_type='city' AND l.is_active=1) AS destinations,
+        (SELECT COUNT(*) FROM users WHERE role='customer' AND status='active') AS customers,
+        (SELECT COUNT(*) FROM reviews WHERE status='approved') AS reviews")->fetch(PDO::FETCH_ASSOC) ?: [];
+    $homepageStats=[];
+    foreach (['villas','destinations','customers','reviews'] as $statKey) {
+        $homepageStats[$statKey] = $homepageStatsSettings[$statKey] ?? (int)($homepageStatsLive[$statKey] ?? 0);
+    }
     villa_perf_mark('home:featured_query');
     $featuredProperties=$pdo->query("SELECT p.*,(SELECT pm.file_path FROM property_media pm WHERE pm.property_id=p.id ORDER BY pm.is_cover DESC,pm.sort_order,pm.id LIMIT 1) AS cover_image,(SELECT COUNT(*) FROM bookings b WHERE b.property_id=p.id AND b.status NOT IN ('cancelled','rejected')) AS booking_count,(SELECT AVG(r.rating) FROM reviews r WHERE r.property_id=p.id AND r.status='approved') AS rating_average,(SELECT COUNT(*) FROM reviews r WHERE r.property_id=p.id AND r.status='approved') AS rating_count FROM properties p WHERE p.status='published' ORDER BY booking_count DESC,p.created_at DESC,p.id DESC LIMIT 9")->fetchAll();
     $featuredCardImages=[];$featuredIds=array_map(static fn(array $p):int=>(int)$p['id'],$featuredProperties);
@@ -1943,6 +1953,7 @@ $router->get('/admin/theme-design', static function (): void {
     $themeBrandSettings = ThemeManager::brandSettings($themeDesignSlug);
     $themeFamilyBannerTextSettings = ThemeManager::familyBannerTextSettings($themeDesignSlug);
     $themeFooterSettings = ThemeManager::footerSettings($themeDesignSlug);
+    $themeHomepageStatsSettings = ThemeManager::homepageStatsSettings($themeDesignSlug);
     $themeBrandMessage = (string)($_SESSION['villa_theme_brand_message'] ?? '');
     $themeBrandMessageType = (string)($_SESSION['villa_theme_brand_message_type'] ?? 'success');
     unset($_SESSION['villa_theme_brand_message'], $_SESSION['villa_theme_brand_message_type']);
@@ -1961,8 +1972,9 @@ $router->post('/admin/theme-design', static function (): void {
         if (isset($_POST['typography']) && is_array($_POST['typography'])) ThemeManager::saveTypographySettings($_POST['typography'], $activeThemeSlug);
         if (isset($_POST['cards']) && is_array($_POST['cards'])) ThemeManager::saveCardSettings($_POST['cards'], $activeThemeSlug);
         if (isset($_POST['footer']) && is_array($_POST['footer'])) ThemeManager::saveFooterSettings($_POST['footer'], $activeThemeSlug);
+        if (isset($_POST['homepage_stats']) && is_array($_POST['homepage_stats'])) ThemeManager::saveHomepageStatsSettings($_POST['homepage_stats'], $activeThemeSlug);
         ThemeManager::saveIconSettings((array)($_POST['icons'] ?? []), $activeThemeSlug);
-        $_SESSION['villa_theme_design_message'] = 'Tema, tipografi, villa kartı ve footer ayarları başarıyla kaydedildi.';
+        $_SESSION['villa_theme_design_message'] = 'Tema, tipografi, sayaç, villa kartı ve footer ayarları başarıyla kaydedildi.';
         $_SESSION['villa_theme_design_message_type'] = 'success';
     } catch (Throwable $e) {
         error_log('Theme design save failed: ' . $e->getMessage());
