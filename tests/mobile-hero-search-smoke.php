@@ -7,6 +7,10 @@ if (!is_string($landing)) {
     throw new RuntimeException('Homepage landing template could not be read.');
 }
 
+if (str_contains($landing, 'class="mobile-hero-search"')) {
+    throw new RuntimeException('Redundant standalone mobile hero search form must not be rendered.');
+}
+
 $marker = '/* Mobile-only hero search emphasis. Desktop rules above remain untouched. */';
 $start = strpos($landing, $marker);
 $end = $start === false ? false : strpos($landing, '</style></head>', $start);
