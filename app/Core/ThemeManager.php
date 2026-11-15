@@ -521,7 +521,7 @@ final class ThemeManager
                     } else {
                         $safeColor = strtolower($colorMatch[1]);
                     }
-                    return '<span style="color:' . $safeColor . '">';
+                    return '<span style="color:' . $safeColor . ' !important">';
                 }
                 return '<span>';
             }
@@ -552,7 +552,7 @@ final class ThemeManager
                     } else {
                         $safeColor = strtolower($colorMatch[1]);
                     }
-                    return '<span style="color:' . $safeColor . '">';
+                    return '<span style="color:' . $safeColor . ' !important">';
                 }
                 return '<span>';
             }
