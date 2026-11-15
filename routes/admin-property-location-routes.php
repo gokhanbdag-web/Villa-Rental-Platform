@@ -20,10 +20,28 @@ $router->get('/admin/properties/locations', static function (): void {
 });
 
 $router->post('/admin/properties/locations/process', static function (): void {
-    Auth::requireRole(['super_admin', 'admin']);
-    verify_csrf();
+    // This endpoint is consumed by fetch(); never redirect AJAX requests to an HTML login page.
     header('Content-Type: application/json; charset=utf-8');
     header('Cache-Control: no-store, private');
+
+    $user = Auth::user();
+    if (!$user) {
+        http_response_code(401);
+        echo json_encode(['ok' => false, 'message' => 'Oturumunuz sona ermiş. Lütfen yönetim paneline yeniden giriş yapın.'], JSON_UNESCAPED_UNICODE);
+        return;
+    }
+    if (!in_array((string)($user['role'] ?? ''), ['super_admin', 'admin'], true)) {
+        http_response_code(403);
+        echo json_encode(['ok' => false, 'message' => 'Bu işlem için yetkiniz bulunmuyor.'], JSON_UNESCAPED_UNICODE);
+        return;
+    }
+
+    $sentCsrf = (string)($_POST['_csrf'] ?? '');
+    if ($sentCsrf === '' || !hash_equals(csrf_token(), $sentCsrf)) {
+        http_response_code(419);
+        echo json_encode(['ok' => false, 'message' => 'Oturum doğrulaması başarısız. Sayfayı yenileyip tekrar deneyin.'], JSON_UNESCAPED_UNICODE);
+        return;
+    }
 
     $pdo = Database::connection();
     $afterId = max(0, (int)($_POST['after_id'] ?? 0));
