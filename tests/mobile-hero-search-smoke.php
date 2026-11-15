@@ -29,6 +29,9 @@ $required = [
     'min-height:64px!important',
     'background:var(--villa-primary)!important',
     'body .hero-copy{',
+    'body .hero-copy h1{font-size:clamp(27px,7.2vw,34px)!important;line-height:1.12!important}',
+    'body .hero-copy p{font-size:13px!important;line-height:1.45!important}',
+    'body .hero-copy .eyebrow{font-size:11px!important;letter-spacing:1.5px!important}',
 ];
 foreach ($required as $rule) {
     if (!str_contains($mobileRules, $rule)) {

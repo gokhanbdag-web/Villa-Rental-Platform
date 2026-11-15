@@ -1,5 +1,8 @@
 # Changelog
 
+## 1.1.5 - 2026-11-16
+- Slightly reduce the eyebrow, headline and subtitle font sizes inside the mobile homepage hero; desktop typography remains unchanged.
+
 ## 1.1.4 - 2026-11-15
 - Place the mobile premium search button in the second column beside the guest selector in the first column.
 
