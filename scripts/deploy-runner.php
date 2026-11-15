@@ -285,7 +285,7 @@ if (!villa_runner_status($statusWriter, 'deploying', $commit, 'GitHub dağıtım
 
 $backupBefore = villa_latest_backup($base);
 $descriptors = [0 => ['pipe', 'r'], 1 => STDOUT, 2 => STDERR];
-$process = proc_open(['/bin/bash', $deployScript], $descriptors, $pipes, $base);
+$process = proc_open(['/bin/bash', $deployScript, $commit], $descriptors, $pipes, $base);
 if (!is_resource($process)) {
     villa_runner_status($statusWriter, 'failed', $previousCommit, 'Dağıtım betiği başlatılamadı');
     exit(5);
@@ -301,10 +301,15 @@ if ($backupAfter !== null && ($backupBefore === null
     $newBackup = $backupAfter['path'];
 }
 $statusLine = '';
-$healthy = ($deployExit === 0) && villa_health_check($healthUrl, $statusLine);
+$stagingCommit = villa_staging_commit('/opt/villa-staging');
+$commitMatches = $stagingCommit !== '' && hash_equals($commit, $stagingCommit);
+if ($deployExit === 0 && !$commitMatches) {
+    $statusLine = 'Dağıtım hedef commit ile eşleşmedi. İstenen: ' . $commit . '; staging: ' . ($stagingCommit !== '' ? $stagingCommit : 'okunamadı');
+}
+$healthy = ($deployExit === 0) && $commitMatches && villa_health_check($healthUrl, $statusLine);
 
 if ($healthy) {
-    $deployedCommit = villa_staging_commit('/opt/villa-staging');
+    $deployedCommit = $stagingCommit;
     if (!villa_runner_status($statusWriter, 'success', $deployedCommit, 'Dağıtım ve HTTP sağlık kontrolü başarılı: ' . $statusLine, $newBackup !== null ? basename($newBackup) : '-')) {
         fwrite(STDERR, "Deployment succeeded but status could not be recorded\n");
         exit(8);
