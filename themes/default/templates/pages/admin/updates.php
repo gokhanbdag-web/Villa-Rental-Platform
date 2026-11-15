@@ -64,14 +64,32 @@ $commitDate = !empty($githubUpdate['commit_date']) ? date('d.m.Y H:i', strtotime
         failed: 'Başarısız',
         rolled_back: 'Önceki sürüme geri dönüldü'
     };
+    // This page is injected into the persistent admin shell. Clear any poller
+    // left by a previous visit so repeated navigation cannot multiply requests.
+    const previousPoller = window.__villaDeploymentStatusPoller;
+    if (previousPoller) {
+        if (previousPoller.timer) window.clearInterval(previousPoller.timer);
+        if (previousPoller.controller) previousPoller.controller.abort();
+    }
+    const poller = window.__villaDeploymentStatusPoller = { timer: 0, controller: null };
     let busy = false;
     async function refreshDeploymentStatus() {
+        if (!statusNode.isConnected || !historyNode.isConnected) {
+            if (poller.timer) window.clearInterval(poller.timer);
+            if (poller.controller) poller.controller.abort();
+            if (window.__villaDeploymentStatusPoller === poller) window.__villaDeploymentStatusPoller = null;
+            return;
+        }
         if (busy || document.visibilityState === 'hidden') return;
         busy = true;
+        const controller = typeof AbortController !== 'undefined' ? new AbortController() : null;
+        poller.controller = controller;
+        const timeout = controller ? window.setTimeout(() => controller.abort(), 5000) : 0;
         try {
             const response = await fetch(endpoint, {
                 credentials: 'same-origin',
                 cache: 'no-store',
+                signal: controller ? controller.signal : undefined,
                 headers: { 'Accept': 'application/json' }
             });
             if (!response.ok) return;
@@ -117,11 +135,13 @@ $commitDate = !empty($githubUpdate['commit_date']) ? date('d.m.Y H:i', strtotime
         } catch (error) {
             // Keep the last successful status visible when a temporary poll fails.
         } finally {
+            if (timeout) window.clearTimeout(timeout);
+            if (poller.controller === controller) poller.controller = null;
             busy = false;
         }
     }
     refreshDeploymentStatus();
-    window.setInterval(refreshDeploymentStatus, 5000);
+    poller.timer = window.setInterval(refreshDeploymentStatus, 10000);
 })();
 </script>
 </body></html>
