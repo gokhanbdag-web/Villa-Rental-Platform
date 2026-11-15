@@ -484,7 +484,7 @@ final class ThemeManager
     /** Theme-scoped footer layout and appearance settings. */
     private static function footerSettingsDefaults(): array
     {
-        return ['background'=>'#20352e','text'=>'#ffffff','padding_top'=>42,'padding_bottom'=>42,'margin_top'=>55,'content_width'=>1180,'about_title'=>'','about_description'=>'','payment_order'=>['mastercard','visa','troy','diners_club','american_express']];
+        return ['background'=>'#20352e','text'=>'#ffffff','padding_top'=>42,'padding_bottom'=>42,'margin_top'=>55,'content_width'=>1180,'about_title'=>'','about_description'=>'','copyright_html'=>'','payment_order'=>['mastercard','visa','troy','diners_club','american_express']];
     }
 
     private static function normalizeFooterSettings(array $input): array
@@ -492,6 +492,14 @@ final class ThemeManager
         $clean = self::footerSettingsDefaults();
         $clean['about_title'] = mb_substr(trim(strip_tags((string)($input['about_title'] ?? ''))), 0, 150);
         $clean['about_description'] = mb_substr(trim(strip_tags((string)($input['about_description'] ?? ''))), 0, 3000);
+        $copyrightHtml = (string)($input['copyright_html'] ?? '');
+        $copyrightHtml = preg_replace('~<(script|style|iframe|object|svg|math)\\b[^>]*>.*?</\\1\\s*>~is', '', $copyrightHtml) ?? '';
+        $copyrightHtml = strip_tags($copyrightHtml, '<p><br><strong><b><em><i><u><ul><ol><li><blockquote><div><h2><h3><h4>');
+        $copyrightHtml = preg_replace_callback('~</?([a-z][a-z0-9]*)\\b[^>]*>~i', static function (array $match): string {
+            $tag = strtolower($match[1]);
+            return str_starts_with($match[0], '</') ? '</' . $tag . '>' : '<' . $tag . '>';
+        }, $copyrightHtml) ?? '';
+        $clean['copyright_html'] = mb_substr(trim($copyrightHtml), 0, 12000);
         $allowedPayments = ['mastercard','visa','troy','diners_club','american_express'];
         $paymentOrder = is_array($input['payment_order'] ?? null) ? $input['payment_order'] : $clean['payment_order'];
         $normalizedOrder = [];
