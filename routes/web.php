@@ -1171,11 +1171,23 @@ $router->get('/account/bookings', static function (): void {
 });
 
 $router->get('/login', static function (): void {
-    if (Auth::check()) { $user = Auth::user(); redirect(($user['role'] ?? '') === 'customer' ? '/account/bookings' : (($user['role'] ?? '') === 'vendor' ? '/vendor' : '/admin')); }
+    header('Cache-Control: private, no-store, no-cache, must-revalidate, max-age=0');
+    header('Pragma: no-cache');
+    if (Auth::check()) {
+        $user = Auth::user();
+        if (session_status() === PHP_SESSION_ACTIVE) session_write_close();
+        redirect(($user['role'] ?? '') === 'customer' ? '/account/bookings' : (($user['role'] ?? '') === 'vendor' ? '/vendor' : '/admin'));
+    }
+    // Persist the form token before rendering so the login page does not hold
+    // PHP's per-session lock while its template is being generated.
+    csrf_token();
+    if (session_status() === PHP_SESSION_ACTIVE) session_write_close();
     ThemeManager::renderTemplate('templates/pages/auth/login.php', get_defined_vars());
 });
 
 $router->post('/login', static function (): void {
+    header('Cache-Control: private, no-store, no-cache, must-revalidate, max-age=0');
+    header('Pragma: no-cache');
     villa_perf_mark('login_post:route_entered');
     verify_csrf();
     villa_perf_mark('login_post:csrf_verified');
@@ -1185,6 +1197,9 @@ $router->post('/login', static function (): void {
     if ($identity !== '' && $password !== '' && Auth::attempt($identity, $password)) {
         villa_perf_mark('login_post:auth_succeeded');
         $user = Auth::user();
+        // The authenticated identity is now fully validated and persisted.
+        // Release the session lock before the browser follows the redirect.
+        if (session_status() === PHP_SESSION_ACTIVE) session_write_close();
         redirect(($user['role'] ?? '') === 'customer' ? '/account/bookings' : (($user['role'] ?? '') === 'vendor' ? '/vendor' : '/admin'));
     }
     villa_perf_mark('login_post:auth_failed');
@@ -1195,10 +1210,14 @@ $router->post('/login', static function (): void {
 // A direct GET or browser refresh of /logout must never be treated as a
 // /villa/{slug} request on subdirectory installations. Actual logout remains POST-only.
 $router->get('/logout', static function (): void {
+    header('Cache-Control: private, no-store, no-cache, must-revalidate, max-age=0');
+    header('Pragma: no-cache');
     redirect('/');
 });
 
 $router->post('/logout', static function (): void {
+    header('Cache-Control: private, no-store, no-cache, must-revalidate, max-age=0');
+    header('Pragma: no-cache');
     verify_csrf();
     Auth::logout();
     redirect('/');
