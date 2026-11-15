@@ -54,3 +54,14 @@ form.addEventListener('submit',async function(e){
 });
 })();
 </script>
+<style id="villa-login-drawer-close-motion">
+/* Match the Explore drawer close control: a soft background and quarter-turn on hover. */
+.villa-login-close{
+  transition:background .2s ease,transform .2s ease!important;
+}
+.villa-login-close:hover{
+  background:#edf2e9!important;
+  transform:rotate(90deg)!important;
+}
+@media(prefers-reduced-motion:reduce){.villa-login-close{transition:none!important}.villa-login-close:hover{transform:none!important}}
+</style>
