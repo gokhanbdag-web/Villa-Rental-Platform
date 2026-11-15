@@ -1,5 +1,8 @@
 # Changelog
 
+## 1.1.11 - 2026-11-16
+- Refine the destination autocomplete smoke assertion to avoid PHP interpolation and escaping ambiguity.
+
 ## 1.1.10 - 2026-11-16
 - Correct a PHP string-literal issue in the destination autocomplete regression test; no runtime behavior changed.
 
