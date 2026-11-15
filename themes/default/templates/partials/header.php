@@ -10,7 +10,7 @@ $themeBrandSettings = is_array($brandSettings ?? null) ? $brandSettings : [];
 $themeLogoUrl = (string) ($themeBrandSettings['logo_url'] ?? '');
 $navItems = $navigation ?? [];
 $navAllowAuth = true;
-$headerUser = is_array($user ?? null) ? $user : \\App\\Core\\Auth::user();
+$headerUser = is_array($user ?? null) ? $user : \App\Core\Auth::user();
 $topPhone = trim((string) ($content['home_support_phone'] ?? ''));
 $topPhoneDigits = preg_replace('/\\D+/', '', $topPhone);
 ?>
