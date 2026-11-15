@@ -1,8 +1,16 @@
+<?php
+// The login modal carries a session-bound CSRF token and must never be served
+// from a browser, proxy, or page cache after login/logout changes the session.
+if (!headers_sent()) {
+    header('Cache-Control: private, no-store, no-cache, must-revalidate, max-age=0');
+    header('Pragma: no-cache');
+}
+?>
 <div class="villa-login-overlay" id="villaLoginOverlay" hidden></div>
 <section class="villa-login-modal" id="villaLoginModal" role="dialog" aria-modal="true" aria-labelledby="villaLoginTitle" hidden>
 <div class="villa-login-card"><button type="button" class="villa-login-close" id="villaLoginClose" aria-label="Kapat">×</button>
 <h2 id="villaLoginTitle">Tekrar hoş geldiniz</h2><p>Hesabınıza giriş yapın.</p>
-<form id="villaLoginForm" method="post" action="<?= e(app_url('/login')) ?>">
+<form id="villaLoginForm" data-login-transport="native-post" method="post" action="<?= e(app_url('/login')) ?>">
 <input type="hidden" name="_csrf" value="<?= e((string)($loginCsrfToken ?? csrf_token())) ?>">
 <label for="villaLoginIdentity">E-posta veya kullanıcı adı</label><input id="villaLoginIdentity" name="identity" autocomplete="username" required>
 <label for="villaLoginPassword">Şifre</label><input id="villaLoginPassword" name="password" type="password" autocomplete="current-password" required>
