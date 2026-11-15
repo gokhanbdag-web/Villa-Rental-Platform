@@ -14,14 +14,6 @@ $settings = is_array($socialSettings ?? null) ? $socialSettings : [];
 <?php if(($themeMessage??'')!==''): ?><div class="notice <?= e((string)($themeMessageType??'success'))==='error'?'error':'' ?>" role="status"><?= e($themeMessage) ?></div><?php endif; ?>
 <form method="post" action="<?= e(app_url('/admin/header-settings/social-icons')) ?>">
 <?= csrf_field() ?>
-<section class="panel"><h2>Adres, çağrı merkezi ve TÜRSAB lisansı</h2><p>Her bilgi kendi alanı dolu olduğunda görüntülenir.</p>
-<div class="fields">
-<div class="field"><label for="topAddress">Adres</label><input id="topAddress" type="text" name="social[_address][text]" maxlength="180" value="<?= e((string)($settings['_address']['text']??'')) ?>"></div>
-<div class="field"><label for="callTitle">Çağrı merkezi başlığı</label><input id="callTitle" type="text" name="social[_call_center][title]" maxlength="60" value="<?= e((string)($settings['_call_center']['title']??'')) ?>"></div>
-<div class="field"><label for="callPhone">Çağrı merkezi telefonu</label><input id="callPhone" type="text" name="social[_call_center][phone]" maxlength="40" value="<?= e((string)($settings['_call_center']['phone']??'')) ?>"></div>
-<div class="field"><label for="licenseTitle">TÜRSAB lisans başlığı</label><input id="licenseTitle" type="text" name="social[_license][title]" maxlength="60" value="<?= e((string)($settings['_license']['title']??'')) ?>"></div>
-<div class="field"><label for="licenseNumber">TÜRSAB lisans numarası</label><input id="licenseNumber" type="text" name="social[_license][number]" maxlength="40" value="<?= e((string)($settings['_license']['number']??'')) ?>"></div>
-</div></section>
 <section class="panel"><h2>Mobil alt menü</h2><p>Bu ayar yalnızca aktif temanın mobil alt menüsündeki telefon kısayolunu kontrol eder.</p><div class="fields"><div class="field"><label for="mobileBarPhone">Telefon numarası</label><input id="mobileBarPhone" type="tel" name="mobile_bar_phone" inputmode="tel" autocomplete="tel" maxlength="20" placeholder="905xxxxxxxxx" value="<?= e((string)($mobileBarPhone??'')) ?>"></div></div><p>Ülke koduyla birlikte girin. Örnek: 905xxxxxxxxx.</p></section>
 <section class="panel"><h2>Sosyal medya bağlantıları</h2><p>Bağlantı adresi girilen platformlar otomatik görüntülenir.</p><div class="social-grid">
 <?php foreach($platforms as $key=>$label): $item=$settings[$key]??[]; ?>
