@@ -189,10 +189,15 @@ function villa_health_check_local(string $url, string &$statusLine): bool
 
 function villa_health_check(string $url, string &$statusLine): bool
 {
-    // Prefer the normal public URL. If the server cannot reach its own public
-    // hostname (DNS/CDN/firewall/TLS hairpin), retry against its local listener
-    // with the original Host header and TLS SNI. Real HTTP 4xx/5xx responses
-    // remain failures and are never hidden by the fallback.
+    // Probe the local virtual host first. A CDN/WAF may return 403 to requests
+    // originating from the server itself even while the public site is healthy.
+    $localStatus = '';
+    if (villa_health_check_local($url, $localStatus)) {
+        $statusLine = $localStatus . ' (local virtual-host probe)';
+        return true;
+    }
+
+    // If loopback is unavailable, try the public hostname as a fallback.
     if (function_exists('error_clear_last')) {
         error_clear_last();
     }
@@ -202,30 +207,25 @@ function villa_health_check(string $url, string &$statusLine): bool
     ]);
     $response = @file_get_contents($url, false, $context);
     $headers = $http_response_header ?? [];
+    $publicStatus = '';
     foreach ($headers as $header) {
         if (preg_match('/^HTTP\/\S+\s+\d{3}/', $header)) {
-            $statusLine = $header;
+            $publicStatus = $header;
         }
     }
 
-    if (is_string($response)) {
-        if ($statusLine === '') {
-            $statusLine = 'HTTP probe returned a body but no HTTP status header';
-            return false;
-        }
-        return preg_match('/^HTTP\/\S+\s+2\d\d\b/', $statusLine) === 1;
+    if (is_string($response) && preg_match('/^HTTP\/\S+\s+2\d\d\b/', $publicStatus) === 1) {
+        $statusLine = $publicStatus . ' (public probe; local probe failed: ' . $localStatus . ')';
+        return true;
     }
 
     $lastError = error_get_last();
     $transportError = is_array($lastError) ? (string)($lastError['message'] ?? '') : '';
-    $publicFailure = $transportError !== '' ? $transportError : 'no response received';
-    $loopbackStatus = '';
-    if (villa_health_check_local($url, $loopbackStatus)) {
-        $statusLine = $loopbackStatus . ' (public URL probe unavailable: ' . $publicFailure . ')';
-        return true;
+    if ($publicStatus === '') {
+        $publicStatus = $transportError !== '' ? $transportError : 'no HTTP response';
     }
-
-    $statusLine = 'Public probe failed: ' . $publicFailure . '; ' . $loopbackStatus;
+    $statusLine = 'Local probe failed: ' . ($localStatus !== '' ? $localStatus : 'unknown')
+        . '; public probe failed: ' . $publicStatus;
     return false;
 }
 
