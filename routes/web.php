@@ -1890,36 +1890,91 @@ $router->post('/contact', static function (): void {
     $s->execute([$name,$email,$phone,$subject,$message,mb_substr((string)($_SERVER['REMOTE_ADDR']??''),0,45)]);
     redirect(villa_return_with_status((string)($_POST['return_to']??'/'),'contact','success'));
 });
+$router->get('/blog', static function (): void {
+    $pdo=Database::connection();$locale='tr';$user=Auth::user();
+    $content=$pdo->query("SELECT content_key,content_value FROM site_content WHERE language_code='tr'")->fetchAll(PDO::FETCH_KEY_PAIR);
+    $siteName=$content['site_name']??'VillaStay';$navigation=villa_navigation_tree($pdo,'header','tr');$footerNavigation=villa_navigation_tree($pdo,'footer','tr');
+    $q=trim((string)($_GET['q']??''));$pageNo=max(1,(int)($_GET['page']??1));$perPage=9;
+    $where=["p.status='published'","(p.published_at IS NULL OR p.published_at<=NOW())"];$params=[];
+    if($q!==''){$where[]="(p.title LIKE ? OR p.excerpt LIKE ? OR p.content LIKE ?)";$like='%'.$q.'%';array_push($params,$like,$like,$like);}
+    $categorySlug=trim((string)($_GET['kategori']??''));$tagSlug=trim((string)($_GET['etiket']??''));
+    if($categorySlug!==''){$where[]="EXISTS (SELECT 1 FROM blog_post_category pc JOIN blog_categories c ON c.id=pc.category_id WHERE pc.post_id=p.id AND c.slug=?)";$params[]=$categorySlug;}
+    if($tagSlug!==''){$where[]="EXISTS (SELECT 1 FROM blog_post_tag pt JOIN blog_tags t ON t.id=pt.tag_id WHERE pt.post_id=p.id AND t.slug=?)";$params[]=$tagSlug;}
+    $sqlWhere=implode(' AND ',$where);$count=$pdo->prepare("SELECT COUNT(*) FROM blog_posts p WHERE $sqlWhere");$count->execute($params);$totalPosts=(int)$count->fetchColumn();$totalPages=max(1,(int)ceil($totalPosts/$perPage));$pageNo=min($pageNo,$totalPages);$offset=($pageNo-1)*$perPage;
+    $stmt=$pdo->prepare("SELECT p.*, (SELECT c.name FROM blog_post_category pc JOIN blog_categories c ON c.id=pc.category_id WHERE pc.post_id=p.id ORDER BY c.name LIMIT 1) AS category_name,(SELECT c.slug FROM blog_post_category pc JOIN blog_categories c ON c.id=pc.category_id WHERE pc.post_id=p.id ORDER BY c.name LIMIT 1) AS category_slug FROM blog_posts p WHERE $sqlWhere ORDER BY p.is_featured DESC,COALESCE(p.published_at,p.created_at) DESC,p.id DESC LIMIT $perPage OFFSET $offset");$stmt->execute($params);$posts=$stmt->fetchAll(PDO::FETCH_ASSOC);
+    $blogCategories=$pdo->query("SELECT c.*,COUNT(p.id) AS post_count FROM blog_categories c LEFT JOIN blog_post_category pc ON pc.category_id=c.id LEFT JOIN blog_posts p ON p.id=pc.post_id AND p.status='published' AND (p.published_at IS NULL OR p.published_at<=NOW()) WHERE c.is_active=1 GROUP BY c.id ORDER BY c.sort_order,c.name")->fetchAll(PDO::FETCH_ASSOC);
+    $popularPosts=$pdo->query("SELECT id,title,slug,featured_image,published_at,views_count FROM blog_posts WHERE status='published' AND (published_at IS NULL OR published_at<=NOW()) ORDER BY views_count DESC,COALESCE(published_at,created_at) DESC LIMIT 5")->fetchAll(PDO::FETCH_ASSOC);
+    $blogTags=$pdo->query("SELECT t.*,COUNT(pt.post_id) AS post_count FROM blog_tags t LEFT JOIN blog_post_tag pt ON pt.tag_id=t.id LEFT JOIN blog_posts p ON p.id=pt.post_id AND p.status='published' AND (p.published_at IS NULL OR p.published_at<=NOW()) GROUP BY t.id ORDER BY post_count DESC,t.name LIMIT 18")->fetchAll(PDO::FETCH_ASSOC);
+    $archiveTitle=$tagSlug!==''?'Etiket: '.(string)($pdo->query("SELECT name FROM blog_tags WHERE slug=".$pdo->quote($tagSlug)." LIMIT 1")->fetchColumn()?:$tagSlug):($categorySlug!==''?'Kategori: '.(string)($pdo->query("SELECT name FROM blog_categories WHERE slug=".$pdo->quote($categorySlug)." LIMIT 1")->fetchColumn()?:$categorySlug):($q!==''?'Arama sonuçları':'Blog & Seyahat Rehberi'));
+    $archiveDescription='Villa tatili, destinasyonlar, seyahat önerileri ve konaklama rehberleri.';
+    ThemeManager::render('blog-index.php',get_defined_vars());
+});
+$router->get('/blog/kategori/{slug}', static function (array $params): void {redirect('/blog?kategori='.rawurlencode((string)$params['slug']));});
+$router->get('/blog/etiket/{slug}', static function (array $params): void {redirect('/blog?etiket='.rawurlencode((string)$params['slug']));});
 $router->get('/blog/{slug}', static function (array $params): void {
     $pdo=Database::connection();$s=$pdo->prepare("SELECT * FROM blog_posts WHERE slug=? AND status='published' AND (published_at IS NULL OR published_at<=NOW()) LIMIT 1");$s->execute([(string)$params['slug']]);$post=$s->fetch(PDO::FETCH_ASSOC);
     if(!$post){http_response_code(404);echo 'Yazı bulunamadı.';return;}
-    $page=['title'=>$post['title'],'content'=>trim((string)$post['excerpt'])."\n\n".(string)$post['content']];
+    $pdo->prepare('UPDATE blog_posts SET views_count=views_count+1 WHERE id=?')->execute([(int)$post['id']]);
     $content=$pdo->query("SELECT content_key,content_value FROM site_content WHERE language_code='tr'")->fetchAll(PDO::FETCH_KEY_PAIR);$siteName=$content['site_name']??'VillaStay';
-    $navigation=villa_navigation_tree($pdo,'header','tr');$footerNavigation=villa_navigation_tree($pdo,'footer','tr');
-    $mode=(string)($pdo->query("SELECT setting_value FROM settings WHERE setting_key='app.mode' LIMIT 1")->fetchColumn() ?: 'single_vendor');$user=Auth::user();$locale='tr';$destinations=[];$featuredProperties=[];$latestProperties=[];$categories=[];$stylePhotos=[];
-    ThemeManager::render('page.php',get_defined_vars());
+    $navigation=villa_navigation_tree($pdo,'header','tr');$footerNavigation=villa_navigation_tree($pdo,'footer','tr');$user=Auth::user();$locale='tr';
+    $blogCategories=$pdo->query("SELECT c.*,COUNT(pc.post_id) AS post_count FROM blog_categories c LEFT JOIN blog_post_category pc ON pc.category_id=c.id LEFT JOIN blog_posts p ON p.id=pc.post_id AND p.status='published' AND (p.published_at IS NULL OR p.published_at<=NOW()) WHERE c.is_active=1 GROUP BY c.id ORDER BY c.sort_order,c.name")->fetchAll(PDO::FETCH_ASSOC);
+    $popularPosts=$pdo->query("SELECT id,title,slug,featured_image,published_at,views_count FROM blog_posts WHERE status='published' AND id<>".(int)$post['id']." AND (published_at IS NULL OR published_at<=NOW()) ORDER BY views_count DESC,COALESCE(published_at,created_at) DESC LIMIT 5")->fetchAll(PDO::FETCH_ASSOC);
+    $tagStmt=$pdo->prepare('SELECT t.* FROM blog_tags t JOIN blog_post_tag pt ON pt.tag_id=t.id WHERE pt.post_id=? ORDER BY t.name');$tagStmt->execute([(int)$post['id']]);$postTags=$tagStmt->fetchAll(PDO::FETCH_ASSOC);
+    $catStmt=$pdo->prepare('SELECT c.* FROM blog_categories c JOIN blog_post_category pc ON pc.category_id=c.id WHERE pc.post_id=? ORDER BY c.name');$catStmt->execute([(int)$post['id']]);$postCategories=$catStmt->fetchAll(PDO::FETCH_ASSOC);
+    $relatedStmt=$pdo->prepare("SELECT DISTINCT p.id,p.title,p.slug,p.excerpt,p.featured_image,p.published_at FROM blog_posts p JOIN blog_post_category pc ON pc.post_id=p.id WHERE pc.category_id IN (SELECT category_id FROM blog_post_category WHERE post_id=?) AND p.id<>? AND p.status='published' AND (p.published_at IS NULL OR p.published_at<=NOW()) ORDER BY p.published_at DESC LIMIT 3");$relatedStmt->execute([(int)$post['id'],(int)$post['id']]);$relatedPosts=$relatedStmt->fetchAll(PDO::FETCH_ASSOC);
+    $safeBlogHtml=static function(string $html):string{$html=strip_tags($html,'<p><h2><h3><h4><ul><ol><li><strong><b><em><i><blockquote><a><img><figure><figcaption><br><hr><table><thead><tbody><tr><th><td>');$html=preg_replace('/\\s+on[a-z]+\\s*=\\s*("[^"]*"|\\x27[^\\x27]*\\x27|[^\\s>]+)/i','',$html)??$html;$html=preg_replace('/(href|src)\\s*=\\s*(["\\x27])\\s*(?:javascript:|data:text\\/html)[^"\\x27]*\\2/i','$1="#"',$html)??$html;return $html;};
+    $postHtml=$safeBlogHtml((string)$post['content']);
+    $metaTitle=trim((string)($post['meta_title']??''))?:$post['title'];$metaDescription=trim((string)($post['meta_description']??''))?:mb_substr(trim(strip_tags((string)($post['excerpt']?:$post['content']))),0,160);
+    ThemeManager::render('blog-single.php',get_defined_vars());
 });
-
-
 $router->get('/admin/blog', static function (): void {
-    Auth::requireRole(['super_admin','admin']);$posts=Database::connection()->query("SELECT id,title,slug,status,published_at,updated_at FROM blog_posts ORDER BY updated_at DESC,id DESC")->fetchAll(PDO::FETCH_ASSOC);$post=null;ThemeManager::renderTemplate('templates/pages/admin/blog.php', get_defined_vars());
+    Auth::requireRole(['super_admin','admin']);$pdo=Database::connection();$q=trim((string)($_GET['q']??''));$status=(string)($_GET['status']??'');$where=[];$params=[];
+    if($q!==''){$where[]='(title LIKE ? OR slug LIKE ?)';$params[]='%'.$q.'%';$params[]='%'.$q.'%';}
+    if(in_array($status,['draft','published'],true)){$where[]='status=?';$params[]=$status;}
+    $sql='SELECT * FROM blog_posts'.($where?' WHERE '.implode(' AND ',$where):'').' ORDER BY updated_at DESC,id DESC';$stmt=$pdo->prepare($sql);$stmt->execute($params);$posts=$stmt->fetchAll(PDO::FETCH_ASSOC);
+    $post=null;$stats=$pdo->query("SELECT COUNT(*) total, SUM(status='published') published, SUM(status='draft') drafts, SUM(is_featured=1) featured FROM blog_posts")->fetch(PDO::FETCH_ASSOC);ThemeManager::renderTemplate('templates/pages/admin/blog.php',get_defined_vars());
 });
 $router->get('/admin/blog/new', static function (): void {
-    Auth::requireRole(['super_admin','admin']);$posts=[];$post=[];ThemeManager::renderTemplate('templates/pages/admin/blog.php', get_defined_vars());
+    Auth::requireRole(['super_admin','admin']);$pdo=Database::connection();$posts=[];$post=[];$categories=$pdo->query('SELECT * FROM blog_categories ORDER BY sort_order,name')->fetchAll(PDO::FETCH_ASSOC);$postCategories=[];$postTags=[];ThemeManager::renderTemplate('templates/pages/admin/blog.php',get_defined_vars());
 });
 $router->get('/admin/blog/{id}', static function (array $params): void {
-    Auth::requireRole(['super_admin','admin']);$pdo=Database::connection();$posts=[];$s=$pdo->prepare('SELECT * FROM blog_posts WHERE id=?');$s->execute([(int)$params['id']]);$post=$s->fetch(PDO::FETCH_ASSOC);if(!$post){http_response_code(404);exit('Blog yazısı bulunamadı.');}ThemeManager::renderTemplate('templates/pages/admin/blog.php', get_defined_vars());
+    Auth::requireRole(['super_admin','admin']);$pdo=Database::connection();$posts=[];$s=$pdo->prepare('SELECT * FROM blog_posts WHERE id=?');$s->execute([(int)$params['id']]);$post=$s->fetch(PDO::FETCH_ASSOC);if(!$post){http_response_code(404);exit('Blog yazısı bulunamadı.');}
+    $categories=$pdo->query('SELECT * FROM blog_categories ORDER BY sort_order,name')->fetchAll(PDO::FETCH_ASSOC);$c=$pdo->prepare('SELECT category_id FROM blog_post_category WHERE post_id=?');$c->execute([(int)$post['id']]);$postCategories=array_map('intval',$c->fetchAll(PDO::FETCH_COLUMN));$t=$pdo->prepare('SELECT t.name FROM blog_tags t JOIN blog_post_tag pt ON pt.tag_id=t.id WHERE pt.post_id=? ORDER BY t.name');$t->execute([(int)$post['id']]);$postTags=array_column($t->fetchAll(PDO::FETCH_ASSOC),'name');ThemeManager::renderTemplate('templates/pages/admin/blog.php',get_defined_vars());
 });
 $router->post('/admin/blog/save', static function (): void {
     Auth::requireRole(['super_admin','admin']);verify_csrf();$pdo=Database::connection();$id=(int)($_POST['id']??0);
     $title=trim((string)($_POST['title']??''));$slug=strtolower(trim((string)($_POST['slug']??'')));$slug=trim(preg_replace('/[^a-z0-9-]+/','-',$slug),'-');
-    $excerpt=trim((string)($_POST['excerpt']??''));$content=trim((string)($_POST['content']??''));$image=trim((string)($_POST['featured_image']??''));$status=($_POST['status']??'')==='published'?'published':'draft';
-    if($title===''||$slug===''||$content===''||mb_strlen($title)>220||mb_strlen($slug)>190||mb_strlen($excerpt)>1500||mb_strlen($image)>500||($image!==''&&!preg_match('~^(https?://|/)~i',$image))){http_response_code(422);exit('Başlık, URL, içerik ve görsel adresini kontrol edin.');}
-    try{if($id){$s=$pdo->prepare("UPDATE blog_posts SET title=?,slug=?,excerpt=?,content=?,featured_image=?,status=?,published_at=IF(?='published',COALESCE(published_at,NOW()),NULL) WHERE id=?");$s->execute([$title,$slug,$excerpt,$content,$image,$status,$status,$id]);}else{$s=$pdo->prepare("INSERT INTO blog_posts(title,slug,excerpt,content,featured_image,status,published_at) VALUES(?,?,?,?,?,?,IF(?='published',NOW(),NULL))");$s->execute([$title,$slug,$excerpt,$content,$image,$status,$status]);}}catch(PDOException $e){http_response_code(409);exit('Bu URL kısa adı başka bir yazıda kullanılıyor.');}
+    $excerpt=trim((string)($_POST['excerpt']??''));$content=trim((string)($_POST['content']??''));$image=trim((string)($_POST['featured_image']??''));$imageAlt=trim((string)($_POST['featured_image_alt']??''));$status=($_POST['status']??'')==='published'?'published':'draft';
+    $publishedRaw=trim((string)($_POST['published_at']??''));$publishedAt=$publishedRaw!==''?str_replace('T',' ',$publishedRaw).(strlen($publishedRaw)===16?':00':''):null;
+    $metaTitle=trim((string)($_POST['meta_title']??''));$metaDescription=trim((string)($_POST['meta_description']??''));$focusKeyword=trim((string)($_POST['focus_keyword']??''));$author=trim((string)($_POST['author_name']??'Yayın Editörü'))?:'Yayın Editörü';$readingTime=max(1,min(60,(int)($_POST['reading_time']??5)));$featured=!empty($_POST['is_featured'])?1:0;
+    $categoryIds=array_values(array_unique(array_filter(array_map('intval',(array)($_POST['categories']??[])),static fn($v)=>$v>0)));$tagNames=array_values(array_unique(array_filter(array_map('trim',explode(',',(string)($_POST['tags']??''))))));
+    if($title===''||$slug===''||$content===''||mb_strlen($title)>220||mb_strlen($slug)>190||mb_strlen($excerpt)>3000||mb_strlen($image)>500||mb_strlen($imageAlt)>255||mb_strlen($metaTitle)>220||mb_strlen($metaDescription)>320||mb_strlen($focusKeyword)>120||mb_strlen($author)>120||($image!==''&&!preg_match('~^(https?://|/)~i',$image))||($publishedAt!==null&&!preg_match('/^\\d{4}-\\d{2}-\\d{2} \\d{2}:\\d{2}(?::\\d{2})?$/',$publishedAt))){http_response_code(422);exit('Blog alanlarını kontrol edin.');}
+    $pdo->beginTransaction();
+    try {
+        if($id){$s=$pdo->prepare("UPDATE blog_posts SET title=?,slug=?,excerpt=?,content=?,featured_image=?,featured_image_alt=?,status=?,published_at=?,meta_title=?,meta_description=?,focus_keyword=?,author_name=?,reading_time=?,is_featured=? WHERE id=?");$s->execute([$title,$slug,$excerpt,$content,$image,$imageAlt,$status,$publishedAt,$metaTitle,$metaDescription,$focusKeyword,$author,$readingTime,$featured,$id]);}
+        else{$s=$pdo->prepare("INSERT INTO blog_posts(title,slug,excerpt,content,featured_image,featured_image_alt,status,published_at,meta_title,meta_description,focus_keyword,author_name,reading_time,is_featured) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?)");$s->execute([$title,$slug,$excerpt,$content,$image,$imageAlt,$status,$publishedAt,$metaTitle,$metaDescription,$focusKeyword,$author,$readingTime,$featured]);$id=(int)$pdo->lastInsertId();}
+        $pdo->prepare('DELETE FROM blog_post_category WHERE post_id=?')->execute([$id]);$link=$pdo->prepare('INSERT IGNORE INTO blog_post_category(post_id,category_id) VALUES(?,?)');foreach($categoryIds as $categoryId)$link->execute([$id,$categoryId]);
+        $pdo->prepare('DELETE FROM blog_post_tag WHERE post_id=?')->execute([$id]);
+        $tagInsert=$pdo->prepare('INSERT INTO blog_tags(name,slug) VALUES(?,?) ON DUPLICATE KEY UPDATE id=LAST_INSERT_ID(id)');$tagLink=$pdo->prepare('INSERT IGNORE INTO blog_post_tag(post_id,tag_id) VALUES(?,?)');
+        foreach($tagNames as $tagName){$tagSlug=trim(preg_replace('/[^a-z0-9]+/','-',strtolower(iconv('UTF-8','ASCII//TRANSLIT//IGNORE',$tagName)?:$tagName)),'-');if($tagSlug==='')continue;$tagInsert->execute([mb_substr($tagName,0,100),mb_substr($tagSlug,0,120)]);$tagLink->execute([$id,(int)$pdo->lastInsertId()]);}
+        $pdo->commit();
+    } catch(PDOException $e){if($pdo->inTransaction())$pdo->rollBack();http_response_code(409);exit('Yazı kaydedilemedi. URL veya etiket benzersizliğini kontrol edin.');}
     redirect('/admin/blog');
 });
 $router->post('/admin/blog/delete', static function (): void {
-    Auth::requireRole(['super_admin','admin']);verify_csrf();$s=Database::connection()->prepare('DELETE FROM blog_posts WHERE id=?');$s->execute([(int)($_POST['id']??0)]);redirect('/admin/blog');
+    Auth::requireRole(['super_admin','admin']);verify_csrf();$pdo=Database::connection();$s=$pdo->prepare('DELETE FROM blog_posts WHERE id=?');$s->execute([(int)($_POST['id']??0)]);redirect('/admin/blog');
+});
+$router->get('/admin/blog/categories', static function (): void {
+    Auth::requireRole(['super_admin','admin']);$categories=Database::connection()->query("SELECT c.*,COUNT(pc.post_id) post_count FROM blog_categories c LEFT JOIN blog_post_category pc ON pc.category_id=c.id GROUP BY c.id ORDER BY c.sort_order,c.name")->fetchAll(PDO::FETCH_ASSOC);ThemeManager::renderTemplate('templates/pages/admin/blog-categories.php',get_defined_vars());
+});
+$router->post('/admin/blog/categories/save', static function (): void {
+    Auth::requireRole(['super_admin','admin']);verify_csrf();$pdo=Database::connection();$id=(int)($_POST['id']??0);$name=trim((string)($_POST['name']??''));$slug=strtolower(trim((string)($_POST['slug']??'')));$slug=trim(preg_replace('/[^a-z0-9-]+/','-',iconv('UTF-8','ASCII//TRANSLIT//IGNORE',$slug)?:$slug),'-');$description=trim((string)($_POST['description']??''));$sort=max(0,(int)($_POST['sort_order']??0));
+    if($name===''||$slug===''||mb_strlen($name)>120||mb_strlen($slug)>140||mb_strlen($description)>500){http_response_code(422);exit('Kategori bilgilerini kontrol edin.');}
+    try{if($id){$s=$pdo->prepare('UPDATE blog_categories SET name=?,slug=?,description=?,sort_order=? WHERE id=?');$s->execute([$name,$slug,$description,$sort,$id]);}else{$s=$pdo->prepare('INSERT INTO blog_categories(name,slug,description,sort_order) VALUES(?,?,?,?)');$s->execute([$name,$slug,$description,$sort]);}}catch(PDOException $e){http_response_code(409);exit('Bu kategori adı veya bağlantısı zaten kullanılıyor.');}
+    redirect('/admin/blog/categories');
+});
+$router->post('/admin/blog/categories/delete', static function (): void {
+    Auth::requireRole(['super_admin','admin']);verify_csrf();$id=(int)($_POST['id']??0);Database::connection()->prepare('DELETE FROM blog_categories WHERE id=?')->execute([$id]);redirect('/admin/blog/categories');
 });
 $router->get('/admin/newsletter', static function (): void {
     Auth::requireRole(['super_admin','admin']);$pdo=Database::connection();$subscribers=$pdo->query('SELECT id,email,status,source,created_at FROM newsletter_subscribers ORDER BY created_at DESC,id DESC')->fetchAll(PDO::FETCH_ASSOC);$activeCount=(int)$pdo->query("SELECT COUNT(*) FROM newsletter_subscribers WHERE status='active'")->fetchColumn();ThemeManager::renderTemplate('templates/pages/admin/newsletter.php', get_defined_vars());

@@ -14,6 +14,8 @@
     "page.php": "templates/page.php",
     "account.php": "templates/account.php",
     "checkout.php": "templates/pages/checkout.php",
-    "compare.php": "templates/pages/compare.php"
+    "compare.php": "templates/pages/compare.php",
+    "blog-index.php": "templates/pages/blog-index.php",
+    "blog-single.php": "templates/pages/blog-single.php"
   }
 }
