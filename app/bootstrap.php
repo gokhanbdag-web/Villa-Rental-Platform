@@ -74,5 +74,8 @@ if (session_status() !== PHP_SESSION_ACTIVE) {
         'httponly' => true,
         'samesite' => 'Lax',
     ]);
-    $sessionStartedAt = microtime(true);\n    session_start();\n    $GLOBALS['villa_perf_session_wait_ms'] = (microtime(true) - $sessionStartedAt) * 1000;\n    $GLOBALS['villa_perf_stage'] = 'session_started';
+    $sessionStartedAt = microtime(true);
+    session_start();
+    $GLOBALS['villa_perf_session_wait_ms'] = (microtime(true) - $sessionStartedAt) * 1000;
+    $GLOBALS['villa_perf_stage'] = 'session_started';
 }
