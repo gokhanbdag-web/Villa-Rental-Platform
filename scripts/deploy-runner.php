@@ -109,6 +109,11 @@ function villa_latest_backup(string $directory): ?array
 
 function villa_health_check(string $url, string &$statusLine): bool
 {
+    // Preserve the actual transport error: a blank status line is not enough
+    // to distinguish a PHP/application failure from DNS, TLS or loopback issues.
+    if (function_exists('error_clear_last')) {
+        error_clear_last();
+    }
     $context = stream_context_create([
         'http' => ['timeout' => 25, 'ignore_errors' => true, 'follow_location' => 1, 'max_redirects' => 5],
         'https' => ['timeout' => 25]
@@ -120,7 +125,19 @@ function villa_health_check(string $url, string &$statusLine): bool
             $statusLine = $header;
         }
     }
-    return is_string($response) && preg_match('/^HTTP\/\S+\s+2\d\d\b/', $statusLine) === 1;
+
+    if (!is_string($response)) {
+        $lastError = error_get_last();
+        $detail = is_array($lastError) ? (string)($lastError['message'] ?? '') : '';
+        $statusLine = 'HTTP probe transport error' . ($detail !== '' ? ': ' . $detail : ': no response received');
+        return false;
+    }
+    if ($statusLine === '') {
+        $statusLine = 'HTTP probe returned a body but no HTTP status header';
+        return false;
+    }
+
+    return preg_match('/^HTTP\/\S+\s+2\d\d\b/', $statusLine) === 1;
 }
 
 function villa_restore_backup(string $archive, string $base, string $live): bool
