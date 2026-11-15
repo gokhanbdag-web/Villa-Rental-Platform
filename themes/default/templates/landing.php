@@ -273,7 +273,7 @@ $homeCss .= <<<'CSS'
   body.villa-home-mediterranean .hero-filter-panel .destination-field,
   body.villa-home-mediterranean .hero-filter-panel .guest-field{grid-column:1/-1;border-right:0}
   body.villa-home-mediterranean .hero-filter-panel .date-field{border-right:1px solid #e8eeea}
-  body.villa-home-mediterranean .hero-filter-panel .date-field:nth-of-type(3){border-right:0}
+  body.villa-home-mediterranean .hero-filter-panel .date-field:nth-of-type(2){border-right:0}
   body.villa-home-mediterranean .hero-filter-panel .search-label{font-size:14px;line-height:1.35;font-weight:700}
   body.villa-home-mediterranean .hero-filter-panel .search-icon{font-size:18px}
   body.villa-home-mediterranean .hero-filter-panel .destination-field input,
