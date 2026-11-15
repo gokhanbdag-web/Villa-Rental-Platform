@@ -1,5 +1,8 @@
 # Changelog
 
+## 1.0.6 - 2026-11-15
+- Stack all footer widgets into one full-width column on mobile and center footer content; leave desktop layout unchanged.
+
 ## 1.0.5 - 2026-11-15
 - Constrain the desktop homepage hero search form to two flexible columns and force the search button to span the card width without overflowing.
 
