@@ -1233,9 +1233,24 @@ $router->post('/login', static function (): void {
     if ($identity !== '' && $password !== '' && Auth::attempt($identity, $password)) {
         villa_perf_mark('login_post:auth_succeeded');
         $user = Auth::user();
-        // The authenticated identity is now fully validated and persisted.
-        // Release the session lock before the browser follows the redirect.
+        $returnTo = trim((string)($_POST['return_to'] ?? ''));
+        $favoritePropertyId = (int)($_POST['favorite_property_id'] ?? 0);
+        if (($user['role'] ?? '') === 'customer' && $favoritePropertyId > 0) {
+            $pdo = Database::connection();
+            $published = $pdo->prepare("SELECT id FROM properties WHERE id=? AND status='published' LIMIT 1");
+            $published->execute([$favoritePropertyId]);
+            if ($published->fetchColumn()) {
+                $exists = $pdo->prepare('SELECT 1 FROM favorites WHERE user_id=? AND property_id=? LIMIT 1');
+                $exists->execute([(int)$user['id'], $favoritePropertyId]);
+                if (!$exists->fetchColumn()) {
+                    $add = $pdo->prepare('INSERT INTO favorites(user_id,property_id,created_at) VALUES(?,?,NOW())');
+                    $add->execute([(int)$user['id'], $favoritePropertyId]);
+                }
+            }
+        }
+        // The authenticated identity and optional favorite are persisted before redirect.
         if (session_status() === PHP_SESSION_ACTIVE) session_write_close();
+        if ($returnTo !== '') redirect(villa_safe_return_url($returnTo));
         redirect(($user['role'] ?? '') === 'customer' ? '/account/bookings' : (($user['role'] ?? '') === 'vendor' ? '/vendor' : '/admin'));
     }
     villa_perf_mark('login_post:auth_failed');
