@@ -1,5 +1,8 @@
 # Changelog
 
+## 1.1.1 - 2026-11-15
+- Correct the mobile premium search section ordering so it appears immediately after the hero video, regardless of the homepage section sort order. Desktop and floating search controls remain unchanged.
+
 ## 1.1.0 - 2026-11-15
 - Add a premium, clean horizontal search bar directly below the homepage hero video on mobile only. Keep desktop hero search and floating comparison/search controls untouched.
 

@@ -752,7 +752,7 @@ body .hero-filter-panel .guest-popover{left:auto;right:0;width:300px}
 <button type="submit" class="search-submit"><span>⌕</span> Villa Ara</button></form></div></section><?php endif; ?>
 
 <?php if($active('hero')): ?>
-<section class="mobile-premium-search" aria-label="Villa arama">
+<section class="mobile-premium-search" aria-label="Villa arama" style="order:<?= $order('hero',1) ?>">
   <form class="mobile-premium-search__form" action="/konaklamalar" method="get">
     <label class="mobile-premium-search__destination">
       <span>DESTİNASYON</span>
