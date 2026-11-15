@@ -4,7 +4,7 @@ declare(strict_types=1);
 define('APP_ROOT', dirname(__DIR__));
 require_once APP_ROOT . '/app/Core/ThemeManager.php';
 
-$normalize = new ReflectionMethod(App\\Core\\ThemeManager::class, 'normalizeHomepageStats');
+$normalize = new ReflectionMethod(App\Core\ThemeManager::class, 'normalizeHomepageStats');
 $normalize->setAccessible(true);
 
 $actual = $normalize->invoke(null, [
@@ -29,4 +29,4 @@ foreach (['-1', '1.5', '1000000000', 'not-a-number'] as $invalid) {
     }
 }
 
-echo "Homepage statistic settings smoke test passed.\\n";
+echo "Homepage statistic settings smoke test passed.\n";
