@@ -1987,7 +1987,14 @@ $router->post('/admin/theme-design', static function (): void {
         if (isset($_POST['hero_typography']) && is_array($_POST['hero_typography'])) ThemeManager::saveHeroTypographySettings($_POST['hero_typography'], $activeThemeSlug);
         if (isset($_POST['typography']) && is_array($_POST['typography'])) ThemeManager::saveTypographySettings($_POST['typography'], $activeThemeSlug);
         if (isset($_POST['cards']) && is_array($_POST['cards'])) ThemeManager::saveCardSettings($_POST['cards'], $activeThemeSlug);
-        if (isset($_POST['footer']) && is_array($_POST['footer'])) ThemeManager::saveFooterSettings($_POST['footer'], $activeThemeSlug);
+        if (isset($_POST['footer']) && is_array($_POST['footer'])) {
+            $footerInput = $_POST['footer'];
+            $footerUpload = (array)($_FILES['footer_logo'] ?? []);
+            if (($footerUpload['error'] ?? UPLOAD_ERR_NO_FILE) !== UPLOAD_ERR_NO_FILE) {
+                $footerInput['logo_path'] = ThemeManager::saveFooterLogoAsset($footerUpload, $activeThemeSlug);
+            }
+            ThemeManager::saveFooterSettings($footerInput, $activeThemeSlug);
+        }
         if (isset($_POST['homepage_stats']) && is_array($_POST['homepage_stats'])) ThemeManager::saveHomepageStatsSettings($_POST['homepage_stats'], $activeThemeSlug);
         ThemeManager::saveIconSettings((array)($_POST['icons'] ?? []), $activeThemeSlug);
         $_SESSION['villa_theme_design_message'] = 'Tema, tipografi, sayaç, villa kartı ve footer ayarları başarıyla kaydedildi.';
