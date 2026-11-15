@@ -169,12 +169,67 @@ function app_config(): array {
     return $config;
 }
 
+/**
+ * Prepare an upload directory with shared-hosting-safe permissions.
+ * Never grants world-write access and never attempts to change file ownership.
+ */
+function ensure_upload_directory(string $directory): void {
+    $uploadRoot = rtrim(str_replace('\\\\', '/', APP_ROOT . '/public/uploads'), '/');
+    $target = rtrim(str_replace('\\\\', '/', $directory), '/');
+    if ($target !== $uploadRoot && !str_starts_with($target, $uploadRoot . '/')) {
+        throw new RuntimeException('Yükleme klasörü izin verilen uploads dizininin dışında.');
+    }
+    if (!is_dir($uploadRoot)) {
+        if (!@mkdir($uploadRoot, 0755, true) && !is_dir($uploadRoot)) {
+            throw new RuntimeException('uploads klasörü oluşturulamadı. Hosting dosya izinlerini ve klasör sahipliğini kontrol edin.');
+        }
+    }
+    $relative = trim(substr($target, strlen($uploadRoot)), '/');
+    $current = $uploadRoot;
+    $directories = [$current];
+    if ($relative !== '') {
+        foreach (explode('/', $relative) as $part) {
+            if ($part === '' || $part === '.' || $part === '..') {
+                throw new RuntimeException('Yükleme klasörü yolu geçersiz.');
+            }
+            $current .= '/' . $part;
+            $directories[] = $current;
+        }
+    }
+    foreach ($directories as $path) {
+        if (!is_dir($path)) {
+            if (!@mkdir($path, 0755) && !is_dir($path)) {
+                throw new RuntimeException('Yükleme klasörü oluşturulamadı: ' . $path . '. PHP kullanıcısının üst klasöre yazma izni olmalı.');
+            }
+            @chmod($path, 0755);
+        }
+        if (!is_writable($path)) {
+            @chmod($path, 0755);
+        }
+        if (!is_dir($path) || !is_writable($path)) {
+            error_log('Upload directory is not writable by PHP: ' . $path . ' (perms=' . substr(sprintf('%o', (int)@fileperms($path)), -4) . ')');
+            throw new RuntimeException('Yükleme klasörüne PHP tarafından yazılamıyor: ' . $path . '. Klasör sahipliği PHP çalışma kullanıcısıyla eşleşmeli; PHP güvenlik nedeniyle sahipliği değiştiremez.');
+        }
+    }
+}
+
+/** Normalize uploaded files to web-readable, non-world-writable permissions. */
+function normalize_uploaded_file_permissions(string $file): void {
+    if (!is_file($file)) {
+        throw new RuntimeException('Yüklenen dosya diskte bulunamadı.');
+    }
+    if (!@chmod($file, 0644) && !is_readable($file)) {
+        throw new RuntimeException('Yüklenen dosyanın okuma izinleri ayarlanamadı.');
+    }
+    if (!is_readable($file)) {
+        throw new RuntimeException('Yüklenen dosya PHP tarafından okunamıyor.');
+    }
+}
+
 function store_property_uploads(PDO $pdo, int $propertyId): void {
     if (empty($_FILES['images']) || !is_array($_FILES['images']['name'] ?? null)) return;
     $directory = APP_ROOT . '/public/uploads/properties';
-    if (!is_dir($directory) && !mkdir($directory, 0750, true) && !is_dir($directory)) {
-        throw new RuntimeException('Görsel yükleme klasörü oluşturulamadı.');
-    }
+    ensure_upload_directory($directory);
     $allowed = ['image/jpeg'=>'jpg','image/png'=>'png','image/webp'=>'webp'];
     $finfo = new finfo(FILEINFO_MIME_TYPE);
     $count = min(count($_FILES['images']['name']), 30);
@@ -195,7 +250,14 @@ function store_property_uploads(PDO $pdo, int $propertyId): void {
         $mime = $finfo->file($tmp);
         if (!isset($allowed[$mime])) continue;
         $filename = bin2hex(random_bytes(18)) . '.' . $allowed[$mime];
-        if (!move_uploaded_file($tmp, $directory . '/' . $filename)) continue;
+        $target = $directory . '/' . $filename;
+        if (!move_uploaded_file($tmp, $target)) continue;
+        try {
+            normalize_uploaded_file_permissions($target);
+        } catch (Throwable $e) {
+            @unlink($target);
+            throw $e;
+        }
         $relative = 'uploads/properties/' . $filename;
         $alt = trim((string)($_POST['title'] ?? 'Villa fotoğrafı'));
         $insert->execute([$propertyId,$relative,$alt,$cover,$nextSortOrder++]);
