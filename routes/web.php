@@ -449,13 +449,16 @@ $router->get('/', static function (): void {
          $homeCategoryCollections=[];
          $homeCategoryIds=array_map(static fn(array $category):int=>(int)$category['id'],array_slice($categories,0,4));
          if($homeCategoryIds){
-             $categoryMarks=implode(',',array_fill(0,count($homeCategoryIds),'?'));
-             $categoryProperties=$pdo->prepare("SELECT p.*,(SELECT pm.file_path FROM property_media pm WHERE pm.property_id=p.id ORDER BY pm.is_cover DESC,pm.sort_order,pm.id LIMIT 1) AS cover_image,(SELECT AVG(r.rating) FROM reviews r WHERE r.property_id=p.id AND r.status='approved') AS rating_average,(SELECT COUNT(*) FROM reviews r WHERE r.property_id=p.id AND r.status='approved') AS rating_count,(SELECT COUNT(*) FROM bookings b WHERE b.property_id=p.id AND b.status NOT IN ('cancelled','rejected')) AS booking_count FROM properties p WHERE p.status='published' AND p.category_id IN ($categoryMarks) ORDER BY p.category_id,p.created_at DESC,p.id DESC");
-             $categoryProperties->execute($homeCategoryIds);
+             $categoryBranches=[];$categoryParams=[];
+             foreach($homeCategoryIds as $homeCategoryId){
+                 $categoryBranches[]="(SELECT p.*,(SELECT pm.file_path FROM property_media pm WHERE pm.property_id=p.id ORDER BY pm.is_cover DESC,pm.sort_order,pm.id LIMIT 1) AS cover_image,(SELECT AVG(r.rating) FROM reviews r WHERE r.property_id=p.id AND r.status='approved') AS rating_average,(SELECT COUNT(*) FROM reviews r WHERE r.property_id=p.id AND r.status='approved') AS rating_count,(SELECT COUNT(*) FROM bookings b WHERE b.property_id=p.id AND b.status NOT IN ('cancelled','rejected')) AS booking_count FROM properties p WHERE p.status='published' AND p.category_id=? ORDER BY p.created_at DESC,p.id DESC LIMIT 3)";
+                 $categoryParams[]=$homeCategoryId;
+             }
+             $categoryProperties=$pdo->prepare(implode(' UNION ALL ',$categoryBranches));
+             $categoryProperties->execute($categoryParams);
              $categoryRowsById=[];
              foreach($categoryProperties->fetchAll(PDO::FETCH_ASSOC) as $categoryProperty){
-                 $categoryId=(int)$categoryProperty['category_id'];
-                 if(count($categoryRowsById[$categoryId]??[])<3)$categoryRowsById[$categoryId][]=$categoryProperty;
+                 $categoryRowsById[(int)$categoryProperty['category_id']][]=$categoryProperty;
              }
              foreach(array_slice($categories,0,4) as $homeCategory){
                  $categoryRows=$categoryRowsById[(int)$homeCategory['id']]??[];
