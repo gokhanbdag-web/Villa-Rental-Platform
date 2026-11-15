@@ -1,5 +1,8 @@
 # Changelog
 
+## 1.1.0 - 2026-11-15
+- Add a premium, clean horizontal search bar directly below the homepage hero video on mobile only. Keep desktop hero search and floating comparison/search controls untouched.
+
 ## 1.0.9 - 2026-11-15
 - Display the current application version from the root VERSION file at the bottom of the admin sidebar, so the admin panel reflects each release.
 
