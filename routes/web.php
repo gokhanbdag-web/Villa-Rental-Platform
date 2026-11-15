@@ -662,7 +662,7 @@ $router->get('/villa/{slug}', static function (array $params): void {
     if($user && ($user['role']??'')==='customer'){$fav=$pdo->prepare('SELECT 1 FROM favorites WHERE user_id=? AND property_id=?');$fav->execute([(int)$user['id'],(int)$property['id']]);$isFavorite=(bool)$fav->fetchColumn();}
     $ratingStmt=$pdo->prepare("SELECT AVG(rating) AS rating_average,COUNT(*) AS rating_count FROM reviews WHERE property_id=? AND status='approved'");
     $ratingStmt->execute([(int)$property['id']]);$ratingSummary=$ratingStmt->fetch() ?: ['rating_average'=>null,'rating_count'=>0];
-    $reviewsStmt=$pdo->prepare("SELECT r.rating,r.body,r.created_at,u.username FROM reviews r JOIN users u ON u.id=r.guest_user_id WHERE r.property_id=? AND r.status='approved' ORDER BY r.created_at DESC LIMIT 20");
+    $reviewsStmt=$pdo->prepare("SELECT r.rating,r.body,r.created_at,r.is_demo,u.username FROM reviews r JOIN users u ON u.id=r.guest_user_id WHERE r.property_id=? AND r.status='approved' ORDER BY r.created_at DESC,r.id DESC LIMIT 20");
     $reviewsStmt->execute([(int)$property['id']]);$reviews=$reviewsStmt->fetchAll();
     ThemeManager::render('property.php', get_defined_vars());
 });
@@ -1231,6 +1231,14 @@ $router->post('/favorites/toggle', static function (): void {
     redirect($return);
 });
 
+
+$router->get('/account/reviews', static function (): void {
+    $user=Auth::user();if(!$user)redirect('/login');if(($user['role']??'')!=='customer')redirect('/admin');
+    $pdo=Database::connection();
+    $stmt=$pdo->prepare("SELECT r.id,r.rating,r.body,r.status,r.created_at,p.title AS property_title,p.slug AS property_slug,b.booking_code FROM reviews r JOIN properties p ON p.id=r.property_id LEFT JOIN bookings b ON b.id=r.booking_id WHERE r.guest_user_id=? AND COALESCE(r.is_demo,0)=0 ORDER BY r.created_at DESC,r.id DESC LIMIT 100");
+    $stmt->execute([(int)$user['id']]);$reviews=$stmt->fetchAll(PDO::FETCH_ASSOC);
+    villa_render_account_view('reviews.php', get_defined_vars());
+});
 
 $router->get('/account/reviews/{bookingId}', static function (array $params): void {
     $user=Auth::user();if(!$user||($user['role']??'')!=='customer')redirect('/login');
