@@ -2028,6 +2028,22 @@ $router->post('/admin/theme-design/brand-asset', static function (): void {
     }
     redirect('/admin/theme-design');
 });
+$router->post('/admin/theme-design/logo-settings', static function (): void {
+    Auth::requireRole(['super_admin','admin']); verify_csrf();
+    try {
+        $width = filter_var($_POST['logo_width'] ?? null, FILTER_VALIDATE_INT);
+        $height = filter_var($_POST['logo_height'] ?? null, FILTER_VALIDATE_INT);
+        if ($width === false || $height === false) throw new RuntimeException('Logo genişliği ve yüksekliği tam sayı olmalıdır.');
+        ThemeManager::saveLogoDisplaySettings($width, $height, ThemeManager::activeSlug());
+        $_SESSION['villa_theme_brand_message'] = 'Logo boyutları kaydedildi.';
+        $_SESSION['villa_theme_brand_message_type'] = 'success';
+    } catch (Throwable $e) {
+        error_log('Theme logo display settings save failed: ' . $e->getMessage());
+        $_SESSION['villa_theme_brand_message'] = 'Logo boyutları kaydedilemedi: ' . $e->getMessage();
+        $_SESSION['villa_theme_brand_message_type'] = 'error';
+    }
+    redirect('/admin/theme-design');
+});
 $router->post('/admin/theme-design/brand-asset/remove', static function (): void {
     Auth::requireRole(['super_admin','admin']); verify_csrf();
     try {

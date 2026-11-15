@@ -91,7 +91,7 @@ final class ThemeManager
     {
         $slug = $slug ?: self::activeSlug();
         if (!preg_match('/^[a-z0-9_-]{1,60}$/', $slug) || !isset(self::installed()[$slug])) $slug = 'default';
-        $defaults = ['logo_path' => '', 'hero_video_path' => '', 'family_banner_path' => '', 'hero_youtube_url' => '', 'hero_overlay_opacity' => '58', 'hero_background_image_url' => '', 'hero_video_start_seconds' => '0', 'hero_video_loop' => '1'];
+        $defaults = ['logo_path' => '', 'logo_width' => '220', 'logo_height' => '54', 'hero_video_path' => '', 'family_banner_path' => '', 'hero_youtube_url' => '', 'hero_overlay_opacity' => '58', 'hero_background_image_url' => '', 'hero_video_start_seconds' => '0', 'hero_video_loop' => '1'];
         try {
             $pdo = Database::connection();
             $stmt = $pdo->prepare('SELECT setting_value FROM settings WHERE setting_key=? LIMIT 1');
@@ -110,6 +110,8 @@ final class ThemeManager
         }
         return [
             'logo_path' => $defaults['logo_path'],
+            'logo_width' => max(80, min(500, (int)$defaults['logo_width'])),
+            'logo_height' => max(24, min(160, (int)$defaults['logo_height'])),
             'hero_video_path' => $defaults['hero_video_path'],
             'family_banner_path' => $defaults['family_banner_path'],
             'hero_youtube_url' => $defaults['hero_youtube_url'],
@@ -153,15 +155,21 @@ final class ThemeManager
 
         $relativeDir = 'uploads/themes/' . $slug . '/branding';
         $dir = APP_ROOT . '/public/' . $relativeDir;
-        if (!is_dir($dir) && !mkdir($dir, 0755, true) && !is_dir($dir)) throw new RuntimeException('Tema dosya klasörü oluşturulamadı.');
+        \ensure_upload_directory($dir);
         $name = $type . '-' . bin2hex(random_bytes(12)) . '.' . $rule['mimes'][$mime];
         $target = $dir . '/' . $name;
-        if (!move_uploaded_file((string)$upload['tmp_name'], $target)) throw new RuntimeException('Dosya kaydedilemedi.');
+        if (!move_uploaded_file((string)$upload['tmp_name'], $target)) throw new RuntimeException('Dosya kaydedilemedi. PHP kullanıcısının uploads klasörüne yazma iznini kontrol edin.');
+        try {
+            \normalize_uploaded_file_permissions($target);
+        } catch (\Throwable $e) {
+            @unlink($target);
+            throw $e;
+        }
 
         $settings = self::brandSettings($slug);
         $old = (string)($settings[$rule['key']] ?? '');
         $settings[$rule['key']] = $relativeDir . '/' . $name;
-        $json = json_encode(['logo_path'=>$settings['logo_path'],'hero_video_path'=>$settings['hero_video_path'],'family_banner_path'=>$settings['family_banner_path'],'hero_youtube_url'=>$settings['hero_youtube_url'],'hero_overlay_opacity'=>(string)$settings['hero_overlay_opacity'],'hero_background_image_url'=>$settings['hero_background_image_url'],'hero_video_start_seconds'=>(string)$settings['hero_video_start_seconds'],'hero_video_loop'=>$settings['hero_video_loop']?'1':'0'], JSON_UNESCAPED_SLASHES | JSON_THROW_ON_ERROR);
+        $json = json_encode(['logo_path'=>$settings['logo_path'],'logo_width'=>(string)$settings['logo_width'],'logo_height'=>(string)$settings['logo_height'],'hero_video_path'=>$settings['hero_video_path'],'family_banner_path'=>$settings['family_banner_path'],'hero_youtube_url'=>$settings['hero_youtube_url'],'hero_overlay_opacity'=>(string)$settings['hero_overlay_opacity'],'hero_background_image_url'=>$settings['hero_background_image_url'],'hero_video_start_seconds'=>(string)$settings['hero_video_start_seconds'],'hero_video_loop'=>$settings['hero_video_loop']?'1':'0'], JSON_UNESCAPED_SLASHES | JSON_THROW_ON_ERROR);
         try {
             $pdo = Database::connection();
             $save = $pdo->prepare('INSERT INTO settings(setting_key,setting_value,autoload) VALUES(?,?,1) ON DUPLICATE KEY UPDATE setting_value=VALUES(setting_value),autoload=1');
@@ -173,6 +181,37 @@ final class ThemeManager
         if ($old !== '' && $old !== $settings[$rule['key']] && str_starts_with($old, 'uploads/themes/' . $slug . '/branding/')) {
             $oldFile = APP_ROOT . '/public/' . $old;
             if (is_file($oldFile)) @unlink($oldFile);
+        }
+    }
+
+    public static function saveLogoDisplaySettings(int $width, int $height, ?string $slug = null): void
+    {
+        $slug = $slug ?: self::activeSlug();
+        if (!preg_match('/^[a-z0-9_-]{1,60}$/', $slug) || !isset(self::installed()[$slug])) {
+            throw new RuntimeException('Tema bulunamadı.');
+        }
+        $settings = self::brandSettings($slug);
+        $settings['logo_width'] = max(80, min(500, $width));
+        $settings['logo_height'] = max(24, min(160, $height));
+        $json = json_encode([
+            'logo_path'=>$settings['logo_path'],
+            'logo_width'=>(string)$settings['logo_width'],
+            'logo_height'=>(string)$settings['logo_height'],
+            'hero_video_path'=>$settings['hero_video_path'],
+            'family_banner_path'=>$settings['family_banner_path'],
+            'hero_youtube_url'=>$settings['hero_youtube_url'],
+            'hero_overlay_opacity'=>(string)$settings['hero_overlay_opacity'],
+            'hero_background_image_url'=>$settings['hero_background_image_url'],
+            'hero_video_start_seconds'=>(string)$settings['hero_video_start_seconds'],
+            'hero_video_loop'=>$settings['hero_video_loop']?'1':'0'
+        ], JSON_UNESCAPED_SLASHES | JSON_THROW_ON_ERROR);
+        $pdo = Database::connection();
+        $save = $pdo->prepare('INSERT INTO settings(setting_key,setting_value,autoload) VALUES(?,?,1) ON DUPLICATE KEY UPDATE setting_value=VALUES(setting_value),autoload=1');
+        $save->execute(['theme.' . $slug . '.branding', $json]);
+        $verify = $pdo->prepare('SELECT setting_value FROM settings WHERE setting_key=? LIMIT 1');
+        $verify->execute(['theme.' . $slug . '.branding']);
+        if ((string)$verify->fetchColumn() !== $json) {
+            throw new RuntimeException('Logo boyut ayarları veritabanına kaydedilemedi.');
         }
     }
 
@@ -203,6 +242,8 @@ final class ThemeManager
         $settings = self::brandSettings($slug);
         $json = json_encode([
             'logo_path'=>$settings['logo_path'],
+            'logo_width'=>(string)$settings['logo_width'],
+            'logo_height'=>(string)$settings['logo_height'],
             'hero_video_path'=>$settings['hero_video_path'],
             'family_banner_path'=>$settings['family_banner_path'],
             'hero_youtube_url'=>$youtubeUrl,
@@ -225,7 +266,7 @@ final class ThemeManager
         $settings = self::brandSettings($slug);
         $old = (string)($settings[$keys[$type]] ?? '');
         $settings[$keys[$type]] = '';
-        $json = json_encode(['logo_path'=>$settings['logo_path'],'hero_video_path'=>$settings['hero_video_path'],'family_banner_path'=>$settings['family_banner_path'],'hero_youtube_url'=>$settings['hero_youtube_url'],'hero_overlay_opacity'=>(string)$settings['hero_overlay_opacity'],'hero_background_image_url'=>$settings['hero_background_image_url'],'hero_video_start_seconds'=>(string)$settings['hero_video_start_seconds'],'hero_video_loop'=>$settings['hero_video_loop']?'1':'0'], JSON_UNESCAPED_SLASHES | JSON_THROW_ON_ERROR);
+        $json = json_encode(['logo_path'=>$settings['logo_path'],'logo_width'=>(string)$settings['logo_width'],'logo_height'=>(string)$settings['logo_height'],'hero_video_path'=>$settings['hero_video_path'],'family_banner_path'=>$settings['family_banner_path'],'hero_youtube_url'=>$settings['hero_youtube_url'],'hero_overlay_opacity'=>(string)$settings['hero_overlay_opacity'],'hero_background_image_url'=>$settings['hero_background_image_url'],'hero_video_start_seconds'=>(string)$settings['hero_video_start_seconds'],'hero_video_loop'=>$settings['hero_video_loop']?'1':'0'], JSON_UNESCAPED_SLASHES | JSON_THROW_ON_ERROR);
         $pdo = Database::connection();
         $save = $pdo->prepare('INSERT INTO settings(setting_key,setting_value,autoload) VALUES(?,?,1) ON DUPLICATE KEY UPDATE setting_value=VALUES(setting_value),autoload=1');
         $save->execute(['theme.' . $slug . '.branding', $json]);
@@ -983,6 +1024,13 @@ final class ThemeManager
                 $styleTags .= '<link rel="stylesheet" href="' . e(self::assetUrl('style.css', $renderSlug)) . '?v=' . rawurlencode((string)filemtime($activeCss)) . '">';
             }
         }
+        $logoWidth = max(80, min(500, (int)($brandSettings['logo_width'] ?? 220)));
+        $logoHeight = max(24, min(160, (int)($brandSettings['logo_height'] ?? 54)));
+        $styleTags .= '<style id="villa-brand-logo-size">'
+            . '.theme-brand-logo,.site-logo-topbar__brand img,.site-header-mobile-brand img{'
+            . 'width:' . $logoWidth . 'px!important;height:' . $logoHeight . 'px!important;'
+            . 'max-width:100%!important;max-height:' . $logoHeight . 'px!important;object-fit:contain!important}'
+            . '</style>';
         if ($styleTags !== '' && stripos($html, '</head>') !== false) {
             $html = preg_replace('/<\/head>/i', $styleTags . '</head>', $html, 1) ?? $html;
         }
