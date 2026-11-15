@@ -767,7 +767,7 @@ $router->post('/villa/{slug}/reserve', static function (array $params): void {
     $email=strtolower(trim((string)($_POST['email']??'')));$phone=trim((string)($_POST['phone']??''));$password=(string)($_POST['password']??'');
     $identityNumber=preg_replace('/\\D+/','',(string)($_POST['identity_number']??''))??'';
     $billingAddress=trim((string)($_POST['billing_address']??''));$billingCity=trim((string)($_POST['billing_city']??''));
-    $iyzicoBookingConfig=\\App\\Core\\PaymentGatewayConfig::forProvider('iyzico');
+    $iyzicoBookingConfig=\App\Core\PaymentGatewayConfig::forProvider('iyzico');
     $autoStartIyzico=!empty($iyzicoBookingConfig['enabled'])&&!empty($iyzicoBookingConfig['configured'])&&($iyzicoBookingConfig['environment']??'')==='sandbox';
     $inRaw=trim((string)($_POST['check_in']??''));$outRaw=trim((string)($_POST['check_out']??''));
     $checkIn=DateTimeImmutable::createFromFormat('!Y-m-d',$inRaw);$checkOut=DateTimeImmutable::createFromFormat('!Y-m-d',$outRaw);
