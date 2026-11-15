@@ -28,8 +28,12 @@ function villa_perf_mark(string $stage): void
         'session_start_ms' => round((float)($GLOBALS['villa_perf_session_wait_ms'] ?? 0), 1),
     ];
     $line = json_encode($record, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
-    if (is_string($line) && is_dir(APP_STORAGE)) {
-        @file_put_contents(APP_STORAGE . '/performance.log', $line . PHP_EOL, FILE_APPEND | LOCK_EX);
+    if (is_string($line)) {
+        // Always send stage markers to the hosting PHP error log as a reliable fallback.
+        error_log('[VILLA_STAGE] ' . $line);
+        if (is_dir(APP_STORAGE) && is_writable(APP_STORAGE)) {
+            @file_put_contents(APP_STORAGE . '/performance.log', $line . PHP_EOL, FILE_APPEND | LOCK_EX);
+        }
     }
 }
 register_shutdown_function(static function (): void {
