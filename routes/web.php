@@ -1449,6 +1449,8 @@ $router->get('/admin/properties/new', static function (): void {
     ThemeManager::renderTemplate('templates/pages/admin/property-form.php', get_defined_vars());
 });
 
+require_once __DIR__ . '/admin-property-location-routes.php';
+
 $router->get('/admin/properties/{id}', static function (array $params): void {
     Auth::requireRole(['super_admin', 'admin']);
     $pdo = Database::connection();
@@ -2513,4 +2515,4 @@ $router->get('/admin', static function (): void {
     ThemeManager::renderTemplate('templates/pages/admin/dashboard.php', get_defined_vars());
 });
 
-require_once __DIR__ . '/admin-property-location-routes.php';
+
