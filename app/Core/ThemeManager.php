@@ -1318,7 +1318,7 @@ final class ThemeManager
             . $themeScope . ' a:not(.search-submit):not(.button-primary):not(.med-support-whatsapp),' . $themeScope . ' .brand{--link-color:var(--villa-primary)}'
             . $themeScope . ' .theme-header .nav a:hover,' . $themeScope . ' .theme-header .nav a[aria-current="page"],' . $themeScope . ' .pill,' . $themeScope . ' .med-trust-icon,' . $themeScope . ' .rating-score{background:var(--villa-accent)!important;color:var(--villa-text)!important}'
             . $themeScope . ' input,' . $themeScope . ' select,' . $themeScope . ' textarea,' . $themeScope . ' .search-enhanced,' . $themeScope . ' .search-field,' . $themeScope . ' .med-faq-item{border-color:var(--villa-primary)!important}'
-            . $themeScope . ' footer,' . $themeScope . ' .site-footer{background:var(--footer-bg,var(--villa-primary))!important;border-color:var(--footer-bg,var(--villa-primary))!important;color:initial!important}'
+            . $themeScope . ' footer,' . $themeScope . ' .site-footer{background:var(--footer-bg,var(--villa-primary))!important;border-color:var(--footer-bg,var(--villa-primary))!important}'
 
             . $themeScope . ' .theme-header .nav a,' . $themeScope . ' .theme-header .nav-submenu-toggle{color:var(--villa-primary)!important}'
             . $themeScope . ' .theme-header .nav a:hover,' . $themeScope . ' .theme-header .nav a:focus-visible,' . $themeScope . ' .theme-header .nav a[aria-current="page"],' . $themeScope . ' .theme-header .nav-entry.is-open>.nav-entry-top>a{background:var(--villa-primary)!important;color:#fff!important}'
