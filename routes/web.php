@@ -380,10 +380,9 @@ $router->get('/', static function (): void {
     villa_perf_mark('home:database_connected');
     $user=Auth::user();
     villa_perf_mark('home:auth_checked');
-    // The landing page is read-only: persist any Auth::user() session refresh
-    // and release PHP's per-session file lock before running homepage queries/rendering.
-    if (session_status() === PHP_SESSION_ACTIVE) session_write_close();
-    villa_perf_mark('home:session_released');
+    // Keep the session active through template rendering: the shared login modal
+    // generates its CSRF token in the footer and must persist it to this session.
+    villa_perf_mark('home:session_kept_open_for_csrf');
     $locale='tr';
     try{$locale=(string)($pdo->query("SELECT setting_value FROM settings WHERE setting_key='app.locale' LIMIT 1")->fetchColumn() ?: 'tr');}catch(Throwable $e){}
     villa_perf_mark('home:mode_loaded');
