@@ -48,7 +48,10 @@ foreach (($propertyAmenities ?? []) as $amenity) {
     };
     $featureItems[]=['icon'=>$icon,'label'=>(string)$amenity['name']];
 }
-$featureGroups = array_chunk($featureItems, max(1,(int)ceil(count($featureItems)/3)));
+$featureGroups = [[], [], []];
+foreach ($featureItems as $featureIndex => $featureItem) {
+    $featureGroups[$featureIndex % 3][] = $featureItem;
+}
 ?>
 <!doctype html><html lang="<?= e($locale ?? 'tr') ?>"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title><?= e($property['title']) ?> · <?= e($siteName) ?></title><meta name="description" content="<?= e($property['summary'] ?? '') ?>">
 <style>
@@ -175,7 +178,7 @@ $featureGroups = array_chunk($featureItems, max(1,(int)ceil(count($featureItems)
 </div></section>
 <section class="property-info-layout"><section class="property-feature-section"><h2 class="property-section-title">Villa özellikleri</h2><div class="property-feature-groups"><?php for($groupIndex=0;$groupIndex<3;$groupIndex++): ?><ul class="property-feature-group"><?php foreach(($featureGroups[$groupIndex] ?? []) as $feature): ?><li><span class="feature-icon"><?= $featureIconSvg($feature['icon']) ?></span><span><?= e($feature['label']) ?></span></li><?php endforeach; ?></ul><?php endfor; ?></div></section><section class="property-location-section"><h2 class="property-section-title">Villa konumu</h2><p class="muted"><?= e(trim(($property['address']??'').' '.($property['district']??'').' '.($property['city']??'').' '.($property['country']??''))) ?></p><?php if(is_numeric($property['latitude']??null)&&is_numeric($property['longitude']??null)): ?><div id="propertyLocationMap" class="property-location-map" data-lat="<?= e((string)$property['latitude']) ?>" data-lng="<?= e((string)$property['longitude']) ?>" role="application" aria-label="Villa konumu haritası"></div><small class="map-attribution">© OpenStreetMap katkıda bulunanlar</small><?php else: ?><p class="property-map-empty">Bu villa için harita konumu henüz seçilmemiş.</p><?php endif; ?></section></section>
 <section class="property-description-section"><h2 class="property-section-title"><?= e($content['property_about'] ?? 'Konaklama hakkında') ?></h2><p class="description"><?= e($property['description'] ?: $property['summary'] ?: '') ?></p></section><section class="guest-reviews property-reviews"><h2 class="property-section-title">Misafir değerlendirmeleri</h2><p class="muted"><?php if((int)($ratingSummary['rating_count']??0)>0): ?>Ortalama <?= number_format((float)$ratingSummary['rating_average'],1,',','.') ?>/10 · <?= (int)$ratingSummary['rating_count'] ?> doğrulanmış değerlendirme<?php else: ?>Bu villa için henüz yayınlanmış değerlendirme bulunmuyor.<?php endif; ?></p><?php foreach($reviews as $review): ?><article class="property-review"><strong><?= e($review['username']) ?> · <span>★ <?= (int)$review['rating'] ?>/10</span></strong><?php if(trim((string)$review['body'])!==''): ?><p><?= nl2br(e($review['body'])) ?></p><?php endif; ?><small class="muted"><?= e(date('d.m.Y',strtotime($review['created_at']))) ?></small></article><?php endforeach; ?></section>
-</section><section class="booking property-booking" id="propertyBooking">
+<section class="booking property-booking" id="propertyBooking">
 <div class="booking-price-row"><strong><?= e(number_format((float)$property['base_nightly_price'],0,',','.')) ?> <?= e($property['currency']) ?></strong><span>/ gece başlangıç</span></div>
 <div class="booking-steps" aria-label="Rezervasyon adımları"><span class="booking-step is-active" data-step-indicator="1">1. Müsaitlik</span><span class="booking-step" data-step-indicator="2">2. Bilgiler</span></div>
 <form class="property-booking-form" id="propertyBookingForm" method="post" action="<?= e(app_url('/villa/' . rawurlencode((string)$property['slug']) . '/reserve')) ?>">
