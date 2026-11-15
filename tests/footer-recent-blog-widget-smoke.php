@@ -12,7 +12,7 @@ $checks=[
  'admin widget allows selecting individual blog posts'=>str_contains($admin,'footer[recent_blog_post_ids][]')&&str_contains($admin,'$themeFooterBlogPosts'),
  'admin route loads published posts for selector'=>str_contains($routes,'$themeFooterBlogPosts = Database::connection()->query("SELECT id,title,slug,featured_image,status,published_at FROM blog_posts'),
  'footer renders selected published posts in configured order'=>str_contains($footer,'$footerRecentBlogIds')&&str_contains($footer,'$recentById[$recentId]'),
- 'footer links to blog posts and shows thumbnails'=>str_contains($footer,"app_url('/blog/' . rawurlencode((string)$recentPost['slug']))")&&str_contains($footer,'featured_image_alt'),
+ 'footer links to blog posts and shows thumbnails'=>str_contains($footer,"app_url('/blog/' . rawurlencode((string)\$recentPost['slug']))")&&str_contains($footer,'featured_image_alt'),
  'widget output is scoped and responsive-safe'=>str_contains($footer,'.footer-recent-blog img')&&str_contains($footer,'overflow-wrap:anywhere'),
  'widget is mounted in footer column 2'=>str_contains($footer,'footer-widget-2')&&str_contains($footer,'footer-recent-blog'),
 ];
