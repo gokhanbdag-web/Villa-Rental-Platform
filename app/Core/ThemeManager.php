@@ -496,10 +496,17 @@ final class ThemeManager
         $clean['about_description'] = mb_substr(trim(strip_tags((string)($input['about_description'] ?? ''))), 0, 3000);
         $copyrightHtml = (string)($input['copyright_html'] ?? '');
         $copyrightHtml = preg_replace('~<(script|style|iframe|object|svg|math)\\b[^>]*>.*?</\\1\\s*>~is', '', $copyrightHtml) ?? '';
-        $copyrightHtml = strip_tags($copyrightHtml, '<a><p><br><strong><b><em><i><u><ul><ol><li><blockquote><div><h2><h3><h4>');
+        $copyrightHtml = strip_tags($copyrightHtml, '<a><p><br><strong><b><em><i><u><ul><ol><li><blockquote><div><h2><h3><h4><span>');
         $copyrightHtml = preg_replace_callback('~</?([a-z][a-z0-9]*)\\b[^>]*>~i', static function (array $match): string {
             $tag = strtolower($match[1]);
             if (str_starts_with($match[0], '</')) return '</' . $tag . '>';
+            if ($tag === 'span') {
+                if (preg_match('~\\bstyle\\s*=\\s*([\"\\'])(.*?)\\1~is', $match[0], $styleMatch)
+                    && preg_match('~(?:^|;)\\s*color\\s*:\\s*(#[0-9a-f]{6})\\s*(?:;|$)~i', $styleMatch[2], $colorMatch)) {
+                    return '<span style="color:' . strtolower($colorMatch[1]) . '">';
+                }
+                return '<span>';
+            }
             if ($tag !== 'a') return '<' . $tag . '>';
             if (preg_match("~\\bhref\\s*=\\s*([\"'])(.*?)\\1~is", $match[0], $hrefMatch)) {
                 $url = trim(html_entity_decode($hrefMatch[2], ENT_QUOTES | ENT_HTML5, 'UTF-8'));
