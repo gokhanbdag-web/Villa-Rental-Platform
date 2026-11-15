@@ -7,6 +7,9 @@ $exploreImage = static function (array $row): string {
     return preg_match('~^https?://~i', $value) ? $value : app_url('/' . ltrim($value, '/'));
 };
 $exploreMode = (string)($mode ?? $appMode ?? '');
+$exploreBlogPosts = is_array($blogPosts ?? null) ? array_slice($blogPosts, 0, 3) : [];
+$explorePhone = preg_replace('/\\\\D+/', '', (string)($content['home_support_phone'] ?? '')) ?: '';
+$exploreWhatsapp = preg_replace('/\\\\D+/', '', (string)($content['home_support_whatsapp'] ?? '')) ?: '';
 ?>
 <div class="villa-explore-backdrop" id="villaExploreBackdrop" hidden></div>
 <aside class="villa-explore-drawer" id="villaExploreDrawer" role="dialog" aria-modal="true" aria-labelledby="villaExploreTitle" aria-hidden="true" hidden>
@@ -25,6 +28,25 @@ $exploreMode = (string)($mode ?? $appMode ?? '');
         <span class="villa-explore-category-copy"><strong><?= e((string)($category['name']??'Villa')) ?></strong><small><?= (int)($category['property_count']??0) ?> konaklama</small></span><span class="villa-explore-category-arrow" aria-hidden="true">›</span>
       </a>
       <?php endforeach; ?>
+    </div>
+  </section>
+  <?php endif; ?>
+  <?php if ($exploreBlogPosts !== []): ?>
+  <section class="villa-explore-section villa-explore-inspiration" aria-labelledby="villaExploreInspirationTitle">
+    <div class="villa-explore-section-heading"><div><span>İLHAM ALIN</span><h3 id="villaExploreInspirationTitle">Tatil ilhamı</h3></div></div>
+    <div class="villa-explore-articles">
+      <?php foreach ($exploreBlogPosts as $post): $postSlug=trim((string)($post['slug']??'')); if($postSlug==='')continue; ?>
+        <a href="<?= e(app_url('/blog/'.rawurlencode($postSlug))) ?>"><span><?= e((string)($post['title']??'Tatil rehberi')) ?></span><span aria-hidden="true">↗</span></a>
+      <?php endforeach; ?>
+    </div>
+  </section>
+  <?php endif; ?>
+  <?php if ($explorePhone !== '' || $exploreWhatsapp !== ''): ?>
+  <section class="villa-explore-support" aria-label="Yardım ve rezervasyon">
+    <div><span>YARDIM & REZERVASYON</span><strong>Planlamanızda yanınızdayız.</strong></div>
+    <div class="villa-explore-support-links">
+      <?php if($explorePhone!==''): ?><a href="tel:<?= e($explorePhone) ?>"> <span aria-hidden="true">☎</span> Bizi arayın</a><?php endif; ?>
+      <?php if($exploreWhatsapp!==''): ?><a href="https://wa.me/<?= e($exploreWhatsapp) ?>" target="_blank" rel="noopener noreferrer"><span aria-hidden="true">◉</span> WhatsApp</a><?php endif; ?>
     </div>
   </section>
   <?php endif; ?>
@@ -47,7 +69,7 @@ $exploreMode = (string)($mode ?? $appMode ?? '');
 .villa-explore-section-heading{display:flex;align-items:flex-end;justify-content:space-between;gap:12px;margin-bottom:13px}.villa-explore-section-heading>div>span{color:#8a978e;font-size:9px;font-weight:800;letter-spacing:.14em}.villa-explore-section-heading h3{margin:5px 0 0;color:#20372b;font-size:19px;letter-spacing:-.03em}.villa-explore-section-heading>a{color:#477257;font-size:11px;font-weight:700;text-decoration:none;white-space:nowrap}
 .villa-explore-categories{display:grid;grid-template-columns:1fr 1fr;gap:9px}.villa-explore-category{display:flex;align-items:center;gap:10px;min-width:0;padding:8px;border:1px solid #edf1ed;border-radius:12px;color:#304238;text-decoration:none;transition:background .18s ease,border-color .18s ease}.villa-explore-category:hover{background:#f6f9f5;border-color:#dce8dc}
 .villa-explore-category>img,.villa-explore-category-placeholder{flex:0 0 48px;width:48px;height:46px;border-radius:9px;object-fit:cover;background:#edf3ec}.villa-explore-category-placeholder{display:grid;place-items:center;color:#64816b;font-size:22px}.villa-explore-category-copy{display:block;min-width:0;flex:1}.villa-explore-category-copy strong{display:block;overflow:hidden;color:#304238;font-size:11px;font-weight:750;text-overflow:ellipsis;white-space:nowrap}.villa-explore-category-copy small{display:block;margin-top:4px;color:#8a968e;font-size:10px}.villa-explore-category-arrow{color:#9aa69d;font-size:20px}
-.villa-explore-bottom{margin-top:auto;padding-top:24px}.villa-explore-note{display:flex;align-items:center;gap:13px;padding:16px;border:1px solid #e8eee6;border-radius:14px;background:#f7f9f4}.villa-explore-note-icon{display:grid;place-items:center;flex:0 0 35px;width:35px;height:35px;border-radius:50%;background:#e8efe3;color:#56744f;font-size:17px}.villa-explore-note strong{display:block;color:#304238;font-size:12px}.villa-explore-note p{margin:5px 0 0;color:#7d8981;font-size:11px;line-height:1.5}.villa-explore-host-link{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-top:12px;padding:12px 2px;color:#78847d;font-size:11px;text-decoration:none}.villa-explore-host-link span{color:#286344;font-weight:750}
+.villa-explore-inspiration{margin-top:23px}.villa-explore-articles{display:flex;flex-direction:column;gap:7px}.villa-explore-articles a{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:10px 12px;border:1px solid #edf1ed;border-radius:10px;color:#405448;font-size:11px;font-weight:650;text-decoration:none;transition:background .18s,border-color .18s}.villa-explore-articles a:hover{background:#f6f9f5;border-color:#dce8dc}.villa-explore-articles a span:first-child{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.villa-explore-support{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-top:20px;padding:14px;border:1px solid #e7eee7;border-radius:13px;background:#fbfcfa}.villa-explore-support>div:first-child>span{display:block;color:#89958d;font-size:9px;font-weight:800;letter-spacing:.12em}.villa-explore-support>div:first-child>strong{display:block;margin-top:5px;color:#304238;font-size:11px}.villa-explore-support-links{display:flex;flex-direction:column;gap:6px}.villa-explore-support-links a{color:#286344;font-size:10px;font-weight:750;text-decoration:none;white-space:nowrap}.villa-explore-support-links a span{display:inline-block;width:15px;text-align:center}.villa-explore-bottom{margin-top:auto;padding-top:24px}.villa-explore-note{display:flex;align-items:center;gap:13px;padding:16px;border:1px solid #e8eee6;border-radius:14px;background:#f7f9f4}.villa-explore-note-icon{display:grid;place-items:center;flex:0 0 35px;width:35px;height:35px;border-radius:50%;background:#e8efe3;color:#56744f;font-size:17px}.villa-explore-note strong{display:block;color:#304238;font-size:12px}.villa-explore-note p{margin:5px 0 0;color:#7d8981;font-size:11px;line-height:1.5}.villa-explore-host-link{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-top:12px;padding:12px 2px;color:#78847d;font-size:11px;text-decoration:none}.villa-explore-host-link span{color:#286344;font-weight:750}
 body.villa-explore-drawer-open{overflow:hidden!important}.site-header-auth{gap:9px}.site-header-auth .villa-explore-trigger{padding:9px!important}
 @media(max-width:760px){.villa-explore-trigger,.villa-explore-backdrop,.villa-explore-drawer{display:none!important}}
 @media(prefers-reduced-motion:reduce){.villa-explore-drawer,.villa-explore-backdrop,.villa-explore-feature,.villa-explore-category{transition:none}}
