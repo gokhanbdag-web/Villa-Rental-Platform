@@ -1,6 +1,8 @@
 <?php
 declare(strict_types=1);
 
+// Regression coverage for the responsive footer layout.
+
 $root = dirname(__DIR__);
 $css = file_get_contents($root . '/themes/default/style.css');
 $footer = file_get_contents($root . '/themes/default/templates/partials/footer.php');
