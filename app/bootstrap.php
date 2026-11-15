@@ -10,6 +10,28 @@ define('APP_STORAGE', APP_ROOT . '/storage');
 $GLOBALS['villa_perf_started_at'] = microtime(true);
 $GLOBALS['villa_perf_session_wait_ms'] = 0.0;
 $GLOBALS['villa_perf_stage'] = 'bootstrap';
+$GLOBALS['villa_perf_request_id'] = bin2hex(random_bytes(6));
+
+/**
+ * Persist a tiny stage marker immediately. Unlike the shutdown summary, this
+ * survives a request that gets stuck before PHP can execute shutdown handlers.
+ * No cookies, session IDs, SQL values, or request parameters are recorded.
+ */
+function villa_perf_mark(string $stage): void
+{
+    $GLOBALS['villa_perf_stage'] = substr($stage, 0, 120);
+    $record = [
+        'type' => 'villa_request_stage',
+        'request_id' => (string)($GLOBALS['villa_perf_request_id'] ?? ''),
+        'stage' => (string)$GLOBALS['villa_perf_stage'],
+        'elapsed_ms' => round((microtime(true) - (float)($GLOBALS['villa_perf_started_at'] ?? microtime(true))) * 1000, 1),
+        'session_start_ms' => round((float)($GLOBALS['villa_perf_session_wait_ms'] ?? 0), 1),
+    ];
+    $line = json_encode($record, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
+    if (is_string($line) && is_dir(APP_STORAGE)) {
+        @file_put_contents(APP_STORAGE . '/performance.log', $line . PHP_EOL, FILE_APPEND | LOCK_EX);
+    }
+}
 register_shutdown_function(static function (): void {
     $started = (float)($GLOBALS['villa_perf_started_at'] ?? microtime(true));
     $totalMs = (microtime(true) - $started) * 1000;
