@@ -14,7 +14,7 @@ $checks=[
  'blog editor shares analyzer'=>str_contains($blogForm,'partials/seo-analyzer.php'),
  'page editor shares analyzer'=>str_contains($pageForm,'partials/seo-analyzer.php'),
  'live score and snippet preview'=>str_contains($partial,'data-seo-score')&&str_contains($partial,'data-seo-preview-title'),
- 'SEO criteria present'=>str_contains($partial,'Meta açıklaması')&&str_contains($partial,'H2/H3')&&str_contains($partial,'alternatif metinleri')&&str_contains($partial,'İç bağlantı'),
+ 'SEO criteria present'=>str_contains($partial,'Meta açıklaması')&&str_contains($partial,'H2/H3')&&str_contains($partial,'alternatif metinleri')&&str_contains($partial,'İç ve dış bağlantılar'),
  'score capped at 100'=>str_contains($partial,'Math.min(100,score)'),
  'page canonical and robots metadata'=>str_contains($pageTemplate,'rel="canonical"')&&str_contains($pageTemplate,'name="robots"'),
  'versioned page keyword migration'=>str_contains($migration,'ALTER TABLE cms_pages ADD COLUMN focus_keyword'),
