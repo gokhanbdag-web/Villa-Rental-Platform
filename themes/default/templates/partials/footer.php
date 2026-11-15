@@ -16,7 +16,7 @@ $footerRecentBlogIds = array_values(array_unique(array_filter(array_map('intval'
 if ($footerRecentBlogIds) {
     try {
         $placeholders = implode(',', array_fill(0, count($footerRecentBlogIds), '?'));
-        $recentStmt = \\App\\Core\\Database::connection()->prepare("SELECT id,title,slug,featured_image,featured_image_alt FROM blog_posts WHERE id IN ($placeholders) AND status='published' AND (published_at IS NULL OR published_at<=NOW())");
+        $recentStmt = \App\Core\Database::connection()->prepare("SELECT id,title,slug,featured_image,featured_image_alt FROM blog_posts WHERE id IN ($placeholders) AND status='published' AND (published_at IS NULL OR published_at<=NOW())");
         $recentStmt->execute($footerRecentBlogIds);
         $recentRows = $recentStmt->fetchAll(PDO::FETCH_ASSOC);
         $recentById = [];
