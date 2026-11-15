@@ -1,5 +1,8 @@
 # Changelog
 
+## 1.0.8 - 2026-11-15
+- Remove the redundant standalone mobile hero search form. Keep one canonical booking form inside the hero so the search controls appear in the intended prominent position; desktop layout is unchanged.
+
 ## 1.0.7 - 2026-11-15
 - Make the mobile homepage hero search unmistakably prominent: move the search panel above the hero copy, add a clear heading, distinct full-width fields and a high-contrast primary search action. Desktop styles remain unchanged.
 
