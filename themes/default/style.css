@@ -1559,7 +1559,7 @@ body[data-villa-theme] .site-footer{
   margin-top:var(--footer-margin-top,55px);
   padding:var(--footer-padding-top,42px) 0 var(--footer-padding-bottom,42px);
   background:var(--footer-bg,#20352e)!important;
-  color:initial!important;
+  color:var(--footer-text,#ffffff)!important;
 }
 body[data-villa-theme] .site-footer .footer-inner{
   width:min(var(--footer-content-width,1180px),calc(100% - 36px));
