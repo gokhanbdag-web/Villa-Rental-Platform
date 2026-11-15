@@ -129,7 +129,7 @@ final class ThemeManager
         $prefix = 'uploads/themes/' . $slug . '/branding/';
         $filename = str_starts_with($relativePath, $prefix) ? substr($relativePath, strlen($prefix)) : '';
         if ($filename === '' || !preg_match('/^[a-z0-9_-]+\\.(?:png|jpe?g|webp|mp4|webm)$/i', $filename)) return '';
-        return app_url('/uploads/themes/' . rawurlencode($slug) . '/branding/' . rawurlencode($filename));
+        return uploaded_media_url($prefix . $filename);
     }
 
     public static function saveBrandAsset(string $type, array $upload, ?string $slug = null): void
