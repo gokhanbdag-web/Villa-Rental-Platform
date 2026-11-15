@@ -152,11 +152,11 @@ $labels = [
 
 <section class="design-panel" data-design-tab-panel="footer">
 <h2>Footer yerleşimi</h2>
-<p>Footer altı boş widget alanından oluşur. İlk satır dört eşit kolondur; ikinci satır 7/12 ve 5/12 oranında iki kolondur. Widget içeriklerini daha sonra bu alanlara ekleyeceğiz.</p>
+<p>Footer altı widget alanından oluşur. Kolon 2'ye küçük görsellerle son blog yazılarını ekleyebilir, başlığını ve gösterilecek yazıları buradan seçebilirsiniz.</p>
 <div class="footer-layout-preview" aria-label="Altı footer kolonunun düzenleme alanları">
   <div class="footer-widget-row footer-widget-four">
     <?php foreach([1,2,3,4] as $widget): ?>
-      <button type="button" class="footer-widget-tile" data-footer-modal-open="footerWidgetModal<?= $widget ?>"><span>Kolon <?= $widget ?></span><small>İçeriği düzenle</small></button>
+      <button type="button" class="footer-widget-tile" data-footer-modal-open="footerWidgetModal<?= $widget ?>"><span>Kolon <?= $widget ?></span><small><?= $widget===2?'Son blog yazıları':'İçeriği düzenle' ?></small></button>
     <?php endforeach; ?>
   </div>
   <div class="footer-widget-row footer-widget-two">
@@ -213,6 +213,15 @@ $labels = [
         <input type="hidden" id="footerAboutDescriptionHtml" name="footer[about_description]" value="<?= e((string)($themeFooterSettings['about_description']??'')) ?>">
         <p class="design-help">Metni seçerek rengini değiştirebilir, biçimlendirebilir ve bağlantı ekleyebilirsiniz. İçerik Footer Kolon 1'de görüntülenir.</p>
       </div>
+    <?php elseif($widget===2): ?>
+      <div class="design-field"><label for="footerRecentBlogTitle">Widget başlığı</label><input id="footerRecentBlogTitle" type="text" name="footer[recent_blog_title]" maxlength="100" value="<?= e((string)($themeFooterSettings['recent_blog_title']??'Son Blog Yazıları')) ?>" placeholder="Son Blog Yazıları"></div>
+      <div class="footer-recent-blog-picker" style="display:grid;gap:8px;max-height:340px;overflow:auto;padding:4px 2px">
+        <?php $selectedFooterBlogIds=array_map('intval',(array)($themeFooterSettings['recent_blog_post_ids']??[])); ?>
+        <?php if(empty($themeFooterBlogPosts)): ?><p class="footer-widget-empty-note">Henüz yayında blog yazısı bulunmuyor.</p><?php else: foreach($themeFooterBlogPosts as $footerBlogPost): ?>
+          <label style="display:flex;align-items:center;gap:10px;padding:9px 11px;border:1px solid #e5ece7;border-radius:9px;font-size:13px;font-weight:600;min-width:0"><input type="checkbox" name="footer[recent_blog_post_ids][]" value="<?= (int)$footerBlogPost['id'] ?>" <?= in_array((int)$footerBlogPost['id'],$selectedFooterBlogIds,true)?'checked':'' ?> style="width:17px;height:17px;flex:0 0 17px"><span style="min-width:0;overflow-wrap:anywhere"><?= e((string)$footerBlogPost['title']) ?></span></label>
+        <?php endforeach; endif; ?>
+      </div>
+      <p class="design-help">Footer Kolon 2'de küçük görsel ve yazı başlığıyla gösterilecek yazıları seçin. En fazla 8 yazı seçebilirsiniz. Yayından kaldırılan yazılar otomatik olarak gizlenir.</p>
     <?php elseif($widget===5): ?>
       <div class="footer-rich-editor-wrap">
         <label for="footerCopyrightEditor">Copyright / telif bilgisi</label>

@@ -1,0 +1,36 @@
+name: Footer recent blog widget
+on:
+  pull_request:
+    paths:
+      - 'app/Core/ThemeManager.php'
+      - 'routes/web.php'
+      - 'themes/default/templates/partials/footer.php'
+      - 'themes/default/templates/pages/admin/theme-design.php'
+      - 'tests/footer-recent-blog-widget-smoke.php'
+      - '.github/workflows/footer-recent-blog-widget.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'app/Core/ThemeManager.php'
+      - 'routes/web.php'
+      - 'themes/default/templates/partials/footer.php'
+      - 'themes/default/templates/pages/admin/theme-design.php'
+      - 'tests/footer-recent-blog-widget-smoke.php'
+      - '.github/workflows/footer-recent-blog-widget.yml'
+jobs:
+  smoke:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.2'
+      - name: PHP syntax check
+        run: |
+          php -l app/Core/ThemeManager.php
+          php -l routes/web.php
+          php -l themes/default/templates/partials/footer.php
+          php -l themes/default/templates/pages/admin/theme-design.php
+          php -l tests/footer-recent-blog-widget-smoke.php
+      - name: Footer recent blog widget smoke test
+        run: php tests/footer-recent-blog-widget-smoke.php

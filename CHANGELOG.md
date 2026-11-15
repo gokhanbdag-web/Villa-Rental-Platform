@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.3.1 - 2026-11-16
+- Add a selectable recent blog posts widget to footer column 2, with configurable heading, thumbnail/title links, and up to eight individually selected published posts.
+
+
 ## 1.3.0 - 2026-11-16
 - Add a shared live SEO score and actionable checklist to page and blog editors, including keyword, snippet preview, headings, readability, image alt text, links, URL, and indexability guidance.
 - Add focus keyword storage to CMS pages through a versioned migration and output canonical/indexability metadata on published pages.

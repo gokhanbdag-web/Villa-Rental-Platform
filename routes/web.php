@@ -2225,6 +2225,7 @@ $router->get('/admin/theme-design', static function (): void {
     $themeBrandSettings = ThemeManager::brandSettings($themeDesignSlug);
     $themeFamilyBannerTextSettings = ThemeManager::familyBannerTextSettings($themeDesignSlug);
     $themeFooterSettings = ThemeManager::footerSettings($themeDesignSlug);
+    $themeFooterBlogPosts = Database::connection()->query("SELECT id,title,slug,featured_image,status,published_at FROM blog_posts WHERE status='published' AND (published_at IS NULL OR published_at<=NOW()) ORDER BY COALESCE(published_at,created_at) DESC,id DESC LIMIT 100")->fetchAll(PDO::FETCH_ASSOC);
     $themeHomepageStatsSettings = ThemeManager::homepageStatsSettings($themeDesignSlug);
     $themeBrandMessage = (string)($_SESSION['villa_theme_brand_message'] ?? '');
     $themeBrandMessageType = (string)($_SESSION['villa_theme_brand_message_type'] ?? 'success');
