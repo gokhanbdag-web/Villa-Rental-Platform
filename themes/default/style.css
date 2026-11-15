@@ -2032,3 +2032,19 @@ body[data-villa-theme] .site-header .nav{margin-left:auto!important}
     padding:0!important;
   }
 }
+
+
+/* Header social icon colors are controlled only by Header Settings, never by the theme palette. */
+body[data-villa-theme] .site-logo-topbar__social-link,
+body[data-villa-theme] .site-header .nav .site-drawer-social a.site-logo-topbar__social-link{
+  color:var(--social-icon-color,#fff)!important;
+  background:var(--social-icon-background,#176b50)!important;
+  border-color:var(--social-icon-background,#176b50)!important;
+}
+body[data-villa-theme] .site-logo-topbar__social-link:hover,
+body[data-villa-theme] .site-header .nav .site-drawer-social a.site-logo-topbar__social-link:hover{
+  color:var(--social-icon-color,#fff)!important;
+  background:var(--social-icon-background,#176b50)!important;
+  border-color:var(--social-icon-background,#176b50)!important;
+  transform:translateY(-1px)!important;
+}
