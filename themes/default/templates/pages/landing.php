@@ -640,6 +640,21 @@ body .hero-filter-panel .guest-popover{left:auto;right:0;width:300px}
   body .hero-filter-panel .home-calendar{grid-column:1/-1!important}
 }
 
+
+/* Premium search strip: mobile only, placed directly after the hero video. */
+.mobile-premium-search{display:none}
+@media(max-width:600px){
+  .mobile-premium-search{display:block;width:100%;padding:15px 14px 22px;background:#f5f7f6}
+  .mobile-premium-search__form{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px;width:100%;padding:13px;background:#fff;border:1px solid #e7ece9;border-radius:18px;box-shadow:0 12px 32px rgba(20,43,34,.10)}
+  .mobile-premium-search__form label{display:flex;flex-direction:column;justify-content:center;gap:6px;min-width:0;min-height:63px;padding:9px 11px;border:1px solid #edf0ee;border-radius:11px;background:#fbfcfb}
+  .mobile-premium-search__form label span{color:#7c8982;font-size:9px;font-weight:800;letter-spacing:1px}
+  .mobile-premium-search__form input,.mobile-premium-search__form select{width:100%;min-width:0;padding:0;border:0;outline:0;background:transparent;color:#263b31;font:600 12px/1.35 var(--villa-font-body);appearance:auto}
+  .mobile-premium-search__form input::placeholder{color:#9aa59f;font-weight:500}
+  .mobile-premium-search__form .mobile-premium-search__destination{grid-column:1/-1;min-height:68px}
+  .mobile-premium-search__form button{grid-column:1/-1;display:flex;align-items:center;justify-content:center;gap:9px;min-height:48px;margin-top:1px;padding:0 18px;border:0;border-radius:11px;background:var(--villa-primary);color:#fff;font:800 13px/1 var(--villa-font-body);letter-spacing:.1px;box-shadow:0 7px 16px color-mix(in srgb,var(--villa-primary) 22%,transparent)}
+  .mobile-premium-search__form button span{font-size:19px;line-height:1}
+}
+
 </style></head><body>
 <?php \App\Core\ThemeManager::renderPartial('partials/header.php', get_defined_vars()); ?>
 <main class="home-sections"><?php if($active('hero')): ?><section class="hero" style="order:<?= $order('hero',1) ?>"><div class="hero-card" style="<?= $heroBackgroundImageUrl!==''?'background-image:url(&quot;'.e($heroBackgroundImageUrl).'&quot;)':'' ?>">
@@ -735,6 +750,33 @@ body .hero-filter-panel .guest-popover{left:auto;right:0;width:300px}
 <div class="guest-row"><span><strong>Bebek</strong><small>0–1 yaş</small></span><span class="counter"><button type="button" data-count="infants" data-step="-1" aria-label="Bebek azalt">−</button><b id="infantsCount">0</b><button type="button" data-count="infants" data-step="1" aria-label="Bebek artır">+</button></span></div>
 <div class="guest-done"><button type="button" id="guestDone">Tamam</button></div></div></div>
 <button type="submit" class="search-submit"><span>⌕</span> Villa Ara</button></form></div></section><?php endif; ?>
+
+<?php if($active('hero')): ?>
+<section class="mobile-premium-search" aria-label="Villa arama">
+  <form class="mobile-premium-search__form" action="/konaklamalar" method="get">
+    <label class="mobile-premium-search__destination">
+      <span>DESTİNASYON</span>
+      <input type="text" name="city" placeholder="Nereye gitmek istersiniz?" aria-label="Destinasyon">
+    </label>
+    <label>
+      <span>GİRİŞ</span>
+      <input type="date" name="check_in" min="<?= e(date('Y-m-d')) ?>" aria-label="Giriş tarihi">
+    </label>
+    <label>
+      <span>ÇIKIŞ</span>
+      <input type="date" name="check_out" min="<?= e(date('Y-m-d',strtotime('+1 day'))) ?>" aria-label="Çıkış tarihi">
+    </label>
+    <label>
+      <span>MİSAFİR</span>
+      <select name="guests" aria-label="Misafir sayısı">
+        <option value="1">1 misafir</option><option value="2" selected>2 misafir</option><option value="3">3 misafir</option><option value="4">4 misafir</option><option value="5">5 misafir</option><option value="6">6+ misafir</option>
+      </select>
+    </label>
+    <button type="submit"><span aria-hidden="true">⌕</span> Villa Bul</button>
+  </form>
+</section>
+<?php endif; ?>
+
 
 <?php if($active('destinations')): ?><section class="section" style="order:<?= $order('destinations',2) ?>"><div class="wrap"><div class="section-head"><div><span>KEŞFETMEYE BAŞLA</span><h2><?= e($homeSections['destinations']['title']??'Popüler destinasyonlar') ?></h2><p><?= e($homeSections['destinations']['subtitle']??'Türkiye’nin en sevilen tatil rotalarında size özel konaklamalar.') ?></p></div><a class="more" href="/destinasyonlar">Tüm destinasyonlar →</a></div><div class="destination-editorial-grid"><?php foreach(array_values($destinations) as $destinationIndex=>$d): ?><a class="destination-editorial-item" href="/konaklamalar?<?= e(http_build_query(['location_id'=>$d['location_id'],'city'=>$d['city']])) ?>"><span class="destination-editorial-index"><?= str_pad((string)($destinationIndex+1),2,'0',STR_PAD_LEFT) ?></span><span class="destination-editorial-copy" data-villa-overlay-text><strong><?= e($d['city']) ?></strong><small><?= (int)$d['property_count'] ?> konaklama seçeneği</small></span><span class="destination-editorial-arrow" aria-hidden="true">↗</span></a><?php endforeach; ?></div></div></section><?php endif; ?>
 <?php if($showFeatured): ?><section class="section home-accommodations" data-home-section="accommodations" style="order:<?= $order('featured',3) ?>"><div class="wrap"><div class="section-head"><div><span class="pill villa-eyebrow">SİZİN İÇİN SEÇTİK</span><h2><?= e($homeSections['featured']['title']??'En çok tercih edilen konaklamalar') ?></h2><p><?= e($homeSections['featured']['subtitle']??'Misafirlerin keşfetmeyi seveceği özel tatil evleri.') ?></p></div><a class="more" href="/konaklamalar">Tüm konaklamalar →</a></div><div class="cards"><?php if(empty($featuredProperties)): ?><div class="empty-accommodations">Henüz yayınlanmış konaklama bulunmuyor. Yeni ilanlar burada görüntülenecek.</div><?php else: ?><?php foreach($featuredProperties as $p):
