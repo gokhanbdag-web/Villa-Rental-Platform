@@ -494,10 +494,20 @@ final class ThemeManager
         $clean['about_description'] = mb_substr(trim(strip_tags((string)($input['about_description'] ?? ''))), 0, 3000);
         $copyrightHtml = (string)($input['copyright_html'] ?? '');
         $copyrightHtml = preg_replace('~<(script|style|iframe|object|svg|math)\\b[^>]*>.*?</\\1\\s*>~is', '', $copyrightHtml) ?? '';
-        $copyrightHtml = strip_tags($copyrightHtml, '<p><br><strong><b><em><i><u><ul><ol><li><blockquote><div><h2><h3><h4>');
+        $copyrightHtml = strip_tags($copyrightHtml, '<a><p><br><strong><b><em><i><u><ul><ol><li><blockquote><div><h2><h3><h4>');
         $copyrightHtml = preg_replace_callback('~</?([a-z][a-z0-9]*)\\b[^>]*>~i', static function (array $match): string {
             $tag = strtolower($match[1]);
-            return str_starts_with($match[0], '</') ? '</' . $tag . '>' : '<' . $tag . '>';
+            if (str_starts_with($match[0], '</')) return '</' . $tag . '>';
+            if ($tag !== 'a') return '<' . $tag . '>';
+            if (preg_match('~\\bhref\\s*=\\s*(["\\'])(.*?)\\1~is', $match[0], $hrefMatch)) {
+                $url = trim(html_entity_decode($hrefMatch[2], ENT_QUOTES | ENT_HTML5, 'UTF-8'));
+                $scheme = strtolower((string)parse_url($url, PHP_URL_SCHEME));
+                $safe = in_array($scheme, ['http','https','mailto','tel'], true) || ($scheme === '' && (str_starts_with($url, '/') || str_starts_with($url, '#')));
+                if ($safe && $url !== '' && !preg_match('/[\\x00-\\x20]/', $url)) {
+                    return '<a href="' . htmlspecialchars($url, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') . '">';
+                }
+            }
+            return '<a>';
         }, $copyrightHtml) ?? '';
         $clean['copyright_html'] = mb_substr(trim($copyrightHtml), 0, 12000);
         $allowedPayments = ['mastercard','visa','troy','diners_club','american_express'];
