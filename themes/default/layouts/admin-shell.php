@@ -102,10 +102,10 @@ return static function (string $html, string $requestPath, string $platformMode)
             $markup = preg_replace_callback('/(<style\\b[^>]*>)(.*?)(<\\/style>)/is', static function (array $match) use ($mapCss): string {
                 return $match[1] . $mapCss($match[2]) . $match[3];
             }, $markup) ?? $markup;
-            $markup = preg_replace_callback('/(\\bstyle\\s*=\\s*)(["\\'])(.*?)\\2/is', static function (array $match) use ($mapCss): string {
+            $markup = preg_replace_callback("/(\\bstyle\\s*=\\s*)([\\"'])(.*?)\\2/is", static function (array $match) use ($mapCss): string {
                 return $match[1] . $match[2] . $mapCss($match[3]) . $match[2];
             }, $markup) ?? $markup;
-            return preg_replace_callback('/\\b(fill|stroke)=(["\\'])(#[0-9a-f]{3}(?:[0-9a-f]{3})?)\\2/i', static function (array $match) use ($mapCss): string {
+            return preg_replace_callback("/\\b(fill|stroke)=(['\\"])(#[0-9a-f]{3}(?:[0-9a-f]{3})?)\\2/i", static function (array $match) use ($mapCss): string {
                 return $match[1] . '=' . $match[2] . $mapCss($match[3]) . $match[2];
             }, $markup) ?? $markup;
         };
