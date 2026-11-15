@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.3.0 - 2026-11-16
+- Add a shared live SEO score and actionable checklist to page and blog editors, including keyword, snippet preview, headings, readability, image alt text, links, URL, and indexability guidance.
+- Add focus keyword storage to CMS pages through a versioned migration and output canonical/indexability metadata on published pages.
+
+
 ## 1.2.2 - 2026-11-16
 - Rework admin blog list and editor responsive layouts: prevent grid overflow, stack editor/sidebar fields on compact screens, improve filters/actions, and keep the dense post table safely scrollable on mobile.
 
