@@ -484,6 +484,18 @@ body .hero-filter-panel .guest-popover{left:auto;right:0;width:300px}
   body .hero-filter-panel .search-submit{display:block!important;grid-column:1/-1!important;width:100%!important;max-width:100%!important;min-width:0!important;box-sizing:border-box!important;justify-self:stretch!important;min-height:58px!important;margin:8px 0 0!important;padding-left:12px!important;padding-right:12px!important}
   body .hero-filter-panel .home-calendar{grid-column:1/-1!important}
   body .hero-filter-panel .guest-popover{left:auto;right:0;width:min(300px,100%)}
+  /* Keep the desktop submit button inside the white search card at every desktop width. */
+  body .hero-card .hero-filter-panel form#homeSearch.search-enhanced{
+    grid-template-columns:minmax(0,1fr) minmax(0,1fr)!important;
+    width:100%!important;max-width:100%!important;min-width:0!important;
+  }
+  body .hero-card .hero-filter-panel form#homeSearch.search-enhanced > .search-submit{
+    display:block!important;grid-column:1 / -1!important;
+    justify-self:stretch!important;align-self:stretch!important;
+    width:100%!important;max-width:100%!important;min-width:0!important;
+    box-sizing:border-box!important;margin:8px 0 0!important;
+    padding-left:12px!important;padding-right:12px!important;
+  }
 }
 </style></head><body>
 <?php \App\Core\ThemeManager::renderPartial('partials/header.php', get_defined_vars()); ?>

@@ -1,5 +1,8 @@
 # Changelog
 
+## 1.0.5 - 2026-11-15
+- Constrain the desktop homepage hero search form to two flexible columns and force the search button to span the card width without overflowing.
+
 ## 1.0.4 - 2026-11-15
 - Replace the mobile villa photo carousel with a compact desktop-style collage showing three photos at once; remove the partial next-photo preview and mobile photo counter.
 
