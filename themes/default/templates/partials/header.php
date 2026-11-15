@@ -52,7 +52,7 @@ $topPhoneDigits = preg_replace('/\\D+/', '', $topPhone);
   </div>
 </header>
 <div class="drawer-overlay" id="menuOverlay"></div>
-<?php \\App\\Core\\ThemeManager::renderPartial('partials/explore-drawer.php', get_defined_vars()); ?>
+<?php \App\Core\ThemeManager::renderPartial('partials/explore-drawer.php', get_defined_vars()); ?>
 
 
 
