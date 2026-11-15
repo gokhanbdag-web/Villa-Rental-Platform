@@ -308,6 +308,155 @@ body.villa-home-mediterranean .hero-filter-panel .search-submit:hover{
   body.villa-home-mediterranean .hero-filter-panel .search-submit{transition:none!important}
 }
 
+
+/* Homepage hero search: global rules (the document body intentionally has no theme-specific class). */
+body .hero-card{
+  min-height:680px!important;
+  padding:64px max(24px,calc((100vw - 1200px)/2)) 54px!important;
+  display:flex!important;
+  flex-direction:column!important;
+  justify-content:center!important;
+  align-items:stretch!important;
+  gap:0!important;
+}
+body .hero-inner{
+  display:block!important;
+  width:100%!important;
+  max-width:1160px!important;
+  margin:0 auto!important;
+}
+body .hero-copy{
+  width:100%!important;
+  max-width:900px!important;
+  margin:0 auto!important;
+  padding:0 12px!important;
+  text-align:center!important;
+}
+body .hero-copy .eyebrow{margin-bottom:12px!important}
+body .hero-copy h1{
+  max-width:900px!important;
+  margin:8px auto 12px!important;
+  font-size:clamp(34px,4.5vw,58px)!important;
+  line-height:1.08!important;
+  letter-spacing:-1.6px!important;
+  text-wrap:balance;
+}
+body .hero-copy p{
+  max-width:700px!important;
+  margin:0 auto!important;
+  font-size:clamp(15px,1.35vw,18px)!important;
+  line-height:1.55!important;
+}
+body .hero-filter-panel{
+  position:relative!important;
+  z-index:5!important;
+  width:100%!important;
+  max-width:1160px!important;
+  margin:34px auto 0!important;
+  padding:13px!important;
+  justify-self:auto!important;
+  border:1px solid rgba(255,255,255,.92)!important;
+  border-radius:22px!important;
+  background:#fff!important;
+  box-shadow:0 24px 68px rgba(5,25,22,.34),0 0 0 7px rgba(255,255,255,.15)!important;
+  backdrop-filter:none!important;
+}
+body .hero-filter-panel .search-enhanced{
+  display:grid!important;
+  grid-template-columns:minmax(190px,1.4fr) repeat(3,minmax(135px,1fr)) minmax(150px,.95fr)!important;
+  align-items:stretch!important;
+  gap:0!important;
+  width:100%!important;
+  max-width:none!important;
+  min-height:92px!important;
+  padding:0!important;
+  border:0!important;
+  border-radius:14px!important;
+  background:transparent!important;
+  box-shadow:none!important;
+}
+body .hero-filter-panel .search-field{
+  min-width:0!important;
+  min-height:82px!important;
+  padding:14px 15px!important;
+  border:0!important;
+  border-right:1px solid #e5ebe6!important;
+  border-bottom:0!important;
+  background:transparent!important;
+}
+body .hero-filter-panel .search-label{
+  margin-bottom:6px!important;
+  color:#53645b!important;
+  font-size:12px!important;
+  font-weight:800!important;
+  letter-spacing:.45px!important;
+}
+body .hero-filter-panel .search-icon{color:var(--villa-primary)!important;font-size:18px!important}
+body .hero-filter-panel .destination-field input,
+body .hero-filter-panel .date-display,
+body .hero-filter-panel .guest-trigger{
+  min-height:30px!important;
+  color:#24362e!important;
+  font-size:16px!important;
+  font-weight:700!important;
+}
+body .hero-filter-panel .destination-field input::placeholder{color:#77857d!important;font-weight:500!important}
+body .hero-filter-panel .search-submit{
+  align-self:stretch!important;
+  min-width:0!important;
+  min-height:72px!important;
+  margin:0 0 0 12px!important;
+  padding:0 18px!important;
+  border:0!important;
+  border-radius:15px!important;
+  background:var(--villa-primary)!important;
+  color:#fff!important;
+  font-size:17px!important;
+  font-weight:850!important;
+  box-shadow:0 10px 24px color-mix(in srgb,var(--villa-primary) 28%,transparent)!important;
+  transition:transform .18s ease,box-shadow .18s ease!important;
+}
+body .hero-filter-panel .search-submit:hover{
+  background:var(--villa-primary)!important;
+  filter:brightness(.94);
+  transform:translateY(-2px);
+  box-shadow:0 14px 28px color-mix(in srgb,var(--villa-primary) 35%,transparent)!important;
+}
+body .hero-filter-panel .home-calendar{grid-column:1/-1}
+body .hero-filter-panel .guest-popover{left:auto;right:0;width:300px}
+@media(max-width:1050px){
+  body .hero-card{min-height:0!important;padding:58px 26px 46px!important}
+  body .hero-filter-panel{margin-top:28px!important}
+  body .hero-filter-panel .search-enhanced{grid-template-columns:repeat(2,minmax(0,1fr))!important;min-height:0!important}
+  body .hero-filter-panel .search-field{min-height:76px!important;border-bottom:1px solid #e5ebe6!important}
+  body .hero-filter-panel .destination-field,
+  body .hero-filter-panel .guest-field{grid-column:1/-1!important;border-right:0!important}
+  body .hero-filter-panel .date-field:nth-of-type(3){border-right:0!important}
+  body .hero-filter-panel .search-submit{grid-column:1/-1!important;min-height:60px!important;margin:10px 0 0!important}
+  body .hero-filter-panel .home-calendar{grid-column:1/-1!important}
+  body .hero-filter-panel .guest-popover{left:0;right:0;width:100%}
+}
+@media(max-width:600px){
+  body .hero-card{min-height:0!important;padding:40px 14px 28px!important}
+  body .hero-copy{padding:0 3px!important}
+  body .hero-copy h1{font-size:clamp(30px,8vw,38px)!important;letter-spacing:-.9px!important}
+  body .hero-copy p{font-size:14px!important}
+  body .hero-filter-panel{margin-top:22px!important;padding:11px!important;border-radius:19px!important;box-shadow:0 18px 46px rgba(0,0,0,.32),0 0 0 5px rgba(255,255,255,.14)!important}
+  body .hero-filter-panel .search-enhanced{grid-template-columns:1fr 1fr!important}
+  body .hero-filter-panel .search-field{min-height:70px!important;padding:10px 9px!important}
+  body .hero-filter-panel .destination-field,
+  body .hero-filter-panel .guest-field{grid-column:1/-1!important}
+  body .hero-filter-panel .date-field{border-right:1px solid #e5ebe6!important}
+  body .hero-filter-panel .date-field:nth-of-type(3){border-right:0!important}
+  body .hero-filter-panel .search-label{font-size:11px!important}
+  body .hero-filter-panel .destination-field input,
+  body .hero-filter-panel .date-display,
+  body .hero-filter-panel .guest-trigger{font-size:14px!important}
+  body .hero-filter-panel .search-submit{min-height:55px!important;font-size:16px!important}
+  body .hero-filter-panel .home-calendar{grid-column:1/-1!important}
+}
+@media(prefers-reduced-motion:reduce){body .hero-filter-panel .search-submit{transition:none!important}}
+
 </style></head><body>
 <?php \App\Core\ThemeManager::renderPartial('partials/header.php', get_defined_vars()); ?>
 <main class="home-sections"><?php if($active('hero')): ?><section class="hero" style="order:<?= $order('hero',1) ?>"><div class="hero-card" style="<?= $heroBackgroundImageUrl!==''?'background-image:url(&quot;'.e($heroBackgroundImageUrl).'&quot;)':'' ?>">
