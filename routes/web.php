@@ -447,11 +447,20 @@ $router->get('/', static function (): void {
       if($activeHomeTheme==='default'){
          $categories=$pdo->query("SELECT c.id,c.name,c.slug,COUNT(DISTINCT p.id) AS property_count,(SELECT pm.file_path FROM property_media pm JOIN properties p2 ON p2.id=pm.property_id WHERE p2.category_id=c.id AND p2.status='published' ORDER BY pm.is_cover DESC,pm.sort_order,pm.id LIMIT 1) AS cover_image FROM property_categories c LEFT JOIN properties p ON p.category_id=c.id AND p.status='published' WHERE c.is_active=1 GROUP BY c.id,c.name,c.slug,c.sort_order ORDER BY c.sort_order,c.name LIMIT 8")->fetchAll(PDO::FETCH_ASSOC);
          $homeCategoryCollections=[];
-         foreach(array_slice($categories,0,4) as $homeCategory){
-             $categoryProperties=$pdo->prepare("SELECT p.*,(SELECT pm.file_path FROM property_media pm WHERE pm.property_id=p.id ORDER BY pm.is_cover DESC,pm.sort_order,pm.id LIMIT 1) AS cover_image,(SELECT AVG(r.rating) FROM reviews r WHERE r.property_id=p.id AND r.status='approved') AS rating_average,(SELECT COUNT(*) FROM reviews r WHERE r.property_id=p.id AND r.status='approved') AS rating_count,(SELECT COUNT(*) FROM bookings b WHERE b.property_id=p.id AND b.status NOT IN ('cancelled','rejected')) AS booking_count FROM properties p WHERE p.status='published' AND p.category_id=? ORDER BY p.created_at DESC,p.id DESC LIMIT 3");
-             $categoryProperties->execute([(int)$homeCategory['id']]);
-             $categoryRows=$categoryProperties->fetchAll(PDO::FETCH_ASSOC);
-             if($categoryRows)$homeCategoryCollections[]=['category'=>$homeCategory,'properties'=>$categoryRows];
+         $homeCategoryIds=array_map(static fn(array $category):int=>(int)$category['id'],array_slice($categories,0,4));
+         if($homeCategoryIds){
+             $categoryMarks=implode(',',array_fill(0,count($homeCategoryIds),'?'));
+             $categoryProperties=$pdo->prepare("SELECT p.*,(SELECT pm.file_path FROM property_media pm WHERE pm.property_id=p.id ORDER BY pm.is_cover DESC,pm.sort_order,pm.id LIMIT 1) AS cover_image,(SELECT AVG(r.rating) FROM reviews r WHERE r.property_id=p.id AND r.status='approved') AS rating_average,(SELECT COUNT(*) FROM reviews r WHERE r.property_id=p.id AND r.status='approved') AS rating_count,(SELECT COUNT(*) FROM bookings b WHERE b.property_id=p.id AND b.status NOT IN ('cancelled','rejected')) AS booking_count FROM properties p WHERE p.status='published' AND p.category_id IN ($categoryMarks) ORDER BY p.category_id,p.created_at DESC,p.id DESC");
+             $categoryProperties->execute($homeCategoryIds);
+             $categoryRowsById=[];
+             foreach($categoryProperties->fetchAll(PDO::FETCH_ASSOC) as $categoryProperty){
+                 $categoryId=(int)$categoryProperty['category_id'];
+                 if(count($categoryRowsById[$categoryId]??[])<3)$categoryRowsById[$categoryId][]=$categoryProperty;
+             }
+             foreach(array_slice($categories,0,4) as $homeCategory){
+                 $categoryRows=$categoryRowsById[(int)$homeCategory['id']]??[];
+                 if($categoryRows)$homeCategoryCollections[]=['category'=>$homeCategory,'properties'=>$categoryRows];
+             }
          }
          $homeReviews=$pdo->query("SELECT r.rating,r.body,r.created_at,u.username,p.title AS property_title FROM reviews r JOIN users u ON u.id=r.guest_user_id JOIN properties p ON p.id=r.property_id WHERE r.status='approved' AND r.body IS NOT NULL AND TRIM(r.body)<>'' AND p.status='published' ORDER BY r.created_at DESC,r.id DESC LIMIT 6")->fetchAll(PDO::FETCH_ASSOC);
      }else{
@@ -1897,7 +1906,18 @@ $router->get('/blog', static function (): void {
     $siteName=$content['site_name']??'VillaStay';$navigation=villa_navigation_tree($pdo,'header','tr');$footerNavigation=villa_navigation_tree($pdo,'footer','tr');
     $q=trim((string)($_GET['q']??''));$pageNo=max(1,(int)($_GET['page']??1));$perPage=9;
     $where=["p.status='published'","(p.published_at IS NULL OR p.published_at<=NOW())"];$params=[];
-    if($q!==''){$where[]="(p.title LIKE ? OR p.excerpt LIKE ? OR p.content LIKE ?)";$like='%'.$q.'%';array_push($params,$like,$like,$like);}
+    if($q!==''){
+         $searchWords=preg_split('/[^\\pL\\pN]+/u',$q,-1,PREG_SPLIT_NO_EMPTY)?:[];
+         $searchWords=array_values(array_filter($searchWords,static fn(string $word):bool=>mb_strlen($word)>=3));
+         if(mb_strlen($q)>=3&&$searchWords){
+             $booleanSearch=implode(' ',array_map(static fn(string $word):string=>'+'.$word.'*',$searchWords));
+             $where[]="MATCH(p.title,p.excerpt,p.content) AGAINST (? IN BOOLEAN MODE)";
+             $params[]=$booleanSearch;
+         }else{
+             $where[]="(p.title LIKE ? OR p.excerpt LIKE ? OR p.content LIKE ?)";
+             $like='%'.$q.'%';array_push($params,$like,$like,$like);
+         }
+     }
     $categorySlug=trim((string)($_GET['kategori']??''));$tagSlug=trim((string)($_GET['etiket']??''));
     if($categorySlug!==''){$where[]="EXISTS (SELECT 1 FROM blog_post_category pc JOIN blog_categories c ON c.id=pc.category_id WHERE pc.post_id=p.id AND c.slug=?)";$params[]=$categorySlug;}
     if($tagSlug!==''){$where[]="EXISTS (SELECT 1 FROM blog_post_tag pt JOIN blog_tags t ON t.id=pt.tag_id WHERE pt.post_id=p.id AND t.slug=?)";$params[]=$tagSlug;}
