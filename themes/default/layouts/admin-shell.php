@@ -66,8 +66,50 @@ return static function (string $html, string $requestPath, string $platformMode)
         // Remove page-level headers/navigation left by older standalone admin views.
         $bodyContent = preg_replace('/<header\b[^>]*>.*?<\/header>/is', '', $bodyContent, 1) ?? $bodyContent;
 
-        // Normalize the legacy green accent to the active theme primary across all admin page markup and embedded CSS/JS.
-        $bodyContent = str_ireplace(['#286344', '#315d41', '#526e50'], $adminPrimaryColor, $bodyContent);
+        // Bind every green CSS accent in admin pages to the theme's configured primary.
+        // Light greens remain tints of the primary; darker greens remain deeper primary shades.
+        $mapAdminGreenStyles = static function (string $markup) use ($adminPrimaryColor): string {
+            $primary = strtolower(html_entity_decode($adminPrimaryColor, ENT_QUOTES, 'UTF-8'));
+            $mapCss = static function (string $css) use ($primary): string {
+                return preg_replace_callback('/#(?:[0-9a-f]{3}|[0-9a-f]{6})\\b/i', static function (array $match) use ($primary): string {
+                    $hex = strtolower($match[0]);
+                    if (strlen($hex) === 4) $hex = '#' . $hex[1] . $hex[1] . $hex[2] . $hex[2] . $hex[3] . $hex[3];
+                    if ($hex === $primary) return 'var(--villa-admin-primary)';
+                    $red = hexdec(substr($hex, 1, 2)) / 255;
+                    $green = hexdec(substr($hex, 3, 2)) / 255;
+                    $blue = hexdec(substr($hex, 5, 2)) / 255;
+                    $max = max($red, $green, $blue);
+                    $min = min($red, $green, $blue);
+                    $delta = $max - $min;
+                    $lightness = ($max + $min) / 2;
+                    if ($delta < 0.0001) return $match[0];
+                    $saturation = $delta / (1 - abs(2 * $lightness - 1));
+                    if ($max === $red) $hue = 60 * fmod((($green - $blue) / $delta), 6);
+                    elseif ($max === $green) $hue = 60 * ((($blue - $red) / $delta) + 2);
+                    else $hue = 60 * ((($red - $green) / $delta) + 4);
+                    if ($hue < 0) $hue += 360;
+                    if ($hue < 72 || $hue > 170 || $saturation < 0.10) return $match[0];
+                    if ($lightness >= 0.78) {
+                        $weight = max(10, min(35, (int)round((1 - $lightness) * 180)));
+                        return 'color-mix(in srgb, var(--villa-admin-primary) ' . $weight . '%, white)';
+                    }
+                    if ($lightness >= 0.55) return 'color-mix(in srgb, var(--villa-admin-primary) 55%, white)';
+                    if ($lightness >= 0.38) return 'color-mix(in srgb, var(--villa-admin-primary) 82%, white)';
+                    if ($lightness >= 0.25) return 'var(--villa-admin-primary)';
+                    return 'color-mix(in srgb, var(--villa-admin-primary) 82%, black)';
+                }, $css) ?? $css;
+            };
+            $markup = preg_replace_callback('/(<style\\b[^>]*>)(.*?)(<\\/style>)/is', static function (array $match) use ($mapCss): string {
+                return $match[1] . $mapCss($match[2]) . $match[3];
+            }, $markup) ?? $markup;
+            $markup = preg_replace_callback('/(\\bstyle\\s*=\\s*)(["\\'])(.*?)\\2/is', static function (array $match) use ($mapCss): string {
+                return $match[1] . $match[2] . $mapCss($match[3]) . $match[2];
+            }, $markup) ?? $markup;
+            return preg_replace_callback('/\\b(fill|stroke)=(["\\'])(#[0-9a-f]{3}(?:[0-9a-f]{3})?)\\2/i', static function (array $match) use ($mapCss): string {
+                return $match[1] . '=' . $match[2] . $mapCss($match[3]) . $match[2];
+            }, $markup) ?? $markup;
+        };
+        $bodyContent = $mapAdminGreenStyles($bodyContent);
 
         // A single icon map keeps the navigation identical on every admin screen.
         $icons = [
@@ -109,7 +151,7 @@ return static function (string $html, string $requestPath, string $platformMode)
         $shell = '<style>:root{--villa-admin-primary:' . $adminPrimaryColor . ';--villa-admin-primary-hover:color-mix(in srgb,var(--villa-admin-primary) 82%,#000)}
             html,body{min-height:100%;margin:0!important;background:#f5f6f8!important;color:#202631;font-family:Inter,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif!important}
             body{overflow-x:hidden}.vr-admin-top{height:68px;box-sizing:border-box;background:#fff;border-bottom:1px solid #e8ebef;display:flex;align-items:center;gap:16px;padding:0 26px;position:sticky;top:0;z-index:1002}
-            .vr-admin-brand{font-size:17px;font-weight:800;letter-spacing:-.3px;color:#20352b;text-decoration:none;white-space:nowrap}
+            .vr-admin-brand{font-size:17px;font-weight:800;letter-spacing:-.3px;color:var(--villa-admin-primary);text-decoration:none;white-space:nowrap}
             .vr-admin-user{font-size:13px;color:#657080}.vr-admin-site-link{margin-left:auto;display:inline-flex;align-items:center;justify-content:center;min-height:36px;padding:0 13px;border:1px solid #dfe7e2;border-radius:9px;background:color-mix(in srgb,var(--villa-admin-primary) 4%,white);color:var(--villa-admin-primary);text-decoration:none;font-size:12px;font-weight:700;white-space:nowrap}.vr-admin-site-link:hover{background:color-mix(in srgb,var(--villa-admin-primary) 10%,white)}.vr-admin-logout{display:inline-flex;align-items:center;justify-content:center;min-height:36px;padding:0 13px;border:1px solid #f0d9d6;border-radius:9px;background:#fff8f7;color:#a43e35;font-size:12px;font-weight:750;cursor:pointer}.vr-admin-logout:hover{background:#fff0ee}.vr-admin-burger{display:none;width:40px;height:40px;border:1px solid #e5e8ed;border-radius:9px;background:#fff;color:#263238;align-items:center;justify-content:center;font-size:22px;cursor:pointer}
             .vr-admin-layout{display:grid;grid-template-columns:252px minmax(0,1fr);min-height:calc(100vh - 68px)}
             .vr-admin-sidebar{background:#fff;border-right:1px solid #e8ebef;padding:22px 15px;display:flex;flex-direction:column;gap:5px;box-sizing:border-box}
@@ -310,6 +352,11 @@ return static function (string $html, string $requestPath, string $platformMode)
             activate(location.pathname);
         })();
         </script>';
+        // Apply the same green-to-primary mapping to the shared shell CSS.
+        $primaryPlaceholder = '__VILLA_ADMIN_PRIMARY_VALUE__';
+        $shell = str_replace($adminPrimaryColor, $primaryPlaceholder, $shell);
+        $shell = $mapAdminGreenStyles($shell);
+        $shell = str_replace($primaryPlaceholder, $adminPrimaryColor, $shell);
         if ($hasDocumentBody) {
             return preg_replace_callback('/<body\\b[^>]*>.*?<\\/body>/is', static function (array $matches) use ($shell): string {
                 return '<body>' . $shell . '</body>';
