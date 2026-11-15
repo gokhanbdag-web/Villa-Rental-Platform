@@ -19,6 +19,9 @@ $desktopHide = strpos($landing, '.mobile-premium-search{display:none}');
 if ($mobileCss === false || $desktopHide === false || $desktopHide > $mobileCss) {
     throw new RuntimeException('Premium search must be hidden by default and enabled only on mobile.');
 }
+if (!str_contains($landing, 'style="order:<?= $order(\'hero\',1) ?>"')) {
+    throw new RuntimeException('Premium search must share the hero order so it renders immediately after the hero.');
+}
 if (!str_contains($landing, 'name="check_in"') || !str_contains($landing, 'name="check_out"') || !str_contains($landing, 'name="guests"')) {
     throw new RuntimeException('Premium search must submit destination, dates and guest count.');
 }
