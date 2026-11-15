@@ -59,6 +59,8 @@ jobs:
         run: php tests/mobile-hero-search-smoke.php
       - name: Run mobile premium search placement smoke test
         run: php tests/mobile-premium-search-smoke.php
+      - name: Run desktop and mobile destination autocomplete smoke test
+        run: php tests/destination-autocomplete-smoke.php
       - name: Run admin version display smoke test
         run: php tests/admin-version-display-smoke.php
       - name: Run browser-installer backend smoke test
