@@ -1609,12 +1609,28 @@ $router->post('/admin/navigation/save', static function (): void {
     if($id>0){$current=$pdo->prepare('SELECT location,parent_id FROM navigation_items WHERE id=? LIMIT 1');$current->execute([$id]);$currentRow=$current->fetch();if($currentRow&&(int)($currentRow['parent_id']??0)===0&&(string)$currentRow['location']!==$location){$has=$pdo->prepare('SELECT 1 FROM navigation_items WHERE parent_id=? LIMIT 1');$has->execute([$id]);if($has->fetchColumn()){http_response_code(422);exit('Alt menüleri bulunan ana öğenin konumunu değiştirmeden önce alt öğelerini taşıyın.');}}}if($parentId>0){$p=$pdo->prepare('SELECT id,parent_id,location FROM navigation_items WHERE id=? LIMIT 1');$p->execute([$parentId]);$parent=$p->fetch();if(!$parent||(int)$parent['id']===$id||(string)$parent['location']!==$location||(int)($parent['parent_id']??0)>0){http_response_code(422);exit('Alt menü yalnızca aynı konumdaki bir ana menüye bağlanabilir.');}$hasChildren=$pdo->prepare('SELECT 1 FROM navigation_items WHERE parent_id=? LIMIT 1');$hasChildren->execute([$id]);if($id>0&&$hasChildren->fetchColumn()){http_response_code(422);exit('Alt menüsü bulunan bir öğeyi başka bir öğenin altına taşıyamazsınız. Önce alt öğelerini taşıyın.');}}
     $validUrl=$url!==''&&!preg_match('/[\r\n\\x00-\\x1F]/',$url)&&!str_starts_with($url,'//')&&(str_starts_with($url,'/')||preg_match('#^https?://#i',$url));
     if($label===''||mb_strlen($label)>120||!$validUrl){http_response_code(422);exit('Menü adı veya bağlantı adresi geçersiz.');}
+    // A navigation URL may exist only once per location and language. Detect it
+    // before writing so the admin receives a useful message instead of a PDO fatal.
+    $duplicate=$pdo->prepare('SELECT id,label FROM navigation_items WHERE location=? AND language_code=? AND url=? AND id<>? LIMIT 1');
+    $duplicate->execute([$location,'tr',$url,$id]);
+    if($duplicate->fetch()){
+        redirect('/admin/navigation?error=duplicate');
+        return;
+    }
     if($id>0){
         $s=$pdo->prepare('UPDATE navigation_items SET location=?,parent_id=?,label=?,url=?,target=?,sort_order=?,is_active=? WHERE id=?');
         $s->execute([$location,$parentId?:null,$label,$url,$target,$sort,$active,$id]);
     }else{
         $s=$pdo->prepare('INSERT INTO navigation_items(location,parent_id,language_code,label,url,target,sort_order,is_active) VALUES(?,?,?,?,?,?,?,?)');
-        $s->execute([$location,$parentId?:null,'tr',$label,$url,$target,$sort,$active]);
+        try {
+            $s->execute([$location,$parentId?:null,'tr',$label,$url,$target,$sort,$active]);
+        } catch (\\PDOException $exception) {
+            if ((string)$exception->getCode()==='23000') {
+                redirect('/admin/navigation?error=duplicate');
+                return;
+            }
+            throw $exception;
+        }
     }
     redirect('/admin/navigation');
 });
