@@ -144,15 +144,38 @@ if ($drawerUser !== null) {
   button.type='submit';button.append(element('span','', '↪'),document.createTextNode(' Güvenli Çıkış Yap'));
   logout.append(token,button);footer.appendChild(logout);drawer.appendChild(footer);
 
+  var accountPath=appPath(data.user.role==='customer'?'/account/bookings':(data.user.role==='vendor'?'/vendor':'/admin'));
   document.querySelectorAll('[data-auth-link]').forEach(function(link){
    var label=data.user.label||'Hesabım';
    var textNodes=Array.from(link.childNodes).filter(function(node){return node.nodeType===Node.TEXT_NODE&&node.textContent.trim()!=='';});
    if(textNodes.length){textNodes[0].textContent=' '+label+' ';textNodes.slice(1).forEach(function(node){node.remove();});}
-   else if(!link.querySelector('[data-auth-label]'))link.appendChild(element('span','',label));
+   else if(!link.querySelector('[data-auth-label]')&&!link.querySelector('svg'))link.appendChild(element('span','',label));
    link.setAttribute('aria-label',label);
-   link.href=appPath(data.user.role==='customer'?'/account/bookings':(data.user.role==='vendor'?'/vendor':'/admin'));
+   link.href=accountPath;
    link.removeAttribute('data-login-trigger');
    link.setAttribute('data-account-drawer-trigger','');
+  });
+  // Login triggers are separate from authenticated account links: convert both
+  // the desktop header link and mobile bottom-bar button immediately after AJAX login.
+  document.querySelectorAll('[data-login-trigger]').forEach(function(trigger){
+   var icon=document.createElementNS('http://www.w3.org/2000/svg','svg');
+   icon.setAttribute('viewBox','0 0 24 24');
+   icon.setAttribute('aria-hidden','true');
+   icon.setAttribute('focusable','false');
+   var circle=document.createElementNS('http://www.w3.org/2000/svg','circle');
+   circle.setAttribute('cx','12');circle.setAttribute('cy','8');circle.setAttribute('r','4');
+   var path=document.createElementNS('http://www.w3.org/2000/svg','path');
+   path.setAttribute('d','M4 21a8 8 0 0 1 16 0');
+   icon.append(circle,path);
+   var oldIcon=trigger.querySelector('svg');
+   if(oldIcon)oldIcon.replaceWith(icon);else trigger.insertBefore(icon,trigger.firstChild);
+   var caption=trigger.querySelector('span');
+   if(caption)caption.textContent='Hesabım';
+   trigger.removeAttribute('data-login-trigger');
+   trigger.setAttribute('data-account-drawer-trigger','');
+   trigger.setAttribute('aria-label','Hesabım');
+   trigger.setAttribute('title','Hesabım');
+   if(trigger.tagName==='A')trigger.href=accountPath;
   });
   form.reset();
   document.dispatchEvent(new CustomEvent('villa:login',{detail:data.user}));
