@@ -1902,7 +1902,7 @@ $router->get('/blog', static function (): void {
     if($categorySlug!==''){$where[]="EXISTS (SELECT 1 FROM blog_post_category pc JOIN blog_categories c ON c.id=pc.category_id WHERE pc.post_id=p.id AND c.slug=?)";$params[]=$categorySlug;}
     if($tagSlug!==''){$where[]="EXISTS (SELECT 1 FROM blog_post_tag pt JOIN blog_tags t ON t.id=pt.tag_id WHERE pt.post_id=p.id AND t.slug=?)";$params[]=$tagSlug;}
     $sqlWhere=implode(' AND ',$where);$count=$pdo->prepare("SELECT COUNT(*) FROM blog_posts p WHERE $sqlWhere");$count->execute($params);$totalPosts=(int)$count->fetchColumn();$totalPages=max(1,(int)ceil($totalPosts/$perPage));$pageNo=min($pageNo,$totalPages);$offset=($pageNo-1)*$perPage;
-    $stmt=$pdo->prepare("SELECT p.*, (SELECT c.name FROM blog_post_category pc JOIN blog_categories c ON c.id=pc.category_id WHERE pc.post_id=p.id ORDER BY c.name LIMIT 1) AS category_name,(SELECT c.slug FROM blog_post_category pc JOIN blog_categories c ON c.id=pc.category_id WHERE pc.post_id=p.id ORDER BY c.name LIMIT 1) AS category_slug FROM blog_posts p WHERE $sqlWhere ORDER BY p.is_featured DESC,COALESCE(p.published_at,p.created_at) DESC,p.id DESC LIMIT $perPage OFFSET $offset");$stmt->execute($params);$posts=$stmt->fetchAll(PDO::FETCH_ASSOC);
+    $stmt=$pdo->prepare("SELECT p.id,p.title,p.slug,p.excerpt,p.featured_image,p.featured_image_alt,p.published_at,p.created_at,p.reading_time,p.is_featured, (SELECT c.name FROM blog_post_category pc JOIN blog_categories c ON c.id=pc.category_id WHERE pc.post_id=p.id ORDER BY c.name LIMIT 1) AS category_name,(SELECT c.slug FROM blog_post_category pc JOIN blog_categories c ON c.id=pc.category_id WHERE pc.post_id=p.id ORDER BY c.name LIMIT 1) AS category_slug FROM blog_posts p WHERE $sqlWhere ORDER BY p.is_featured DESC,COALESCE(p.published_at,p.created_at) DESC,p.id DESC LIMIT $perPage OFFSET $offset");$stmt->execute($params);$posts=$stmt->fetchAll(PDO::FETCH_ASSOC);
     $blogCategories=$pdo->query("SELECT c.*,COUNT(p.id) AS post_count FROM blog_categories c LEFT JOIN blog_post_category pc ON pc.category_id=c.id LEFT JOIN blog_posts p ON p.id=pc.post_id AND p.status='published' AND (p.published_at IS NULL OR p.published_at<=NOW()) WHERE c.is_active=1 GROUP BY c.id ORDER BY c.sort_order,c.name")->fetchAll(PDO::FETCH_ASSOC);
     $popularPosts=$pdo->query("SELECT id,title,slug,featured_image,published_at,views_count FROM blog_posts WHERE status='published' AND (published_at IS NULL OR published_at<=NOW()) ORDER BY views_count DESC,COALESCE(published_at,created_at) DESC LIMIT 5")->fetchAll(PDO::FETCH_ASSOC);
     $blogTags=$pdo->query("SELECT t.*,COUNT(pt.post_id) AS post_count FROM blog_tags t LEFT JOIN blog_post_tag pt ON pt.tag_id=t.id LEFT JOIN blog_posts p ON p.id=pt.post_id AND p.status='published' AND (p.published_at IS NULL OR p.published_at<=NOW()) GROUP BY t.id ORDER BY post_count DESC,t.name LIMIT 18")->fetchAll(PDO::FETCH_ASSOC);
@@ -1915,7 +1915,22 @@ $router->get('/blog/etiket/{slug}', static function (array $params): void {redir
 $router->get('/blog/{slug}', static function (array $params): void {
     $pdo=Database::connection();$s=$pdo->prepare("SELECT * FROM blog_posts WHERE slug=? AND status='published' AND (published_at IS NULL OR published_at<=NOW()) LIMIT 1");$s->execute([(string)$params['slug']]);$post=$s->fetch(PDO::FETCH_ASSOC);
     if(!$post){http_response_code(404);echo 'Yazı bulunamadı.';return;}
-    $pdo->prepare('UPDATE blog_posts SET views_count=views_count+1 WHERE id=?')->execute([(int)$post['id']]);
+    // Count a post view once per session (30-minute window) to avoid duplicate
+    // writes from refreshes, repeated requests and crawler retries.
+    $viewPostId=(int)$post['id'];
+    $viewNow=time();
+    if(session_status()===PHP_SESSION_ACTIVE){
+        $viewHistory=is_array($_SESSION['villa_blog_views']??null)?$_SESSION['villa_blog_views']:[];
+        foreach($viewHistory as $viewId=>$viewAt){if(!is_numeric($viewAt)||$viewNow-(int)$viewAt>1800)unset($viewHistory[$viewId]);}
+        if(!isset($viewHistory[$viewPostId])){
+            $pdo->prepare('UPDATE blog_posts SET views_count=views_count+1 WHERE id=?')->execute([$viewPostId]);
+            $viewHistory[$viewPostId]=$viewNow;
+        }
+        if(count($viewHistory)>50){asort($viewHistory);$viewHistory=array_slice($viewHistory,-50,null,true);}
+        $_SESSION['villa_blog_views']=$viewHistory;
+    }else{
+        $pdo->prepare('UPDATE blog_posts SET views_count=views_count+1 WHERE id=?')->execute([$viewPostId]);
+    }
     $content=$pdo->query("SELECT content_key,content_value FROM site_content WHERE language_code='tr'")->fetchAll(PDO::FETCH_KEY_PAIR);$siteName=$content['site_name']??'VillaStay';
     $navigation=villa_navigation_tree($pdo,'header','tr');$footerNavigation=villa_navigation_tree($pdo,'footer','tr');$user=Auth::user();$locale='tr';
     $blogCategories=$pdo->query("SELECT c.*,COUNT(pc.post_id) AS post_count FROM blog_categories c LEFT JOIN blog_post_category pc ON pc.category_id=c.id LEFT JOIN blog_posts p ON p.id=pc.post_id AND p.status='published' AND (p.published_at IS NULL OR p.published_at<=NOW()) WHERE c.is_active=1 GROUP BY c.id ORDER BY c.sort_order,c.name")->fetchAll(PDO::FETCH_ASSOC);
