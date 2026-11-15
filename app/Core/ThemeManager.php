@@ -506,7 +506,37 @@ final class ThemeManager
         $logoPath = trim((string)($input['logo_path'] ?? ''));
         $clean['logo_path'] = preg_match('~^uploads/themes/[a-z0-9_-]{1,60}/branding/footer-logo-[a-f0-9]{24}\.(?:png|jpg|webp)$~i', $logoPath) ? $logoPath : '';
         $clean['about_title'] = mb_substr(trim(strip_tags((string)($input['about_title'] ?? ''))), 0, 150);
-        $clean['about_description'] = mb_substr(trim(strip_tags((string)($input['about_description'] ?? ''))), 0, 3000);
+        $aboutHtml = (string)($input['about_description'] ?? '');
+        $aboutHtml = preg_replace('~<(script|style|iframe|object|svg|math)\b[^>]*>.*?</\1\s*>~is', '', $aboutHtml) ?? '';
+        $aboutHtml = strip_tags($aboutHtml, '<a><p><br><strong><b><em><i><u><ul><ol><li><blockquote><div><h2><h3><h4><span>');
+        $aboutHtml = preg_replace_callback('~</?([a-z][a-z0-9]*)\b[^>]*>~i', static function (array $match): string {
+            $tag = strtolower($match[1]);
+            if (str_starts_with($match[0], '</')) return '</' . $tag . '>';
+            if ($tag === 'span') {
+                if (preg_match("~\bstyle\s*=\s*(['\"])(.*?)\1~is", $match[0], $styleMatch)
+                    && preg_match('~(?:^|;)\s*color\s*:\s*(#[0-9a-f]{6}|rgb\(\s*(\d{1,3})\s*,\s*(\d{1,3})\s*,\s*(\d{1,3})\s*\))\s*(?:;|$)~i', $styleMatch[2], $colorMatch)) {
+                    if (isset($colorMatch[2], $colorMatch[3], $colorMatch[4]) && $colorMatch[2] !== '') {
+                        $rgb = array_map(static fn(string $value): int => max(0, min(255, (int)$value)), [$colorMatch[2], $colorMatch[3], $colorMatch[4]]);
+                        $safeColor = sprintf('#%02x%02x%02x', $rgb[0], $rgb[1], $rgb[2]);
+                    } else {
+                        $safeColor = strtolower($colorMatch[1]);
+                    }
+                    return '<span style="color:' . $safeColor . '">';
+                }
+                return '<span>';
+            }
+            if ($tag !== 'a') return '<' . $tag . '>';
+            if (preg_match("~\bhref\s*=\s*([\"'])(.*?)\1~is", $match[0], $hrefMatch)) {
+                $url = trim(html_entity_decode($hrefMatch[2], ENT_QUOTES | ENT_HTML5, 'UTF-8'));
+                $scheme = strtolower((string)parse_url($url, PHP_URL_SCHEME));
+                $safe = in_array($scheme, ['http','https','mailto','tel'], true) || ($scheme === '' && (str_starts_with($url, '/') || str_starts_with($url, '#')));
+                if ($safe && $url !== '' && !preg_match('/[\x00-\x20]/', $url)) {
+                    return '<a href="' . htmlspecialchars($url, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') . '">';
+                }
+            }
+            return '<a>';
+        }, $aboutHtml) ?? '';
+        $clean['about_description'] = mb_substr(trim($aboutHtml), 0, 3000);
         $copyrightHtml = (string)($input['copyright_html'] ?? '');
         $copyrightHtml = preg_replace('~<(script|style|iframe|object|svg|math)\\b[^>]*>.*?</\\1\\s*>~is', '', $copyrightHtml) ?? '';
         $copyrightHtml = strip_tags($copyrightHtml, '<a><p><br><strong><b><em><i><u><ul><ol><li><blockquote><div><h2><h3><h4><span>');
