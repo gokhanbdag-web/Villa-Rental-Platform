@@ -7,18 +7,24 @@ final class Auth
 {
     public static function attempt(string $identity, string $password): bool
     {
+        if (function_exists('villa_perf_mark')) villa_perf_mark('auth_attempt:db_connect_begin');
         $pdo = Database::connection();
+        if (function_exists('villa_perf_mark')) villa_perf_mark('auth_attempt:db_connected');
         $identityHash = hash('sha256', strtolower(trim($identity)));
         $ipHash = hash('sha256', (string)($_SERVER['REMOTE_ADDR'] ?? 'unknown'));
         $throttle = $pdo->prepare('SELECT attempts,locked_until,window_started_at FROM login_attempts WHERE identity_hash=? AND ip_hash=? LIMIT 1');
+        if (function_exists('villa_perf_mark')) villa_perf_mark('auth_attempt:throttle_query_begin');
         $throttle->execute([$identityHash,$ipHash]);
         $attemptState = $throttle->fetch();
+        if (function_exists('villa_perf_mark')) villa_perf_mark('auth_attempt:throttle_query_done');
         if ($attemptState && $attemptState['locked_until'] && strtotime($attemptState['locked_until']) > time()) return false;
         $stmt = $pdo->prepare(
             'SELECT id, username, email, password_hash, role, status FROM users WHERE email = ? OR username = ? LIMIT 1'
         );
+        if (function_exists('villa_perf_mark')) villa_perf_mark('auth_attempt:user_query_begin');
         $stmt->execute([$identity, $identity]);
         $user = $stmt->fetch();
+        if (function_exists('villa_perf_mark')) villa_perf_mark('auth_attempt:user_query_done');
         if (!$user || $user['status'] !== 'active' || !password_verify($password, $user['password_hash'])) {
             $now = new \DateTimeImmutable('now');
             $windowExpired = !$attemptState || strtotime($attemptState['window_started_at']) < time() - 900;
@@ -31,7 +37,9 @@ final class Auth
         }
         $clear = $pdo->prepare('DELETE FROM login_attempts WHERE identity_hash=? AND ip_hash=?');
         $clear->execute([$identityHash,$ipHash]);
+        if (function_exists('villa_perf_mark')) villa_perf_mark('auth_attempt:session_regenerate_begin');
         session_regenerate_id(true);
+        if (function_exists('villa_perf_mark')) villa_perf_mark('auth_attempt:session_regenerate_done');
         $_SESSION['user'] = [
             'id' => (int)$user['id'],
             'username' => $user['username'],
