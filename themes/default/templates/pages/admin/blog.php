@@ -88,7 +88,7 @@
 <label class="blog-field full">Meta açıklama<textarea name="meta_description" maxlength="320" rows="3"><?= e($post['meta_description']??'') ?></textarea><span class="blog-seo-meter" data-count="meta_description"></span></label>
 <label class="blog-field">Odak anahtar kelime<input name="focus_keyword" maxlength="120" value="<?= e($post['focus_keyword']??'') ?>"></label>
 <label class="blog-field">Yazar adı<input name="author_name" maxlength="120" value="<?= e($post['author_name']??'Yayın Editörü') ?>"></label>
-</div></section></div><aside>
+</div></section><?php include dirname(__DIR__,2) . '/partials/seo-analyzer.php'; ?></div><aside>
 <section class="blog-card"><h3>Yayınla</h3><div class="blog-fields">
 <label class="blog-field">Durum<select name="status"><option value="draft" <?= ($post['status']??'draft')==='draft'?'selected':'' ?>>Taslak</option><option value="published" <?= ($post['status']??'')==='published'?'selected':'' ?>>Yayında</option></select></label>
 <label class="blog-field">Yayın tarihi<input type="datetime-local" name="published_at" value="<?= !empty($post['published_at'])?e(date('Y-m-d\TH:i',strtotime((string)$post['published_at']))):e(date('Y-m-d\TH:i')) ?>"></label>
