@@ -20,6 +20,11 @@ $GLOBALS['villa_perf_request_id'] = bin2hex(random_bytes(6));
 function villa_perf_mark(string $stage): void
 {
     $GLOBALS['villa_perf_stage'] = substr($stage, 0, 120);
+    // Per-stage disk writes are opt-in. Normal traffic records only slow-request
+    // summaries in the shutdown handler below.
+    if (getenv('VILLA_PERF_TRACE') !== '1') {
+        return;
+    }
     $record = [
         'type' => 'villa_request_stage',
         'request_id' => (string)($GLOBALS['villa_perf_request_id'] ?? ''),
@@ -76,16 +81,32 @@ spl_autoload_register(static function (string $class): void {
 
 require APP_ROOT . '/app/Support/helpers.php';
 
-// Rewrite root-relative HTML links so the same build works at / or /any/subfolder/.
-if (app_base_path() !== '') {
+// Rewrite root-relative HTML links for subdirectory installs, but never buffer
+// media, CSS, JavaScript, fonts or other asset responses. In particular, buffering
+// an MP4 byte-range response defeats streaming and can exhaust shared-hosting RAM.
+$basePath = app_base_path();
+$requestPath = parse_url((string)($_SERVER['REQUEST_URI'] ?? '/'), PHP_URL_PATH) ?: '/';
+$routePath = $requestPath;
+if ($basePath !== '' && ($routePath === $basePath || str_starts_with($routePath, $basePath . '/'))) {
+    $routePath = substr($routePath, strlen($basePath)) ?: '/';
+}
+$isThemeAssetRequest = preg_match('#^/(?:brand-assets|theme-assets)(?:/|$)#', $routePath) === 1;
+if ($basePath !== '' && !$isThemeAssetRequest) {
     ob_start(static function (string $html): string {
+        // Do not rewrite explicitly non-HTML responses (JSON, downloads, etc.).
+        foreach (headers_list() as $header) {
+            if (stripos($header, 'Content-Type:') === 0) {
+                if (preg_match('~^Content-Type:\s*(?:text/html|application/xhtml\+xml)~i', $header) !== 1) {
+                    return $html;
+                }
+                break;
+            }
+        }
         $base = app_base_path();
         return preg_replace_callback(
             '/(\b(?:href|src|action|formaction)\s*=\s*)(["\'])(\/(?!\/)[^"\']*)/i',
             static function (array $m) use ($base): string {
                 $path = $m[3];
-                // app_url() may already have added the installation prefix.
-                // Never prepend it a second time to form actions or asset links.
                 if ($path === $base || str_starts_with($path, $base . '/')) return $m[0];
                 return $m[1] . $m[2] . $base . $path;
             },
@@ -94,7 +115,9 @@ if (app_base_path() !== '') {
     });
 }
 
-if (session_status() !== PHP_SESSION_ACTIVE) {
+// Public theme assets are read-only and never use session state. Do not open a PHP
+// session for them: this avoids waiting on an unrelated page request's session lock.
+if (!$isThemeAssetRequest && session_status() !== PHP_SESSION_ACTIVE) {
     ini_set('session.use_strict_mode', '1');
     session_name('villa_platform_session');
     session_set_cookie_params([

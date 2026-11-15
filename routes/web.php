@@ -7,6 +7,33 @@ use App\Core\Router;
 use App\Core\Translator;
 use App\Core\ThemeManager;
 
+/**
+ * Read only a bounded tail of a newline-delimited log. The old file() calls
+ * loaded the entire deployment history on every admin status poll.
+ */
+function villa_read_file_tail_lines(string $file, int $limit = 20, int $maxBytes = 131072): array
+{
+    if ($limit < 1 || !is_file($file) || !is_readable($file)) return [];
+    $handle = @fopen($file, 'rb');
+    if (!is_resource($handle)) return [];
+    $stat = fstat($handle);
+    $size = is_array($stat) ? (int)($stat['size'] ?? 0) : 0;
+    $offset = max(0, $size - max(4096, $maxBytes));
+    if ($offset > 0) {
+        fseek($handle, $offset);
+        fgets($handle); // Discard the first possibly incomplete line.
+    }
+    $lines = [];
+    while (($line = fgets($handle)) !== false) {
+        $line = trim($line);
+        if ($line === '') continue;
+        $lines[] = $line;
+        if (count($lines) > $limit) array_shift($lines);
+    }
+    fclose($handle);
+    return $lines;
+}
+
 function villa_navigation_tree(PDO $pdo, string $location, string $locale): array {
     $stmt=$pdo->prepare('SELECT id,parent_id,label,url,target FROM navigation_items WHERE location=? AND language_code=? AND is_active=1 ORDER BY sort_order,id');
     $stmt->execute([$location,$locale]);$rows=$stmt->fetchAll(PDO::FETCH_ASSOC);$byId=[];$children=[];$roots=[];
@@ -168,7 +195,7 @@ $router->get('/admin/updates', static function (): void {
     $deploymentHistory=[];
     $historyFile=$root.'/storage/deploy-history.jsonl';
     if(is_file($historyFile)&&is_readable($historyFile)){
-        $historyLines=@file($historyFile,FILE_IGNORE_NEW_LINES|FILE_SKIP_EMPTY_LINES)?:[];
+        $historyLines=villa_read_file_tail_lines($historyFile,20,131072);
         foreach(array_slice($historyLines,-20) as $historyLine){
             $historyItem=json_decode($historyLine,true);
             if(is_array($historyItem))$deploymentHistory[]=$historyItem;
@@ -192,7 +219,7 @@ $router->get('/admin/updates/status', static function (): void {
     $history = [];
     $historyFile = $root . '/storage/deploy-history.jsonl';
     if (is_file($historyFile) && is_readable($historyFile)) {
-        $lines = @file($historyFile, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES) ?: [];
+        $lines = villa_read_file_tail_lines($historyFile, 20, 131072);
         foreach (array_slice($lines, -20) as $line) {
             $event = json_decode($line, true);
             if (is_array($event)) $history[] = $event;
@@ -208,8 +235,7 @@ $router->get('/admin/performance/diagnostics', static function (): void {
     header('Cache-Control: no-store, private');
     $readTail = static function (string $file, int $limit = 120): array {
         if (!is_file($file) || !is_readable($file)) return [];
-        $lines = @file($file, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
-        return is_array($lines) ? array_slice($lines, -$limit) : [];
+        return villa_read_file_tail_lines($file, $limit, 262144);
     };
     $root = dirname(__DIR__);
     echo json_encode([
@@ -1802,6 +1828,8 @@ $router->get('/brand-assets/{slug}/{filename}', static function (array $params):
     if (!isset($types[$extension])) { http_response_code(404); exit; }
     $mime = (new \finfo(FILEINFO_MIME_TYPE))->file($realPath);
     if (!is_string($mime) || $mime !== $types[$extension]) { http_response_code(404); exit; }
+    // Release the PHP session lock before a potentially long video/file transfer.
+    if (session_status() === PHP_SESSION_ACTIVE) session_write_close();
     header('Content-Type: ' . $mime);
     header('X-Content-Type-Options: nosniff');
     header('Cache-Control: public, max-age=3600');
@@ -1869,6 +1897,8 @@ $router->get('/theme-assets/{slug}/{file*}', static function (array $params): vo
     if (!isset($types[$extension])) { http_response_code(404); exit; }
     $etag = '"' . sha1($path . ':' . (string)filemtime($path)) . '"';
     $charset = in_array($extension, ['css','js','mjs','svg','json','map'], true) ? '; charset=UTF-8' : '';
+    // Asset requests do not need to hold the visitor's session open while readfile runs.
+    if (session_status() === PHP_SESSION_ACTIVE) session_write_close();
     header('Content-Type: ' . $types[$extension] . $charset);
     header('X-Content-Type-Options: nosniff');
     header('Cache-Control: public, max-age=3600');

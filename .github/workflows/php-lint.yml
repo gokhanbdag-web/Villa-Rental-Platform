@@ -43,6 +43,8 @@ jobs:
           php-version: '8.2'
           extensions: pdo_mysql, fileinfo
           tools: none
+      - name: Run router dispatch smoke test
+        run: php tests/router-smoke.php
       - name: Run payment signature and secret security smoke tests
         run: php tests/payment-security-smoke.php
       - name: Run browser-installer backend smoke test
