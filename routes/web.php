@@ -1199,6 +1199,12 @@ $router->post('/login', static function (): void {
     redirect('/login');
 });
 
+// A direct GET or browser refresh of /logout must never be treated as a
+// /villa/{slug} request on subdirectory installations. Actual logout remains POST-only.
+$router->get('/logout', static function (): void {
+    redirect('/');
+});
+
 $router->post('/logout', static function (): void {
     verify_csrf();
     Auth::logout();
