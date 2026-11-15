@@ -7,7 +7,7 @@ if (!is_string($landing)) {
     throw new RuntimeException('Homepage template could not be read.');
 }
 
-if (substr_count($landing, 'data-location-autocomplete') !== 2) {
+if (substr_count($landing, 'data-location-autocomplete>') !== 2) {
     throw new RuntimeException('Desktop and mobile destination fields must both enable location autocomplete.');
 }
 foreach ([
