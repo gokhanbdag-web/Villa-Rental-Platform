@@ -114,6 +114,7 @@ return static function (string $html, string $requestPath, string $platformMode)
             $markup = preg_replace_callback("~\\b(fill|stroke)=(')(#[0-9a-f]{3}(?:[0-9a-f]{3})?)(')~i", static function (array $match) use ($mapCss): string {
                 return $match[1] . $match[2] . $mapCss($match[3]) . $match[4];
             }, $markup) ?? $markup;
+            return $markup;
         };
         $bodyContent = $mapAdminGreenStyles($bodyContent);
 
