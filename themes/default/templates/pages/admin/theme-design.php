@@ -195,15 +195,13 @@ $labels = [
         <small class="design-help">Bu logo yalnızca footer Kolon 1'i etkiler; üst menüdeki ana logo değişmez. Logo yüklendiğinde kolon başlığı yerine kullanılır.</small>
       </section>
       <div class="design-field"><label for="footerAboutTitle">Başlık (logo yoksa gösterilir)</label><input id="footerAboutTitle" type="text" name="footer[about_title]" maxlength="150" value="<?= e((string)($themeFooterSettings['about_title']??'')) ?>" placeholder="Örn. Hakkımızda"></div>
-      <div class="design-field footer-modal-description"><label for="footerAboutDescription">Açıklamalar</label><textarea id="footerAboutDescription" name="footer[about_description]" rows="6" maxlength="3000" placeholder="Kısa açıklamanızı yazın..."><?= e((string)($themeFooterSettings['about_description']??'')) ?></textarea></div>
-    <?php elseif($widget===5): ?>
       <div class="footer-rich-editor-wrap">
-        <label for="footerCopyrightEditor">Copyright / telif bilgisi</label>
-        <div class="footer-rich-toolbar" role="toolbar" aria-label="Copyright metin biçimlendirme araçları">
+        <label for="footerAboutDescriptionEditor">Açıklamalar</label>
+        <div class="footer-rich-toolbar" role="toolbar" aria-label="Footer açıklama metin biçimlendirme araçları">
           <button type="button" data-footer-editor-command="bold" aria-label="Kalın"><strong>B</strong></button>
           <button type="button" data-footer-editor-command="italic" aria-label="İtalik"><em>I</em></button>
           <button type="button" data-footer-editor-command="underline" aria-label="Altı çizili"><u>U</u></button>
-          <label class="footer-editor-color-control" for="footerEditorTextColor">Yazı rengi <input type="color" id="footerEditorTextColor" value="#ffffff" aria-label="Seçili metnin yazı rengi"></label>
+          <label class="footer-editor-color-control">Yazı rengi <input type="color" data-footer-editor-color value="#ffffff" aria-label="Seçili metnin yazı rengi"></label>
           <button type="button" data-footer-editor-apply-color aria-label="Seçili metne rengi uygula">Rengi uygula</button>
           <button type="button" data-footer-editor-command="insertUnorderedList" aria-label="Madde işaretli liste">• Liste</button>
           <button type="button" data-footer-editor-command="insertOrderedList" aria-label="Numaralı liste">1. Liste</button>
@@ -211,7 +209,26 @@ $labels = [
           <button type="button" data-footer-editor-command="unlink" aria-label="Bağlantıyı kaldır">Linki kaldır</button>
           <button type="button" data-footer-editor-command="removeFormat" aria-label="Biçimlendirmeyi temizle">Biçimi temizle</button>
         </div>
-        <div id="footerCopyrightEditor" class="footer-rich-editor" contenteditable="true" role="textbox" aria-multiline="true" data-footer-rich-editor data-placeholder="Örn. © 2026 VillaCMS. Tüm hakları saklıdır."><?= (string)($themeFooterSettings['copyright_html']??'') ?></div>
+        <div id="footerAboutDescriptionEditor" class="footer-rich-editor" contenteditable="true" role="textbox" aria-multiline="true" data-footer-rich-editor data-footer-hidden="footerAboutDescriptionHtml" data-placeholder="Footer açıklamanızı yazın..."><?= (string)($themeFooterSettings['about_description']??'') ?></div>
+        <input type="hidden" id="footerAboutDescriptionHtml" name="footer[about_description]" value="<?= e((string)($themeFooterSettings['about_description']??'')) ?>">
+        <p class="design-help">Metni seçerek rengini değiştirebilir, biçimlendirebilir ve bağlantı ekleyebilirsiniz. İçerik Footer Kolon 1'de görüntülenir.</p>
+      </div>
+    <?php elseif($widget===5): ?>
+      <div class="footer-rich-editor-wrap">
+        <label for="footerCopyrightEditor">Copyright / telif bilgisi</label>
+        <div class="footer-rich-toolbar" role="toolbar" aria-label="Copyright metin biçimlendirme araçları">
+          <button type="button" data-footer-editor-command="bold" aria-label="Kalın"><strong>B</strong></button>
+          <button type="button" data-footer-editor-command="italic" aria-label="İtalik"><em>I</em></button>
+          <button type="button" data-footer-editor-command="underline" aria-label="Altı çizili"><u>U</u></button>
+          <label class="footer-editor-color-control" for="footerEditorTextColor">Yazı rengi <input type="color" data-footer-editor-color value="#ffffff" aria-label="Seçili metnin yazı rengi"></label>
+          <button type="button" data-footer-editor-apply-color aria-label="Seçili metne rengi uygula">Rengi uygula</button>
+          <button type="button" data-footer-editor-command="insertUnorderedList" aria-label="Madde işaretli liste">• Liste</button>
+          <button type="button" data-footer-editor-command="insertOrderedList" aria-label="Numaralı liste">1. Liste</button>
+          <button type="button" data-footer-editor-link aria-label="Bağlantı ekle">🔗 Link ekle</button>
+          <button type="button" data-footer-editor-command="unlink" aria-label="Bağlantıyı kaldır">Linki kaldır</button>
+          <button type="button" data-footer-editor-command="removeFormat" aria-label="Biçimlendirmeyi temizle">Biçimi temizle</button>
+        </div>
+        <div id="footerCopyrightEditor" class="footer-rich-editor" contenteditable="true" role="textbox" aria-multiline="true" data-footer-rich-editor data-footer-hidden="footerCopyrightHtml" data-placeholder="Örn. © 2026 VillaCMS. Tüm hakları saklıdır."><?= (string)($themeFooterSettings['copyright_html']??'') ?></div>
         <input type="hidden" id="footerCopyrightHtml" name="footer[copyright_html]" value="<?= e((string)($themeFooterSettings['copyright_html']??'')) ?>">
         <p class="design-help">Metni biçimlendirebilir, seçtiğiniz metne bağlantı ekleyebilir veya mevcut bağlantıyı kaldırabilirsiniz. Kaydettiğiniz içerik footer 5. kolonda görüntülenir.</p>
       </div>
@@ -466,59 +483,62 @@ $labels = [
 })();
 
 (function(){
- const editor=document.querySelector('[data-footer-rich-editor]');
- const hidden=document.getElementById('footerCopyrightHtml');
  const form=document.getElementById('themeDesignForm');
- if(!editor||!hidden||!form)return;
- function sync(){hidden.value=editor.innerHTML;}
- const colorInput=document.getElementById('footerEditorTextColor');
- const colorButton=document.querySelector('[data-footer-editor-apply-color]');
- let savedRange=null;
- function rememberSelection(){
-  const selection=window.getSelection();
-  if(selection&&selection.rangeCount&&editor.contains(selection.anchorNode)&&editor.contains(selection.focusNode))savedRange=selection.getRangeAt(0).cloneRange();
- }
- editor.addEventListener('mouseup',rememberSelection);
- editor.addEventListener('keyup',rememberSelection);
- if(colorButton)colorButton.addEventListener('mousedown',function(event){event.preventDefault();});
- if(colorButton)colorButton.addEventListener('click',function(){
-  const color=colorInput&&/^#[0-9a-f]{6}$/i.test(colorInput.value)?colorInput.value:'#ffffff';
-  editor.focus();
-  const selection=window.getSelection();
-  if(!savedRange||!editor.contains(savedRange.commonAncestorContainer)){window.alert('Önce rengini değiştirmek istediğiniz metni seçin.');return;}
-  selection.removeAllRanges();selection.addRange(savedRange);
-  if(selection.isCollapsed){window.alert('Önce rengini değiştirmek istediğiniz metni seçin.');return;}
-  const range=selection.getRangeAt(0),span=document.createElement('span');
-  span.style.color=color;span.appendChild(range.extractContents());range.insertNode(span);
-  selection.removeAllRanges();
-  const nextRange=document.createRange();nextRange.selectNodeContents(span);selection.addRange(nextRange);savedRange=nextRange.cloneRange();
-  sync();
- });
- const linkButton=document.querySelector('[data-footer-editor-link]');
- if(linkButton)linkButton.addEventListener('mousedown',function(event){event.preventDefault();});
- if(linkButton)linkButton.addEventListener('click',function(){
-  editor.focus();
-  const selection=window.getSelection();
-  if(!selection||selection.isCollapsed){window.alert('Önce bağlantı vermek istediğiniz metni seçin.');return;}
-  const url=window.prompt('Bağlantı adresini girin (https://, mailto: veya tel:):','https://');
-  if(url===null)return;
-  const value=url.trim();
-  if(!/^(https?:|mailto:|tel:|\/|#)/i.test(value)){window.alert('Lütfen geçerli bir https://, http://, mailto:, tel: veya site içi bağlantı girin.');return;}
-  document.execCommand('createLink',false,value);
-  sync();
- });
- document.querySelectorAll('[data-footer-editor-command]').forEach(function(button){
-  button.addEventListener('mousedown',function(event){event.preventDefault();});
-  button.addEventListener('click',function(){
+ if(!form)return;
+ form.querySelectorAll('[data-footer-rich-editor]').forEach(function(editor){
+  const wrap=editor.closest('.footer-rich-editor-wrap');
+  const hidden=document.getElementById(editor.dataset.footerHidden||'');
+  if(!wrap||!hidden)return;
+  function sync(){hidden.value=editor.innerHTML;}
+  const colorInput=wrap.querySelector('[data-footer-editor-color]');
+  const colorButton=wrap.querySelector('[data-footer-editor-apply-color]');
+  let savedRange=null;
+  function rememberSelection(){
+   const selection=window.getSelection();
+   if(selection&&selection.rangeCount&&editor.contains(selection.anchorNode)&&editor.contains(selection.focusNode))savedRange=selection.getRangeAt(0).cloneRange();
+  }
+  editor.addEventListener('mouseup',rememberSelection);
+  editor.addEventListener('keyup',rememberSelection);
+  if(colorButton)colorButton.addEventListener('mousedown',function(event){event.preventDefault();});
+  if(colorButton)colorButton.addEventListener('click',function(){
+   const color=colorInput&&/^#[0-9a-f]{6}$/i.test(colorInput.value)?colorInput.value:'#ffffff';
    editor.focus();
-   document.execCommand(button.dataset.footerEditorCommand,false,null);
+   const selection=window.getSelection();
+   if(!savedRange||!editor.contains(savedRange.commonAncestorContainer)){window.alert('Önce rengini değiştirmek istediğiniz metni seçin.');return;}
+   selection.removeAllRanges();selection.addRange(savedRange);
+   if(selection.isCollapsed){window.alert('Önce rengini değiştirmek istediğiniz metni seçin.');return;}
+   const range=selection.getRangeAt(0),span=document.createElement('span');
+   span.style.color=color;span.appendChild(range.extractContents());range.insertNode(span);
+   selection.removeAllRanges();
+   const nextRange=document.createRange();nextRange.selectNodeContents(span);selection.addRange(nextRange);savedRange=nextRange.cloneRange();
    sync();
   });
+  const linkButton=wrap.querySelector('[data-footer-editor-link]');
+  if(linkButton)linkButton.addEventListener('mousedown',function(event){event.preventDefault();});
+  if(linkButton)linkButton.addEventListener('click',function(){
+   editor.focus();
+   const selection=window.getSelection();
+   if(!selection||selection.isCollapsed){window.alert('Önce bağlantı vermek istediğiniz metni seçin.');return;}
+   const url=window.prompt('Bağlantı adresini girin (https://, mailto: veya tel:):','https://');
+   if(url===null)return;
+   const value=url.trim();
+   if(!/^(https?:|mailto:|tel:|\/|#)/i.test(value)){window.alert('Lütfen geçerli bir https://, http://, mailto:, tel: veya site içi bağlantı girin.');return;}
+   document.execCommand('createLink',false,value);
+   sync();
+  });
+  wrap.querySelectorAll('[data-footer-editor-command]').forEach(function(button){
+   button.addEventListener('mousedown',function(event){event.preventDefault();});
+   button.addEventListener('click',function(){
+    editor.focus();
+    document.execCommand(button.dataset.footerEditorCommand,false,null);
+    sync();
+   });
+  });
+  editor.addEventListener('input',sync);
+  form.addEventListener('submit',sync);
+  sync();
  });
- editor.addEventListener('input',sync);
- form.addEventListener('submit',sync);
- sync();
-})();
+})();;
 </script>
 <script>
 (function(){
