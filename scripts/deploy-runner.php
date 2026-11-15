@@ -107,16 +107,98 @@ function villa_latest_backup(string $directory): ?array
     return is_string($hash) ? ['path' => $path, 'hash' => $hash] : null;
 }
 
+function villa_health_check_local(string $url, string &$statusLine): bool
+{
+    $parts = parse_url($url);
+    if (!is_array($parts) || empty($parts['host'])) {
+        $statusLine = 'Invalid URL for loopback probe';
+        return false;
+    }
+
+    $scheme = strtolower((string)($parts['scheme'] ?? 'https'));
+    $host = (string)$parts['host'];
+    $port = (int)($parts['port'] ?? ($scheme === 'https' ? 443 : 80));
+    $path = (string)($parts['path'] ?? '/');
+    if (isset($parts['query']) && $parts['query'] !== '') {
+        $path .= '?' . $parts['query'];
+    }
+
+    $transport = $scheme === 'https' ? 'tls' : 'tcp';
+    $contextOptions = [];
+    if ($transport === 'tls') {
+        // Connect to the local web server while preserving the site's TLS SNI
+        // and Host name. Certificate verification is intentionally disabled
+        // only for this loopback diagnostic request.
+        $contextOptions['ssl'] = [
+            'peer_name' => $host,
+            'SNI_enabled' => true,
+            'verify_peer' => false,
+            'verify_peer_name' => false,
+            'allow_self_signed' => true,
+        ];
+    }
+
+    $context = stream_context_create($contextOptions);
+    $errno = 0;
+    $error = '';
+    $socket = @stream_socket_client(
+        $transport . '://127.0.0.1:' . $port,
+        $errno,
+        $error,
+        12,
+        STREAM_CLIENT_CONNECT,
+        $context
+    );
+    if (!is_resource($socket)) {
+        $statusLine = 'Loopback connection failed (' . $errno . '): ' . ($error !== '' ? $error : 'no local listener');
+        return false;
+    }
+
+    stream_set_timeout($socket, 20);
+    $request = "GET " . $path . " HTTP/1.1\r\n"
+        . "Host: " . $host . "\r\n"
+        . "User-Agent: Villa-Deploy-Health-Check/1.0\r\n"
+        . "Accept: text/html,application/json;q=0.9,*/*;q=0.8\r\n"
+        . "Connection: close\r\n\r\n";
+    $written = @fwrite($socket, $request);
+    if (!is_int($written) || $written <= 0) {
+        fclose($socket);
+        $statusLine = 'Loopback request could not be written';
+        return false;
+    }
+
+    $response = stream_get_contents($socket);
+    $meta = stream_get_meta_data($socket);
+    fclose($socket);
+    if (!is_string($response) || $response === '') {
+        $statusLine = !empty($meta['timed_out'])
+            ? 'Loopback HTTP response timed out'
+            : 'Loopback HTTP server returned no response';
+        return false;
+    }
+
+    $firstLine = strtok($response, "\r\n");
+    if (!is_string($firstLine) || !preg_match('/^HTTP\/\S+\s+(\d{3})\b/', $firstLine, $match)) {
+        $statusLine = 'Loopback server returned an invalid HTTP response';
+        return false;
+    }
+
+    $statusLine = 'Loopback ' . $firstLine;
+    return (int)$match[1] >= 200 && (int)$match[1] < 300;
+}
+
 function villa_health_check(string $url, string &$statusLine): bool
 {
-    // Preserve the actual transport error: a blank status line is not enough
-    // to distinguish a PHP/application failure from DNS, TLS or loopback issues.
+    // Prefer the normal public URL. If the server cannot reach its own public
+    // hostname (DNS/CDN/firewall/TLS hairpin), retry against its local listener
+    // with the original Host header and TLS SNI. Real HTTP 4xx/5xx responses
+    // remain failures and are never hidden by the fallback.
     if (function_exists('error_clear_last')) {
         error_clear_last();
     }
     $context = stream_context_create([
-        'http' => ['timeout' => 25, 'ignore_errors' => true, 'follow_location' => 1, 'max_redirects' => 5],
-        'https' => ['timeout' => 25]
+        'http' => ['timeout' => 20, 'ignore_errors' => true, 'follow_location' => 1, 'max_redirects' => 5],
+        'https' => ['timeout' => 20]
     ]);
     $response = @file_get_contents($url, false, $context);
     $headers = $http_response_header ?? [];
@@ -126,18 +208,25 @@ function villa_health_check(string $url, string &$statusLine): bool
         }
     }
 
-    if (!is_string($response)) {
-        $lastError = error_get_last();
-        $detail = is_array($lastError) ? (string)($lastError['message'] ?? '') : '';
-        $statusLine = 'HTTP probe transport error' . ($detail !== '' ? ': ' . $detail : ': no response received');
-        return false;
-    }
-    if ($statusLine === '') {
-        $statusLine = 'HTTP probe returned a body but no HTTP status header';
-        return false;
+    if (is_string($response)) {
+        if ($statusLine === '') {
+            $statusLine = 'HTTP probe returned a body but no HTTP status header';
+            return false;
+        }
+        return preg_match('/^HTTP\/\S+\s+2\d\d\b/', $statusLine) === 1;
     }
 
-    return preg_match('/^HTTP\/\S+\s+2\d\d\b/', $statusLine) === 1;
+    $lastError = error_get_last();
+    $transportError = is_array($lastError) ? (string)($lastError['message'] ?? '') : '';
+    $publicFailure = $transportError !== '' ? $transportError : 'no response received';
+    $loopbackStatus = '';
+    if (villa_health_check_local($url, $loopbackStatus)) {
+        $statusLine = $loopbackStatus . ' (public URL probe unavailable: ' . $publicFailure . ')';
+        return true;
+    }
+
+    $statusLine = 'Public probe failed: ' . $publicFailure . '; ' . $loopbackStatus;
+    return false;
 }
 
 function villa_restore_backup(string $archive, string $base, string $live): bool
