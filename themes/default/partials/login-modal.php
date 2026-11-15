@@ -97,7 +97,7 @@ if ($drawerUser !== null) {
 .villa-account-drawer-kicker{display:block;margin-bottom:9px;color:#7b8b80;font-size:10px;font-weight:800;letter-spacing:.16em}
 .villa-account-drawer-heading h2{margin:0;color:#1d3328;font-size:27px;line-height:1.2;letter-spacing:-.04em}
 .villa-account-drawer-heading p{margin:7px 0 0;color:#78847d;font-size:13px;overflow-wrap:anywhere}
-.villa-account-drawer-close{flex:0 0 40px;width:40px;height:40px;border:1px solid #e7eee8;border-radius:50%;background:#f7faf7;color:#263b30;font-size:25px;line-height:1;cursor:pointer}
+.villa-account-drawer-close{flex:0 0 40px;width:40px;height:40px;border:1px solid #e7eee8;border-radius:50%;background:#f7faf7;color:#263b30;font-size:25px;line-height:1;cursor:pointer;transition:background .2s,transform .2s}.villa-account-drawer-close:hover{background:#edf2e9;transform:rotate(90deg)}.villa-account-drawer-close:focus-visible{outline:2px solid #66836b;outline-offset:3px}
 .villa-account-drawer-role{align-self:flex-start;margin:22px 0 12px;padding:6px 11px;border-radius:999px;background:#edf5ef;color:#286344;font-size:11px;font-weight:750}
 .villa-account-drawer-menu{display:flex;flex-direction:column;gap:6px;padding:2px 0 18px}
 .villa-account-drawer-menu a{display:flex;align-items:center;gap:13px;min-height:50px;padding:0 12px;border:1px solid transparent;border-radius:12px;color:#304238;text-decoration:none;font-size:14px;font-weight:650;transition:background .18s ease,border-color .18s ease,transform .18s ease}
