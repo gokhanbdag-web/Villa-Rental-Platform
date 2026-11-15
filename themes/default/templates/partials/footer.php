@@ -34,7 +34,13 @@ $footerAccountLabel = in_array($footerRole, ['admin', 'super_admin'], true) ? 'Y
             <div class="footer-widget footer-widget-4" data-footer-widget="4"></div>
         </div>
         <div class="footer-row footer-row-secondary" aria-label="Alt widget satırı">
-            <div class="footer-widget footer-widget-5" data-footer-widget="5"></div>
+            <div class="footer-widget footer-widget-5" data-footer-widget="5">
+                <?php if (trim((string)($footerSettings['copyright_html'] ?? '')) !== ''): ?>
+                    <div class="footer-copyright-content" style="font-size:13px;line-height:1.7;color:inherit">
+                        <?= (string)$footerSettings['copyright_html'] ?>
+                    </div>
+                <?php endif; ?>
+            </div>
             <div class="footer-widget footer-widget-6" data-footer-widget="6">
                 <?php
                 $paymentNames = ['mastercard'=>'Mastercard','visa'=>'Visa','troy'=>'Troy','diners_club'=>'Diners Club','american_express'=>'American Express'];
