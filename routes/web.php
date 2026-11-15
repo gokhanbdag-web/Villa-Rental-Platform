@@ -1785,9 +1785,44 @@ $router->get('/admin/users', static function (): void {
     Auth::requireRole(['super_admin','admin']);$users=Database::connection()->query('SELECT id,username,email,role,status,created_at FROM users ORDER BY created_at DESC LIMIT 500')->fetchAll();$currentUser=Auth::user();ThemeManager::renderTemplate('templates/pages/admin/users.php', get_defined_vars());
 });
 $router->post('/admin/users/status', static function (): void {
-    Auth::requireRole(['super_admin','admin']);verify_csrf();$id=(int)($_POST['id']??0);$status=($_POST['status']??'')==='active'?'active':'disabled';
-    if($id===(int)Auth::user()['id']){http_response_code(422);exit('Kendi hesabınızın durumunu bu ekrandan değiştiremezsiniz.');}
-    $s=Database::connection()->prepare("UPDATE users SET status=? WHERE id=? AND role<>'super_admin'");$s->execute([$status,$id]);redirect('/admin/users');
+    Auth::requireRole(['super_admin','admin']);
+    verify_csrf();
+
+    $actor = Auth::user();
+    $id = (int)($_POST['id'] ?? 0);
+    $status = (string)($_POST['status'] ?? '');
+    if ($id < 1 || $id === (int)$actor['id'] || !in_array($status, ['active', 'disabled'], true)) {
+        http_response_code(422);
+        exit('Kullanıcı işlemi için gönderilen bilgiler geçersiz.');
+    }
+
+    $pdo = Database::connection();
+    try {
+        $pdo->beginTransaction();
+        $lookup = $pdo->prepare('SELECT role FROM users WHERE id=? FOR UPDATE');
+        $lookup->execute([$id]);
+        $targetRole = $lookup->fetchColumn();
+        if (!is_string($targetRole)) {
+            $pdo->rollBack();
+            http_response_code(404);
+            exit('Kullanıcı bulunamadı.');
+        }
+        if (!Auth::canManageUserRole((string)$actor['role'], $targetRole)) {
+            $pdo->rollBack();
+            http_response_code(403);
+            exit('Bu kullanıcı hesabını yönetme yetkiniz yok.');
+        }
+
+        $update = $pdo->prepare('UPDATE users SET status=? WHERE id=?');
+        $update->execute([$status, $id]);
+        $pdo->commit();
+        redirect('/admin/users');
+    } catch (Throwable $e) {
+        if ($pdo->inTransaction()) $pdo->rollBack();
+        error_log('Admin user status update failed: ' . $e->getMessage());
+        http_response_code(409);
+        exit('Kullanıcı durumu güvenli şekilde güncellenemedi.');
+    }
 });
 
 $router->post('/admin/users/delete', static function (): void {
