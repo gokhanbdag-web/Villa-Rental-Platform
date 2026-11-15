@@ -1539,6 +1539,10 @@ body[data-villa-theme] .villa-back-to-top.is-returning svg{animation:villa-back-
 }
 
 
+
+/* Homepage: keep the destinations/content area flush with the footer. */
+body.villa-home-mediterranean .site-footer{margin-top:0!important}
+
 /* Shared site footer */
 .site-footer{background:#20352e;color:#fff;padding:36px 0;margin-top:55px}
 .site-footer p{color:#c3d2ca;line-height:1.65}
