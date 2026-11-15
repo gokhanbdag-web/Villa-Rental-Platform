@@ -1624,7 +1624,7 @@ $router->post('/admin/navigation/save', static function (): void {
         $s=$pdo->prepare('INSERT INTO navigation_items(location,parent_id,language_code,label,url,target,sort_order,is_active) VALUES(?,?,?,?,?,?,?,?)');
         try {
             $s->execute([$location,$parentId?:null,'tr',$label,$url,$target,$sort,$active]);
-        } catch (\\PDOException $exception) {
+        } catch (\PDOException $exception) {
             if ((string)$exception->getCode()==='23000') {
                 redirect('/admin/navigation?error=duplicate');
                 return;
