@@ -15,7 +15,7 @@ $mobileStart = strpos($css, '@media(max-width:600px){', strpos($css, '/* Footer 
 if ($mobileStart === false) {
     throw new RuntimeException('Mobile footer responsive rules were not found.');
 }
-$mobileEnd = strpos($css, '\n}', $mobileStart);
+$mobileEnd = strpos($css, "\n\n/* Remove unwanted decorative borders", $mobileStart);
 if ($mobileEnd === false) {
     throw new RuntimeException('Mobile footer responsive rules were not closed.');
 }
