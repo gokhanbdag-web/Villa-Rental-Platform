@@ -85,6 +85,55 @@ $stylePhotos=['https://images.unsplash.com/photo-1613490493576-7fde63acd811?auto
 .hero-filter-panel .guest-popover{left:auto;right:0;width:300px}
 @media(max-width:900px){.hero-card{min-height:0;padding:58px 28px 42px;gap:24px}.hero-inner{display:block}.hero-filter-panel{max-width:100%}.hero-filter-panel .search-enhanced{grid-template-columns:repeat(2,minmax(0,1fr))}.hero-filter-panel .search-field{min-height:68px;border-right:1px solid #e8eeea;border-bottom:1px solid #e8eeea}.hero-filter-panel .destination-field,.hero-filter-panel .guest-field{grid-column:1/-1;border-right:0}.hero-filter-panel .date-field:nth-of-type(3){border-right:0}.hero-filter-panel .search-submit{grid-column:1/-1;width:100%;margin:8px 0 0}.hero-filter-panel .guest-popover{left:0;right:0;width:100%}}
 @media(max-width:680px){.hero-card{padding:46px 16px 28px;gap:20px}.hero-copy{padding:0 3px}.hero-filter-panel{padding:7px;border-radius:17px}.hero-filter-panel .search-enhanced{grid-template-columns:1fr 1fr}.hero-filter-panel .search-field{padding:10px 9px;min-height:65px}.hero-filter-panel .destination-field,.hero-filter-panel .guest-field{grid-column:1/-1}.hero-filter-panel .date-field{border-right:1px solid #e8eeea}.hero-filter-panel .date-field:nth-of-type(3){border-right:0}.hero-filter-panel .search-submit{min-height:50px}}
+
+
+/* Mobile conversion focus: make villa search the primary hero action. */
+@media(max-width:680px){
+ body .hero{padding:12px 0 22px;background:#f4f7f4}
+ body .hero-card{
+  min-height:0;padding:27px 13px 17px;gap:17px;
+  border-radius:0 0 22px 22px;background-position:center 48%;
+ }
+ body .hero-inner{width:100%;max-width:none}
+ body .hero-copy{max-width:100%;padding:0 5px;text-align:center}
+ body .hero-copy .eyebrow{
+  margin:0 0 8px;padding:6px 10px;border-radius:30px;
+  background:rgba(255,255,255,.16);font-size:11px;letter-spacing:1.4px
+ }
+ body .hero-copy h1{max-width:100%;margin:7px 0 8px;font-size:clamp(25px,7vw,32px);line-height:1.15;letter-spacing:-.8px}
+ body .hero-copy p{max-width:340px;margin:0 auto;font-size:13px;line-height:1.45}
+ body .hero-filter-panel{
+  width:100%;max-width:none;justify-self:stretch;margin:0;padding:13px;
+  border:1px solid rgba(255,255,255,.95);border-radius:20px;
+  background:#fff;box-shadow:0 15px 38px rgba(12,35,27,.24)
+ }
+ body .hero-filter-panel .search-enhanced{
+  display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);
+  gap:0;padding:0;border:0;background:transparent
+ }
+ body .hero-filter-panel .search-field{
+  min-width:0;min-height:76px;padding:11px 10px;
+  border-bottom:1px solid #e8eeea;border-right:1px solid #e8eeea
+ }
+ body .hero-filter-panel .destination-field,
+ body .hero-filter-panel .guest-field{grid-column:1/-1;border-right:0}
+ body .hero-filter-panel .date-field:nth-of-type(3){border-right:0}
+ body .hero-filter-panel .search-label{font-size:12px;font-weight:700;color:#52645a}
+ body .hero-filter-panel .search-icon{font-size:15px;color:var(--teal)}
+ body .hero-filter-panel .destination-field input,
+ body .hero-filter-panel .date-display,
+ body .hero-filter-panel .guest-trigger{min-height:27px;font-size:15px;font-weight:600;color:#20332c}
+ body .hero-filter-panel .destination-field input::placeholder{color:#69776f;font-weight:500}
+ body .hero-filter-panel .search-submit{
+  grid-column:1/-1;width:100%;min-height:58px;margin:13px 0 0;
+  border-radius:14px;background:var(--coral);color:#fff;
+  font-size:16px;font-weight:800;letter-spacing:.2px;
+  box-shadow:0 7px 16px rgba(255,128,107,.28)
+ }
+ body .hero-filter-panel .search-submit span{font-size:20px;margin-right:7px}
+ body .hero-filter-panel .guest-popover{left:0;right:0;width:100%}
+}
+
 </style></head><body>
 <?php \App\Core\ThemeManager::renderPartial('partials/header.php', get_defined_vars()); ?>
 <main class="home-sections"><?php if($active('hero')): ?><section class="hero" style="order:<?= $order('hero',1) ?>"><div class="hero-card" style="<?= $heroBackgroundImageUrl!==''?'background-image:url(&quot;'.e($heroBackgroundImageUrl).'&quot;)':'' ?>">
