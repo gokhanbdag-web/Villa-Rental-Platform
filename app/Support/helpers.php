@@ -105,32 +105,19 @@ function app_url(string $path = '/'): string {
  * relying on rewrite rules or assuming that "public" is URL-visible.
  */
 function uploaded_media_url(string $storedPath): string {
-    $path = str_replace('\\\\', '/', trim($storedPath));
+    // Uploads are always exposed through the stable /uploads URL.
+    // The project-root .htaccess maps that URL to public/uploads when the
+    // repository root is the document root; when public/ is the document
+    // root, the same URL addresses the file directly. Avoid emitting
+    // /public/uploads, which bypasses the application's intended mapping
+    // and breaks installations mounted below a parent document root.
+    $path = str_replace(chr(92), '/', trim($storedPath));
     $path = ltrim($path, '/');
     if (str_starts_with($path, 'public/')) $path = substr($path, 7);
     if (!str_starts_with($path, 'uploads/')) return '';
     $parts = explode('/', $path);
     if (in_array('', $parts, true) || in_array('.', $parts, true) || in_array('..', $parts, true)) return '';
 
-    $appRoot = realpath(defined('APP_ROOT') ? APP_ROOT : dirname(__DIR__, 2));
-    $documentRoot = realpath((string)($_SERVER['DOCUMENT_ROOT'] ?? ''));
-    $publicRoot = $appRoot !== false ? realpath($appRoot . '/public') : false;
-
-    // When public/ is the actual document root, uploads are directly visible.
-    if ($publicRoot !== false && $documentRoot !== false && $publicRoot === $documentRoot) {
-        return app_url('/' . implode('/', array_map('rawurlencode', $parts)));
-    }
-
-    // When the project root (or its parent) is the document root, address
-    // the real public/uploads directory explicitly. This avoids depending
-    // on fragile RewriteRule mappings for every uploaded media type.
-    if ($appRoot !== false && $documentRoot !== false &&
-        ($appRoot === $documentRoot || str_starts_with($appRoot, $documentRoot . '/'))) {
-        $publicPath = 'public/' . implode('/', $parts);
-        return app_url('/' . implode('/', array_map('rawurlencode', explode('/', $publicPath))));
-    }
-
-    // Aliased hosting fallback: retain the established uploads URL mapping.
     return app_url('/' . implode('/', array_map('rawurlencode', $parts)));
 }
 
