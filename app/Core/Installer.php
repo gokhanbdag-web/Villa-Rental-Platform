@@ -6,6 +6,34 @@ namespace App\Core;
 use PDO;
 use Throwable;
 
+/**
+ * Records only slow SQL execution metadata. Bound values are never logged.
+ * This keeps production diagnostics useful without exposing credentials or
+ * personal data from query parameters.
+ */
+final class TimedPDOStatement extends \PDOStatement
+{
+    protected function __construct() {}
+
+    public function execute(?array $params = null): bool
+    {
+        $started = microtime(true);
+        try {
+            return parent::execute($params);
+        } finally {
+            $elapsedMs = (microtime(true) - $started) * 1000;
+            if ($elapsedMs >= 200) {
+                $sql = preg_replace('/\\s+/', ' ', trim($this->queryString));
+                $sql = is_string($sql) ? substr($sql, 0, 180) : '';
+                error_log('[VILLA_SQL] ' . json_encode([
+                    'duration_ms' => round($elapsedMs, 1),
+                    'sql' => $sql,
+                ], JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE));
+            }
+        }
+    }
+}
+
 final class Installer
 {
     public static function isInstalled(): bool
@@ -21,7 +49,7 @@ final class Installer
         return new PDO($dsn, $db['user'], $db['password'], [
             PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
             PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
-            PDO::ATTR_EMULATE_PREPARES => false,
+            PDO::ATTR_EMULATE_PREPARES => false,\n            PDO::ATTR_STATEMENT_CLASS => [TimedPDOStatement::class, []],
         ]);
     }
 
