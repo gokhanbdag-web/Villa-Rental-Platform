@@ -99,6 +99,14 @@ foreach ($pathCandidates as $requestPath) {
     $isAdminPage = $requestPath === '/admin' || str_starts_with($requestPath, '/admin/');
     if ($isAdminPage) {
         ob_start(static function (string $html) use ($requestPath, $platformMode): string {
+            // Admin POST endpoints may return JSON. Never wrap non-HTML responses
+            // in the admin shell, or fetch() will receive a full HTML document.
+            foreach (headers_list() as $header) {
+                if (stripos($header, 'Content-Type:') === 0 &&
+                    preg_match('~^Content-Type:\\s*(?:text/html|application/xhtml\\+xml)~i', $header) !== 1) {
+                    return $html;
+                }
+            }
             return ThemeManager::wrapAdminHtml($html, $requestPath, $platformMode);
         });
     }
