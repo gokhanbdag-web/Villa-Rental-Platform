@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.5.0 - 2026-11-16
+- Fix horizontal overflow in mobile account pages, including bookings and notifications.
+- Add the customer My Reviews page with review ratings, property links, and moderation statuses.
+- Seed five clearly labeled demo reviews per published villa using inactive demo-only reviewer accounts; demo reviews do not create fake bookings and are excluded from customer-owned reviews.
+
+
 ## 1.4.0 - 2026-11-16
 - Unify responsive header drawer styling across public pages and keep the burger icon readable after repeated open/close interactions.
 - Remove the conflicting legacy listing-menu handler that replaced the shared icon markup.
