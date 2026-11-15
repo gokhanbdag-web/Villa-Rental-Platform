@@ -22,6 +22,7 @@ $checks=[
  'demo reviews are explicitly identified and excluded from customer-owned reviews'=>str_contains($migration,'is_demo')&&str_contains($migration,'demo-reviewer-')&&str_contains($migration,'inactive'),
  'five demo reviews are generated for each published property'=>str_contains($migration,'SELECT 1 AS slot_no UNION ALL SELECT 2 UNION ALL SELECT 3 UNION ALL SELECT 4 UNION ALL SELECT 5')&&str_contains($migration,"WHERE p.status='published'"),
  'public property page labels demo reviews and does not call all ratings verified'=>str_contains($propertyPage,'Demo yorum · Gerçek müşteri deneyimi değildir')&&!str_contains($propertyPage,'doğrulanmış değerlendirme'),
+ 'property average and individual review scores use prominent high-contrast rating badges'=>str_contains($propertyPage,'class="rating-score"')&&str_contains($propertyPage,'class="rating-count"')&&str_contains($propertyPage,'class="review-rating-score"')&&str_contains($propertyPage,'#fff4d5')&&str_contains($propertyPage,'font-size:clamp(20px,2vw,25px)'),
 ];
 
 $failed=[];
