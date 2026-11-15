@@ -126,6 +126,7 @@ return static function (string $html, string $requestPath, string $platformMode)
             .vr-admin-upload-preview-copy strong{font-size:12px}
             .vr-admin-upload-preview-copy span{color:#78867d;font-size:11px;font-weight:500}
             @media(max-width:560px){.vr-admin-content input[type="file"]:not(.footer-logo-file-input):not(#propertyImages){padding:8px;font-size:11px}.vr-admin-content input[type="file"]:not(.footer-logo-file-input):not(#propertyImages)::file-selector-button{min-height:36px;padding:0 11px;margin-right:8px}.vr-admin-upload-preview{align-items:flex-start;flex-direction:column}}
+            .vr-admin-rich-color-toolbar{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin:0 0 7px;padding:8px 10px;border:1px solid #dce5df;border-radius:9px;background:#f8faf8}.vr-admin-rich-color-toolbar label{display:inline-flex;align-items:center;gap:7px;margin:0;color:#46594e;font-size:12px;font-weight:700}.vr-admin-rich-color-toolbar input[type=color]{width:34px;height:30px;padding:2px;border:1px solid #dce5df;border-radius:6px;background:#fff;cursor:pointer}.vr-admin-rich-color-toolbar button{min-height:32px;padding:0 12px;border:1px solid #176b50;border-radius:7px;background:#176b50;color:#fff;font-size:12px;font-weight:750;cursor:pointer}.vr-admin-rich-color-toolbar button:hover{background:#10563f}
             .vr-admin-content input,.vr-admin-content select,.vr-admin-content textarea{min-width:0}
             .vr-admin-content button,.vr-admin-content a{overflow-wrap:anywhere}
             .vr-admin-content form{min-width:0;max-width:100%}
@@ -177,6 +178,42 @@ return static function (string $html, string $requestPath, string $platformMode)
                 });
             }
             enhanceResponsiveTables(content);
+            function enhanceRichTextColors(root){
+                (root||content).querySelectorAll('[contenteditable="true"]:not([data-admin-color-ready])').forEach(function(editor){
+                    if(editor.hasAttribute("data-footer-rich-editor"))return;
+                    editor.setAttribute("data-admin-color-ready","1");
+                    const toolbar=document.createElement("div");
+                    toolbar.className="vr-admin-rich-color-toolbar";
+                    toolbar.setAttribute("role","group");
+                    toolbar.setAttribute("aria-label","Metin biçimlendirme");
+                    const label=document.createElement("label");
+                    label.appendChild(document.createTextNode("Yazı rengi"));
+                    const picker=document.createElement("input");
+                    picker.type="color";picker.value="#26352e";picker.setAttribute("aria-label","Seçili metnin yazı rengi");
+                    label.appendChild(picker);
+                    const apply=document.createElement("button");
+                    apply.type="button";apply.textContent="Rengi uygula";
+                    toolbar.append(label,apply);
+                    editor.parentNode.insertBefore(toolbar,editor);
+                    let savedRange=null;
+                    function remember(){const selection=window.getSelection();if(selection&&selection.rangeCount&&editor.contains(selection.anchorNode)&&editor.contains(selection.focusNode))savedRange=selection.getRangeAt(0).cloneRange();}
+                    editor.addEventListener("mouseup",remember);editor.addEventListener("keyup",remember);
+                    picker.addEventListener("mousedown",function(event){event.preventDefault();});
+                    apply.addEventListener("mousedown",function(event){event.preventDefault();});
+                    apply.addEventListener("click",function(){
+                        if(!savedRange||!editor.contains(savedRange.commonAncestorContainer)){window.alert("Önce rengini değiştirmek istediğiniz metni seçin.");return;}
+                        const selection=window.getSelection();if(!selection)return;
+                        selection.removeAllRanges();selection.addRange(savedRange);
+                        if(selection.isCollapsed){window.alert("Önce rengini değiştirmek istediğiniz metni seçin.");return;}
+                        const range=selection.getRangeAt(0),span=document.createElement("span");
+                        span.style.color=/^#[0-9a-f]{6}$/i.test(picker.value)?picker.value:"#26352e";
+                        span.appendChild(range.extractContents());range.insertNode(span);
+                        selection.removeAllRanges();const next=document.createRange();next.selectNodeContents(span);selection.addRange(next);savedRange=next.cloneRange();
+                        editor.dispatchEvent(new Event("input",{bubbles:true}));
+                    });
+                });
+            }
+            enhanceRichTextColors(content);
             function enhanceFileUploaders(root){
                 (root||content).querySelectorAll("input[type=file]:not([data-vr-upload-enhanced])").forEach(function(input){
                     if(input.classList.contains("footer-logo-file-input")||input.classList.contains("theme-file-input")||input.id==="propertyImages"||input.closest(".drop-zone"))return;
@@ -237,6 +274,7 @@ return static function (string $html, string $requestPath, string $platformMode)
                     if(!next||!next.innerHTML.trim())throw new Error("Sayfa içeriği alınamadı. Oturum veya sunucu yanıtını kontrol edin.");
                     content.innerHTML=next.innerHTML;
                     enhanceResponsiveTables(content);
+                    enhanceRichTextColors(content);
                     enhanceFileUploaders(content);
                     if(push)history.pushState({admin:true}, "",url);
                     activate(new URL(url,location.href).pathname);
