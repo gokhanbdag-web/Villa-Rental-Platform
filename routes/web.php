@@ -1232,6 +1232,14 @@ $router->post('/favorites/toggle', static function (): void {
 });
 
 
+$router->get('/account/reviews', static function (): void {
+    $user=Auth::user();if(!$user)redirect('/login');if(($user['role']??'')!=='customer')redirect('/admin');
+    $pdo=Database::connection();
+    $stmt=$pdo->prepare("SELECT r.id,r.rating,r.body,r.status,r.created_at,p.title AS property_title,p.slug AS property_slug,b.booking_code FROM reviews r JOIN properties p ON p.id=r.property_id LEFT JOIN bookings b ON b.id=r.booking_id WHERE r.guest_user_id=? AND COALESCE(r.is_demo,0)=0 ORDER BY r.created_at DESC,r.id DESC LIMIT 100");
+    $stmt->execute([(int)$user['id']]);$reviews=$stmt->fetchAll(PDO::FETCH_ASSOC);
+    villa_render_account_view('reviews.php', get_defined_vars());
+});
+
 $router->get('/account/reviews/{bookingId}', static function (array $params): void {
     $user=Auth::user();if(!$user||($user['role']??'')!=='customer')redirect('/login');
     $s=Database::connection()->prepare("SELECT b.id,p.title FROM bookings b JOIN properties p ON p.id=b.property_id WHERE b.id=? AND b.guest_user_id=? AND b.status='completed'");
