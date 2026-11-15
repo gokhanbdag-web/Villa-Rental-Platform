@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.2.0 - 2026-11-16
+- Expand blog into a WordPress-style CMS with SEO metadata, focus keyword, author, reading time, scheduled publishing, featured posts, categories, tags, and view counts.
+- Add responsive blog archive and single-post templates with sidebar search, categories, popular posts, tags, newsletter signup, related posts, social sharing, breadcrumbs, and BlogPosting structured data.
+- Add 15 Turkish demo articles and starter categories/tags through an idempotent versioned migration.
+- Add category management and blog CMS regression smoke tests.
+
 ## 1.1.11 - 2026-11-16
 - Refine the destination autocomplete smoke assertion to avoid PHP interpolation and escaping ambiguity.
 
