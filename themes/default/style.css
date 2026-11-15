@@ -1964,3 +1964,27 @@ body[data-villa-theme] .site-header .nav{margin-left:auto!important}
 @media (min-width:761px) {
   body[data-villa-theme] .site-drawer-social {display:none!important}
 }
+
+
+/* Social icons: use the former hover appearance as the default and vice versa. */
+@media (min-width:761px) {
+  body[data-villa-theme] .site-logo-topbar__social-link {
+    color:#fff!important;
+    background:var(--villa-primary,#176b50)!important;
+  }
+  body[data-villa-theme] .site-logo-topbar__social-link:hover {
+    color:var(--villa-primary,#176b50)!important;
+    background:transparent!important;
+    transform:none!important;
+  }
+}
+@media (max-width:760px) {
+  body[data-villa-theme] .site-header .nav .site-drawer-social a.site-logo-topbar__social-link {
+    background:var(--villa-primary,#176b50)!important;
+    color:#fff!important;
+  }
+  body[data-villa-theme] .site-header .nav .site-drawer-social a.site-logo-topbar__social-link:hover {
+    background:transparent!important;
+    color:var(--villa-primary,#176b50)!important;
+  }
+}
