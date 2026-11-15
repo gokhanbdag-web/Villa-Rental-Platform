@@ -1373,7 +1373,7 @@ HTML;
 
         // Normalize legacy hard-coded green accents in rendered frontend markup and embedded assets to the active theme primary.
         $designPrimaryColor = self::designSettings($renderSlug)['primary'] ?? '#176b50';
-        $html = str_ireplace('#286344', $designPrimaryColor, $html);
+        $html = str_ireplace(['#286344', '#315d41', '#526e50'], $designPrimaryColor, $html);
 
         echo $html;
     }
