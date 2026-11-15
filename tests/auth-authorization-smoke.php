@@ -24,7 +24,7 @@ $vendorBookingCases = [
     ['', false],
 ];
 foreach ($vendorBookingCases as [$vendorStatus, $expected]) {
-    $actual = \\App\\Core\\Auth::canManageVendorBookings($vendorStatus);
+    $actual = \App\Core\Auth::canManageVendorBookings($vendorStatus);
     if ($actual !== $expected) {
         throw new RuntimeException('Unexpected vendor booking access for status ' . $vendorStatus);
     }
