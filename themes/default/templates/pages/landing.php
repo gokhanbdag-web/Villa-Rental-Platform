@@ -492,7 +492,13 @@ body .hero-filter-panel .guest-popover{left:auto;right:0;width:300px}
   }
  };
  video.addEventListener('loadedmetadata',seekAndPlay,{once:true});
- if(video.readyState>=1)seekAndPlay();
+ if(video.readyState>=1){
+  seekAndPlay();
+ }else{
+  // preload="metadata" is only a browser hint. On mobile/shared-hosting
+  // browsers it may not fetch metadata until load() is explicitly requested.
+  try{video.load();}catch(error){}
+ }
 })();
 </script><?php endif; ?>
 <?php if($heroYouTubeIdValue!==''): ?><script>
