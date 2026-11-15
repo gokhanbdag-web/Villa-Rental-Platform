@@ -1756,6 +1756,7 @@ $router->get('/admin/navigation', static function (): void {
         ['label'=>'Ana Sayfa','url'=>'/'],
         ['label'=>'Konaklamalar','url'=>'/konaklamalar'],
         ['label'=>'Destinasyonlar','url'=>'/destinasyonlar'],
+        ['label'=>'Blog Arşivi','url'=>'/blog'],
         ['label'=>'Giriş Yap','url'=>'/login'],
         ['label'=>'Favorilerim','url'=>'/favorites'],
         ['label'=>'Rezervasyonlarım','url'=>'/account/bookings'],
