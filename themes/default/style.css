@@ -2012,3 +2012,19 @@ body[data-villa-theme] .site-header .nav{margin-left:auto!important}
     color:var(--villa-primary,#176b50)!important;
   }
 }
+
+
+/* Header action icons: keep a clear, consistent visual gap between Explore and Account. */
+@media(min-width:761px){
+  body[data-villa-theme] .site-header .site-header-auth{
+    gap:14px!important;
+  }
+  body[data-villa-theme] .site-header .site-header-auth-link{
+    flex:0 0 44px!important;
+    width:44px!important;
+    min-width:44px!important;
+    height:44px!important;
+    min-height:44px!important;
+    padding:0!important;
+  }
+}
