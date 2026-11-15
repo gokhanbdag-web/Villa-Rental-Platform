@@ -4,7 +4,7 @@ declare(strict_types=1);
 // The dedicated premium search must sit after the hero and remain mobile-only.
 $root = dirname(__DIR__);
 $landing = file_get_contents($root . '/themes/default/templates/pages/landing.php');
-$compare = file_get_contents($root . '/themes/default/templates/partials/compare-bar.php');
+$compare = file_get_contents($root . '/themes/default/partials/compare-bar.php');
 if (!is_string($landing) || !is_string($compare)) {
     throw new RuntimeException('Homepage or floating compare/search partial could not be read.');
 }
