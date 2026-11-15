@@ -25,4 +25,14 @@ if (!str_contains($landing, 'style="order:<?= $order(\'hero\',1) ?>"')) {
 if (!str_contains($landing, 'name="check_in"') || !str_contains($landing, 'name="check_out"') || !str_contains($landing, 'name="guests"')) {
     throw new RuntimeException('Premium search must submit destination, dates and guest count.');
 }
+$mobileFormStart = strpos($landing, '<form class="mobile-premium-search__form"');
+$mobileFormEnd = $mobileFormStart === false ? false : strpos($landing, '</form>', $mobileFormStart);
+$mobileForm = ($mobileFormStart !== false && $mobileFormEnd !== false)
+    ? substr($landing, $mobileFormStart, $mobileFormEnd - $mobileFormStart)
+    : '';
+if ($mobileForm === '' || !str_contains($mobileForm, '<select name="guests"')
+    || !str_contains($mobileForm, '<button type="submit"')
+    || !str_contains($landing, '.mobile-premium-search__form button{grid-column:1;')) {
+    throw new RuntimeException('Mobile search button must sit in the same column as the guest selector.');
+}
 echo "Mobile premium search placement and responsive visibility smoke test passed.\n";

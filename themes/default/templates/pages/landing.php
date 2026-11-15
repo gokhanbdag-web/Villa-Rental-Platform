@@ -651,7 +651,7 @@ body .hero-filter-panel .guest-popover{left:auto;right:0;width:300px}
   .mobile-premium-search__form input,.mobile-premium-search__form select{width:100%;min-width:0;padding:0;border:0;outline:0;background:transparent;color:#263b31;font:600 12px/1.35 var(--villa-font-body);appearance:auto}
   .mobile-premium-search__form input::placeholder{color:#9aa59f;font-weight:500}
   .mobile-premium-search__form .mobile-premium-search__destination{grid-column:1/-1;min-height:68px}
-  .mobile-premium-search__form button{grid-column:1/-1;display:flex;align-items:center;justify-content:center;gap:9px;min-height:48px;margin-top:1px;padding:0 18px;border:0;border-radius:11px;background:var(--villa-primary);color:#fff;font:800 13px/1 var(--villa-font-body);letter-spacing:.1px;box-shadow:0 7px 16px color-mix(in srgb,var(--villa-primary) 22%,transparent)}
+  .mobile-premium-search__form button{grid-column:1;min-width:0;display:flex;align-items:center;justify-content:center;gap:9px;min-height:48px;margin-top:1px;padding:0 18px;border:0;border-radius:11px;background:var(--villa-primary);color:#fff;font:800 13px/1 var(--villa-font-body);letter-spacing:.1px;box-shadow:0 7px 16px color-mix(in srgb,var(--villa-primary) 22%,transparent)}
   .mobile-premium-search__form button span{font-size:19px;line-height:1}
 }
 
