@@ -9,7 +9,7 @@ if (!headers_sent()) {
 $drawerUser = is_array($user ?? null) ? $user : null;
 if ($drawerUser === null) {
     try {
-        $resolvedDrawerUser = \\App\\Core\\Auth::user();
+        $resolvedDrawerUser = \App\Core\Auth::user();
         $drawerUser = is_array($resolvedDrawerUser) ? $resolvedDrawerUser : null;
     } catch (Throwable $drawerAuthError) {
         $drawerUser = null;
