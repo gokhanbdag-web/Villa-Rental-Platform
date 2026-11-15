@@ -66,6 +66,9 @@ return static function (string $html, string $requestPath, string $platformMode)
         // Remove page-level headers/navigation left by older standalone admin views.
         $bodyContent = preg_replace('/<header\b[^>]*>.*?<\/header>/is', '', $bodyContent, 1) ?? $bodyContent;
 
+        // Normalize the legacy green accent to the active theme primary across all admin page markup and embedded CSS/JS.
+        $bodyContent = str_ireplace('#286344', $adminPrimaryColor, $bodyContent);
+
         // A single icon map keeps the navigation identical on every admin screen.
         $icons = [
             '/admin' => '▦',
