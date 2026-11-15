@@ -8,11 +8,16 @@ use RuntimeException;
 
 final class ThemeManager
 {
+    /** Request-local caches prevent repeated theme directory scans and settings lookups. */
+    private static ?array $installedCache = null;
+    private static ?string $activeSlugCache = null;
+
     private static function root(): string { return APP_ROOT . '/themes'; }
 
     /** Discover valid theme folders; default is the mandatory base layer. */
     public static function installed(): array
     {
+        if (self::$installedCache !== null) return self::$installedCache;
         $themes = [];
         foreach (glob(self::root() . '/*', GLOB_ONLYDIR) ?: [] as $directory) {
             $slug = basename($directory);
@@ -31,20 +36,21 @@ final class ThemeManager
                 'manifest' => $manifest,
             ];
         }
-        if (!isset($themes['default'])) return [];
-        return $themes;
+        if (!isset($themes['default'])) return self::$installedCache = [];
+        return self::$installedCache = $themes;
     }
 
     public static function activeSlug(?PDO $pdo = null): string
     {
+        if (self::$activeSlugCache !== null) return self::$activeSlugCache;
         try {
             $pdo = $pdo ?? Database::connection();
             $stmt = $pdo->prepare('SELECT setting_value FROM settings WHERE setting_key=? LIMIT 1');
             $stmt->execute(['theme.active']);
             $slug = trim((string)($stmt->fetchColumn() ?: 'default'));
-            return isset(self::installed()[$slug]) ? $slug : 'default';
+            return self::$activeSlugCache = (isset(self::installed()[$slug]) ? $slug : 'default');
         } catch (\Throwable $e) {
-            return 'default';
+            return self::$activeSlugCache = 'default';
         }
     }
 
@@ -733,6 +739,7 @@ final class ThemeManager
         if ((string)$verify->fetchColumn() !== $slug) {
             throw new RuntimeException('Aktif tema tercihi veritabanına kaydedilemedi.');
         }
+        self::$activeSlugCache = $slug;
     }
 
     public static function saveTypographySettings(array $input, ?string $slug = null): void
@@ -854,7 +861,7 @@ final class ThemeManager
         require $template;
         $html = (string)ob_get_clean();
 
-        $brandSettings = self::brandSettings($renderSlug);
+        $brandSettings = $variables['brandSettings'];
         $logoUrl = (string)($brandSettings['logo_url'] ?? '');
         if ($logoUrl !== '') {
             $siteName = (string)($variables['content']['site_name'] ?? $variables['siteName'] ?? 'VillaStay');
