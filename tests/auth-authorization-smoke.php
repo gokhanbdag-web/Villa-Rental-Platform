@@ -3,7 +3,6 @@ declare(strict_types=1);
 
 require dirname(__DIR__) . '/app/Core/Auth.php';
 
-use App\\Core\\Auth;
 
 $cases = [
     ['super_admin', 'admin', true],
@@ -19,7 +18,7 @@ $cases = [
 ];
 
 foreach ($cases as [$actorRole, $targetRole, $expected]) {
-    $actual = Auth::canManageUserRole($actorRole, $targetRole);
+    $actual = \App\Core\Auth::canManageUserRole($actorRole, $targetRole);
     if ($actual !== $expected) {
         throw new RuntimeException(sprintf(
             'Unexpected permission for actor %s managing %s: expected %s, got %s.',
@@ -31,4 +30,4 @@ foreach ($cases as [$actorRole, $targetRole, $expected]) {
     }
 }
 
-fwrite(STDOUT, "User role boundary smoke test passed.\\n");
+fwrite(STDOUT, "User role boundary smoke test passed.\n");
