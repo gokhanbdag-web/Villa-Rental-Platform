@@ -114,6 +114,18 @@ return static function (string $html, string $requestPath, string $platformMode)
             .vr-admin-content{min-width:0;padding:30px 32px;box-sizing:border-box;overflow-x:hidden}.vr-admin-content *{box-sizing:border-box;max-width:100%}.vr-admin-content .wrap{max-width:none!important;margin:0!important;padding:0!important}
             .vr-admin-content h1{margin-top:0}.vr-admin-content table{width:100%;max-width:100%;border-collapse:collapse}
             .vr-admin-content img,.vr-admin-content input,.vr-admin-content select,.vr-admin-content textarea{max-width:100%}
+            /* Shared, visible file-upload treatment for every native admin uploader. */
+            .vr-admin-content input[type="file"]:not(.footer-logo-file-input):not(#propertyImages){display:block;width:100%;min-height:58px;padding:9px;border:1px dashed #b9cdbf;border-radius:12px;background:#f8fbf9;color:#46594e;font:600 12px/1.45 Inter,system-ui,sans-serif;cursor:pointer}
+            .vr-admin-content input[type="file"]:not(.footer-logo-file-input):not(#propertyImages)::file-selector-button{display:inline-flex;align-items:center;justify-content:center;min-height:38px;margin:0 12px 0 0;padding:0 16px;border:0;border-radius:8px;background:#176b50;color:#fff;font:750 12px Inter,system-ui,sans-serif;cursor:pointer;transition:background .15s ease}
+            .vr-admin-content input[type="file"]:not(.footer-logo-file-input):not(#propertyImages)::file-selector-button:hover{background:#10563f}
+            .vr-admin-upload-preview{display:flex;align-items:center;gap:14px;min-height:76px;margin-top:10px;padding:12px;border:1px solid #e1e9e3;border-radius:11px;background:#fff}
+            .vr-admin-upload-preview[hidden]{display:none}
+            .vr-admin-upload-preview img,.vr-admin-upload-preview video{display:block;width:auto;max-width:min(100%,220px);max-height:118px;object-fit:contain;border-radius:7px;background:#f1f4f2}
+            .vr-admin-upload-preview video{width:min(100%,220px)}
+            .vr-admin-upload-preview-copy{display:grid;gap:4px;min-width:0;color:#35483c;font-size:12px;overflow-wrap:anywhere}
+            .vr-admin-upload-preview-copy strong{font-size:12px}
+            .vr-admin-upload-preview-copy span{color:#78867d;font-size:11px;font-weight:500}
+            @media(max-width:560px){.vr-admin-content input[type="file"]:not(.footer-logo-file-input):not(#propertyImages){padding:8px;font-size:11px}.vr-admin-content input[type="file"]:not(.footer-logo-file-input):not(#propertyImages)::file-selector-button{min-height:36px;padding:0 11px;margin-right:8px}.vr-admin-upload-preview{align-items:flex-start;flex-direction:column}}
             .vr-admin-content input,.vr-admin-content select,.vr-admin-content textarea{min-width:0}
             .vr-admin-content button,.vr-admin-content a{overflow-wrap:anywhere}
             .vr-admin-content form{min-width:0;max-width:100%}
@@ -165,6 +177,43 @@ return static function (string $html, string $requestPath, string $platformMode)
                 });
             }
             enhanceResponsiveTables(content);
+            function enhanceFileUploaders(root){
+                (root||content).querySelectorAll('input[type="file"]:not([data-vr-upload-enhanced])').forEach(function(input){
+                    if(input.classList.contains("footer-logo-file-input")||input.id==="propertyImages"||input.closest(".drop-zone"))return;
+                    input.setAttribute("data-vr-upload-enhanced","1");
+                    const preview=document.createElement("div");
+                    preview.className="vr-admin-upload-preview";
+                    preview.hidden=true;
+                    preview.setAttribute("aria-live","polite");
+                    input.insertAdjacentElement("afterend",preview);
+                    let objectUrl="";
+                    input.addEventListener("change",function(){
+                        if(objectUrl){URL.revokeObjectURL(objectUrl);objectUrl=""}
+                        preview.replaceChildren();
+                        const file=input.files&&input.files[0];
+                        if(!file){preview.hidden=true;return}
+                        preview.hidden=false;
+                        const type=(file.type||"").toLowerCase();
+                        if(type.indexOf("image/")===0||type.indexOf("video/")===0){
+                            objectUrl=URL.createObjectURL(file);
+                            const media=document.createElement(type.indexOf("video/")===0?"video":"img");
+                            media.src=objectUrl;
+                            if(media.tagName==="VIDEO"){media.controls=true;media.muted=true;media.playsInline=true;media.preload="metadata"}
+                            else media.alt="Seçilen görselin önizlemesi";
+                            preview.appendChild(media);
+                        }
+                        const copy=document.createElement("div");
+                        copy.className="vr-admin-upload-preview-copy";
+                        const name=document.createElement("strong");
+                        name.textContent=file.name;
+                        const details=document.createElement("span");
+                        details.textContent=(file.size/1024/1024).toFixed(2)+" MB · "+(file.type||"Dosya türü belirlenemedi");
+                        copy.append(name,details);
+                        preview.appendChild(copy);
+                    });
+                });
+            }
+            enhanceFileUploaders(content);
             burger&&burger.addEventListener("click",function(){const open=layout.classList.toggle("menu-open");burger.setAttribute("aria-expanded",open?"true":"false")});
             overlay&&overlay.addEventListener("click",closeMenu);
             function activate(url){document.querySelectorAll("[data-admin-link]").forEach(a=>{const u=new URL(a.href,location.href);a.classList.toggle("is-active",u.pathname===url|| (url!=="/admin"&&u.pathname!=="/admin"&&url.startsWith(u.pathname+"/")));});}
@@ -188,6 +237,7 @@ return static function (string $html, string $requestPath, string $platformMode)
                     if(!next||!next.innerHTML.trim())throw new Error("Sayfa içeriği alınamadı. Oturum veya sunucu yanıtını kontrol edin.");
                     content.innerHTML=next.innerHTML;
                     enhanceResponsiveTables(content);
+                    enhanceFileUploaders(content);
                     if(push)history.pushState({admin:true}, "",url);
                     activate(new URL(url,location.href).pathname);
                     if(doc.title)document.title=doc.title;
