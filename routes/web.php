@@ -287,25 +287,29 @@ $router->get('/locations/search', static function (): void {
     header('Cache-Control: no-store');
     $q=trim((string)($_GET['q']??''));
     if($q===''||mb_strlen($q)<1){echo '[]';return;}
-    $like=$q.'%';
-    $sql="SELECT l.id,l.location_type,l.name,
-        CASE
-            WHEN l.location_type='city' THEN l.name
-            WHEN l.location_type='district' THEN TRIM(BOTH ' / ' FROM CONCAT_WS(' / ',p.name,l.name))
-            WHEN l.location_type='neighborhood' THEN TRIM(BOTH ' / ' FROM CONCAT_WS(' / ',g.name,p.name,l.name))
-            ELSE l.name
-        END AS label
-        FROM locations l
-        LEFT JOIN locations p ON p.id=l.parent_id
-        LEFT JOIN locations g ON g.id=p.parent_id
-        WHERE l.is_active=1
-          AND (p.id IS NULL OR p.is_active=1)
-          AND (g.id IS NULL OR g.is_active=1)
-          AND l.name LIKE ?
-        ORDER BY FIELD(l.location_type,'city','district','neighborhood','country'),
-                 l.name ASC,p.name ASC,g.name ASC,l.id ASC
+    $needle='%' . $q . '%';
+    $sql="SELECT matched.id,matched.location_type,matched.name,matched.label
+        FROM (
+            SELECT l.id,l.location_type,l.name,
+                CASE
+                    WHEN l.location_type='city' THEN l.name
+                    WHEN l.location_type='district' THEN TRIM(BOTH ' / ' FROM CONCAT_WS(' / ',p.name,l.name))
+                    WHEN l.location_type='neighborhood' THEN TRIM(BOTH ' / ' FROM CONCAT_WS(' / ',g.name,p.name,l.name))
+                    ELSE l.name
+                END AS label,
+                p.name AS parent_name,g.name AS grandparent_name
+            FROM locations l
+            LEFT JOIN locations p ON p.id=l.parent_id
+            LEFT JOIN locations g ON g.id=p.parent_id
+            WHERE l.is_active=1
+              AND (p.id IS NULL OR p.is_active=1)
+              AND (g.id IS NULL OR g.is_active=1)
+        ) AS matched
+        WHERE LOWER(matched.label) LIKE LOWER(?)
+        ORDER BY FIELD(matched.location_type,'city','district','neighborhood','country'),
+                 matched.name ASC,matched.parent_name ASC,matched.grandparent_name ASC,matched.id ASC
         LIMIT 30";
-    $s=Database::connection()->prepare($sql);$s->execute([$like]);
+    $s=Database::connection()->prepare($sql);$s->execute([$needle]);
     echo json_encode($s->fetchAll(),JSON_UNESCAPED_UNICODE|JSON_THROW_ON_ERROR);
 });
 $router->get('/admin/locations', static function (): void {
