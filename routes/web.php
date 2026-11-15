@@ -375,22 +375,32 @@ $router->post('/admin/locations/toggle', static function (): void {
 });
 
 $router->get('/', static function (): void {
-    $pdo=Database::connection();$user=Auth::user();
+    villa_perf_mark('home:begin');
+    $pdo=Database::connection();
+    villa_perf_mark('home:database_connected');
+    $user=Auth::user();
+    villa_perf_mark('home:auth_checked');
     // The landing page is read-only: persist any Auth::user() session refresh
     // and release PHP's per-session file lock before running homepage queries/rendering.
     if (session_status() === PHP_SESSION_ACTIVE) session_write_close();
+    villa_perf_mark('home:session_released');
     $locale='tr';
     try{$locale=(string)($pdo->query("SELECT setting_value FROM settings WHERE setting_key='app.locale' LIMIT 1")->fetchColumn() ?: 'tr');}catch(Throwable $e){}
+    villa_perf_mark('home:mode_loaded');
     $mode=(string)($pdo->query("SELECT setting_value FROM settings WHERE setting_key='app.mode' LIMIT 1")->fetchColumn() ?: 'single_vendor');
     $contentStmt=$pdo->prepare('SELECT content_key,content_value FROM site_content WHERE language_code=?');$contentStmt->execute([$locale]);$content=$contentStmt->fetchAll(PDO::FETCH_KEY_PAIR);
+    villa_perf_mark('home:navigation_loaded');
     $navigation=villa_navigation_tree($pdo,'header',$locale);$footerNavigation=villa_navigation_tree($pdo,'footer',$locale);
+    villa_perf_mark('home:destinations_query');
     $destinations=$pdo->query("SELECT l.id AS location_id,l.name AS city,COUNT(DISTINCT p.id) AS property_count,(SELECT pm.file_path FROM property_media pm JOIN properties p2 ON p2.id=pm.property_id WHERE p2.status='published' AND p2.location_city_id=l.id ORDER BY pm.is_cover DESC,pm.sort_order,pm.id LIMIT 1) AS cover_image FROM locations l JOIN locations c ON c.id=l.parent_id AND c.location_type='country' AND c.is_active=1 JOIN properties p ON p.status='published' AND p.location_city_id=l.id WHERE l.location_type='city' AND l.is_active=1 GROUP BY l.id,l.name,l.sort_order ORDER BY property_count DESC,l.sort_order,l.name LIMIT 9")->fetchAll();
+    villa_perf_mark('home:featured_query');
     $featuredProperties=$pdo->query("SELECT p.*,(SELECT pm.file_path FROM property_media pm WHERE pm.property_id=p.id ORDER BY pm.is_cover DESC,pm.sort_order,pm.id LIMIT 1) AS cover_image,(SELECT COUNT(*) FROM bookings b WHERE b.property_id=p.id AND b.status NOT IN ('cancelled','rejected')) AS booking_count,(SELECT AVG(r.rating) FROM reviews r WHERE r.property_id=p.id AND r.status='approved') AS rating_average,(SELECT COUNT(*) FROM reviews r WHERE r.property_id=p.id AND r.status='approved') AS rating_count FROM properties p WHERE p.status='published' ORDER BY booking_count DESC,p.created_at DESC,p.id DESC LIMIT 9")->fetchAll();
     $featuredCardImages=[];$featuredIds=array_map(static fn(array $p):int=>(int)$p['id'],$featuredProperties);
     if($featuredIds){$marks=implode(',',array_fill(0,count($featuredIds),'?'));$media=$pdo->prepare("SELECT property_id,file_path FROM property_media WHERE property_id IN ($marks) ORDER BY property_id,is_cover DESC,sort_order,id");$media->execute($featuredIds);foreach($media->fetchAll() as $m){$pid=(int)$m['property_id'];if(count($featuredCardImages[$pid]??[])<4)$featuredCardImages[$pid][]=$m['file_path'];}}
     $favoritePropertyIds=[];
     if($user && ($user['role']??'')==='customer' && $featuredIds){$marks=implode(',',array_fill(0,count($featuredIds),'?'));$fav=$pdo->prepare("SELECT property_id FROM favorites WHERE user_id=? AND property_id IN ($marks)");$fav->execute(array_merge([(int)$user['id']],$featuredIds));$favoritePropertyIds=array_map('intval',$fav->fetchAll(PDO::FETCH_COLUMN));}
 
+    villa_perf_mark('home:latest_query');
     $latestProperties=$pdo->query("SELECT p.*,(SELECT pm.file_path FROM property_media pm WHERE pm.property_id=p.id ORDER BY pm.is_cover DESC,pm.sort_order,pm.id LIMIT 1) AS cover_image,(SELECT AVG(r.rating) FROM reviews r WHERE r.property_id=p.id AND r.status='approved') AS rating_average,(SELECT COUNT(*) FROM reviews r WHERE r.property_id=p.id AND r.status='approved') AS rating_count,(SELECT COUNT(*) FROM bookings b WHERE b.property_id=p.id AND b.status NOT IN ('cancelled','rejected')) AS booking_count FROM properties p WHERE p.status='published' ORDER BY p.id DESC LIMIT 6")->fetchAll();
     $activeHomeTheme='default';
       if($activeHomeTheme==='default'){
@@ -426,10 +436,13 @@ $router->get('/', static function (): void {
             $favoritePropertyIds=array_values(array_unique(array_merge($favoritePropertyIds,array_map('intval',$favStmt->fetchAll(PDO::FETCH_COLUMN)))));
         }
     }
+    villa_perf_mark('home:blog_query');
     $blogPosts=$pdo->query("SELECT id,title,slug,excerpt,featured_image,published_at FROM blog_posts WHERE status='published' AND (published_at IS NULL OR published_at<=NOW()) ORDER BY COALESCE(published_at,created_at) DESC,id DESC LIMIT 12")->fetchAll(PDO::FETCH_ASSOC);
     $homeSections=[];foreach($pdo->query('SELECT * FROM homepage_sections ORDER BY sort_order,id')->fetchAll() as $section){$homeSections[$section['section_key']]=$section;}
+    villa_perf_mark('home:countries_query');
     $locationCountries=$pdo->query("SELECT id,name FROM locations WHERE location_type='country' AND is_active=1 ORDER BY sort_order,name")->fetchAll();
-     ThemeManager::render('landing.php', get_defined_vars());
+     villa_perf_mark('home:theme_render');
+    ThemeManager::render('landing.php', get_defined_vars());
 });
 
 $router->get('/konaklamalar', static function (): void {
