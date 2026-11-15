@@ -205,6 +205,9 @@ foreach ($featureItems as $featureIndex => $featureItem) {
 <label>Soyadınız<input type="text" name="last_name" autocomplete="family-name" maxlength="90" required></label>
 <label>E-posta adresiniz<input type="email" name="email" autocomplete="email" maxlength="190" required></label>
 <label>Telefon numaranız<input type="tel" name="phone" autocomplete="tel" maxlength="40" required></label>
+<label>T.C. kimlik numaranız<input type="text" name="identity_number" inputmode="numeric" autocomplete="off" pattern="[0-9]{11}" minlength="11" maxlength="11" required></label>
+<label>Fatura şehri<input type="text" name="billing_city" autocomplete="address-level2" maxlength="100" required></label>
+<label class="booking-field-full">Fatura adresi<input type="text" name="billing_address" autocomplete="street-address" maxlength="500" required></label>
 <label>Şifreniz<input type="password" name="password" autocomplete="new-password" minlength="10" maxlength="128" required><small>En az 10 karakter. Mevcut hesabınız varsa hesabınızın şifresini girin.</small></label>
 <div class="booking-price-preview booking-price-preview-compact" id="bookingPricePreviewDetails" aria-live="polite"></div>
 <p class="booking-inline-status" id="bookingDetailsStatus" role="status" aria-live="polite">Misafir sayısını seçin; fiyat ve kapasite yeniden doğrulanır.</p>
