@@ -91,7 +91,7 @@ final class ThemeManager
     {
         $slug = $slug ?: self::activeSlug();
         if (!preg_match('/^[a-z0-9_-]{1,60}$/', $slug) || !isset(self::installed()[$slug])) $slug = 'default';
-        $defaults = ['logo_path' => '', 'logo_width' => '220', 'logo_height' => '54', 'hero_video_path' => '', 'family_banner_path' => '', 'hero_youtube_url' => '', 'hero_overlay_opacity' => '58', 'hero_background_image_url' => '', 'hero_video_start_seconds' => '0', 'hero_video_loop' => '1'];
+        $defaults = ['logo_path' => '', 'logo_width' => '220', 'logo_height' => '54', 'hero_video_path' => '', 'family_banner_path' => '', 'hero_youtube_url' => '', 'hero_overlay_opacity' => '58', 'hero_overlay_color' => '#081d19', 'hero_overlay_texture' => 'none', 'hero_background_image_url' => '', 'hero_video_start_seconds' => '0', 'hero_video_loop' => '1'];
         try {
             $pdo = Database::connection();
             $stmt = $pdo->prepare('SELECT setting_value FROM settings WHERE setting_key=? LIMIT 1');
@@ -116,6 +116,8 @@ final class ThemeManager
             'family_banner_path' => $defaults['family_banner_path'],
             'hero_youtube_url' => $defaults['hero_youtube_url'],
             'hero_overlay_opacity' => max(0, min(100, (int)$defaults['hero_overlay_opacity'])),
+            'hero_overlay_color' => preg_match('/^#[0-9a-fA-F]{6}$/', $defaults['hero_overlay_color']) ? strtolower($defaults['hero_overlay_color']) : '#081d19',
+            'hero_overlay_texture' => in_array($defaults['hero_overlay_texture'], ['none','diagonal','grid','dots'], true) ? $defaults['hero_overlay_texture'] : 'none',
             'hero_background_image_url' => $defaults['hero_background_image_url'],
             'hero_video_start_seconds' => max(0, min(86400, (int)$defaults['hero_video_start_seconds'])),
             'hero_video_loop' => $defaults['hero_video_loop'] !== '0',
@@ -169,7 +171,7 @@ final class ThemeManager
         $settings = self::brandSettings($slug);
         $old = (string)($settings[$rule['key']] ?? '');
         $settings[$rule['key']] = $relativeDir . '/' . $name;
-        $json = json_encode(['logo_path'=>$settings['logo_path'],'logo_width'=>(string)$settings['logo_width'],'logo_height'=>(string)$settings['logo_height'],'hero_video_path'=>$settings['hero_video_path'],'family_banner_path'=>$settings['family_banner_path'],'hero_youtube_url'=>$settings['hero_youtube_url'],'hero_overlay_opacity'=>(string)$settings['hero_overlay_opacity'],'hero_background_image_url'=>$settings['hero_background_image_url'],'hero_video_start_seconds'=>(string)$settings['hero_video_start_seconds'],'hero_video_loop'=>$settings['hero_video_loop']?'1':'0'], JSON_UNESCAPED_SLASHES | JSON_THROW_ON_ERROR);
+        $json = json_encode(['logo_path'=>$settings['logo_path'],'logo_width'=>(string)$settings['logo_width'],'logo_height'=>(string)$settings['logo_height'],'hero_video_path'=>$settings['hero_video_path'],'family_banner_path'=>$settings['family_banner_path'],'hero_youtube_url'=>$settings['hero_youtube_url'],'hero_overlay_opacity'=>(string)$settings['hero_overlay_opacity'],'hero_overlay_color'=>$settings['hero_overlay_color'],'hero_overlay_texture'=>$settings['hero_overlay_texture'],'hero_background_image_url'=>$settings['hero_background_image_url'],'hero_video_start_seconds'=>(string)$settings['hero_video_start_seconds'],'hero_video_loop'=>$settings['hero_video_loop']?'1':'0'], JSON_UNESCAPED_SLASHES | JSON_THROW_ON_ERROR);
         try {
             $pdo = Database::connection();
             $save = $pdo->prepare('INSERT INTO settings(setting_key,setting_value,autoload) VALUES(?,?,1) ON DUPLICATE KEY UPDATE setting_value=VALUES(setting_value),autoload=1');
@@ -215,7 +217,7 @@ final class ThemeManager
         }
     }
 
-    public static function saveHeroVideoSettings(string $youtubeUrl, int $overlayOpacity, string $backgroundImageUrl = '', int $startSeconds = 0, bool $loop = true, ?string $slug = null): void
+    public static function saveHeroVideoSettings(string $youtubeUrl, int $overlayOpacity, string $backgroundImageUrl = '', int $startSeconds = 0, bool $loop = true, ?string $slug = null, string $overlayColor = '#081d19', string $overlayTexture = 'none'): void
     {
         $slug = $slug ?: self::activeSlug();
         if (!preg_match('/^[a-z0-9_-]{1,60}$/', $slug) || !isset(self::installed()[$slug])) throw new RuntimeException('Tema kodu geçersiz.');
@@ -239,6 +241,8 @@ final class ThemeManager
         if ($backgroundImageUrl !== '') {
             if (!filter_var($backgroundImageUrl, FILTER_VALIDATE_URL) || !in_array(strtolower((string)parse_url($backgroundImageUrl, PHP_URL_SCHEME)), ['http','https'], true)) throw new RuntimeException('Hero yedek görseli geçerli bir http/https adresi olmalı.');
         }
+        $overlayColor = preg_match('/^#[0-9a-fA-F]{6}$/', $overlayColor) ? strtolower($overlayColor) : '#081d19';
+        if (!in_array($overlayTexture, ['none','diagonal','grid','dots'], true)) $overlayTexture = 'none';
         $settings = self::brandSettings($slug);
         $json = json_encode([
             'logo_path'=>$settings['logo_path'],
@@ -248,6 +252,8 @@ final class ThemeManager
             'family_banner_path'=>$settings['family_banner_path'],
             'hero_youtube_url'=>$youtubeUrl,
             'hero_overlay_opacity'=>(string)max(0,min(100,$overlayOpacity)),
+            'hero_overlay_color'=>$overlayColor,
+            'hero_overlay_texture'=>$overlayTexture,
             'hero_background_image_url'=>$backgroundImageUrl,
             'hero_video_start_seconds'=>(string)max(0,min(86400,$startSeconds)),
             'hero_video_loop'=>$loop?'1':'0'
