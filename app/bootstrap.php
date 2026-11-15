@@ -96,7 +96,7 @@ if ($basePath !== '' && !$isThemeAssetRequest) {
         // Do not rewrite explicitly non-HTML responses (JSON, downloads, etc.).
         foreach (headers_list() as $header) {
             if (stripos($header, 'Content-Type:') === 0) {
-                if (preg_match('~^Content-Type:\\s*(?:text/html|application/xhtml\\+xml)~i', $header) !== 1) {
+                if (preg_match('~^Content-Type:\s*(?:text/html|application/xhtml\+xml)~i', $header) !== 1) {
                     return $html;
                 }
                 break;
@@ -104,7 +104,7 @@ if ($basePath !== '' && !$isThemeAssetRequest) {
         }
         $base = app_base_path();
         return preg_replace_callback(
-            '/(\\b(?:href|src|action|formaction)\\s*=\\s*)(["\\'])(\\/(?!\\/)[^"\\']*)/i',
+            '/(\b(?:href|src|action|formaction)\s*=\s*)(["\'])(\/(?!\/)[^"\']*)/i',
             static function (array $m) use ($base): string {
                 $path = $m[3];
                 if ($path === $base || str_starts_with($path, $base . '/')) return $m[0];
