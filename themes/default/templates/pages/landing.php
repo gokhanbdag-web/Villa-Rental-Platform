@@ -92,7 +92,7 @@ $stylePhotos=['https://images.unsplash.com/photo-1613490493576-7fde63acd811?auto
  body .hero{padding:12px 0 22px;background:#f4f7f4}
  body .hero-card{
   min-height:0;padding:27px 13px 17px;gap:17px;
-  border-radius:0 0 22px 22px;background-position:center 48%;
+  background-position:center 48%;
  }
  body .hero-inner{width:100%;max-width:none}
  body .hero-copy{max-width:100%;padding:0 5px;text-align:center}
