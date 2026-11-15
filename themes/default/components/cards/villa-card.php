@@ -24,34 +24,36 @@ $cardReturnTo = (string)($_SERVER['REQUEST_URI'] ?? '/konaklamalar');
         <?php if ((int)($p['booking_count'] ?? 0) > 0): ?>
             <span class="stay-badge">Çok tercih edilen</span>
         <?php endif; ?>
-        <?php if (($user['role'] ?? '') === 'customer'): ?>
-            <form class="card-favorite-form js-favorite-form" method="post" action="<?= e(app_url('/favorites/toggle')) ?>">
-                <?= csrf_field() ?>
-                <input type="hidden" name="property_id" value="<?= (int)$p['id'] ?>">
-                <input type="hidden" name="return_to" value="<?= e($cardReturnTo) ?>">
-                <button class="card-favorite <?= $isCardFavorite ? 'is-active' : '' ?>" type="submit"
-                    aria-label="<?= $isCardFavorite ? 'Favorilerden çıkar' : 'Favorilere ekle' ?>"
-                    title="<?= $isCardFavorite ? 'Favorilerden çıkar' : 'Favorilere ekle' ?>"><?= $isCardFavorite ? '♥' : '♡' ?></button>
-            </form>
-        <?php elseif (empty($user)): ?>
-            <button class="card-favorite" type="button" data-login-trigger data-favorite-login-trigger
-                data-favorite-property-id="<?= (int)$p['id'] ?>"
-                aria-label="Giriş yaparak favorilere ekle" title="Giriş yaparak favorilere ekle">♡</button>
-        <?php else: ?>
-            <button class="card-favorite is-unavailable" type="button" disabled
-                aria-label="Favoriler müşteri hesaplarında kullanılabilir"
-                title="Favorilere eklemek için müşteri hesabı kullanın">♡</button>
-        <?php endif; ?>
-        <button class="card-compare-button" type="button" data-compare-property
-            data-property-id="<?= (int)$p['id'] ?>"
-            data-property-title="<?= e((string)($p['title'] ?? '')) ?>"
-            data-property-url="<?= e(app_url('/villa/' . rawurlencode((string)$p['slug']))) ?>"
-            data-property-image="<?= e((string)($cardImages[0] ?? '')) ?>"
-            data-property-price="<?= e((string)($p['base_nightly_price'] ?? 0)) ?>"
-            data-property-currency="<?= e((string)($p['currency'] ?? 'TRY')) ?>"
-            data-property-location="<?= e(trim((string)($p['district'] ?? '') . ', ' . (string)($p['city'] ?? ''), ', ')) ?>"
-            data-property-guests="<?= (int)($p['max_guests'] ?? 0) ?>"
-            aria-pressed="false" title="Karşılaştırmaya ekle">⇄</button>
+        <div class="card-action-buttons" aria-label="Villa işlemleri">
+            <?php if (($user['role'] ?? '') === 'customer'): ?>
+                <form class="card-favorite-form js-favorite-form" method="post" action="<?= e(app_url('/favorites/toggle')) ?>">
+                    <?= csrf_field() ?>
+                    <input type="hidden" name="property_id" value="<?= (int)$p['id'] ?>">
+                    <input type="hidden" name="return_to" value="<?= e($cardReturnTo) ?>">
+                    <button class="card-favorite <?= $isCardFavorite ? 'is-active' : '' ?>" type="submit"
+                        aria-label="<?= $isCardFavorite ? 'Favorilerden çıkar' : 'Favorilere ekle' ?>"
+                        title="<?= $isCardFavorite ? 'Favorilerden çıkar' : 'Favorilere ekle' ?>"><?= $isCardFavorite ? '♥' : '♡' ?></button>
+                </form>
+            <?php elseif (empty($user)): ?>
+                <button class="card-favorite" type="button" data-login-trigger data-favorite-login-trigger
+                    data-favorite-property-id="<?= (int)$p['id'] ?>"
+                    aria-label="Giriş yaparak favorilere ekle" title="Giriş yaparak favorilere ekle">♡</button>
+            <?php else: ?>
+                <button class="card-favorite is-unavailable" type="button" disabled
+                    aria-label="Favoriler müşteri hesaplarında kullanılabilir"
+                    title="Favorilere eklemek için müşteri hesabı kullanın">♡</button>
+            <?php endif; ?>
+            <button class="card-compare-button" type="button" data-compare-property
+                data-property-id="<?= (int)$p['id'] ?>"
+                data-property-title="<?= e((string)($p['title'] ?? '')) ?>"
+                data-property-url="<?= e(app_url('/villa/' . rawurlencode((string)$p['slug']))) ?>"
+                data-property-image="<?= e((string)($cardImages[0] ?? '')) ?>"
+                data-property-price="<?= e((string)($p['base_nightly_price'] ?? 0)) ?>"
+                data-property-currency="<?= e((string)($p['currency'] ?? 'TRY')) ?>"
+                data-property-location="<?= e(trim((string)($p['district'] ?? '') . ', ' . (string)($p['city'] ?? ''), ', ')) ?>"
+                data-property-guests="<?= (int)($p['max_guests'] ?? 0) ?>"
+                aria-pressed="false" title="Karşılaştırmaya ekle">⇄</button>
+        </div>
         <script type="application/json" class="card-gallery-data"><?= json_encode($cardImages, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE) ?></script>
     </div>
     <a class="stay-content" href="<?= e(app_url('/villa/' . rawurlencode((string)$p['slug']) . (!empty($filters['check_in']) && !empty($filters['check_out']) ? '?' . http_build_query(['check_in' => $filters['check_in'], 'check_out' => $filters['check_out']]) : ''))) ?>">
