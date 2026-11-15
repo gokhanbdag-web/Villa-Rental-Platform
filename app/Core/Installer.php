@@ -25,10 +25,14 @@ final class TimedPDOStatement extends \PDOStatement
             if ($elapsedMs >= 200) {
                 $sql = preg_replace('/\\s+/', ' ', trim($this->queryString));
                 $sql = is_string($sql) ? substr($sql, 0, 180) : '';
-                error_log('[VILLA_SQL] ' . json_encode([
+                $record = json_encode([
                     'duration_ms' => round($elapsedMs, 1),
                     'sql' => $sql,
-                ], JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE));
+                ], JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
+                if (is_string($record) && defined('APP_STORAGE') && is_dir(APP_STORAGE)) {
+                    @file_put_contents(APP_STORAGE . '/sql-performance.log', $record . PHP_EOL, FILE_APPEND | LOCK_EX);
+                }
+                error_log('[VILLA_SQL] ' . (is_string($record) ? $record : '{}'));
             }
         }
     }
