@@ -727,6 +727,9 @@ final class ThemeManager
         if (!preg_match('/^[a-z0-9_-]{1,60}$/', $slug)) {
             throw new RuntimeException('Tema seçimi geçersiz.');
         }
+        // A theme may have been added or replaced earlier in this request.
+        // Refresh discovery before validating an explicit activation request.
+        self::$installedCache = null;
         $installed = self::installed();
         if (!isset($installed[$slug])) {
             throw new RuntimeException('Seçilen tema kurulu değil veya tema bildirimi geçersiz.');
