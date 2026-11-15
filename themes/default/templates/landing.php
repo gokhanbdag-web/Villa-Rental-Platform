@@ -93,10 +93,19 @@ $medBlocks = '';
     if ($medSectionActive('support')): $phone=trim((string)($content['home_support_phone']??''));$wa=trim((string)($content['home_support_whatsapp']??$phone));$phoneDigits=preg_replace('/\D+/','',$phone);$waDigits=preg_replace('/\D+/','',$wa); ?>
     <section class="section med-support" style="order:<?= $medSectionOrder('support',10) ?>">
       <div class="wrap">
-        <?php $homeStatLabels=['villas'=>'Yayındaki villa','destinations'=>'Destinasyon','customers'=>'Müşteri','reviews'=>'Onaylı yorum']; ?>
+        <div class="med-home-stats-heading">
+          <span><?= e($content['home_stats_eyebrow'] ?? 'RAKAMLARLA BİZ') ?></span>
+          <h2><?= e($content['home_stats_title'] ?? 'Tatiliniz için güven veren deneyim') ?></h2>
+          <p><?= e($content['home_stats_subtitle'] ?? 'Villa seçeneklerimizi, destinasyonlarımızı ve misafir deneyimimizi keşfedin.') ?></p>
+        </div>
+        <?php $homeStatLabels=['villas'=>'Yayındaki villa','destinations'=>'Destinasyon','customers'=>'Müşteri','reviews'=>'Onaylı yorum']; $homeStatIcons=['villas'=>'<svg viewBox="0 0 24 24" aria-hidden="true"><path d="m3 10 9-7 9 7v10a1 1 0 0 1-1 1h-6v-7h-4v7H4a1 1 0 0 1-1-1z"/></svg>','destinations'=>'<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 10c0 5-8 12-8 12S4 15 4 10a8 8 0 1 1 16 0Z"/><circle cx="12" cy="10" r="2.5"/></svg>','customers'=>'<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M16 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="10" cy="7" r="4"/><path d="M20 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/></svg>','reviews'=>'<svg viewBox="0 0 24 24" aria-hidden="true"><path d="m12 3 2.8 5.7 6.2.9-4.5 4.4 1.1 6.2-5.6-3-5.6 3 1.1-6.2L3 9.6l6.2-.9z"/></svg>']; ?>
         <div class="med-home-stats" aria-label="Villa platformu istatistikleri">
           <?php foreach($homeStatLabels as $statKey=>$statLabel): $statCount=max(0,(int)($homepageStats[$statKey]??0)); ?>
-            <div class="med-home-stat"><strong data-home-counter="<?= $statCount ?>"><?= number_format($statCount,0,',','.') ?></strong><span><?= e($statLabel) ?></span></div>
+            <div class="med-home-stat">
+              <span class="med-home-stat-icon"><?= $homeStatIcons[$statKey] ?></span>
+              <strong data-home-counter="<?= $statCount ?>"><?= number_format($statCount,0,',','.') ?></strong>
+              <span class="med-home-stat-label"><?= e($statLabel) ?></span>
+            </div>
           <?php endforeach; ?>
         </div>
       </div>
@@ -221,15 +230,27 @@ body.villa-home-mediterranean .destination-editorial-item:hover .destination-edi
 .med-faq-item summary span{color:var(--villa-text);font:inherit;}
 .med-faq-item[open] summary span{transform:rotate(45deg)}
 .med-faq-item p{max-width:680px;color:var(--villa-text);font:inherit;}
-.med-support{padding:24px 0!important}
-.med-home-stats{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:16px;margin:0}
-.med-home-stat{min-width:0;min-height:112px;display:flex;flex-direction:column;justify-content:center;padding:18px 14px;border:1px solid #e7ece5;border-radius:16px;background:#fff;box-shadow:0 8px 24px rgba(35,57,39,.06);text-align:center}
-.med-home-stat strong{display:block;color:var(--villa-primary,#315a43);font-size:clamp(25px,3vw,36px);font-weight:800;line-height:1.15;font-variant-numeric:tabular-nums}
-.med-home-stat span{display:block;margin-top:7px;color:var(--villa-primary,#315a43);font-size:12px;font-weight:650;letter-spacing:.02em}
+.med-support{padding:48px 0!important;background:linear-gradient(180deg,color-mix(in srgb,var(--villa-primary,#315a43) 5%,#fff),#fff 88%)}
+.med-home-stats-heading{max-width:720px;margin:0 auto 26px;text-align:center}
+.med-home-stats-heading>span{display:inline-flex;align-items:center;gap:8px;color:var(--villa-primary,#315a43);font-size:11px;font-weight:850;letter-spacing:.14em}
+.med-home-stats-heading>span:before,.med-home-stats-heading>span:after{content:"";width:24px;height:1px;background:var(--villa-primary,#315a43);opacity:.45}
+.med-home-stats-heading h2{margin:9px 0 7px;color:var(--villa-text);font-size:clamp(23px,3vw,32px);line-height:1.2;letter-spacing:-.035em}
+.med-home-stats-heading p{margin:0;color:var(--villa-text);opacity:.72;font-size:14px;line-height:1.65}
+.med-home-stats{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:18px;margin:0}
+.med-home-stat{position:relative;isolation:isolate;overflow:hidden;min-width:0;min-height:190px;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:24px 16px;border:1px solid color-mix(in srgb,var(--villa-primary,#315a43) 14%,#e7ece5);border-radius:20px;background:linear-gradient(145deg,#fff 15%,color-mix(in srgb,var(--villa-primary,#315a43) 4%,#fff));box-shadow:0 12px 32px rgba(35,57,39,.075);text-align:center;transition:transform .25s ease,box-shadow .25s ease,border-color .25s ease}
+.med-home-stat:after{content:"";position:absolute;z-index:-1;width:150px;height:150px;right:-72px;top:-78px;border-radius:50%;background:color-mix(in srgb,var(--villa-primary,#315a43) 8%,transparent)}
+.med-home-stat:hover{transform:translateY(-4px);border-color:color-mix(in srgb,var(--villa-primary,#315a43) 35%,#e7ece5);box-shadow:0 18px 38px rgba(35,57,39,.12)}
+.med-home-stat-icon{width:48px;height:48px;display:grid;place-items:center;margin-bottom:13px;border:1px solid color-mix(in srgb,var(--villa-primary,#315a43) 20%,transparent);border-radius:50%;background:color-mix(in srgb,var(--villa-primary,#315a43) 9%,#fff);color:var(--villa-primary,#315a43)}
+.med-home-stat-icon svg{width:23px;height:23px;fill:none;stroke:currentColor;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
+.med-home-stat strong{display:block;color:var(--villa-primary,#315a43);font-size:clamp(30px,3.3vw,42px);font-weight:850;line-height:1.1;font-variant-numeric:tabular-nums;letter-spacing:-.04em}
+.med-home-stat-label{display:block;margin-top:9px;color:var(--villa-text);font-size:13px;font-weight:700;letter-spacing:.015em}
 .med-support-date-form{display:grid;grid-template-columns:minmax(0,1fr);gap:14px}
 .med-calendar-toolbar{display:flex;align-items:center;justify-content:space-between;gap:14px}
 .med-calendar-nav{width:42px;height:42px;flex:0 0 42px;border:1px solid var(--villa-primary,#315a43);border-radius:50%;background:#fff;color:var(--villa-primary,#315a43);font-size:27px;line-height:1;cursor:pointer}
 .med-calendar-nav:disabled{opacity:.35;cursor:default}
+@media(max-width:900px){.med-home-stats{grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}.med-home-stat{min-height:174px}}
+@media(max-width:600px){.med-support{padding:34px 0!important}.med-home-stats-heading{margin-bottom:20px}.med-home-stats-heading p{font-size:13px}.med-home-stats{grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}.med-home-stat{min-height:156px;padding:18px 10px;border-radius:16px}.med-home-stat-icon{width:42px;height:42px;margin-bottom:10px}.med-home-stat-icon svg{width:20px;height:20px}.med-home-stat strong{font-size:clamp(25px,7vw,34px)}.med-home-stat-label{font-size:12px;margin-top:7px}}
+@media(prefers-reduced-motion:reduce){.med-home-stat{transition:none}.med-home-stat:hover{transform:none}}
 .med-calendar-selection{display:flex;align-items:center;justify-content:center;gap:10px;flex-wrap:wrap;color:var(--villa-primary,#315a43)}
 .med-calendar-selection span{font-size:10px;font-weight:800;letter-spacing:.08em}
 .med-calendar-selection strong{font-size:13px}
