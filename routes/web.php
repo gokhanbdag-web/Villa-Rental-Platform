@@ -497,8 +497,7 @@ $router->get('/konaklamalar', static function (): void {
     $footerNavigation = villa_navigation_tree($pdo,'footer',$locale);
     $categories = $pdo->query('SELECT id,name,slug FROM property_categories WHERE is_active=1 ORDER BY sort_order,name')->fetchAll();
     $locationCountries=$pdo->query("SELECT id,name FROM locations WHERE location_type='country' AND is_active=1 ORDER BY sort_order,name")->fetchAll();
-    $locationChildren=static function(int $parent) use($pdo): array {if(!$parent)return [];$s=$pdo->prepare('SELECT id,name FROM locations WHERE parent_id=? AND is_active=1 ORDER BY sort_order,name');$s->execute([$parent]);return $s->fetchAll();};
-    $locationCountryId=max(0,(int)($_GET['country_id']??0));$locationCityId=max(0,(int)($_GET['city_id']??0));$locationDistrictId=max(0,(int)($_GET['district_id']??0));$locationNeighborhoodId=max(0,(int)($_GET['neighborhood_id']??0));
+    $locationChildren=static function(int $parent) use($pdo): array {if(!$parent)return [];$s=$pdo->prepare('SELECT id,name FROM locations WHERE parent_id=? AND is_active=1 ORDER BY sort_order,name');$s->execute([$parent]);return $s->fetchAll();};    $locationCountryId=max(0,(int)($_GET['country_id']??0));$locationCityId=max(0,(int)($_GET['city_id']??0));$locationDistrictId=max(0,(int)($_GET['district_id']??0));$locationNeighborhoodId=max(0,(int)($_GET['neighborhood_id']??0));
     $selectedLocationId=max(0,(int)($_GET['location_id']??0));
     if($selectedLocationId>0){
         $selectedStmt=$pdo->prepare('SELECT location_type FROM locations WHERE id=? AND is_active=1 LIMIT 1');
@@ -766,10 +765,14 @@ $router->post('/villa/{slug}/reserve', static function (array $params): void {
     if(!$property){http_response_code(404);exit('Konaklama bulunamadı.');}
     $first=trim((string)($_POST['first_name']??''));$last=trim((string)($_POST['last_name']??''));
     $email=strtolower(trim((string)($_POST['email']??'')));$phone=trim((string)($_POST['phone']??''));$password=(string)($_POST['password']??'');
+    $identityNumber=preg_replace('/\\D+/','',(string)($_POST['identity_number']??''))??'';
+    $billingAddress=trim((string)($_POST['billing_address']??''));$billingCity=trim((string)($_POST['billing_city']??''));
+    $iyzicoBookingConfig=\\App\\Core\\PaymentGatewayConfig::forProvider('iyzico');
+    $autoStartIyzico=!empty($iyzicoBookingConfig['enabled'])&&!empty($iyzicoBookingConfig['configured'])&&($iyzicoBookingConfig['environment']??'')==='sandbox';
     $inRaw=trim((string)($_POST['check_in']??''));$outRaw=trim((string)($_POST['check_out']??''));
     $checkIn=DateTimeImmutable::createFromFormat('!Y-m-d',$inRaw);$checkOut=DateTimeImmutable::createFromFormat('!Y-m-d',$outRaw);
     $guests=(int)($_POST['guests']??0);$fullName=trim($first.' '.$last);
-    if($first===''||$last===''||mb_strlen($first)>90||mb_strlen($last)>90||!filter_var($email,FILTER_VALIDATE_EMAIL)||strlen($email)>190||$phone===''||strlen($phone)>40||strlen($password)<10||strlen($password)>128||!$checkIn||!$checkOut||$checkIn->format('Y-m-d')!==$inRaw||$checkOut->format('Y-m-d')!==$outRaw||$checkIn<new DateTimeImmutable('today')||$checkOut<=$checkIn||(int)$checkIn->diff($checkOut)->days>365||$guests<1||$guests>(int)$property['max_guests']){
+    if($first===''||$last===''||mb_strlen($first)>90||mb_strlen($last)>90||!filter_var($email,FILTER_VALIDATE_EMAIL)||strlen($email)>190||$phone===''||strlen($phone)>40||strlen($password)<10||strlen($password)>128||!$checkIn||!$checkOut||$checkIn->format('Y-m-d')!==$inRaw||$checkOut->format('Y-m-d')!==$outRaw||$checkIn<new DateTimeImmutable('today')||$checkOut<=$checkIn||(int)$checkIn->diff($checkOut)->days>365||$guests<1||$guests>(int)$property['max_guests']||($autoStartIyzico&&(!preg_match('/^[0-9]{11}$/',$identityNumber)||$billingAddress===''||mb_strlen($billingAddress)>500||$billingCity===''||mb_strlen($billingCity)>100))){
         http_response_code(422);exit('Lütfen tüm bilgileri ve rezervasyon tarihlerini kontrol edin. Şifre en az 10 karakter olmalıdır.');
     }
     $currentUser=Auth::user();$userId=0;$createNewAccount=false;$newUsername='';
@@ -825,6 +828,10 @@ $router->post('/villa/{slug}/reserve', static function (array $params): void {
         $notice=$pdo->prepare("INSERT INTO notifications(user_id,notification_type,title,body,created_at) VALUES(?,'booking.created','Rezervasyonunuz oluşturuldu',?,NOW())");$notice->execute([$userId,'Rezervasyon kodunuz: '.$code]);
         $pdo->commit();
         if($createNewAccount)Auth::attempt($email,$password);
+        if($autoStartIyzico){
+            $_SESSION['villa_iyzico_autostart'][$code]=['identity_number'=>$identityNumber,'billing_address'=>$billingAddress,'billing_city'=>$billingCity];
+            redirect('/checkout/'.rawurlencode($code).'?start_iyzico=1');
+        }
         redirect('/checkout/'.rawurlencode($code));
     }catch(Throwable $e){if($pdo->inTransaction())$pdo->rollBack();error_log('Booking creation failed: '.$e->getMessage());http_response_code(500);exit('Rezervasyon kaydedilemedi. Lütfen tekrar deneyin.');}
 });
@@ -836,6 +843,14 @@ $router->get('/checkout/{bookingCode}', static function(array $params):void {
     if(!$booking){http_response_code(404);exit('Rezervasyon bulunamadı.');}
     $iyzicoConfig=\App\Core\PaymentGatewayConfig::forProvider('iyzico');
     $iyzicoPaymentAvailable=!empty($iyzicoConfig['enabled'])&&!empty($iyzicoConfig['configured'])&&($iyzicoConfig['environment']??'')==='sandbox';
+    $autoStartIyzicoPayment=false;$iyzicoAutoStartData=[];
+    if(!empty($_GET['start_iyzico'])&&$iyzicoPaymentAvailable){
+        $pendingAutoStart=$_SESSION['villa_iyzico_autostart'][(string)$booking['booking_code']]??null;
+        unset($_SESSION['villa_iyzico_autostart'][(string)$booking['booking_code']]);
+        if(is_array($pendingAutoStart)&&preg_match('/^[0-9]{11}$/',(string)($pendingAutoStart['identity_number']??''))&&trim((string)($pendingAutoStart['billing_address']??''))!==''&&trim((string)($pendingAutoStart['billing_city']??''))!==''){
+            $iyzicoAutoStartData=$pendingAutoStart;$autoStartIyzicoPayment=true;
+        }
+    }
     $requestedPaymentStatus=(string)($_GET['payment']??'');
     $paymentStatus=in_array($requestedPaymentStatus,['failed','verify_error','init_error'],true)?$requestedPaymentStatus:'';
     $latestPayment=$pdo->prepare("SELECT status,response_payload,expires_at FROM payment_transactions WHERE booking_id=? AND provider='iyzico' ORDER BY id DESC LIMIT 1");
@@ -997,8 +1012,7 @@ $router->post('/payments/iyzico/callback', static function (): void {
         if(strtolower((string)($result['status']??''))!=='success')throw new RuntimeException('iyzico ödeme sonucu doğrulanamadı.');
         $secret=(string)($config['credentials']['secret_key']??'');
         if(!\App\Core\PaymentSignatureVerifier::verifyIyzicoCheckoutFormRetrieve($result,$secret))throw new RuntimeException('iyzico ödeme yanıtı imza doğrulamasından geçmedi.');
-        if(!hash_equals($expectedConversationId,(string)($result['conversationId']??''))
-            ||!hash_equals($expectedBasketId,(string)($result['basketId']??''))) {
+        if(!hash_equals($expectedConversationId,(string)($result['conversationId']??''))            ||!hash_equals($expectedBasketId,(string)($result['basketId']??''))) {
             throw new RuntimeException('iyzico ödeme yanıtı rezervasyon referanslarıyla eşleşmedi.');
         }
         $paymentStatus=strtoupper((string)($result['paymentStatus']??''));
@@ -1497,8 +1511,7 @@ $router->post('/vendor/properties/save', static function (): void {
     $slug=trim(strtolower(preg_replace('/[^a-z0-9-]+/','-',$slug)),'-');if($slug==='')$slug='villa-'.bin2hex(random_bytes(4));
     $id=(int)($_POST['id']??0);$status=$vendor['status']==='approved'&&($_POST['status']??'')==='published'?'published':'draft';
     $data=[$title,$slug,trim((string)($_POST['summary']??'')),trim((string)($_POST['description']??'')),trim((string)($_POST['country']??'Türkiye')),trim((string)($_POST['city']??'')),trim((string)($_POST['district']??'')),trim((string)($_POST['address']??'')),max(1,(int)($_POST['max_guests']??1)),max(0,(int)($_POST['bedrooms']??0)),max(0,(int)($_POST['beds']??0)),max(0,(float)($_POST['bathrooms']??1)),max(0,(float)($_POST['base_nightly_price']??0)),max(0,(float)($_POST['weekend_nightly_price']??0)),max(0,(float)($_POST['cleaning_fee']??0)),strtoupper(substr(preg_replace('/[^A-Za-z]/','',(string)($_POST['currency']??'TRY')),0,3))?:'TRY',$status,($_POST['booking_type']??'')==='instant'?'instant':'request',((int)($_POST['category_id']??0)>0?(int)$_POST['category_id']:null)];
-    if($id){$owned=$pdo->prepare('SELECT id FROM properties WHERE id=? AND vendor_id=?');$owned->execute([$id,(int)$vendor['id']]);if(!$owned->fetchColumn()){http_response_code(404);exit('İlan bulunamadı.');}$s=$pdo->prepare('UPDATE properties SET title=?,slug=?,summary=?,description=?,country=?,city=?,district=?,address=?,max_guests=?,bedrooms=?,beds=?,bathrooms=?,base_nightly_price=?,weekend_nightly_price=?,cleaning_fee=?,currency=?,status=?,booking_type=?,category_id=?,updated_at=NOW() WHERE id=? AND vendor_id=?');$s->execute([...$data,$id,(int)$vendor['id']]);}
-    else{$s=$pdo->prepare('INSERT INTO properties(vendor_id,title,slug,summary,description,country,city,district,address,max_guests,bedrooms,beds,bathrooms,base_nightly_price,weekend_nightly_price,cleaning_fee,currency,status,booking_type,category_id,created_at) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,NOW())');$s->execute([(int)$vendor['id'],...$data]);$id=(int)$pdo->lastInsertId();}
+    if($id){$owned=$pdo->prepare('SELECT id FROM properties WHERE id=? AND vendor_id=?');$owned->execute([$id,(int)$vendor['id']]);if(!$owned->fetchColumn()){http_response_code(404);exit('İlan bulunamadı.');}$s=$pdo->prepare('UPDATE properties SET title=?,slug=?,summary=?,description=?,country=?,city=?,district=?,address=?,max_guests=?,bedrooms=?,beds=?,bathrooms=?,base_nightly_price=?,weekend_nightly_price=?,cleaning_fee=?,currency=?,status=?,booking_type=?,category_id=?,updated_at=NOW() WHERE id=? AND vendor_id=?');$s->execute([...$data,$id,(int)$vendor['id']]);}    else{$s=$pdo->prepare('INSERT INTO properties(vendor_id,title,slug,summary,description,country,city,district,address,max_guests,bedrooms,beds,bathrooms,base_nightly_price,weekend_nightly_price,cleaning_fee,currency,status,booking_type,category_id,created_at) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,NOW())');$s->execute([(int)$vendor['id'],...$data]);$id=(int)$pdo->lastInsertId();}
     $latitudeRaw=trim((string)($_POST['latitude']??''));$longitudeRaw=trim((string)($_POST['longitude']??''));
     if(($latitudeRaw==='')!==($longitudeRaw==='')){http_response_code(422);exit('Harita için enlem ve boylam birlikte girilmelidir.');}
     $latitude=$latitudeRaw===''?null:(is_numeric($latitudeRaw)?(float)$latitudeRaw:null);$longitude=$longitudeRaw===''?null:(is_numeric($longitudeRaw)?(float)$longitudeRaw:null);
@@ -1997,8 +2010,7 @@ $router->post('/admin/users/delete', static function (): void {
         // Keep reservation and payment history; detach the account before deleting it.
         $bookings=$pdo->prepare('UPDATE bookings SET guest_user_id=NULL WHERE guest_user_id=?');
         $bookings->execute([$id]);
-        $delete=$pdo->prepare("DELETE FROM users WHERE id=? AND role IN ('customer','vendor')");
-        $delete->execute([$id]);
+        $delete=$pdo->prepare("DELETE FROM users WHERE id=? AND role IN ('customer','vendor')");        $delete->execute([$id]);
         if($delete->rowCount()!==1){
             throw new RuntimeException('Üye kaydı silinemedi.');
         }
@@ -2597,8 +2609,7 @@ $router->post('/admin/payment-tests', static function (): void {
     } catch (InvalidArgumentException $e) {
         http_response_code(422);
         $simulationResult=['error'=>$e->getMessage(),'real_charge'=>false,'network_requests'=>0];
-    }
-    ThemeManager::renderTemplate('templates/pages/admin/payment-tests.php', get_defined_vars());
+    }    ThemeManager::renderTemplate('templates/pages/admin/payment-tests.php', get_defined_vars());
 });
 
 $router->get('/admin/finance', static function (): void {
@@ -2657,5 +2668,4 @@ $router->get('/admin', static function (): void {
         ORDER BY b.created_at DESC LIMIT 6")->fetchAll();
     ThemeManager::renderTemplate('templates/pages/admin/dashboard.php', get_defined_vars());
 });
-
 
