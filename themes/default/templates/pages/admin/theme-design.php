@@ -46,7 +46,7 @@ $labels = [
 .footer-logo-no-preview span:first-child{font-size:23px;color:#aab8ae}
 .footer-logo-upload-status{margin:0;color:#708077;font-size:11px;line-height:1.5}
 @media(max-width:560px){.footer-logo-dropzone{align-items:flex-start;flex-wrap:wrap}.footer-logo-upload-copy{flex-basis:calc(100% - 64px)}.footer-logo-choose-button{margin-left:60px}.footer-logo-uploader{padding:13px}.footer-logo-preview-image{align-items:flex-start;flex-direction:column}}
-.footer-widget-modal-body .design-field{display:grid;align-items:start;gap:8px}.footer-widget-modal-body .design-field input[type=text],.footer-widget-modal-body textarea{width:100%;min-width:0;max-width:none;box-sizing:border-box;padding:11px;border:1px solid #dce5df;border-radius:8px;background:#fff;color:#26352e;font:inherit}.footer-modal-description textarea{resize:vertical}.footer-rich-editor-wrap{display:grid;gap:9px}.footer-rich-toolbar{display:flex;flex-wrap:wrap;gap:6px;padding:8px;border:1px solid #dce5df;border-bottom:0;border-radius:9px 9px 0 0;background:#f5f8f6}.footer-rich-toolbar button{min-width:34px;height:32px;padding:0 9px;border:1px solid #dce5df;border-radius:6px;background:#fff;color:#34483c;font-size:12px;font-weight:700;cursor:pointer}.footer-rich-toolbar button:hover{background:#eaf1ec;border-color:#176b50}.footer-rich-editor{min-height:170px;max-height:360px;overflow:auto;padding:13px;border:1px solid #dce5df;border-radius:0 0 9px 9px;background:#fff;color:#26352e;font:inherit;line-height:1.6;outline:none}.footer-rich-editor:focus{border-color:#176b50;box-shadow:0 0 0 3px rgba(23,107,80,.10)}.footer-rich-editor:empty:before{content:attr(data-placeholder);color:#9aa69e;pointer-events:none}.footer-rich-editor ul,.footer-rich-editor ol{padding-left:24px}.footer-rich-editor p{margin:0 0 8px}.footer-rich-editor-wrap .design-help{font-size:12px;color:#77847c}.footer-widget-empty-note{margin:0;padding:12px;border-radius:9px;background:#f6f8f6;color:#77847c;font-size:13px}.footer-widget-modal-actions{display:flex;justify-content:flex-end;padding:0 22px 20px}.footer-payment-order{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:8px;min-width:0}.footer-payment-order .design-field{min-width:0;padding:9px 7px}.footer-payment-order .design-field label{font-size:11px}.footer-payment-order select{width:100%;max-width:none!important;font-size:11px;padding:6px 3px!important}
+.footer-widget-modal-body .design-field{display:grid;align-items:start;gap:8px}.footer-widget-modal-body .design-field input[type=text],.footer-widget-modal-body textarea{width:100%;min-width:0;max-width:none;box-sizing:border-box;padding:11px;border:1px solid #dce5df;border-radius:8px;background:#fff;color:#26352e;font:inherit}.footer-modal-description textarea{resize:vertical}.footer-rich-editor-wrap{display:grid;gap:9px}.footer-rich-toolbar{display:flex;flex-wrap:wrap;gap:6px;padding:8px;border:1px solid #dce5df;border-bottom:0;border-radius:9px 9px 0 0;background:#f5f8f6}.footer-rich-toolbar button{min-width:34px;height:32px;padding:0 9px;border:1px solid #dce5df;border-radius:6px;background:#fff;color:#34483c;font-size:12px;font-weight:700;cursor:pointer}.footer-rich-toolbar button:hover{background:#eaf1ec;border-color:#176b50}.footer-editor-color-control{display:inline-flex;align-items:center;gap:7px;padding:0 8px;border:1px solid #dce5df;border-radius:6px;background:#fff;color:#34483c;font-size:11px;font-weight:700}.footer-editor-color-control input{width:28px;height:26px;padding:2px;border:0;background:transparent;cursor:pointer}.footer-rich-editor{min-height:170px;max-height:360px;overflow:auto;padding:13px;border:1px solid #dce5df;border-radius:0 0 9px 9px;background:#fff;color:#26352e;font:inherit;line-height:1.6;outline:none}.footer-rich-editor:focus{border-color:#176b50;box-shadow:0 0 0 3px rgba(23,107,80,.10)}.footer-rich-editor:empty:before{content:attr(data-placeholder);color:#9aa69e;pointer-events:none}.footer-rich-editor ul,.footer-rich-editor ol{padding-left:24px}.footer-rich-editor p{margin:0 0 8px}.footer-rich-editor-wrap .design-help{font-size:12px;color:#77847c}.footer-widget-empty-note{margin:0;padding:12px;border-radius:9px;background:#f6f8f6;color:#77847c;font-size:13px}.footer-widget-modal-actions{display:flex;justify-content:flex-end;padding:0 22px 20px}.footer-payment-order{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:8px;min-width:0}.footer-payment-order .design-field{min-width:0;padding:9px 7px}.footer-payment-order .design-field label{font-size:11px}.footer-payment-order select{width:100%;max-width:none!important;font-size:11px;padding:6px 3px!important}
 @media(max-width:520px){.theme-design [data-design-tab-panel="footer"] .footer-widget-row.footer-widget-four{grid-template-columns:repeat(4,minmax(0,1fr))!important}.theme-design [data-design-tab-panel="footer"] .footer-widget-row.footer-widget-two{grid-template-columns:minmax(0,7fr) minmax(0,5fr)!important}.theme-design [data-design-tab-panel="footer"] .footer-widget-tile{min-height:68px;padding:8px 3px}.theme-design [data-design-tab-panel="footer"] .footer-widget-tile span{font-size:11px}.theme-design [data-design-tab-panel="footer"] .footer-widget-tile small{font-size:9px}.footer-widget-modal-head,.footer-widget-modal-body{padding-left:16px;padding-right:16px}.footer-payment-order{grid-template-columns:repeat(5,minmax(0,1fr));gap:4px}.footer-payment-order .design-field{padding:7px 3px}.footer-payment-order .design-field label{font-size:10px}.footer-payment-order select{font-size:10px!important}.footer-widget-modal-actions{padding:0 16px 16px}}
 
 .theme-file-uploader{display:grid;gap:10px;margin-top:4px;padding:15px;border:1px solid #dce8df;border-radius:13px;background:linear-gradient(180deg,#fbfdfb 0%,#f4f8f5 100%)}
@@ -203,6 +203,8 @@ $labels = [
           <button type="button" data-footer-editor-command="bold" aria-label="Kalın"><strong>B</strong></button>
           <button type="button" data-footer-editor-command="italic" aria-label="İtalik"><em>I</em></button>
           <button type="button" data-footer-editor-command="underline" aria-label="Altı çizili"><u>U</u></button>
+          <label class="footer-editor-color-control" for="footerEditorTextColor">Yazı rengi <input type="color" id="footerEditorTextColor" value="#ffffff" aria-label="Seçili metnin yazı rengi"></label>
+          <button type="button" data-footer-editor-apply-color aria-label="Seçili metne rengi uygula">Rengi uygula</button>
           <button type="button" data-footer-editor-command="insertUnorderedList" aria-label="Madde işaretli liste">• Liste</button>
           <button type="button" data-footer-editor-command="insertOrderedList" aria-label="Numaralı liste">1. Liste</button>
           <button type="button" data-footer-editor-link aria-label="Bağlantı ekle">🔗 Link ekle</button>
@@ -470,6 +472,29 @@ $labels = [
  const form=document.getElementById('themeDesignForm');
  if(!editor||!hidden||!form)return;
  function sync(){hidden.value=editor.innerHTML;}
+ const colorInput=document.getElementById('footerEditorTextColor');
+ const colorButton=document.querySelector('[data-footer-editor-apply-color]');
+ let savedRange=null;
+ function rememberSelection(){
+  const selection=window.getSelection();
+  if(selection&&selection.rangeCount&&editor.contains(selection.anchorNode)&&editor.contains(selection.focusNode))savedRange=selection.getRangeAt(0).cloneRange();
+ }
+ editor.addEventListener('mouseup',rememberSelection);
+ editor.addEventListener('keyup',rememberSelection);
+ if(colorButton)colorButton.addEventListener('mousedown',function(event){event.preventDefault();});
+ if(colorButton)colorButton.addEventListener('click',function(){
+  const color=colorInput&&/^#[0-9a-f]{6}$/i.test(colorInput.value)?colorInput.value:'#ffffff';
+  editor.focus();
+  const selection=window.getSelection();
+  if(!savedRange||!editor.contains(savedRange.commonAncestorContainer)){window.alert('Önce rengini değiştirmek istediğiniz metni seçin.');return;}
+  selection.removeAllRanges();selection.addRange(savedRange);
+  if(selection.isCollapsed){window.alert('Önce rengini değiştirmek istediğiniz metni seçin.');return;}
+  const range=selection.getRangeAt(0),span=document.createElement('span');
+  span.style.color=color;span.appendChild(range.extractContents());range.insertNode(span);
+  selection.removeAllRanges();
+  const nextRange=document.createRange();nextRange.selectNodeContents(span);selection.addRange(nextRange);savedRange=nextRange.cloneRange();
+  sync();
+ });
  const linkButton=document.querySelector('[data-footer-editor-link]');
  if(linkButton)linkButton.addEventListener('mousedown',function(event){event.preventDefault();});
  if(linkButton)linkButton.addEventListener('click',function(){
