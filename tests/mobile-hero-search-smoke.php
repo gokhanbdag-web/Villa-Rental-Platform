@@ -33,7 +33,7 @@ foreach ($required as $rule) {
 }
 
 $desktopStart = strpos($landing, '@media(min-width:901px)');
-$desktopEnd = $desktopStart === false ? false : strpos($landing, '\n}', $desktopStart);
+$desktopEnd = $desktopStart === false ? false : strpos($landing, '</style></head>', $desktopStart);
 if ($desktopStart === false || $desktopEnd === false) {
     throw new RuntimeException('Existing desktop hero layout rules could not be verified.');
 }
