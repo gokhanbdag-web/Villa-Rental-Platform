@@ -49,7 +49,8 @@ final class Installer
         return new PDO($dsn, $db['user'], $db['password'], [
             PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
             PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
-            PDO::ATTR_EMULATE_PREPARES => false,\n            PDO::ATTR_STATEMENT_CLASS => [TimedPDOStatement::class, []],
+            PDO::ATTR_EMULATE_PREPARES => false,
+            PDO::ATTR_STATEMENT_CLASS => [TimedPDOStatement::class, []],
         ]);
     }
 
@@ -95,7 +96,8 @@ final class Installer
             if (!is_file($schemaFile) || !is_readable($schemaFile)) throw new \RuntimeException('Şema dosyası okunamadı.');
             $schemaSql = file_get_contents($schemaFile);
             if ($schemaSql === false) throw new \RuntimeException('Şema dosyası okunamadı.');
-            foreach (preg_split('/;\\s*(?:\\r?\\n|$)/', trim($schemaSql)) as $statement) {
+            foreach (preg_split('/;\\s*(?:\\r?\
+|$)/', trim($schemaSql)) as $statement) {
                 $statement = trim($statement);
                 if ($statement !== '') $pdo->exec($statement);
             }
@@ -116,7 +118,10 @@ final class Installer
             $pdo->commit();
 
             $config = ['database' => $db, 'app' => ['timezone' => 'Europe/Istanbul']];
-            $php = "<?php\ndeclare(strict_types=1);\nreturn " . var_export($config, true) . ";\n";
+            $php = "<?php
+declare(strict_types=1);
+return " . var_export($config, true) . ";
+";
             if (file_put_contents($root . '/config/config.php', $php, LOCK_EX) === false) {
                 throw new \RuntimeException('Yapılandırma dosyası yazılamadı.');
             }
