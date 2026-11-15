@@ -1,5 +1,8 @@
 # Changelog
 
+## 1.1.2 - 2026-11-15
+- Prepare a verified deployment-pipeline smoke test and release version marker.
+
 ## 1.1.1 - 2026-11-15
 - Correct the mobile premium search section ordering so it appears immediately after the hero video, regardless of the homepage section sort order. Desktop and floating search controls remain unchanged.
 
