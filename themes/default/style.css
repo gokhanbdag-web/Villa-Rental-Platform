@@ -1582,10 +1582,50 @@ body[data-villa-theme] .site-footer .footer-payment-logo img{display:block;width
  body[data-villa-theme] .site-footer .footer-row-primary{grid-template-columns:repeat(2,minmax(0,1fr))}
 }
 @media(max-width:600px){
- body[data-villa-theme] .site-footer .footer-inner{width:calc(100% - 32px);gap:18px}
- body[data-villa-theme] .site-footer .footer-row{gap:16px}
- body[data-villa-theme] .site-footer .footer-row-primary{grid-template-columns:repeat(2,minmax(0,1fr))}
- body[data-villa-theme] .site-footer .footer-row-secondary{grid-template-columns:minmax(0,1fr)}
+ body[data-villa-theme] .site-footer .footer-inner{
+  width:calc(100% - 32px);
+  max-width:none;
+  gap:18px;
+ }
+ body[data-villa-theme] .site-footer .footer-row{
+  width:100%;
+  grid-template-columns:minmax(0,1fr);
+  gap:16px;
+ }
+ body[data-villa-theme] .site-footer .footer-row-primary,
+ body[data-villa-theme] .site-footer .footer-row-secondary{
+  grid-template-columns:minmax(0,1fr);
+ }
+ body[data-villa-theme] .site-footer .footer-widget{
+  box-sizing:border-box;
+  width:100%;
+  max-width:none;
+  text-align:center;
+ }
+ body[data-villa-theme] .site-footer .footer-widget > *{
+  max-width:100%;
+  margin-left:auto;
+  margin-right:auto;
+  text-align:center;
+ }
+ body[data-villa-theme] .site-footer .footer-about{
+  width:100%;
+  text-align:center;
+ }
+ body[data-villa-theme] .site-footer .footer-about-logo{
+  margin-left:auto!important;
+  margin-right:auto!important;
+  object-position:center!important;
+ }
+ body[data-villa-theme] .site-footer .footer-about-description,
+ body[data-villa-theme] .site-footer .footer-copyright-content{
+  text-align:center!important;
+ }
+ body[data-villa-theme] .site-footer .footer-payment-logos{
+  width:100%;
+  max-width:100%;
+  justify-content:center;
+ }
 }
 
 /* Remove unwanted decorative borders from public search, mobile drawer and villa cards. */
