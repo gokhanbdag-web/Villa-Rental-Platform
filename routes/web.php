@@ -202,6 +202,23 @@ $router->get('/admin/updates/status', static function (): void {
     echo json_encode(['status' => $status, 'history' => $history], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
 });
 
+$router->get('/admin/performance/diagnostics', static function (): void {
+    Auth::requireRole(['super_admin']);
+    header('Content-Type: application/json; charset=utf-8');
+    header('Cache-Control: no-store, private');
+    $readTail = static function (string $file, int $limit = 120): array {
+        if (!is_file($file) || !is_readable($file)) return [];
+        $lines = @file($file, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
+        return is_array($lines) ? array_slice($lines, -$limit) : [];
+    };
+    $root = dirname(__DIR__);
+    echo json_encode([
+        'performance' => $readTail($root . '/storage/performance.log'),
+        'slow_sql' => $readTail($root . '/storage/sql-performance.log'),
+        'note' => 'Only slow requests and SQL statements are recorded. Request bodies, cookies, session IDs and SQL bound values are not logged.',
+    ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+});
+
 $router->get('/admin/homepage', static function (): void {
     Auth::requireRole(['super_admin','admin']);$pdo=Database::connection();
     $sections=$pdo->query('SELECT * FROM homepage_sections ORDER BY sort_order,id')->fetchAll();
