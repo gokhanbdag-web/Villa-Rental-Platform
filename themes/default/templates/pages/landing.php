@@ -92,7 +92,7 @@ $stylePhotos=['https://images.unsplash.com/photo-1613490493576-7fde63acd811?auto
  body .hero{padding:12px 0 22px;background:#f4f7f4}
  body .hero-card{
   min-height:0;padding:27px 13px 17px;gap:17px;
-  border-radius:0 0 22px 22px;background-position:center 48%;
+  border-radius:0!important;background-position:center 48%;
  }
  body .hero-inner{width:100%;max-width:none}
  body .hero-copy{max-width:100%;padding:0 5px;text-align:center}
@@ -103,10 +103,15 @@ $stylePhotos=['https://images.unsplash.com/photo-1613490493576-7fde63acd811?auto
  body .hero-copy h1{max-width:100%;margin:7px 0 8px;font-size:clamp(25px,7vw,32px);line-height:1.15;letter-spacing:-.8px}
  body .hero-copy p{max-width:340px;margin:0 auto;font-size:13px;line-height:1.45}
  body .hero-filter-panel{
-  width:100%;max-width:none;justify-self:stretch;margin:0;padding:13px;
-  border:1px solid rgba(255,255,255,.95);border-radius:20px;
-  background:#fff;box-shadow:0 15px 38px rgba(12,35,27,.24)
+  width:100%;max-width:none;justify-self:stretch;margin:0;padding:16px!important;
+  border:2px solid rgba(255,255,255,.98)!important;border-radius:20px!important;
+  background:#fff!important;box-shadow:0 19px 48px rgba(0,0,0,.34)!important
  }
+ body .hero-filter-panel::before{
+  content:"TATİLİNİZİ PLANLAYIN";display:block;margin:0 0 9px;padding:0 10px;
+  color:#20332c;font-size:15px;font-weight:850;letter-spacing:.65px;text-align:left
+ }
+ body .mobile-hero-search{display:none!important}
  body .hero-filter-panel .search-enhanced{
   display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);
   gap:0;padding:0;border:0;background:transparent
@@ -126,8 +131,8 @@ $stylePhotos=['https://images.unsplash.com/photo-1613490493576-7fde63acd811?auto
  body .hero-filter-panel .destination-field input::placeholder{color:#69776f;font-weight:500}
  body .hero-filter-panel .search-submit{
   grid-column:1/-1;width:100%;min-height:58px;margin:13px 0 0;
-  border-radius:14px;background:var(--coral);color:#fff;
-  font-size:16px;font-weight:800;letter-spacing:.2px;
+  border-radius:14px;background:var(--villa-primary,var(--coral))!important;color:#fff!important;
+  font-size:16px;font-weight:850;letter-spacing:.25px;
   box-shadow:0 7px 16px rgba(255,128,107,.28)
  }
  body .hero-filter-panel .search-submit span{font-size:20px;margin-right:7px}
