@@ -1,5 +1,8 @@
 # Changelog
 
+## 1.5.1 - 2026-11-16
+- Make villa average ratings and individual guest review scores more prominent with larger, high-contrast gold rating badges, including mobile sizing.
+
 ## 1.5.0 - 2026-11-16
 - Fix horizontal overflow in mobile account pages, including bookings and notifications.
 - Add the customer My Reviews page with review ratings, property links, and moderation statuses.
