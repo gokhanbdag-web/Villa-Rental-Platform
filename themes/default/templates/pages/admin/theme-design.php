@@ -139,11 +139,13 @@ $labels = [
           <button type="button" data-footer-editor-command="underline" aria-label="Altı çizili"><u>U</u></button>
           <button type="button" data-footer-editor-command="insertUnorderedList" aria-label="Madde işaretli liste">• Liste</button>
           <button type="button" data-footer-editor-command="insertOrderedList" aria-label="Numaralı liste">1. Liste</button>
+          <button type="button" data-footer-editor-link aria-label="Bağlantı ekle">🔗 Link ekle</button>
+          <button type="button" data-footer-editor-command="unlink" aria-label="Bağlantıyı kaldır">Linki kaldır</button>
           <button type="button" data-footer-editor-command="removeFormat" aria-label="Biçimlendirmeyi temizle">Biçimi temizle</button>
         </div>
         <div id="footerCopyrightEditor" class="footer-rich-editor" contenteditable="true" role="textbox" aria-multiline="true" data-footer-rich-editor data-placeholder="Örn. © 2026 VillaCMS. Tüm hakları saklıdır."><?= (string)($themeFooterSettings['copyright_html']??'') ?></div>
         <input type="hidden" id="footerCopyrightHtml" name="footer[copyright_html]" value="<?= e((string)($themeFooterSettings['copyright_html']??'')) ?>">
-        <p class="design-help">Metni kalın, italik, altı çizili veya liste biçiminde düzenleyebilirsiniz. Kaydettiğiniz içerik footer 5. kolonda görüntülenir.</p>
+        <p class="design-help">Metni biçimlendirebilir, seçtiğiniz metne bağlantı ekleyebilir veya mevcut bağlantıyı kaldırabilirsiniz. Kaydettiğiniz içerik footer 5. kolonda görüntülenir.</p>
       </div>
     <?php elseif($widget===6): ?>
       <div class="footer-payment-order" aria-label="Ödeme kuruluşu sıralaması">
@@ -301,6 +303,18 @@ $labels = [
  const form=document.getElementById('themeDesignForm');
  if(!editor||!hidden||!form)return;
  function sync(){hidden.value=editor.innerHTML;}
+ const linkButton=document.querySelector('[data-footer-editor-link]');
+ if(linkButton)linkButton.addEventListener('click',function(){
+  editor.focus();
+  const selection=window.getSelection();
+  if(!selection||selection.isCollapsed){window.alert('Önce bağlantı vermek istediğiniz metni seçin.');return;}
+  const url=window.prompt('Bağlantı adresini girin (https://, mailto: veya tel:):','https://');
+  if(url===null)return;
+  const value=url.trim();
+  if(!/^(https?:\\/\\/|mailto:|tel:|\\/|#)/i.test(value)){window.alert('Lütfen geçerli bir https://, http://, mailto:, tel: veya site içi bağlantı girin.');return;}
+  document.execCommand('createLink',false,value);
+  sync();
+ });
  document.querySelectorAll('[data-footer-editor-command]').forEach(function(button){
   button.addEventListener('mousedown',function(event){event.preventDefault();});
   button.addEventListener('click',function(){
