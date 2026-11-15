@@ -1175,12 +1175,18 @@ $router->get('/login', static function (): void {
 });
 
 $router->post('/login/ajax', static function (): void {
+    villa_perf_mark('login_ajax:route_entered');
     header('Content-Type: application/json; charset=utf-8');header('Cache-Control: no-store');
+    villa_perf_mark('login_ajax:csrf_check');
     if(!hash_equals(csrf_token(),(string)($_POST['_csrf']??''))){http_response_code(419);echo json_encode(['ok'=>false,'message'=>'Oturum doğrulaması başarısız. Sayfayı yenileyip tekrar deneyin.']);return;}
+    villa_perf_mark('login_ajax:credentials_received');
     $identity=trim((string)($_POST['identity']??''));$password=(string)($_POST['password']??'');
+    villa_perf_mark('login_ajax:auth_attempt_begin');
     if($identity===''||$password===''||!Auth::attempt($identity,$password)){http_response_code(401);echo json_encode(['ok'=>false,'message'=>'E-posta/kullanıcı adı veya şifre hatalı.']);return;}
+    villa_perf_mark('login_ajax:auth_attempt_ok');
     $user=Auth::user();$role=(string)($user['role']??'customer');
     $destination=$role==='customer'?'/account/bookings':($role==='vendor'?'/vendor':'/admin');
+    villa_perf_mark('login_ajax:response_ready');
     echo json_encode(['ok'=>true,'user'=>['username'=>(string)($user['username']??''),'role'=>$role,'label'=>in_array($role,['admin','super_admin'],true)?'Yönetim':($role==='vendor'?'Ev Sahibi':'Hesabım'),'url'=>app_url($destination)]],JSON_UNESCAPED_UNICODE|JSON_THROW_ON_ERROR);
 });
 $router->post('/login', static function (): void {
