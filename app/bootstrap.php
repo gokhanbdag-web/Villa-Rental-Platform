@@ -29,7 +29,11 @@ register_shutdown_function(static function (): void {
         'peak_memory_mb' => round(memory_get_peak_usage(true) / 1048576, 1),
         'http_status' => http_response_code(),
     ];
-    error_log('[VILLA_PERF] ' . json_encode($record, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE));
+    $line = json_encode($record, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
+    if (is_string($line) && is_dir(APP_STORAGE)) {
+        @file_put_contents(APP_STORAGE . '/performance.log', $line . PHP_EOL, FILE_APPEND | LOCK_EX);
+    }
+    error_log('[VILLA_PERF] ' . (is_string($line) ? $line : '{}'));
 });
 
 if (is_file(APP_ROOT . '/config/config.php')) {
