@@ -192,4 +192,4 @@ modal.addEventListener('touchstart',function(e){touchX=e.changedTouches[0].scree
  if(calendarContinue){calendarContinue.addEventListener('click',async e=>{e.preventDefault();if(checking)return;if(await check())setStep(2);});}
  if(checkIn.value&&checkOut.value)check();
 })();
-</script><?php \\App\\Core\\ThemeManager::renderPartial('partials/compare-bar.php', get_defined_vars()); ?></body></html>
+</script><?php \App\Core\ThemeManager::renderPartial('partials/compare-bar.php', get_defined_vars()); ?></body></html>
