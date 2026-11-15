@@ -457,6 +457,32 @@ body .hero-filter-panel .guest-popover{left:auto;right:0;width:300px}
 }
 @media(prefers-reduced-motion:reduce){body .hero-filter-panel .search-submit{transition:none!important}}
 
+
+/* Desktop: keep the hero message clear on the left and the search panel on the right.
+   The existing stacked/mobile composition remains unchanged below this breakpoint. */
+@media(min-width:901px){
+  body .hero-card{
+    display:grid!important;
+    grid-template-columns:minmax(250px,.82fr) minmax(0,1.28fr)!important;
+    align-items:center!important;
+    gap:clamp(24px,3vw,48px)!important;
+    min-height:640px!important;
+    padding:54px max(28px,calc((100vw - 1200px)/2))!important;
+  }
+  body .hero-inner{display:block!important;width:100%!important;max-width:none!important;margin:0!important}
+  body .hero-copy{width:100%!important;max-width:520px!important;margin:0!important;padding:0!important;text-align:left!important}
+  body .hero-copy h1{max-width:520px!important;margin:8px 0 12px!important;text-align:left!important}
+  body .hero-copy p{max-width:480px!important;margin:0!important;text-align:left!important}
+  body .hero-filter-panel{width:100%!important;max-width:none!important;margin:0!important;justify-self:stretch!important;padding:12px!important}
+  body .hero-filter-panel .search-enhanced{grid-template-columns:repeat(2,minmax(0,1fr))!important;min-height:0!important}
+  body .hero-filter-panel .search-field{min-height:72px!important;border-right:1px solid #e5ebe6!important;border-bottom:1px solid #e5ebe6!important}
+  body .hero-filter-panel .destination-field,
+  body .hero-filter-panel .guest-field{grid-column:1/-1!important;border-right:0!important}
+  body .hero-filter-panel .date-field:nth-of-type(3){border-right:0!important}
+  body .hero-filter-panel .search-submit{grid-column:1/-1!important;min-height:58px!important;margin:8px 0 0!important}
+  body .hero-filter-panel .home-calendar{grid-column:1/-1!important}
+  body .hero-filter-panel .guest-popover{left:auto;right:0;width:min(300px,100%)}
+}
 </style></head><body>
 <?php \App\Core\ThemeManager::renderPartial('partials/header.php', get_defined_vars()); ?>
 <main class="home-sections"><?php if($active('hero')): ?><section class="hero" style="order:<?= $order('hero',1) ?>"><div class="hero-card" style="<?= $heroBackgroundImageUrl!==''?'background-image:url(&quot;'.e($heroBackgroundImageUrl).'&quot;)':'' ?>">
