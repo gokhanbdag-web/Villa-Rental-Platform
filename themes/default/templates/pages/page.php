@@ -5,6 +5,8 @@
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title><?= e($page['meta_title'] ?: $page['title']) ?></title>
 <meta name="description" content="<?= e($page['meta_description']??'') ?>">
+<link rel="canonical" href="<?= e(app_url('/page/'.rawurlencode((string)$page['slug']))) ?>">
+<meta name="robots" content="index,follow">
 <style>
 :root{--green:#167c80;--ink:#20332c;--line:#e8eeea}
 *{box-sizing:border-box}
