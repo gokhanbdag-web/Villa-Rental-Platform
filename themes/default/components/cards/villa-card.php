@@ -37,6 +37,10 @@ $cardReturnTo = (string)($_SERVER['REQUEST_URI'] ?? '/konaklamalar');
             <button class="card-favorite" type="button" data-login-trigger data-favorite-login-trigger
                 data-favorite-property-id="<?= (int)$p['id'] ?>"
                 aria-label="Giriş yaparak favorilere ekle" title="Giriş yaparak favorilere ekle">♡</button>
+        <?php else: ?>
+            <button class="card-favorite is-unavailable" type="button" disabled
+                aria-label="Favoriler müşteri hesaplarında kullanılabilir"
+                title="Favorilere eklemek için müşteri hesabı kullanın">♡</button>
         <?php endif; ?>
         <button class="card-compare-button" type="button" data-compare-property
             data-property-id="<?= (int)$p['id'] ?>"
