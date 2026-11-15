@@ -107,9 +107,9 @@ $navigation = is_array($navigation ?? null) ? $navigation : [];
 <form method="post" action="<?= e(app_url('/checkout/'.rawurlencode((string)$booking['booking_code']).'/iyzico/start')) ?>">
 <?= csrf_field() ?>
 <div class="checkout-fields">
-<label class="checkout-field">T.C. kimlik numarası<input name="identity_number" inputmode="numeric" autocomplete="off" pattern="[0-9]{11}" minlength="11" maxlength="11" required placeholder="11 haneli numara"></label>
-<label class="checkout-field">Şehir<input name="billing_city" autocomplete="address-level2" maxlength="100" required placeholder="Örn. Antalya"></label>
-<label class="checkout-field full">Fatura adresi<input name="billing_address" autocomplete="street-address" maxlength="500" required placeholder="Mahalle, cadde, sokak ve kapı numarası"></label>
+<label class="checkout-field">T.C. kimlik numarası<input name="identity_number" inputmode="numeric" autocomplete="off" pattern="[0-9]{11}" minlength="11" maxlength="11" required placeholder="11 haneli numara" value="<?= e((string)($iyzicoAutoStartData['identity_number']??'')) ?>"></label>
+<label class="checkout-field">Şehir<input name="billing_city" autocomplete="address-level2" maxlength="100" required placeholder="Örn. Antalya" value="<?= e((string)($iyzicoAutoStartData['billing_city']??'')) ?>"></label>
+<label class="checkout-field full">Fatura adresi<input name="billing_address" autocomplete="street-address" maxlength="500" required placeholder="Mahalle, cadde, sokak ve kapı numarası" value="<?= e((string)($iyzicoAutoStartData['billing_address']??'')) ?>"></label>
 </div>
 <p class="checkout-summary-location">Fatura bilgileriniz iyzico'ya aktarılır. Kart numarası ve güvenlik kodu uygulamamızın sunucusundan geçmez.</p>
 <button class="checkout-pay-button" type="submit">iyzico güvenli ödeme sayfasına git</button>
@@ -138,5 +138,13 @@ $navigation = is_array($navigation ?? null) ? $navigation : [];
 </div>
 </main>
 <?php \App\Core\ThemeManager::renderPartial('partials/footer.php', get_defined_vars()); ?>
+<?php if(!empty($autoStartIyzicoPayment)&&!empty($iyzicoPaymentAvailable)): ?>
+<script>
+document.addEventListener('DOMContentLoaded',function(){
+ const paymentForm=document.querySelector('.checkout-payment form');
+ if(paymentForm){const button=paymentForm.querySelector('button[type="submit"]');if(button){button.disabled=true;button.textContent='iyzico güvenli ödeme sayfasına yönlendiriliyorsunuz…';}paymentForm.submit();}
+});
+</script>
+<?php endif; ?>
 </body>
 </html>
