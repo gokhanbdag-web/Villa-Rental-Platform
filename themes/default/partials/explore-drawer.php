@@ -8,8 +8,8 @@ $exploreImage = static function (array $row): string {
 };
 $exploreMode = (string)($mode ?? $appMode ?? '');
 $exploreBlogPosts = is_array($blogPosts ?? null) ? array_slice($blogPosts, 0, 3) : [];
-$explorePhone = preg_replace('/\\\\D+/', '', (string)($content['home_support_phone'] ?? '')) ?: '';
-$exploreWhatsapp = preg_replace('/\\\\D+/', '', (string)($content['home_support_whatsapp'] ?? '')) ?: '';
+$explorePhone = preg_replace('/\\D+/', '', (string)($content['home_support_phone'] ?? '')) ?: '';
+$exploreWhatsapp = preg_replace('/\\D+/', '', (string)($content['home_support_whatsapp'] ?? '')) ?: '';
 ?>
 <div class="villa-explore-backdrop" id="villaExploreBackdrop" hidden></div>
 <aside class="villa-explore-drawer" id="villaExploreDrawer" role="dialog" aria-modal="true" aria-labelledby="villaExploreTitle" aria-hidden="true" hidden>
