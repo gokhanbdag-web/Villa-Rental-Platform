@@ -501,7 +501,7 @@ final class ThemeManager
             $tag = strtolower($match[1]);
             if (str_starts_with($match[0], '</')) return '</' . $tag . '>';
             if ($tag === 'span') {
-                if (preg_match('~\\bstyle\\s*=\\s*([\"\\'])(.*?)\\1~is', $match[0], $styleMatch)
+                if (preg_match("~\\bstyle\\s*=\\s*(['\"])(.*?)\\1~is", $match[0], $styleMatch)
                     && preg_match('~(?:^|;)\\s*color\\s*:\\s*(#[0-9a-f]{6})\\s*(?:;|$)~i', $styleMatch[2], $colorMatch)) {
                     return '<span style="color:' . strtolower($colorMatch[1]) . '">';
                 }
