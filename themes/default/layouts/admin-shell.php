@@ -183,6 +183,25 @@ return static function (string $html, string $requestPath, string $platformMode)
             .vr-admin-rich-color-toolbar{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin:0 0 7px;padding:8px 10px;border:1px solid #dce5df;border-radius:9px;background:#f8faf8}.vr-admin-rich-color-toolbar label{display:inline-flex;align-items:center;gap:7px;margin:0;color:var(--villa-admin-primary);font-size:12px;font-weight:700}.vr-admin-rich-color-toolbar input[type=color]{width:34px;height:30px;padding:2px;border:1px solid #dce5df;border-radius:6px;background:#fff;cursor:pointer}.vr-admin-rich-color-toolbar button{min-height:32px;padding:0 12px;border:1px solid var(--villa-admin-primary);border-radius:7px;background:var(--villa-admin-primary);color:#fff;font-size:12px;font-weight:750;cursor:pointer}.vr-admin-rich-color-toolbar button:hover{background:var(--villa-admin-primary-hover)}
             .vr-admin-content input,.vr-admin-content select,.vr-admin-content textarea{min-width:0}
             .vr-admin-content button,.vr-admin-content a{overflow-wrap:anywhere}
+            /* Every admin action button follows the configured primary color, regardless of legacy page-level styles. */
+            #vrAdminContent :is(button,input[type="submit"],input[type="button"],a[role="button"],a.btn,a.button,a[class*="btn-"],a[class*="button"],[class$="-button"],.quick-add,.site-link),
+            .vr-admin-top :is(button,a[role="button"],.vr-admin-site-link){
+                background:var(--villa-admin-primary)!important;
+                background-color:var(--villa-admin-primary)!important;
+                border-color:var(--villa-admin-primary)!important;
+                color:#fff!important;
+            }
+            #vrAdminContent :is(button,input[type="submit"],input[type="button"],a[role="button"],a.btn,a.button,a[class*="btn-"],a[class*="button"],[class$="-button"],.quick-add,.site-link):hover,
+            .vr-admin-top :is(button,a[role="button"],.vr-admin-site-link):hover{
+                background:var(--villa-admin-primary-hover)!important;
+                border-color:var(--villa-admin-primary-hover)!important;
+                color:#fff!important;
+            }
+            #vrAdminContent :is(button,input[type="submit"],input[type="button"],a[role="button"],a.btn,a.button,a[class*="btn-"],a[class*="button"],[class$="-button"],.quick-add,.site-link):focus-visible,
+            .vr-admin-top :is(button,a[role="button"],.vr-admin-site-link):focus-visible{
+                outline:3px solid color-mix(in srgb,var(--villa-admin-primary) 28%,transparent)!important;
+                outline-offset:2px;
+            }
             .vr-admin-content form{min-width:0;max-width:100%}
             .vr-admin-content .panel,.vr-admin-content article,.vr-admin-content section{min-width:0;max-width:100%}
             .vr-admin-overlay{display:none}
