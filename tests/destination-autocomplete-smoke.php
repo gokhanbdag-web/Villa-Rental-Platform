@@ -3,7 +3,8 @@ declare(strict_types=1);
 
 $root = dirname(__DIR__);
 $landing = file_get_contents($root . '/themes/default/templates/pages/landing.php');
-if (!is_string($landing)) {
+$routes = file_get_contents($root . '/routes/web.php');
+if (!is_string($landing) || !is_string($routes)) {
     throw new RuntimeException('Homepage template could not be read.');
 }
 
@@ -41,6 +42,17 @@ if ($mobileForm === '' || !str_contains($mobileForm, 'id="mobileDestination"')
     || !str_contains($mobileForm, 'id="mobileDestinationOptions"')
     || !str_contains($mobileForm, 'name="location_id"')) {
     throw new RuntimeException('Mobile destination input must submit the selected canonical location ID.');
+}
+
+foreach ([
+    "'/locations/search'",
+    "$needle='%' . $q . '%';",
+    'LOWER(matched.label) LIKE LOWER(?)',
+    'LIMIT 30',
+] as $required) {
+    if (!str_contains($routes, $required)) {
+        throw new RuntimeException('Destination search endpoint matching is incomplete: ' . $required);
+    }
 }
 
 echo "Desktop and mobile destination autocomplete smoke test passed.\n";
