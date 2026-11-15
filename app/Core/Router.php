@@ -6,15 +6,41 @@ namespace App\Core;
 final class Router
 {
     private array $routes = [];
+    /** @var array<string, array<string, array{regex:string,names:array,handler:callable}>> */
+    private array $compiledRoutes = [];
 
     public function get(string $path, callable $handler): void
     {
-        $this->routes['GET'][$this->normalize($path)] = $handler;
+        $this->addRoute('GET', $path, $handler);
     }
 
     public function post(string $path, callable $handler): void
     {
-        $this->routes['POST'][$this->normalize($path)] = $handler;
+        $this->addRoute('POST', $path, $handler);
+    }
+
+    /**
+     * Compile parameterized route patterns once when routes are registered,
+     * not again for every incoming request.
+     */
+    private function addRoute(string $method, string $path, callable $handler): void
+    {
+        $path = $this->normalize($path);
+        $this->routes[$method][$path] = $handler;
+        $names = [];
+        $regex = preg_replace_callback(
+            '/\{([a-zA-Z_][a-zA-Z0-9_]*\*?)\}/',
+            static function (array $match) use (&$names): string {
+                $names[] = rtrim($match[1], '*');
+                return str_ends_with($match[1], '*') ? '(.+)' : '([^/]+)';
+            },
+            $path
+        );
+        $this->compiledRoutes[$method][$path] = [
+            'regex' => '#^' . $regex . '$#',
+            'names' => $names,
+            'handler' => $handler,
+        ];
     }
 
     /**
@@ -40,28 +66,18 @@ final class Router
     {
         $path = $this->normalize($path);
 
-        foreach ($this->routes[strtoupper($method)] ?? [] as $pattern => $handler) {
-            $names = [];
-            $regex = preg_replace_callback(
-                '/\{([a-zA-Z_][a-zA-Z0-9_]*\*?)\}/',
-                static function (array $match) use (&$names): string {
-                    $names[] = rtrim($match[1], '*');
-                    return str_ends_with($match[1], '*') ? '(.+)' : '([^/]+)';
-                },
-                $pattern
-            );
-
-            if (!preg_match('#^' . $regex . '$#', $path, $matches)) {
+        foreach ($this->compiledRoutes[strtoupper($method)] ?? [] as $route) {
+            if (!preg_match($route['regex'], $path, $matches)) {
                 continue;
             }
 
             array_shift($matches);
             $params = [];
-            foreach ($names as $index => $name) {
+            foreach ($route['names'] as $index => $name) {
                 $params[$name] = rawurldecode($matches[$index] ?? '');
             }
 
-            $handler($params);
+            ($route['handler'])($params);
             return true;
         }
 
