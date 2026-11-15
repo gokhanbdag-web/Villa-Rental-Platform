@@ -504,7 +504,7 @@ final class ThemeManager
     /** Theme-scoped footer layout and appearance settings. */
     private static function footerSettingsDefaults(): array
     {
-        return ['background'=>'#20352e','text'=>'#ffffff','padding_top'=>42,'padding_bottom'=>42,'margin_top'=>55,'content_width'=>1180,'logo_path'=>'','about_title'=>'','about_description'=>'','copyright_html'=>'','payment_order'=>['mastercard','visa','troy','diners_club','american_express']];
+        return ['background'=>'#20352e','text'=>'#ffffff','padding_top'=>42,'padding_bottom'=>42,'margin_top'=>55,'content_width'=>1180,'logo_path'=>'','about_title'=>'','about_description'=>'','copyright_html'=>'','recent_blog_title'=>'Son Blog Yazıları','recent_blog_post_ids'=>[],'payment_order'=>['mastercard','visa','troy','diners_club','american_express']];
     }
 
     private static function normalizeFooterSettings(array $input): array
@@ -513,6 +513,9 @@ final class ThemeManager
         $logoPath = trim((string)($input['logo_path'] ?? ''));
         $clean['logo_path'] = preg_match('~^uploads/themes/[a-z0-9_-]{1,60}/branding/footer-logo-[a-f0-9]{24}\.(?:png|jpg|webp)$~i', $logoPath) ? $logoPath : '';
         $clean['about_title'] = mb_substr(trim(strip_tags((string)($input['about_title'] ?? ''))), 0, 150);
+        $clean['recent_blog_title'] = mb_substr(trim(strip_tags((string)($input['recent_blog_title'] ?? 'Son Blog Yazıları'))), 0, 100);
+        $postIds = is_array($input['recent_blog_post_ids'] ?? null) ? $input['recent_blog_post_ids'] : [];
+        $clean['recent_blog_post_ids'] = array_values(array_unique(array_filter(array_map('intval', array_slice($postIds, 0, 8)), static fn(int $id): bool => $id > 0)));
         $aboutHtml = (string)($input['about_description'] ?? '');
         $aboutHtml = preg_replace('~<(script|style|iframe|object|svg|math)\b[^>]*>.*?</\1\s*>~is', '', $aboutHtml) ?? '';
         $aboutHtml = strip_tags($aboutHtml, '<a><p><br><strong><b><em><i><u><ul><ol><li><blockquote><div><h2><h3><h4><span>');
