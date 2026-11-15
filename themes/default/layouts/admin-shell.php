@@ -3,11 +3,13 @@ declare(strict_types=1);
 
 use App\Core\Auth;
 use App\Core\Translator;
+use App\Core\ThemeManager;
 
 return static function (string $html, string $requestPath, string $platformMode): string {
 
         $user = Auth::user();
         $username = e((string)($user['username'] ?? 'Yönetici'));
+        $adminPrimaryColor = e(ThemeManager::designSettings()['primary'] ?? 'var(--villa-admin-primary)');
         // Keep the same three navigation groups on the first load and every AJAX page.
         $groups = [
             'Yönetim' => [
@@ -101,23 +103,23 @@ return static function (string $html, string $requestPath, string $platformMode)
         }
         $adminRootUrl = json_encode(app_url('/admin'), JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_AMP | JSON_HEX_QUOT);
 
-        $shell = '<style>
+        $shell = '<style>:root{--villa-admin-primary:' . $adminPrimaryColor . ';--villa-admin-primary-hover:color-mix(in srgb,var(--villa-admin-primary) 82%,#000)}
             html,body{min-height:100%;margin:0!important;background:#f5f6f8!important;color:#202631;font-family:Inter,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif!important}
             body{overflow-x:hidden}.vr-admin-top{height:68px;box-sizing:border-box;background:#fff;border-bottom:1px solid #e8ebef;display:flex;align-items:center;gap:16px;padding:0 26px;position:sticky;top:0;z-index:1002}
             .vr-admin-brand{font-size:17px;font-weight:800;letter-spacing:-.3px;color:#20352b;text-decoration:none;white-space:nowrap}
-            .vr-admin-user{font-size:13px;color:#657080}.vr-admin-site-link{margin-left:auto;display:inline-flex;align-items:center;justify-content:center;min-height:36px;padding:0 13px;border:1px solid #dfe7e2;border-radius:9px;background:#f7faf8;color:#176b50;text-decoration:none;font-size:12px;font-weight:700;white-space:nowrap}.vr-admin-site-link:hover{background:#edf5f1}.vr-admin-logout{display:inline-flex;align-items:center;justify-content:center;min-height:36px;padding:0 13px;border:1px solid #f0d9d6;border-radius:9px;background:#fff8f7;color:#a43e35;font-size:12px;font-weight:750;cursor:pointer}.vr-admin-logout:hover{background:#fff0ee}.vr-admin-burger{display:none;width:40px;height:40px;border:1px solid #e5e8ed;border-radius:9px;background:#fff;color:#263238;align-items:center;justify-content:center;font-size:22px;cursor:pointer}
+            .vr-admin-user{font-size:13px;color:#657080}.vr-admin-site-link{margin-left:auto;display:inline-flex;align-items:center;justify-content:center;min-height:36px;padding:0 13px;border:1px solid #dfe7e2;border-radius:9px;background:color-mix(in srgb,var(--villa-admin-primary) 4%,white);color:var(--villa-admin-primary);text-decoration:none;font-size:12px;font-weight:700;white-space:nowrap}.vr-admin-site-link:hover{background:color-mix(in srgb,var(--villa-admin-primary) 10%,white)}.vr-admin-logout{display:inline-flex;align-items:center;justify-content:center;min-height:36px;padding:0 13px;border:1px solid #f0d9d6;border-radius:9px;background:#fff8f7;color:#a43e35;font-size:12px;font-weight:750;cursor:pointer}.vr-admin-logout:hover{background:#fff0ee}.vr-admin-burger{display:none;width:40px;height:40px;border:1px solid #e5e8ed;border-radius:9px;background:#fff;color:#263238;align-items:center;justify-content:center;font-size:22px;cursor:pointer}
             .vr-admin-layout{display:grid;grid-template-columns:252px minmax(0,1fr);min-height:calc(100vh - 68px)}
             .vr-admin-sidebar{background:#fff;border-right:1px solid #e8ebef;padding:22px 15px;display:flex;flex-direction:column;gap:5px;box-sizing:border-box}
             .vr-admin-nav-title{padding:5px 12px 13px;color:#9aa2ad;font-size:10px;font-weight:800;letter-spacing:1.1px;text-transform:uppercase}
-            .vr-admin-link{display:flex;align-items:center;gap:11px;min-height:42px;box-sizing:border-box;padding:10px 13px;color:#566170;text-decoration:none;border-radius:9px;font-size:13px;font-weight:600;transition:background .15s,color .15s}.vr-admin-icon{flex:0 0 20px;width:20px;height:20px;display:inline-flex;align-items:center;justify-content:center;font-size:17px;line-height:1;color:#829188}.vr-admin-link.is-active .vr-admin-icon{color:#176b50}.vr-admin-link-label{min-width:0}
-            .vr-admin-link:hover{background:#f4f6f8;color:#176b50}.vr-admin-link.is-active{background:#edf5f1;color:#176b50;font-weight:750}
+            .vr-admin-link{display:flex;align-items:center;gap:11px;min-height:42px;box-sizing:border-box;padding:10px 13px;color:#566170;text-decoration:none;border-radius:9px;font-size:13px;font-weight:600;transition:background .15s,color .15s}.vr-admin-icon{flex:0 0 20px;width:20px;height:20px;display:inline-flex;align-items:center;justify-content:center;font-size:17px;line-height:1;color:var(--villa-admin-primary)}.vr-admin-link.is-active .vr-admin-icon{color:var(--villa-admin-primary)}.vr-admin-link-label{min-width:0}
+            .vr-admin-link:hover{background:#f4f6f8;color:var(--villa-admin-primary)}.vr-admin-link.is-active{background:color-mix(in srgb,var(--villa-admin-primary) 10%,white);color:var(--villa-admin-primary);font-weight:750}
             .vr-admin-content{min-width:0;padding:30px 32px;box-sizing:border-box;overflow-x:hidden}.vr-admin-content *{box-sizing:border-box;max-width:100%}.vr-admin-content .wrap{max-width:none!important;margin:0!important;padding:0!important}
             .vr-admin-content h1{margin-top:0}.vr-admin-content table{width:100%;max-width:100%;border-collapse:collapse}
             .vr-admin-content img,.vr-admin-content input,.vr-admin-content select,.vr-admin-content textarea{max-width:100%}
             /* Shared, visible file-upload treatment for every native admin uploader. */
-            .vr-admin-content input[type="file"]:not(.footer-logo-file-input):not(#propertyImages){display:block;width:100%;min-height:58px;padding:9px;border:1px dashed #b9cdbf;border-radius:12px;background:#f8fbf9;color:#46594e;font:600 12px/1.45 Inter,system-ui,sans-serif;cursor:pointer}
-            .vr-admin-content input[type="file"]:not(.footer-logo-file-input):not(#propertyImages)::file-selector-button{display:inline-flex;align-items:center;justify-content:center;min-height:38px;margin:0 12px 0 0;padding:0 16px;border:0;border-radius:8px;background:#176b50;color:#fff;font:750 12px Inter,system-ui,sans-serif;cursor:pointer;transition:background .15s ease}
-            .vr-admin-content input[type="file"]:not(.footer-logo-file-input):not(#propertyImages)::file-selector-button:hover{background:#10563f}
+            .vr-admin-content input[type="file"]:not(.footer-logo-file-input):not(#propertyImages){display:block;width:100%;min-height:58px;padding:9px;border:1px dashed color-mix(in srgb,var(--villa-admin-primary) 35%,#d5dbe2);border-radius:12px;background:color-mix(in srgb,var(--villa-admin-primary) 3%,white);color:var(--villa-admin-primary);font:600 12px/1.45 Inter,system-ui,sans-serif;cursor:pointer}
+            .vr-admin-content input[type="file"]:not(.footer-logo-file-input):not(#propertyImages)::file-selector-button{display:inline-flex;align-items:center;justify-content:center;min-height:38px;margin:0 12px 0 0;padding:0 16px;border:0;border-radius:8px;background:var(--villa-admin-primary);color:#fff;font:750 12px Inter,system-ui,sans-serif;cursor:pointer;transition:background .15s ease}
+            .vr-admin-content input[type="file"]:not(.footer-logo-file-input):not(#propertyImages)::file-selector-button:hover{background:var(--villa-admin-primary-hover)}
             .vr-admin-upload-preview{display:flex;align-items:center;gap:14px;min-height:76px;margin-top:10px;padding:12px;border:1px solid #e1e9e3;border-radius:11px;background:#fff}
             .vr-admin-upload-preview[hidden]{display:none}
             .vr-admin-upload-preview img,.vr-admin-upload-preview video{display:block;width:auto;max-width:min(100%,220px);max-height:118px;object-fit:contain;border-radius:7px;background:#f1f4f2}
@@ -126,7 +128,7 @@ return static function (string $html, string $requestPath, string $platformMode)
             .vr-admin-upload-preview-copy strong{font-size:12px}
             .vr-admin-upload-preview-copy span{color:#78867d;font-size:11px;font-weight:500}
             @media(max-width:560px){.vr-admin-content input[type="file"]:not(.footer-logo-file-input):not(#propertyImages){padding:8px;font-size:11px}.vr-admin-content input[type="file"]:not(.footer-logo-file-input):not(#propertyImages)::file-selector-button{min-height:36px;padding:0 11px;margin-right:8px}.vr-admin-upload-preview{align-items:flex-start;flex-direction:column}}
-            .vr-admin-rich-color-toolbar{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin:0 0 7px;padding:8px 10px;border:1px solid #dce5df;border-radius:9px;background:#f8faf8}.vr-admin-rich-color-toolbar label{display:inline-flex;align-items:center;gap:7px;margin:0;color:#46594e;font-size:12px;font-weight:700}.vr-admin-rich-color-toolbar input[type=color]{width:34px;height:30px;padding:2px;border:1px solid #dce5df;border-radius:6px;background:#fff;cursor:pointer}.vr-admin-rich-color-toolbar button{min-height:32px;padding:0 12px;border:1px solid #176b50;border-radius:7px;background:#176b50;color:#fff;font-size:12px;font-weight:750;cursor:pointer}.vr-admin-rich-color-toolbar button:hover{background:#10563f}
+            .vr-admin-rich-color-toolbar{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin:0 0 7px;padding:8px 10px;border:1px solid #dce5df;border-radius:9px;background:#f8faf8}.vr-admin-rich-color-toolbar label{display:inline-flex;align-items:center;gap:7px;margin:0;color:var(--villa-admin-primary);font-size:12px;font-weight:700}.vr-admin-rich-color-toolbar input[type=color]{width:34px;height:30px;padding:2px;border:1px solid #dce5df;border-radius:6px;background:#fff;cursor:pointer}.vr-admin-rich-color-toolbar button{min-height:32px;padding:0 12px;border:1px solid var(--villa-admin-primary);border-radius:7px;background:var(--villa-admin-primary);color:#fff;font-size:12px;font-weight:750;cursor:pointer}.vr-admin-rich-color-toolbar button:hover{background:var(--villa-admin-primary-hover)}
             .vr-admin-content input,.vr-admin-content select,.vr-admin-content textarea{min-width:0}
             .vr-admin-content button,.vr-admin-content a{overflow-wrap:anywhere}
             .vr-admin-content form{min-width:0;max-width:100%}
