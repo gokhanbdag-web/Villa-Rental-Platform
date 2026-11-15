@@ -55,6 +55,8 @@ jobs:
         run: php tests/homepage-stats-smoke.php
       - name: Run mobile footer layout smoke test
         run: php tests/footer-mobile-layout-smoke.php
+      - name: Run mobile hero search prominence smoke test
+        run: php tests/mobile-hero-search-smoke.php
       - name: Run browser-installer backend smoke test
         env:
           DB_HOST: 127.0.0.1
