@@ -1,7 +1,7 @@
 <?php
 declare(strict_types=1);
 $siteName=$content['site_name']??'VillaStay';
-$cover=static function(array $p):string{$v=(string)($p['cover_image']??'');return $v===''?'':(preg_match('~^https?://~i',$v)?$v:'/'.ltrim($v,'/'));};
+$cover=static function(array $p):string{$v=(string)($p['cover_image']??'');return $v===''?'':(preg_match('~^https?://~i',$v)?$v:uploaded_media_url($v));};
 ?>
 <!doctype html><html lang="<?= e($locale??'tr') ?>"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Konaklamaları keşfet · <?= e($siteName) ?></title><meta name="description" content="Size uygun tatil villalarını, özel havuzlu evleri ve benzersiz konaklamaları keşfedin.">
 <style>
@@ -56,7 +56,7 @@ header{height:76px;border-bottom:1px solid var(--line);display:flex;align-items:
 <?php else: ?>
 <div class="grid">
 <?php foreach($properties as $p):
-    $cardImages=array_map(static fn($v)=>preg_match('~^https?://~i',(string)$v)?(string)$v:'/'.ltrim((string)$v,'/'),$listingCardImages[(int)$p['id']]??($cover($p)?[$cover($p)]:[]));
+    $cardImages=array_map(static fn($v)=>preg_match('~^https?://~i',(string)$v)?(string)$v :uploaded_media_url((string)$v),$listingCardImages[(int)$p['id']]??($cover($p)?[$cover($p)]:[]));
     $isCardFavorite=in_array((int)$p['id'],$favoritePropertyIds??[],true);
     \App\Core\ThemeManager::renderPartial('components/cards/villa-card.php', get_defined_vars());
 endforeach; ?>
