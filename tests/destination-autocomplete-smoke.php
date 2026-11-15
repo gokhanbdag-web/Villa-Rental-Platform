@@ -46,7 +46,7 @@ if ($mobileForm === '' || !str_contains($mobileForm, 'id="mobileDestination"')
 
 foreach ([
     "'/locations/search'",
-    '$needle=\\'%\\' . $q . \\'%\\';',
+    '$needle=' . "'%'" . ' . $q . ' . "'%';",
     'LOWER(matched.label) LIKE LOWER(?)',
     'LIMIT 30',
 ] as $required) {
