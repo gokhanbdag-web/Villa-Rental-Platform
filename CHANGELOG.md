@@ -1,5 +1,15 @@
 # Changelog
 
+## 1.1.11 - 2026-11-16
+- Refine the destination autocomplete smoke assertion to avoid PHP interpolation and escaping ambiguity.
+
+## 1.1.10 - 2026-11-16
+- Correct a PHP string-literal issue in the destination autocomplete regression test; no runtime behavior changed.
+
+## 1.1.9 - 2026-11-16
+- Improve destination autocomplete matching for full hierarchical labels and ensure mobile suggestion panels are not clipped or hidden behind adjacent sections.
+- Retry native hero video seeking when duration/media readiness becomes available after initial metadata; preserve saved start-second settings.
+
 ## 1.1.8 - 2026-11-16
 - Tighten destination autocomplete regression coverage to count the two actual form controls separately from the shared JavaScript selector.
 

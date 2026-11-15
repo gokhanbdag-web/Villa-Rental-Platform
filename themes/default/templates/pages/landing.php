@@ -45,6 +45,10 @@ $stylePhotos=['https://images.unsplash.com/photo-1613490493576-7fde63acd811?auto
 @media(max-width:900px){.search-enhanced{grid-template-columns:repeat(2,minmax(0,1fr));gap:0}.search-enhanced .search-field{min-height:72px;border-bottom:1px solid #e8eeea}.search-enhanced .destination-field,.search-enhanced .guest-field{border-right:0}.search-enhanced .date-field:nth-of-type(3){border-right:0}.search-enhanced .search-submit{grid-column:1/-1;min-height:49px;margin-top:8px}}
 @media(max-width:600px){.search-enhanced{display:grid;grid-template-columns:1fr 1fr;gap:0;padding:8px;border-radius:16px}.search-enhanced .search-field{padding:10px 9px;min-height:69px}.search-enhanced .destination-field,.search-enhanced .guest-field{grid-column:1/-1;border-right:0}.search-enhanced .date-field{border-right:1px solid #e8eeea}.search-enhanced .date-field:nth-of-type(3){border-right:0}.search-enhanced .date-display,.search-enhanced .guest-trigger{font-size:var(--villa-body-size);}.search-enhanced .search-submit{grid-column:1/-1;min-height:49px;margin-top:8px}.guest-popover{right:0;left:0;width:100%;top:calc(100% + 8px)}}
 .location-suggestions{position:absolute;z-index:1000;top:calc(100% + 7px);left:0;right:0;max-height:280px;overflow-y:auto;background:#fff;border:1px solid #e3ebe6;border-radius:12px;box-shadow:0 14px 35px #102d2526;padding:8px 0}.location-suggestions[hidden]{display:none}.location-suggestion{display:block;width:100%;padding:10px 15px;border:0;border-radius:0;background:transparent;color:var(--villa-text);text-align:left;font:inherit;line-height:var(--villa-body-line-height);cursor:pointer;white-space:normal}.location-suggestion:hover,.location-suggestion.is-active{background:#f4f8f5;color:var(--villa-text);}.destination-field{z-index:5}
+.mobile-premium-search,.mobile-premium-search__form{overflow:visible}
+.mobile-premium-search{position:relative;z-index:12}
+.mobile-premium-search__destination{isolation:isolate}
+.mobile-premium-search__destination .location-suggestions{z-index:1300;max-height:min(280px,45vh);}
 
 /* Hierarchical navigation dropdowns */
 .nav-entry{position:relative;display:inline-flex;align-items:center;min-width:0}.nav-entry-top{display:flex;align-items:center;gap:4px}.nav-entry-top>a{display:inline-flex;align-items:center}.nav-submenu-toggle{border:0;background:transparent;color:var(--villa-text);font:inherit;padding:5px 7px;cursor:pointer;transition:transform .22s ease}.nav-entry.is-open>.nav-entry-top .nav-submenu-toggle{transform:rotate(180deg)}.nav-dropdown{position:absolute;z-index:1200;top:calc(100% + 9px);left:0;min-width:220px;padding:8px;background:#fff;border:1px solid #e8eeea;border-radius:14px;box-shadow:0 18px 42px #102d2520;opacity:0;visibility:hidden;transform:translateY(8px);transition:opacity .2s ease,transform .2s ease,visibility .2s ease;display:flex;flex-direction:column;gap:2px}.nav-entry:hover>.nav-dropdown,.nav-entry:focus-within>.nav-dropdown,.nav-entry.is-open>.nav-dropdown{opacity:1;visibility:visible;transform:translateY(0)}.nav-dropdown .nav-entry{display:block;width:100%}.nav-dropdown .nav-entry-top>a{display:block;width:100%;padding:10px 12px;border-radius:8px;white-space:normal}.nav-dropdown .nav-entry-top>a:hover{background:#eff7f3}.nav-dropdown .nav-submenu-toggle{display:none}.footer-links .nav-entry{display:block;min-width:0}.footer-links .nav-dropdown{position:static;min-width:0;padding:4px 0 4px 12px;border:0;border-radius:0;box-shadow:none;background:transparent;opacity:1;visibility:visible;transform:none;display:flex}.footer-links .nav-dropdown .nav-entry-top>a{padding:4px 0;color:var(--villa-text);}.footer-links .nav-submenu-toggle{display:none}
@@ -698,14 +702,18 @@ body .hero-filter-panel .guest-popover{left:auto;right:0;width:300px}
    playSafely();
   }
  };
- video.addEventListener('loadedmetadata',seekAndPlay,{once:true});
- if(video.readyState>=1){
+ const readinessEvents=['loadedmetadata','durationchange','loadeddata','canplay'];
+ const onReady=function(){
+  if(started)return;
   seekAndPlay();
- }else{
-  // preload="metadata" is only a browser hint. On mobile/shared-hosting
-  // browsers it may not fetch metadata until load() is explicitly requested.
-  try{video.load();}catch(error){}
- }
+  if(started)readinessEvents.forEach(function(name){video.removeEventListener(name,onReady)});
+ };
+ readinessEvents.forEach(function(name){video.addEventListener(name,onReady)});
+ if(video.readyState>=1)onReady();
+ // preload="metadata" is only a browser hint. Some mobile browsers do not
+ // expose a finite duration until data has been requested explicitly.
+ try{video.load();}catch(error){}
+
 })();
 </script><?php endif; ?>
 <?php if($heroYouTubeIdValue!==''): ?><script>
