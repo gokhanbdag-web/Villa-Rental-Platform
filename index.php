@@ -11,7 +11,7 @@ use App\Core\Router;
 use App\Core\Translator;
 use App\Core\ThemeManager;
 
-if (!Installer::isInstalled()) {
+$GLOBALS['villa_perf_stage'] = 'installer_check';\nif (!Installer::isInstalled()) {
     header('Location: ' . app_url('/install/'));
     exit;
 }
@@ -24,7 +24,7 @@ try {
     exit('Veritabanı güncellemesi tamamlanamadı. Lütfen sistem yöneticisine başvurun.');
 }
 
-$locale = 'tr';
+$GLOBALS['villa_perf_stage'] = 'locale_and_settings';\n$locale = 'tr';
 try {
     $tzStmt = Database::connection()->prepare('SELECT setting_value FROM settings WHERE setting_key = ? LIMIT 1');
     $tzStmt->execute(['app.timezone']);
@@ -96,7 +96,7 @@ foreach ($pathCandidates as $requestPath) {
         });
     }
 
-    if ($router->dispatch($method, $requestPath)) {
+    $GLOBALS['villa_perf_stage'] = 'dispatch:' . $method . ':' . substr($requestPath, 0, 120);\n    if ($router->dispatch($method, $requestPath)) {
         // A matching route owns the response; do not try another path.
         exit;
     }
