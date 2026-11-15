@@ -41,3 +41,7 @@ Durum yazıcısı yalnızca CLI üzerinden çalışır. Durum ve geçmiş dosyal
 ## GitHub erişimi
 
 Depo özeldir. Yönetim panelindeki GitHub sürüm kontrolü için sunucu PHP sürecine `VILLA_GITHUB_TOKEN` ortam değişkeni tanımlanmalıdır. Token yalnızca bu depoda **Contents: Read-only** iznine sahip olmalıdır. Token kaynak koda, veritabanına veya web üzerinden erişilebilir dosyalara yazılmamalıdır.
+
+## Dağıtım tetikleme doğrulaması
+
+Bu belgeye yapılan küçük ve uygulama davranışını değiştirmeyen bir `main` dalı güncellemesi, GitHub push webhook'unun tetiklenmesini doğrulamak için kullanılabilir. GitHub Actions PHP kontrollerinin başarılı olması tek başına sunucu dağıtımının başladığını veya tamamlandığını kanıtlamaz; sonuç canlı uygulamanın Güncelleme Merkezi'ndeki dağıtım durumu ve sunucu dağıtım günlüğü üzerinden doğrulanmalıdır. Sağlık kontrolü hatası kaydında HTTP durum satırı boşsa, canlı sunucudaki `deploy-runner.php` sürümü ve gerçek dağıtım günlüğü ayrıca karşılaştırılmalıdır.
