@@ -22,7 +22,14 @@ $topPhoneDigits = preg_replace('/\\D+/', '', $topPhone);
       <img src="<?= e($themeLogoUrl) ?>" alt="<?= e($themeSiteName) ?>">
     </a>
     <?php endif; ?>
-    <nav class="nav" id="siteNavigation"><?php \App\Core\ThemeManager::renderPartial('partials/navigation-items.php', get_defined_vars()); ?></nav>
+    <nav class="nav" id="siteNavigation"><?php \App\Core\ThemeManager::renderPartial('partials/navigation-items.php', get_defined_vars()); ?>
+      <?php $drawerSocialLinks = \App\Core\ThemeManager::desktopSocialLinks(); ?>
+      <?php if ($drawerSocialLinks !== ''): ?>
+        <div class="site-drawer-social" aria-label="Sosyal medya">
+          <?= $drawerSocialLinks ?>
+        </div>
+      <?php endif; ?>
+    </nav>
     <div class="site-header-auth">
       <?php
         $headerRole = (string) ($headerUser['role'] ?? '');
