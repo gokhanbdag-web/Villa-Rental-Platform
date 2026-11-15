@@ -9,6 +9,7 @@ $checkout = file_get_contents($root.'/themes/default/templates/pages/checkout.ph
 $checks = [
     'villa detail uses a dedicated 1/3 + 2/3 hero layout' => str_contains($property, 'property-hero-layout') && str_contains($property, 'property-hero-gallery'),
     'feature area is grouped into three icon columns' => str_contains($property, 'property-feature-groups') && str_contains($property, 'for($groupIndex=0;$groupIndex<3;$groupIndex++)') && str_contains($property, '$featureIconSvg'),
+    'villa features stay in three columns on mobile widths' => str_contains($property, '@media(max-width:700px)') && str_contains($property, '.property-feature-groups{grid-template-columns:repeat(3,minmax(0,1fr))') && str_contains($property, '@media(max-width:420px){.property-feature-groups{grid-template-columns:repeat(3,minmax(0,1fr))'),
     'location map sits in the adjacent information column' => str_contains($property, 'property-info-layout') && str_contains($property, 'property-location-section'),
     'booking form is full-width rather than a sidebar' => str_contains($property, '<section class="booking property-booking"') && !str_contains($property, '<aside class="booking property-booking"'),
     'availability calendar renders two months' => str_contains($property, 'villaCalendarGridNext') && str_contains($property, 'calendarNextMonth') && str_contains($property, 'İki aylık müsaitlik'),
