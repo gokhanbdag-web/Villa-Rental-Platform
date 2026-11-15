@@ -29,4 +29,10 @@ foreach (['-1', '1.5', '1000000000', 'not-a-number'] as $invalid) {
     }
 }
 
+$landingTemplate = file_get_contents(APP_ROOT . '/themes/default/templates/pages/landing.php');
+$desktopSearchFix = 'body .hero-card .hero-filter-panel form#homeSearch.search-enhanced > .search-submit';
+if (!is_string($landingTemplate) || !str_contains($landingTemplate, $desktopSearchFix) || !str_contains($landingTemplate, 'grid-column:1 / -1!important;') || !str_contains($landingTemplate, 'width:100%!important;max-width:100%!important;min-width:0!important;')) {
+    throw new RuntimeException('Desktop hero search submit button must span the search card without exceeding its width.');
+}
+
 echo "Homepage statistic settings smoke test passed.\n";
