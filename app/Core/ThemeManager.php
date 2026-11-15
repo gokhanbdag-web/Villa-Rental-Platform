@@ -203,6 +203,8 @@ final class ThemeManager
             'family_banner_path'=>$settings['family_banner_path'],
             'hero_youtube_url'=>$settings['hero_youtube_url'],
             'hero_overlay_opacity'=>(string)$settings['hero_overlay_opacity'],
+            'hero_overlay_color'=>$settings['hero_overlay_color'],
+            'hero_overlay_texture'=>$settings['hero_overlay_texture'],
             'hero_background_image_url'=>$settings['hero_background_image_url'],
             'hero_video_start_seconds'=>(string)$settings['hero_video_start_seconds'],
             'hero_video_loop'=>$settings['hero_video_loop']?'1':'0'
@@ -272,7 +274,7 @@ final class ThemeManager
         $settings = self::brandSettings($slug);
         $old = (string)($settings[$keys[$type]] ?? '');
         $settings[$keys[$type]] = '';
-        $json = json_encode(['logo_path'=>$settings['logo_path'],'logo_width'=>(string)$settings['logo_width'],'logo_height'=>(string)$settings['logo_height'],'hero_video_path'=>$settings['hero_video_path'],'family_banner_path'=>$settings['family_banner_path'],'hero_youtube_url'=>$settings['hero_youtube_url'],'hero_overlay_opacity'=>(string)$settings['hero_overlay_opacity'],'hero_background_image_url'=>$settings['hero_background_image_url'],'hero_video_start_seconds'=>(string)$settings['hero_video_start_seconds'],'hero_video_loop'=>$settings['hero_video_loop']?'1':'0'], JSON_UNESCAPED_SLASHES | JSON_THROW_ON_ERROR);
+        $json = json_encode(['logo_path'=>$settings['logo_path'],'logo_width'=>(string)$settings['logo_width'],'logo_height'=>(string)$settings['logo_height'],'hero_video_path'=>$settings['hero_video_path'],'family_banner_path'=>$settings['family_banner_path'],'hero_youtube_url'=>$settings['hero_youtube_url'],'hero_overlay_opacity'=>(string)$settings['hero_overlay_opacity'],'hero_overlay_color'=>$settings['hero_overlay_color'],'hero_overlay_texture'=>$settings['hero_overlay_texture'],'hero_background_image_url'=>$settings['hero_background_image_url'],'hero_video_start_seconds'=>(string)$settings['hero_video_start_seconds'],'hero_video_loop'=>$settings['hero_video_loop']?'1':'0'], JSON_UNESCAPED_SLASHES | JSON_THROW_ON_ERROR);
         $pdo = Database::connection();
         $save = $pdo->prepare('INSERT INTO settings(setting_key,setting_value,autoload) VALUES(?,?,1) ON DUPLICATE KEY UPDATE setting_value=VALUES(setting_value),autoload=1');
         $save->execute(['theme.' . $slug . '.branding', $json]);
