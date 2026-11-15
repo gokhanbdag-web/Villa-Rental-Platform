@@ -1135,6 +1135,44 @@ $router->post('/account/messages/send', static function (): void {
     redirect('/account/messages/'.$bookingId);
 });
 
+
+$router->get('/karsilastir', static function (): void {
+    $pdo = Database::connection();
+    $user = Auth::user();
+    $locale = 'tr';
+    try { $locale = (string)($pdo->query("SELECT setting_value FROM settings WHERE setting_key='app.locale' LIMIT 1")->fetchColumn() ?: 'tr'); } catch (Throwable $e) {}
+    $contentStmt = $pdo->prepare('SELECT content_key,content_value FROM site_content WHERE language_code=?');
+    $contentStmt->execute([$locale]);
+    $content = $contentStmt->fetchAll(PDO::FETCH_KEY_PAIR);
+    $navigation = villa_navigation_tree($pdo, 'header', $locale);
+    $footerNavigation = villa_navigation_tree($pdo, 'footer', $locale);
+    $compareIds = array_values(array_unique(array_filter(array_map('intval', explode(',', (string)($_GET['ids'] ?? ''))), static fn(int $id): bool => $id > 0)));
+    $compareIds = array_slice($compareIds, 0, 4);
+    $properties = [];
+    $compareAmenities = [];
+    if (count($compareIds) >= 2) {
+        $marks = implode(',', array_fill(0, count($compareIds), '?'));
+        $stmt = $pdo->prepare("SELECT p.*,
+            (SELECT pm.file_path FROM property_media pm WHERE pm.property_id=p.id ORDER BY pm.is_cover DESC,pm.sort_order,pm.id LIMIT 1) AS cover_image,
+            (SELECT AVG(r.rating) FROM reviews r WHERE r.property_id=p.id AND r.status='approved') AS rating_average,
+            (SELECT COUNT(*) FROM reviews r WHERE r.property_id=p.id AND r.status='approved') AS rating_count
+            FROM properties p WHERE p.status='published' AND p.id IN ($marks)");
+        $stmt->execute($compareIds);
+        $found = $stmt->fetchAll(PDO::FETCH_ASSOC);
+        $order = array_flip($compareIds);
+        usort($found, static fn(array $a, array $b): int => ($order[(int)$a['id']] ?? 999) <=> ($order[(int)$b['id']] ?? 999));
+        $properties = $found;
+        $foundIds = array_map(static fn(array $p): int => (int)$p['id'], $properties);
+        if ($foundIds) {
+            $amenityMarks = implode(',', array_fill(0, count($foundIds), '?'));
+            $amenityStmt = $pdo->prepare("SELECT pa.property_id,a.name FROM property_amenities pa JOIN amenities a ON a.id=pa.amenity_id WHERE pa.property_id IN ($amenityMarks) AND a.is_active=1 ORDER BY a.sort_order,a.name");
+            $amenityStmt->execute($foundIds);
+            foreach ($amenityStmt->fetchAll(PDO::FETCH_ASSOC) as $row) $compareAmenities[(int)$row['property_id']][] = (string)$row['name'];
+        }
+    }
+    ThemeManager::render('compare.php', get_defined_vars());
+});
+
 $router->get('/favorites', static function (): void {
     $user=Auth::user();if(!$user)redirect('/login');if(($user['role']??'')!=='customer')redirect('/admin');
     $s=Database::connection()->prepare("SELECT p.*, (SELECT file_path FROM property_media WHERE property_id=p.id ORDER BY is_cover DESC,sort_order,id LIMIT 1) AS cover_image FROM favorites f JOIN properties p ON p.id=f.property_id WHERE f.user_id=? AND p.status='published' ORDER BY f.created_at DESC");
@@ -1233,9 +1271,24 @@ $router->post('/login', static function (): void {
     if ($identity !== '' && $password !== '' && Auth::attempt($identity, $password)) {
         villa_perf_mark('login_post:auth_succeeded');
         $user = Auth::user();
-        // The authenticated identity is now fully validated and persisted.
-        // Release the session lock before the browser follows the redirect.
+        $returnTo = trim((string)($_POST['return_to'] ?? ''));
+        $favoritePropertyId = (int)($_POST['favorite_property_id'] ?? 0);
+        if (($user['role'] ?? '') === 'customer' && $favoritePropertyId > 0) {
+            $pdo = Database::connection();
+            $published = $pdo->prepare("SELECT id FROM properties WHERE id=? AND status='published' LIMIT 1");
+            $published->execute([$favoritePropertyId]);
+            if ($published->fetchColumn()) {
+                $exists = $pdo->prepare('SELECT 1 FROM favorites WHERE user_id=? AND property_id=? LIMIT 1');
+                $exists->execute([(int)$user['id'], $favoritePropertyId]);
+                if (!$exists->fetchColumn()) {
+                    $add = $pdo->prepare('INSERT INTO favorites(user_id,property_id,created_at) VALUES(?,?,NOW())');
+                    $add->execute([(int)$user['id'], $favoritePropertyId]);
+                }
+            }
+        }
+        // The authenticated identity and optional favorite are persisted before redirect.
         if (session_status() === PHP_SESSION_ACTIVE) session_write_close();
+        if ($returnTo !== '') redirect(villa_safe_return_url($returnTo));
         redirect(($user['role'] ?? '') === 'customer' ? '/account/bookings' : (($user['role'] ?? '') === 'vendor' ? '/vendor' : '/admin'));
     }
     villa_perf_mark('login_post:auth_failed');
