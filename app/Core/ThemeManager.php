@@ -499,7 +499,7 @@ final class ThemeManager
             $tag = strtolower($match[1]);
             if (str_starts_with($match[0], '</')) return '</' . $tag . '>';
             if ($tag !== 'a') return '<' . $tag . '>';
-            if (preg_match('~\\bhref\\s*=\\s*(["\\'])(.*?)\\1~is', $match[0], $hrefMatch)) {
+            if (preg_match("~\\bhref\\s*=\\s*([\"'])(.*?)\\1~is", $match[0], $hrefMatch)) {
                 $url = trim(html_entity_decode($hrefMatch[2], ENT_QUOTES | ENT_HTML5, 'UTF-8'));
                 $scheme = strtolower((string)parse_url($url, PHP_URL_SCHEME));
                 $safe = in_array($scheme, ['http','https','mailto','tel'], true) || ($scheme === '' && (str_starts_with($url, '/') || str_starts_with($url, '#')));
