@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.2.2 - 2026-11-16
+- Rework admin blog list and editor responsive layouts: prevent grid overflow, stack editor/sidebar fields on compact screens, improve filters/actions, and keep the dense post table safely scrollable on mobile.
+
+
 ## 1.2.1 - 2026-11-16
 - Add the WordPress-style blog archive as a selectable system page in menu management, pre-filling its `/blog` URL.
 

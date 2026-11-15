@@ -67,6 +67,8 @@ jobs:
         run: php tests/admin-version-display-smoke.php
       - name: Run WordPress-style blog CMS smoke test
         run: php tests/blog-cms-smoke.php
+      - name: Run admin blog responsive layout smoke test
+        run: php tests/admin-blog-responsive-smoke.php
       - name: Run blog archive menu option smoke test
         run: php tests/navigation-blog-archive-smoke.php
       - name: Run browser-installer backend smoke test
