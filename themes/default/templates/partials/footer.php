@@ -12,7 +12,7 @@ try {
 }
 $mobileBarEnabled = ($mobileBarSettings['mobile_bar.enabled'] ?? '1') === '1';
 $mobilePhone = preg_replace('/\\D+/', '', (string)($mobileBarSettings['mobile_bar.phone'] ?? '')) ?: '';
-$footerUser = \App\Core\Auth::user();
+$footerUser = is_array($user ?? null) ? $user : null;
 $footerRole = (string)($footerUser['role'] ?? '');
 $footerAccountPath = $footerRole === 'customer' ? '/account/bookings' : ($footerRole === 'vendor' ? '/vendor' : '/admin');
 $footerAccountLabel = in_array($footerRole, ['admin', 'super_admin'], true) ? 'Yönetim' : ($footerRole === 'vendor' ? 'Ev Sahibi' : 'Hesabım');
