@@ -66,21 +66,43 @@ final class PaymentCallbackProcessor
                 return ['result' => 'in_progress', 'payment_updated' => false];
             }
 
-            $select = $this->pdo->prepare(
-                'SELECT id,booking_id,provider,provider_reference,amount,currency,status FROM payment_transactions WHERE provider=? AND provider_reference=? LIMIT 1 FOR UPDATE'
+            // Read the immutable booking association without locking first. All
+            // callbacks for a booking then acquire locks in the same order:
+            // booking row -> payment transaction row(s). Locking the payment row
+            // before the booking can deadlock when two providers notify different
+            // transactions for the same booking at the same time.
+            $lookup = $this->pdo->prepare(
+                'SELECT id,booking_id FROM payment_transactions WHERE provider=? AND provider_reference=? LIMIT 1'
             );
-            $select->execute([$provider, $transactionReference]);
-            $transaction = $select->fetch(PDO::FETCH_ASSOC);
-
-            if (!$transaction || !PaymentTransactionGuard::matches($transaction, $callback)) {
+            $lookup->execute([$provider, $transactionReference]);
+            $paymentIdentity = $lookup->fetch(PDO::FETCH_ASSOC);
+            if (!$paymentIdentity) {
                 $inbox->markFailed($provider, $eventId, 'Ödeme kaydı, rezervasyon, tutar veya para birimi eşleşmedi.');
                 $this->pdo->commit();
                 return ['result' => 'rejected', 'payment_updated' => false];
             }
 
             $bookingLock = $this->pdo->prepare('SELECT id,status FROM bookings WHERE id=? LIMIT 1 FOR UPDATE');
-            $bookingLock->execute([(int)$transaction['booking_id']]);
+            $bookingLock->execute([(int)$paymentIdentity['booking_id']]);
             $booking = $bookingLock->fetch(PDO::FETCH_ASSOC);
+            if (!$booking) {
+                $inbox->markFailed($provider, $eventId, 'Ödemeye bağlı rezervasyon bulunamadı.');
+                $this->pdo->commit();
+                return ['result' => 'rejected_booking', 'payment_updated' => false];
+            }
+
+            $select = $this->pdo->prepare(
+                'SELECT id,booking_id,provider,provider_reference,amount,currency,status FROM payment_transactions WHERE provider=? AND provider_reference=? LIMIT 1 FOR UPDATE'
+            );
+            $select->execute([$provider, $transactionReference]);
+            $transaction = $select->fetch(PDO::FETCH_ASSOC);
+            if (!$transaction
+                || (int)$transaction['booking_id'] !== (int)$booking['id']
+                || !PaymentTransactionGuard::matches($transaction, $callback)) {
+                $inbox->markFailed($provider, $eventId, 'Ödeme kaydı, rezervasyon, tutar veya para birimi eşleşmedi.');
+                $this->pdo->commit();
+                return ['result' => 'rejected', 'payment_updated' => false];
+            }
             if (!$booking) {
                 $inbox->markFailed($provider, $eventId, 'Ödemeye bağlı rezervasyon bulunamadı.');
                 $this->pdo->commit();
