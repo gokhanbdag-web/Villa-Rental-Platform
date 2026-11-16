@@ -248,23 +248,97 @@ $router->get('/admin/performance/data', static function (): void {
         return villa_read_file_tail_lines($file, $limit, 262144);
     };
     $root = dirname(__DIR__);
+    $performanceFile = $root . '/storage/performance.log';
+    $sqlFile = $root . '/storage/sql-performance.log';
+    $countLines = static function (string $file): int {
+        if (!is_file($file) || !is_readable($file)) return 0;
+        $handle = @fopen($file, 'rb');
+        if (!is_resource($handle)) return 0;
+        $count = 0;
+        while (($line = fgets($handle)) !== false) if (trim($line) !== '') $count++;
+        fclose($handle);
+        return $count;
+    };
     $performance = array_values(array_filter(
-        $readTail($root . '/storage/performance.log'),
+        $readTail($performanceFile),
         static function (string $line): bool {
             $record = json_decode($line, true);
             if (!is_array($record)) return true;
             $path = (string)($record['path'] ?? '');
             $status = (int)($record['http_status'] ?? 0);
-            // Hide historical video downloads too; their duration reflects client transfer time.
             return !(preg_match('~/(?:brand-assets)/[^/]+\\.(?:mp4|webm)$~i', $path) === 1
                 && in_array($status, [200, 206, 304], true));
         }
     ));
     echo json_encode([
         'performance' => $performance,
-        'slow_sql' => $readTail($root . '/storage/sql-performance.log'),
+        'slow_sql' => $readTail($sqlFile),
+        'log_counts' => ['performance' => $countLines($performanceFile), 'slow_sql' => $countLines($sqlFile)],
         'note' => 'Only slow requests and SQL statements are recorded. Request bodies, cookies, session IDs and SQL bound values are not logged.',
     ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+});
+
+$router->post('/admin/performance/cleanup', static function (): void {
+    Auth::requireRole(['super_admin']);
+    verify_csrf();
+    $scope = (string)($_POST['scope'] ?? '');
+    $keepLast = (int)($_POST['keep_last'] ?? -1);
+    if (!in_array($scope, ['performance', 'slow_sql', 'all'], true) || !in_array($keepLast, [0, 20, 50, 100], true)) {
+        http_response_code(422);
+        exit('Temizleme seçenekleri geçersiz.');
+    }
+    $root = dirname(__DIR__);
+    $targets = [];
+    if ($scope === 'performance' || $scope === 'all') $targets['performance'] = $root . '/storage/performance.log';
+    if ($scope === 'slow_sql' || $scope === 'all') $targets['slow_sql'] = $root . '/storage/sql-performance.log';
+    $results = [];
+    foreach ($targets as $name => $file) {
+        if (!file_exists($file)) { $results[$name] = ['removed' => 0, 'remaining' => 0]; continue; }
+        if (!is_file($file) || is_link($file) || !is_readable($file) || !is_writable($file)) {
+            http_response_code(500);
+            exit('Tanılama günlük dosyası güvenli biçimde açılamadı: ' . $name);
+        }
+        $handle = @fopen($file, 'c+b');
+        if (!is_resource($handle) || !flock($handle, LOCK_EX)) {
+            if (is_resource($handle)) fclose($handle);
+            http_response_code(500);
+            exit('Tanılama günlük dosyası kilitlenemedi: ' . $name);
+        }
+        $tail = [];
+        $total = 0;
+        rewind($handle);
+        while (($line = fgets($handle)) !== false) {
+            if (trim($line) === '') continue;
+            $total++;
+            if ($keepLast > 0) {
+                $tail[] = rtrim($line, "\r\n");
+                if (count($tail) > $keepLast) array_shift($tail);
+            }
+        }
+        $remaining = count($tail);
+        $removed = max(0, $total - $remaining);
+        rewind($handle);
+        if (!ftruncate($handle, 0)) {
+            flock($handle, LOCK_UN); fclose($handle);
+            http_response_code(500);
+            exit('Tanılama günlük dosyası temizlenemedi: ' . $name);
+        }
+        if ($remaining > 0) {
+            $payload = implode(PHP_EOL, $tail) . PHP_EOL;
+            if (fwrite($handle, $payload) !== strlen($payload)) {
+                flock($handle, LOCK_UN); fclose($handle);
+                http_response_code(500);
+                exit('Tanılama günlük dosyası yeniden yazılamadı: ' . $name);
+            }
+        }
+        fflush($handle);
+        flock($handle, LOCK_UN);
+        fclose($handle);
+        $results[$name] = ['removed' => $removed, 'remaining' => $remaining];
+    }
+    header('Content-Type: application/json; charset=utf-8');
+    header('Cache-Control: no-store, private');
+    echo json_encode(['success' => true, 'results' => $results], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
 });
 
 $router->get('/admin/homepage', static function (): void {

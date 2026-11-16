@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.5.4 - 2026-11-16
+- Add super-admin-only cleanup controls for slow HTTP and SQL diagnostic logs, with keep-latest retention choices, explicit confirmation, CSRF protection, and exact removal counts.
+- Preserve selected newest log lines in place without touching application, booking, user, or other business data.
+
+
 ## 1.5.3 - 2026-11-16
 - Add the diagnostics dashboard to the actual shared admin-shell navigation.
 - Move the JSON feed to a dedicated data URL and redirect the former raw diagnostics URL to the styled dashboard.
