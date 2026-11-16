@@ -78,7 +78,7 @@ $navigation = is_array($navigation ?? null) ? $navigation : [];
 <header class="checkout-heading">
 <span class="checkout-kicker">Rezervasyonunuz hazır</span>
 <h1>Konaklamanızı tamamlayın</h1>
-<p>Rezervasyon bilgilerinizi kontrol edin ve güvenli ödeme adımını tamamlayın. Ödeme tamamlandığında iyzico sizi başarılı veya başarısız sonuç sayfamıza geri yönlendirecektir.</p>
+<p>Rezervasyon bilgilerinizi kontrol edin ve güvenli ödeme adımını tamamlayın. Ödeme tamamlandığında kullanabileceğiniz ödeme yöntemlerini ve rezervasyon durumunuzu burada görüntüleyebilirsiniz.</p>
 </header>
 <div class="checkout-layout">
 <section class="checkout-main">
@@ -116,7 +116,36 @@ $navigation = is_array($navigation ?? null) ? $navigation : [];
 </form>
 </section>
 <?php else: ?>
-<div class="checkout-notice"><span class="checkout-notice-icon">i</span><div><strong>Ödeme bilgisi</strong>Online ödeme şu anda etkin değil veya rezervasyonunuzun ödeme durumu güncelleniyor.</div></div>
+<div class="checkout-notice"><span class="checkout-notice-icon">i</span><div><strong>Ödeme bilgisi</strong><?php if(!empty($manualPaymentAvailable)): ?>Kartla ödeme şu anda kullanılamıyor. Banka havalesi / EFT seçeneğini aşağıda kullanabilirsiniz.<?php else: ?>Ödeme yöntemi şu anda etkin değil veya rezervasyonunuzun ödeme durumu güncelleniyor.<?php endif; ?></div></div>
+<?php endif; ?>
+<?php if(!empty($manualPaymentAvailable)&&$booking['status']==='pending'&&($manualReportStatus??'')!=='approved'): ?>
+<section class="checkout-payment">
+<div class="checkout-section-title"><span class="checkout-step"><?= !empty($iyzicoPaymentAvailable)?3:2 ?></span><div><h2>Banka havalesi / EFT</h2></div></div>
+<p class="checkout-payment-copy">Aşağıdaki hesaba rezervasyon tutarını gönderin. Açıklama alanında rezervasyon kodunuzu kullanın. Ödeme, banka hareketi yönetici tarafından doğrulandıktan sonra onaylanır.</p>
+<div class="checkout-booking-grid">
+<div class="checkout-data"><span>Banka</span><strong><?= e($manualBankDetails['bank_name']??'') ?></strong></div>
+<div class="checkout-data"><span>Hesap sahibi</span><strong><?= e($manualBankDetails['account_holder']??'') ?></strong></div>
+<div class="checkout-data" style="grid-column:1/-1"><span>IBAN</span><strong><?= e($manualBankDetails['iban']??'') ?></strong></div>
+<div class="checkout-data"><span>Transfer açıklaması</span><strong><?= e(($manualBankDetails['reference_prefix']??'VILLA').'-'.$booking['booking_code']) ?></strong></div>
+<div class="checkout-data"><span>Gönderilecek tutar</span><strong><?= e(number_format((float)$booking['total'],2,',','.')) ?> <?= e($booking['currency']) ?></strong></div>
+<?php if(!empty($manualBankDetails['instructions'])): ?><div class="checkout-data" style="grid-column:1/-1"><span>Ödeme talimatı</span><strong><?= nl2br(e($manualBankDetails['instructions'])) ?></strong></div><?php endif; ?>
+</div>
+<?php if(($manualReportStatus??'')==='pending'): ?>
+<div class="checkout-notice"><span class="checkout-notice-icon">◷</span><div><strong>Havale bildiriminiz incelemede</strong>Transfer bildiriminiz yöneticiye ulaştı. Banka hareketi doğrulanana kadar rezervasyonunuz beklemede kalır.</div></div>
+<?php else: ?>
+<?php if(($manualReportStatus??'')==='rejected'): ?><div class="checkout-notice error"><span class="checkout-notice-icon">!</span><div><strong>Önceki bildiriminiz onaylanmadı</strong><?= e($latestManualReportRow['review_note']??'Transfer bilgilerinizi kontrol edip yeniden bildirim gönderebilirsiniz.') ?></div></div><?php endif; ?>
+<form method="post" action="<?= e(app_url('/checkout/'.rawurlencode((string)$booking['booking_code']).'/manual/notify')) ?>">
+<?= csrf_field() ?>
+<div class="checkout-fields">
+<label class="checkout-field">Gönderen adı soyadı<input name="sender_name" maxlength="190" autocomplete="name" required placeholder="Havale yapan kişi / şirket"></label>
+<label class="checkout-field">Gönderen banka<input name="sender_bank" maxlength="120" placeholder="Banka adı"></label>
+<label class="checkout-field full">Banka işlem / dekont referansı<input name="transfer_reference" maxlength="120" required placeholder="Bankadaki işlem referansı"></label>
+<label class="checkout-field full">Ek açıklama (isteğe bağlı)<input name="note" maxlength="1000" placeholder="Ödeme tarihi veya ek bilgi"></label>
+</div>
+<button class="checkout-pay-button" type="submit">Havale yaptım, bildirimi gönder</button>
+</form>
+<?php endif; ?>
+</section>
 <?php endif; ?>
 <div class="checkout-actions"><a class="checkout-action" href="<?= e(app_url('/account/bookings')) ?>">Rezervasyonlarım</a><a class="checkout-action" href="<?= e(app_url('/villa/'.rawurlencode((string)$booking['property_slug']))) ?>">Villaya dön</a></div>
 </section>
