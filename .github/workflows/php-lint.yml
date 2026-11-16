@@ -85,6 +85,8 @@ jobs:
         run: php tests/public-locale-consistency-smoke.php
       - name: Run public language selector smoke test
         run: php tests/public-language-selector-smoke.php
+      - name: Run admin language management smoke test
+        run: php tests/admin-language-management-smoke.php
       - name: Run blog archive menu option smoke test
         run: php tests/navigation-blog-archive-smoke.php
       - name: Run SMTP message validation smoke test
