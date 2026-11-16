@@ -74,7 +74,12 @@ final class PaymentRefundService
         $refundId = (int)$reserved['id'];
 
         try {
-            $config = PaymentGatewayConfig::forProvider('iyzico');
+            try {
+                $config = PaymentGatewayConfig::forProvider('iyzico');
+            } catch (Throwable $e) {
+                self::setStatus($pdo, $refundId, 'failed', 'iyzico kimlik bilgileri okunamadı; sağlayıcı isteği gönderilmedi.');
+                throw new \RuntimeException('iyzico bağlantı bilgileri güvenli biçimde okunamadı; iade isteği gönderilmedi.', 0, $e);
+            }
             if (empty($config['configured'])) {
                 self::setStatus($pdo, $refundId, 'failed', 'iyzico üretici bağlantı bilgileri yapılandırılmamış.');
                 throw new \RuntimeException('iyzico bağlantı bilgileri yapılandırılmamış.');
