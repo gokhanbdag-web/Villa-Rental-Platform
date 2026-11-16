@@ -14,7 +14,7 @@ final class SmtpMailer
         $username = (string)($config['username'] ?? '');
         $password = (string)($config['password'] ?? '');
 
-        if ($host === '' || strlen($host) > 253 || preg_match('/[\s\r\n\\\/]/', $host)
+        if ($host === '' || strlen($host) > 253 || preg_match('/[\s\r\n]/', $host) === 1 || str_contains($host, '/') || str_contains($host, '\\')
             || (!filter_var($host, FILTER_VALIDATE_IP) && preg_match('/^(?=.{1,253}$)(?:[A-Za-z0-9](?:[A-Za-z0-9-]{0,61}[A-Za-z0-9])?)(?:\.(?:[A-Za-z0-9](?:[A-Za-z0-9-]{0,61}[A-Za-z0-9])?))*$/', $host) !== 1)) {
             throw new \InvalidArgumentException('SMTP sunucu adresini kontrol edin.');
         }
