@@ -11,6 +11,7 @@ $checks=[
  'dashboard route is separate from the JSON data endpoint'=>str_contains($routes,"$"."router->get('/admin/performance',")&&str_contains($routes,"$"."router->get('/admin/performance/diagnostics',"),
  'dashboard is protected for super admins'=>preg_match("~\$router->get\('/admin/performance',\s*static function \(\): void \{\s*Auth::requireRole\(\['super_admin'\]\);~",$routes)===1,
  'dashboard uses the theme admin template renderer'=>str_contains($routes,"templates/pages/admin/performance.php"),
+ 'diagnostics API suppresses historical successful video transfer rows'=>str_contains($routes,'Hide historical video downloads too')&&str_contains($routes,'$performance'),
  'dashboard parses JSON log lines into readable request and SQL tables'=>str_contains($page,'JSON.parse(row)')&&str_contains($page,'Yavaş HTTP istekleri')&&str_contains($page,'Yavaş SQL sorguları'),
  'dashboard provides summary metrics, filters and expandable raw details'=>str_contains($page,'requestCount')&&str_contains($page,'requestFilter')&&str_contains($page,'Ham kaydı göster'),
  'dashboard fetch URL respects subdirectory installation'=>str_contains($page,"app_url('/admin/performance/diagnostics')"),
