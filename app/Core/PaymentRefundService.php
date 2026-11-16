@@ -118,7 +118,12 @@ final class PaymentRefundService
                 throw new \RuntimeException('iyzico iade yanıtı doğrulanamadı. Sağlayıcı panelinden kontrol edilmeden tekrar gönderilmemelidir.');
             }
 
-            return self::applyVerifiedRefund($pdo, $refundId, $actorUserId, $response, $secretKey);
+            try {
+                return self::applyVerifiedRefund($pdo, $refundId, $actorUserId, $response, $secretKey);
+            } catch (Throwable $e) {
+                self::setStatus($pdo, $refundId, 'unknown', 'iyzico iadeyi başarılı bildirdi ancak yerel finans kaydı tamamlanamadı; manuel mutabakat gereklidir.');
+                throw new \RuntimeException('iyzico iadesi sağlayıcıda başarılı görünüyor ancak yerel kayıt tamamlanamadı. Çift iade göndermeyin; finans kaydını kontrol edin.', 0, $e);
+            }
         } catch (Throwable $e) {
             // A reserved refund remains blocked if the provider outcome is ambiguous.
             throw $e;
