@@ -109,13 +109,24 @@ final class IyzicoApiClient
         ]);
     }
 
-    public static function testSandboxConnection(array $config): array
+    public static function testConnection(array $config): array
     {
         // BIN check validates API authentication without creating a payment or charging a card.
+        $environment = (string)($config['environment'] ?? 'sandbox');
+        if (!in_array($environment, ['sandbox', 'production'], true)) {
+            throw new \\InvalidArgumentException('iyzico ortamı geçersiz.');
+        }
         return self::post($config, '/payment/bin/check', [
             'locale' => 'tr',
-            'conversationId' => 'villa-sandbox-check-' . bin2hex(random_bytes(6)),
+            'conversationId' => 'villa-connection-check-' . bin2hex(random_bytes(6)),
             'binNumber' => '535805',
-        ], 'sandbox');
+        ], $environment);
+    }
+
+    /** Backwards-compatible alias for existing Sandbox-only callers. */
+    public static function testSandboxConnection(array $config): array
+    {
+        $config['environment'] = 'sandbox';
+        return self::testConnection($config);
     }
 }
