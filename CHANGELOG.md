@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.5.9 - 2026-11-16
+- Add MySQL-backed manual bank transfer lifecycle tests for rejection and resubmission, amount/currency mismatch, overlapping confirmed bookings, single approval, and duplicate-review protection.
+- Strengthen route regression checks for report/booking locks, pending-only review transitions, paid-payment guards, and booking conflict checks.
+
+
 ## 1.5.8 - 2026-11-16
 - Add MySQL-backed iyzico callback integration coverage for successful payment application, booking confirmation, duplicate webhook idempotency, and amount-mismatch rejection without contacting the provider or charging a card.
 
