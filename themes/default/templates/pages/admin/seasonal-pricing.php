@@ -1,0 +1,25 @@
+<?php declare(strict_types=1); $isVendor=($ownerType??'admin')==='vendor'; ?>
+<!doctype html><html lang="tr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Sezonluk fiyatlandırma</title>
+<style>
+*{box-sizing:border-box}body{font-family:system-ui,-apple-system,sans-serif;background:#f4f7f4;color:#26332b;margin:0}.wrap{max-width:1050px;margin:28px auto;padding:0 16px}.top{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap}.top h1{font-size:25px;margin:0}.muted{color:#718077}.panel{background:#fff;padding:20px;border-radius:15px;margin:16px 0;box-shadow:0 4px 18px #193a2110}.grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px}label{font-size:13px;font-weight:700}input{display:block;width:100%;padding:11px;border:1px solid #dfe6e0;border-radius:8px;margin-top:6px;font:inherit}.btn{display:inline-block;text-decoration:none;background:#176b50;color:#fff;border:0;border-radius:9px;padding:10px 14px;font-weight:700;cursor:pointer}.btn.danger{background:#a43}.table-wrap{overflow-x:auto}table{width:100%;border-collapse:collapse;min-width:650px}td,th{text-align:left;padding:11px;border-bottom:1px solid #edf0ed;font-size:13px}td input{min-width:120px}.muted-note{font-size:12px;color:#718077;line-height:1.6}.actions{display:flex;gap:6px;align-items:center;flex-wrap:wrap}.flash{padding:12px;border-radius:9px;background:#edf8f0;color:#176b50;margin:12px 0}.flash.error{background:#fff0ed;color:#a43}@media(max-width:720px){.grid{grid-template-columns:1fr 1fr}.panel{padding:14px}.top h1{font-size:21px}}@media(max-width:420px){.grid{grid-template-columns:1fr}}
+</style></head><body><main class="wrap">
+<div class="top"><div><h1>Sezonluk fiyatlandırma</h1><p class="muted"><?= e($property['title']) ?></p></div><a class="btn" href="<?= e(app_url($backUrl)) ?>">← Müsaitlik takvimine dön</a></div>
+<?php if(!empty($message)): ?><div class="flash <?= ($messageType??'success')==='error'?'error':'' ?>"><?= e($message) ?></div><?php endif; ?>
+<section class="panel"><h2>Yeni sezon fiyatı ekle</h2><p class="muted-note">Örn. yüksek sezon, yaz tatili, bayram veya yılbaşı. Bitiş tarihi dahil değildir. Sezon tarihleri aynı villa için birbiriyle çakışamaz. Sezon fiyatı hafta sonu fiyatını geçersiz kılar; takvimde tanımlanmış günlük özel fiyat ise en yüksek önceliğe sahiptir.</p>
+<form method="post" action="<?= e(app_url($saveUrl)) ?>"><?= csrf_field() ?><input type="hidden" name="property_id" value="<?= (int)$property['id'] ?>"><div class="grid">
+<label>Sezon adı<input name="name" maxlength="120" required placeholder="Örn. Yaz yüksek sezonu"></label>
+<label>Başlangıç tarihi<input type="date" name="date_from" min="<?= e(date('Y-m-d')) ?>" required></label>
+<label>Bitiş tarihi (dahil değil)<input type="date" name="date_to" min="<?= e(date('Y-m-d',strtotime('+1 day'))) ?>" required></label>
+<label>Gecelik sezon fiyatı<input type="number" name="nightly_price" min="0" max="99999999.99" step=".01" required placeholder="0.00"></label>
+</div><p><button class="btn" type="submit">Sezon fiyatını kaydet</button></p></form></section>
+<section class="panel"><h2>Tanımlı sezonlar</h2><div class="table-wrap"><table><thead><tr><th>Sezon</th><th>Başlangıç</th><th>Bitiş</th><th>Gecelik fiyat</th><th>İşlem</th></tr></thead><tbody>
+<?php foreach($seasons as $season): $formId='season-'.$season['id']; ?><tr>
+<td><form id="<?= e($formId) ?>" method="post" action="<?= e(app_url($saveUrl)) ?>"><?= csrf_field() ?><input type="hidden" name="id" value="<?= (int)$season['id'] ?>"><input type="hidden" name="property_id" value="<?= (int)$property['id'] ?>"></form><input form="<?= e($formId) ?>" name="name" maxlength="120" required value="<?= e($season['name']) ?>"></td>
+<td><input form="<?= e($formId) ?>" type="date" name="date_from" required value="<?= e($season['date_from']) ?>"></td>
+<td><input form="<?= e($formId) ?>" type="date" name="date_to" required value="<?= e($season['date_to']) ?>"></td>
+<td><input form="<?= e($formId) ?>" type="number" name="nightly_price" min="0" max="99999999.99" step=".01" required value="<?= e((string)$season['nightly_price']) ?>"></td>
+<td><div class="actions"><button class="btn" type="submit" form="<?= e($formId) ?>">Güncelle</button><form method="post" action="<?= e(app_url($deleteUrl)) ?>" onsubmit="return confirm('Bu sezon fiyatı silinsin mi?')"><?= csrf_field() ?><input type="hidden" name="property_id" value="<?= (int)$property['id'] ?>"><input type="hidden" name="id" value="<?= (int)$season['id'] ?>"><button class="btn danger" type="submit">Sil</button></form></div></td>
+</tr><?php endforeach; ?>
+<?php if(!$seasons): ?><tr><td colspan="5" class="muted">Henüz sezon fiyatı tanımlanmamış.</td></tr><?php endif; ?>
+</tbody></table></div></section>
+</main></body></html>
