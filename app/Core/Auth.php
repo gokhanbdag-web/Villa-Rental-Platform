@@ -55,7 +55,7 @@ final class Auth
         static $validated = false;
         if (!isset($_SESSION['user']) || !is_array($_SESSION['user'])) return null;
         if (!$validated) {
-            $stmt = Database::connection()->prepare('SELECT username,email,role,status FROM users WHERE id=? LIMIT 1');
+            $stmt = Database::connection()->prepare('SELECT username,email,role,status,session_version FROM users WHERE id=? LIMIT 1');
             $stmt->execute([(int)($_SESSION['user']['id'] ?? 0)]);
             $current = $stmt->fetch();
             if (!$current || $current['status'] !== 'active') {
