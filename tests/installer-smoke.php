@@ -647,6 +647,39 @@ assertSmoke(str_contains($themeRoutesSource, "'sandbox-cpp.iyzipay.com'") && str
     assertSmoke($paidStatus==='paid' && (int)$payoutEventCount->fetchColumn()===3, 'Paid payout did not finalize the ledger and record the complete audit trail.');
     assertSmoke(\App\Core\VendorPayoutService::availableBalances($pdo,$vendorId)===[], 'Already-paid vendor funds remained available for another payout request.');
 
+    // Apply signed provider refund responses locally without making a live gateway call.
+    $refundBookingCode='REFUNDSMOKE'.strtoupper($vendorSuffix);
+    $refundBookingStmt=$pdo->prepare("INSERT INTO bookings(booking_code,property_id,guest_user_id,guest_name,guest_email,guest_phone,booking_source,check_in,check_out,guests,subtotal,fees,total,currency,status,created_at) VALUES(?,?,?,'Refund Smoke Guest',?,'','website',?,?,2,100,0,100,'TRY','completed',NOW())");
+    $refundBookingStmt->execute([$refundBookingCode,$payoutPropertyId,$customerId,$customerEmail,(new DateTimeImmutable('-3 days'))->format('Y-m-d'),(new DateTimeImmutable('-1 day'))->format('Y-m-d')]);
+    $refundBookingId=(int)$pdo->lastInsertId();
+    $refundFinancial=$pdo->prepare("INSERT INTO booking_financials(booking_id,gross_amount,platform_fee,vendor_net_amount,currency,payout_status,created_at) VALUES(?,100,10,90,'TRY','unpaid',NOW())");
+    $refundFinancial->execute([$refundBookingId]);
+    $refundPaymentPayload=json_encode(['environment'=>'sandbox','conversationId'=>'REFUND-CONV-'.$vendorSuffix,'basketId'=>$refundBookingCode],JSON_UNESCAPED_SLASHES);
+    $refundVerifiedPayload=json_encode(['verified_checkout_form'=>['paymentId'=>'IYZICO-REFUND-'.$vendorSuffix]],JSON_UNESCAPED_SLASHES);
+    $refundPayment=$pdo->prepare("INSERT INTO payment_transactions(booking_id,provider,provider_reference,amount,currency,status,request_payload,response_payload,paid_at,created_at,updated_at) VALUES(?,'iyzico',?,100,'TRY','paid',?,?,NOW(),NOW(),NOW())");
+    $refundPayment->execute([$refundBookingId,'REFUND-TOKEN-'.$vendorSuffix,$refundPaymentPayload,$refundVerifiedPayload]);
+    $refundPaymentId=(int)$pdo->lastInsertId();
+    $refundSecret='refund-smoke-secret';
+    $createRefund=$pdo->prepare("INSERT INTO payment_refunds(payment_transaction_id,booking_id,provider,amount,currency,status,conversation_id,reason,actor_user_id,created_at,updated_at) VALUES(?,?,'iyzico',?,'TRY','processing',?,?,?,NOW(),NOW())");
+    $createRefund->execute([$refundPaymentId,$refundBookingId,'25.00','REFUND-PARTIAL-'.$vendorSuffix,'Partial refund smoke',(int)$admin['id']]);
+    $partialRefundId=(int)$pdo->lastInsertId();
+    $partialResponse=['status'=>'success','paymentId'=>'IYZICO-REFUND-'.$vendorSuffix,'price'=>'25.00','currency'=>'TRY','conversationId'=>'REFUND-PARTIAL-'.$vendorSuffix,'refundHostReference'=>'REFUND-PARTIAL-REF'];
+    $partialResponse['signature']=hash_hmac('sha256',implode(':',[$partialResponse['paymentId'],'25','TRY',$partialResponse['conversationId']]),$refundSecret);
+    \App\Core\PaymentRefundService::applyVerifiedRefund($pdo,$partialRefundId,(int)$admin['id'],$partialResponse,$refundSecret);
+    $partialLedger=$pdo->prepare('SELECT gross_amount,platform_fee,vendor_net_amount FROM booking_financials WHERE booking_id=?');$partialLedger->execute([$refundBookingId]);$partialValues=$partialLedger->fetch(PDO::FETCH_ASSOC);
+    $partialPaymentStatus=(string)$pdo->query('SELECT status FROM payment_transactions WHERE id='.(int)$refundPaymentId)->fetchColumn();
+    assertSmoke((float)$partialValues['gross_amount']===75.0&&(float)$partialValues['platform_fee']===7.5&&(float)$partialValues['vendor_net_amount']===67.5&&$partialPaymentStatus==='paid','Partial refund did not proportionally reconcile booking financials.');
+
+    $createRefund->execute([$refundPaymentId,$refundBookingId,'75.00','REFUND-FINAL-'.$vendorSuffix,'Final refund smoke',(int)$admin['id']]);
+    $finalRefundId=(int)$pdo->lastInsertId();
+    $finalResponse=['status'=>'success','paymentId'=>'IYZICO-REFUND-'.$vendorSuffix,'price'=>'75.00','currency'=>'TRY','conversationId'=>'REFUND-FINAL-'.$vendorSuffix,'refundHostReference'=>'REFUND-FINAL-REF'];
+    $finalResponse['signature']=hash_hmac('sha256',implode(':',[$finalResponse['paymentId'],'75','TRY',$finalResponse['conversationId']]),$refundSecret);
+    \App\Core\PaymentRefundService::applyVerifiedRefund($pdo,$finalRefundId,(int)$admin['id'],$finalResponse,$refundSecret);
+    $finalLedger=$pdo->prepare('SELECT gross_amount,platform_fee,vendor_net_amount FROM booking_financials WHERE booking_id=?');$finalLedger->execute([$refundBookingId]);$finalValues=$finalLedger->fetch(PDO::FETCH_ASSOC);
+    $finalPaymentStatus=(string)$pdo->query('SELECT status FROM payment_transactions WHERE id='.(int)$refundPaymentId)->fetchColumn();
+    assertSmoke((float)$finalValues['gross_amount']===0.0&&(float)$finalValues['platform_fee']===0.0&&(float)$finalValues['vendor_net_amount']===0.0&&$finalPaymentStatus==='refunded','Full refund did not zero the booking ledger and mark the payment refunded.');
+
+
     echo "Installer smoke tests passed: admin, platform mode, {$villaCount} demo villas, customer account authentication, booking persistence, financial record, checkout ownership, {$migrationCount} migrations, required tables, theme fallback architecture, and repeat migration.\n";
 } finally {
     if (is_file($configFile)) unlink($configFile);
