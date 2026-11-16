@@ -4,8 +4,6 @@ declare(strict_types=1);
 require_once dirname(__DIR__).'/app/bootstrap.php';
 
 use App\Core\BookingStayRules;
-use DateTimeImmutable;
-use InvalidArgumentException;
 
 function stayRuleAssert(bool $condition,string $message):void{if(!$condition)throw new RuntimeException($message);}
 $season=[[
