@@ -91,6 +91,8 @@ jobs:
         run: php tests/seasonal-stay-rules-smoke.php
       - name: Run booking time extras fee smoke tests
         run: php tests/booking-extras-smoke.php
+      - name: Run booking cancellation policy and request workflow smoke tests
+        run: php tests/booking-cancellation-policy-smoke.php
       - name: Run browser-installer backend smoke test
         env:
           DB_HOST: 127.0.0.1
