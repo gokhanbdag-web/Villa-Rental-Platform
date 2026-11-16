@@ -967,7 +967,7 @@ $router->post('/villa/{slug}/reserve', static function (array $params): void {
         if($conflict->fetchColumn()||$unavailable){$pdo->rollBack();http_response_code(409);exit('Seçtiğiniz tarihler artık müsait değil. Lütfen yeni tarih seçin.');}
         try{\App\Core\BookingStayRules::validate($checkIn,$checkOut,$seasons);}catch(InvalidArgumentException $e){$pdo->rollBack();http_response_code(422);exit($e->getMessage());}
         $subtotal=\App\Core\BookingRateCalculator::staySubtotal($current,$checkIn,$checkOut,$seasons,$rules);
-        try{$extras=\\App\\Core\\BookingExtras::calculate($current,$earlyRequested,$lateRequested);}catch(InvalidArgumentException $e){$pdo->rollBack();http_response_code(422);exit($e->getMessage());}
+        try{$extras=\App\Core\BookingExtras::calculate($current,$earlyRequested,$lateRequested);}catch(InvalidArgumentException $e){$pdo->rollBack();http_response_code(422);exit($e->getMessage());}
         if($createNewAccount){
             $create=$pdo->prepare("INSERT INTO users(username,email,password_hash,role,status,created_at) VALUES(?,?,?,'customer','active',NOW())");
             $create->execute([$newUsername,$email,password_hash($password,PASSWORD_DEFAULT)]);$userId=(int)$pdo->lastInsertId();
