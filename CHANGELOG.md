@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.6.6 - 2026-11-16
+- Add encrypted vendor payout bank profiles with IBAN checksum validation and vendor self-service balance / payout requests.
+- Reserve eligible completed, paid booking balances per payout; prevent duplicate requests and add audited admin processing, paid, failed, and cancellation transitions.
+- Add MySQL integration coverage for IBAN encryption, payout eligibility, allocation idempotency, status transitions, and financial ledger reconciliation.
+
 ## 1.6.5 - 2026-11-16
 - Add native PHP SMTP delivery with encrypted credentials, an idempotent retrying outbox, and a token-protected shared-hosting cron endpoint.
 - Add administrator SMTP settings and test-email delivery; queue booking and new-message notifications while keeping mail disabled by default.
