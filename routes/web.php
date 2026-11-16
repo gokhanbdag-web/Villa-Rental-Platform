@@ -961,6 +961,8 @@ $router->get('/checkout/{bookingCode}', static function(array $params):void {
     $manualReportStatus=(string)($latestManualReportRow['status']??'');
     $iyzicoConfig=\App\Core\PaymentGatewayConfig::forProvider('iyzico');
     $iyzicoPaymentAvailable=!empty($iyzicoConfig['enabled'])&&!empty($iyzicoConfig['configured'])&&($iyzicoConfig['environment']??'')==='sandbox';
+    $paytrConfig=\App\Core\PaymentGatewayConfig::forProvider('paytr');
+    $paytrPaymentAvailable=!empty($paytrConfig['enabled'])&&!empty($paytrConfig['configured']);
     $autoStartIyzicoPayment=false;$iyzicoAutoStartData=[];
     if(!empty($_GET['start_iyzico'])&&$iyzicoPaymentAvailable){
         $pendingAutoStart=$_SESSION['villa_iyzico_autostart'][(string)$booking['booking_code']]??null;
