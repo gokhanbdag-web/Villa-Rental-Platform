@@ -892,6 +892,7 @@ $router->get('/villa/{slug}/availability', static function (array $params): void
     $seasonStmt->execute([(int)$property['id'],$outRaw,$inRaw]);$seasons=$seasonStmt->fetchAll(PDO::FETCH_ASSOC);
     try{\App\Core\BookingStayRules::validate($checkIn,$checkOut,$seasons);}catch(InvalidArgumentException $e){$fail(422,$e->getMessage());return;}
     $subtotal=\App\Core\BookingRateCalculator::staySubtotal($property,$checkIn,$checkOut,$seasons,$rules);
+        try{$extras=\App\Core\BookingExtras::calculate($property,$earlyRequested,$lateRequested);}catch(InvalidArgumentException $e){$pdo->rollBack();http_response_code(422);exit($e->getMessage());}
     $earlyRequested=(string)($_GET['early_checkin']??'')==='1';$lateRequested=(string)($_GET['late_checkout']??'')==='1';
     try{$extras=\App\Core\BookingExtras::calculate($property,$earlyRequested,$lateRequested);}catch(InvalidArgumentException $e){$fail(422,$e->getMessage());return;}
     $cleaningFee=(float)($property['cleaning_fee']??0);$fees=round($cleaningFee+(float)$extras['fees'],2);
@@ -3070,7 +3071,7 @@ $router->get('/admin/bookings', static function (): void {
     $sql="SELECT b.*,p.title,COALESCE(NULLIF(b.guest_name,''),u.username,'Misafir') AS guest_name,COALESCE(NULLIF(b.guest_email,''),u.email,'') AS guest_email,COALESCE(b.guest_phone,'') AS guest_phone FROM bookings b JOIN properties p ON p.id=b.property_id LEFT JOIN users u ON u.id=b.guest_user_id";
     if(in_array($status,$allowed,true)){$sql.=' WHERE b.status=?';$s=$pdo->prepare($sql.' ORDER BY b.created_at DESC LIMIT 250');$s->execute([$status]);$bookings=$s->fetchAll();}
     else{$bookings=$pdo->query($sql.' ORDER BY b.created_at DESC LIMIT 250')->fetchAll();}
-    $bookingProperties=$pdo->query("SELECT id,title,max_guests FROM properties WHERE status<>'archived' ORDER BY title")->fetchAll();
+    $bookingProperties=$pdo->query("SELECT id,title,max_guests,early_checkin_enabled,early_checkin_fee,late_checkout_enabled,late_checkout_fee FROM properties WHERE status<>'archived' ORDER BY title")->fetchAll();
     $bookingFilter=in_array($status,$allowed,true)?$status:'';
     ThemeManager::renderTemplate('templates/pages/admin/bookings.php', get_defined_vars());
 });
@@ -3078,13 +3079,13 @@ $router->post('/admin/bookings/manual', static function (): void {
     Auth::requireRole(['super_admin','admin']);verify_csrf();
     $pdo=Database::connection();$propertyId=(int)($_POST['property_id']??0);
     $guestName=trim((string)($_POST['guest_name']??''));$guestEmail=trim((string)($_POST['guest_email']??''));$guestPhone=trim((string)($_POST['guest_phone']??''));$source=(string)($_POST['booking_source']??'other');if(!in_array($source,['phone','whatsapp','agency','walk_in','other'],true))$source='other';
-    $inRaw=trim((string)($_POST['check_in']??''));$outRaw=trim((string)($_POST['check_out']??''));$guests=(int)($_POST['guests']??1);
+    $inRaw=trim((string)($_POST['check_in']??''));$outRaw=trim((string)($_POST['check_out']??''));$guests=(int)($_POST['guests']??1);$earlyRequested=(string)($_POST['early_checkin']??'')==='1';$lateRequested=(string)($_POST['late_checkout']??'')==='1';
     $checkIn=DateTimeImmutable::createFromFormat('!Y-m-d',$inRaw);$checkOut=DateTimeImmutable::createFromFormat('!Y-m-d',$outRaw);
     $totalInput=trim((string)($_POST['total_amount']??''));
     if($propertyId<1||$guestName===''||strlen($guestName)>760||strlen($guestEmail)>760||strlen($guestPhone)>160||!$checkIn||!$checkOut||$checkIn->format('Y-m-d')!==$inRaw||$checkOut->format('Y-m-d')!==$outRaw||$checkIn<new DateTimeImmutable('today')||$checkOut<=$checkIn||(int)$checkIn->diff($checkOut)->days>365||($guestEmail!==''&&!filter_var($guestEmail,FILTER_VALIDATE_EMAIL))||($totalInput!==''&&(!is_numeric($totalInput)||(float)$totalInput<0||!is_finite((float)$totalInput)))){http_response_code(422);exit('Misafir, tutar ve tarih bilgilerini kontrol edin.');}
     try{
         $pdo->beginTransaction();
-        $lock=$pdo->prepare("SELECT id,base_nightly_price,weekend_nightly_price,cleaning_fee,currency,max_guests FROM properties WHERE id=? AND status<>'archived' FOR UPDATE");
+        $lock=$pdo->prepare("SELECT id,base_nightly_price,weekend_nightly_price,cleaning_fee,early_checkin_enabled,early_checkin_fee,late_checkout_enabled,late_checkout_fee,currency,max_guests FROM properties WHERE id=? AND status<>'archived' FOR UPDATE");
         $lock->execute([$propertyId]);$property=$lock->fetch();
         if(!$property||$guests<1||$guests>(int)$property['max_guests']){$pdo->rollBack();http_response_code(422);exit('Konaklama veya misafir kapasitesi geçersiz.');}
         $conflict=$pdo->prepare("SELECT id FROM bookings WHERE property_id=? AND status='confirmed' AND check_in < ? AND check_out > ? LIMIT 1");
@@ -3097,12 +3098,12 @@ $router->post('/admin/bookings/manual', static function (): void {
         $seasonStmt->execute([$propertyId,$outRaw,$inRaw]);$seasons=$seasonStmt->fetchAll(PDO::FETCH_ASSOC);
         try{\App\Core\BookingStayRules::validate($checkIn,$checkOut,$seasons);}catch(InvalidArgumentException $e){$pdo->rollBack();http_response_code(422);exit($e->getMessage());}
         $subtotal=\App\Core\BookingRateCalculator::staySubtotal($property,$checkIn,$checkOut,$seasons,$rules);
-        $fees=(float)$property['cleaning_fee'];$calculated=round($subtotal+$fees,2);
+        $fees=round((float)$property['cleaning_fee']+(float)$extras['fees'],2);$calculated=round($subtotal+$fees,2);
         $entered=$totalInput;$total=$entered===''?$calculated:(float)$entered;
         if($total<0||!is_finite($total)){$pdo->rollBack();http_response_code(422);exit('Toplam tutar geçersiz.');}
         $code='VRM'.date('ymd').strtoupper(bin2hex(random_bytes(3)));
-        $save=$pdo->prepare("INSERT INTO bookings (booking_code,property_id,guest_user_id,guest_name,guest_email,guest_phone,booking_source,check_in,check_out,guests,subtotal,fees,total,currency,status,created_at) VALUES(?,?,NULL,?,?,?,?,?,?,?,?,?,?,?,'confirmed',NOW())");
-        $save->execute([$code,$propertyId,$guestName,$guestEmail?:null,$guestPhone?:null,$source,$inRaw,$outRaw,$guests,$subtotal,$fees,$total,$property['currency']]);
+        $save=$pdo->prepare("INSERT INTO bookings (booking_code,property_id,guest_user_id,guest_name,guest_email,guest_phone,booking_source,check_in,check_out,guests,subtotal,fees,early_checkin_requested,early_checkin_fee,late_checkout_requested,late_checkout_fee,total,currency,status,created_at) VALUES(?,?,NULL,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,'confirmed',NOW())");
+        $save->execute([$code,$propertyId,$guestName,$guestEmail?:null,$guestPhone?:null,$source,$inRaw,$outRaw,$guests,$subtotal,$fees,$extras['early_checkin_requested'],$extras['early_checkin_fee'],$extras['late_checkout_requested'],$extras['late_checkout_fee'],$total,$property['currency']]);
         $bookingId=(int)$pdo->lastInsertId();
         $financial=$pdo->prepare("INSERT INTO booking_financials(booking_id,gross_amount,platform_fee,vendor_net_amount,currency,payout_status,created_at) VALUES(?,?,0,?,?, 'unpaid',NOW())");
         $financial->execute([$bookingId,$total,$total,$property['currency']]);
