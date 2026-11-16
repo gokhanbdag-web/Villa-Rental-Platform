@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.6.2 - 2026-11-16
+- Reserve iyzico checkout initialization atomically under the booking row lock, reject starts after any provider has been paid, and reuse an active session instead of creating duplicate sessions.
+- Expire stale five-minute initialization placeholders so interrupted requests cannot block checkout indefinitely.
+- Add MySQL integration coverage for repeated starts and safe retry after an abandoned initialization.
+
+
 ## 1.6.1 - 2026-11-16
 - Prevent a second provider or separately initialized checkout from marking another payment paid for a booking that already has a successful payment; enforce the check under the booking row lock.
 - Add MySQL integration coverage for a pending iyzico callback arriving after a manual transfer has already been approved.
