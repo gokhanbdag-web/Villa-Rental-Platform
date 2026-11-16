@@ -1,12 +1,12 @@
 # Ödeme altyapısı güvenlik notları
 
-Bu aşamada uygulama hiçbir iyzico veya PayTR ödeme başlatma API'sine istek göndermez ve gerçek tahsilat yapmaz.
+Uygulama PayTR iFrame için sunucudan token ister ve iyzico Checkout Form'u Sandbox ortamında başlatabilir. PayTR Production yalnızca yönetici tarafından açıkça etkinleştirilip canlı mağaza bilgileri girildiğinde çalışır. Gerçek tahsilat, yalnızca sağlayıcının barındırdığı ödeme formunda müşteri işlemi tamamladığında oluşur.
 
 - Sağlayıcı kimlik bilgileri `PaymentSecretVault` ile AES-256-GCM kullanılarak şifrelenir.
 - `PaymentGatewayConfig` yalnızca güvenilir sunucu tarafı kodunun kullanması için kimlik bilgilerini çözer. Çıktısı HTTP yanıtlarına veya loglara yazılmamalıdır.
-- `PaymentSignatureVerifier` PayTR callback HMAC'ini ve iyzico `X-IYZ-SIGNATURE-V3` imzasını doğrular.
+- `PaymentSignatureVerifier` PayTR callback HMAC'ini ve iyzico `X-IYZ-SIGNATURE-V3` imzasını doğrular. PayTR callback ayrıca rezervasyon, sipariş referansı, tutar ve para birimiyle eşleştirilir.
 - İmza doğrulaması tek başına ödemeyi onaylamaz. Gerçek callback işleyicisi; sağlayıcıya ait işlem sonucunu, rezervasyon referansını, tutarı ve para birimini eşleştirmeli, ardından `payment_webhook_events` benzersiz anahtarı ve işlem kilidi ile mükerrer bildirimleri etkisiz kılmalıdır.
-- Ödeme aktif bayrağı bu geliştirme boyunca `0` kalır. Ortamın `production` seçilmesi tahsilat başlatmaz.
+- Ödeme aktif bayrağı yeni kurulumda `0` kalır. PayTR Production seçimi tek başına ödeme açmaz; PayTR'nin etkinleştirilmesi ve geçerli canlı mağaza bilgilerinin girilmesi gerekir. iyzico Production akışı bu aşamada kapalıdır.
 
 ## Entegrasyon sırası
 
