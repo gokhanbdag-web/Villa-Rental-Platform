@@ -124,6 +124,9 @@ try {
     assertSmoke($seasonTable===1,'Seasonal property pricing migration did not create its table.');
     $stayColumns=(int)$pdo->query("SELECT COUNT(*) FROM information_schema.COLUMNS WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='property_seasonal_prices' AND COLUMN_NAME IN ('min_nights','checkin_weekdays','checkout_weekdays')")->fetchColumn();
     assertSmoke($stayColumns===3,'Seasonal minimum-stay and weekday restriction migration did not add all required columns.');
+    $propertyExtraColumns=(int)$pdo->query("SELECT COUNT(*) FROM information_schema.COLUMNS WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='properties' AND COLUMN_NAME IN ('early_checkin_enabled','early_checkin_fee','late_checkout_enabled','late_checkout_fee')")->fetchColumn();
+    $bookingExtraColumns=(int)$pdo->query("SELECT COUNT(*) FROM information_schema.COLUMNS WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='bookings' AND COLUMN_NAME IN ('early_checkin_requested','early_checkin_fee','late_checkout_requested','late_checkout_fee')")->fetchColumn();
+    assertSmoke($propertyExtraColumns===4&&$bookingExtraColumns===4,'Booking time extras migration did not add all property settings and booking snapshot columns.');
     $seasonFrom=(new DateTimeImmutable('+400 days'))->format('Y-m-d');
     $seasonTo=(new DateTimeImmutable('+402 days'))->format('Y-m-d');
     $seasonInsert=$pdo->prepare('INSERT INTO property_seasonal_prices(property_id,name,date_from,date_to,nightly_price,created_at) VALUES(?,?,?,?,?,NOW())');
@@ -135,6 +138,7 @@ try {
     $seasonDelete=$pdo->prepare('DELETE FROM property_seasonal_prices WHERE property_id=? AND name=?');$seasonDelete->execute([(int)$property['id'],'Installer seasonal pricing smoke']);
     assertSmoke(str_contains($webRoutesSource,'/admin/properties/{id}/seasonal-pricing')&&str_contains($webRoutesSource,'/vendor/properties/{id}/seasonal-pricing')&&substr_count($webRoutesSource,'BookingRateCalculator::staySubtotal')>=3,'Seasonal pricing management routes or booking quote integration are missing.');
     assertSmoke(substr_count($webRoutesSource,'BookingStayRules::validate')>=5,'Seasonal stay rules must be enforced in quotes, customer bookings, manual bookings, and both confirmation paths.');
+    assertSmoke(substr_count($webRoutesSource,'BookingExtras::calculate')>=3&&str_contains($webRoutesSource,'early_checkin_requested')&&str_contains($webRoutesSource,'late_checkout_requested'),'Early check-in and late checkout must be priced and stored on customer and manual reservations.');
     \App\Core\EmailService::enqueue($pdo,'mail.smoke@example.test','Smoke email','<p>Smoke email body</p>','Smoke email body','smoke.email.event');
     \App\Core\EmailService::enqueue($pdo,'mail.smoke@example.test','Smoke email duplicate','<p>Duplicate</p>','Duplicate','smoke.email.event');
     $queuedEmailCount = (int)$pdo->query("SELECT COUNT(*) FROM email_queue WHERE event_key='smoke.email.event'")->fetchColumn();
