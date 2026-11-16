@@ -23,8 +23,8 @@ Native PHP 8.2+ and MySQL villa rental platform. No PHP framework or Composer de
 ## Important operational notes
 
 - Manual bank transfers can be reported by customers and are only marked paid after an authenticated admin verifies and approves the report. Approval also checks booking date conflicts before confirming a pending reservation. No automated bank statement matching is provided.
-- iyzico remains sandbox-only and PayTR live checkout is not enabled by this manual-transfer workflow. `payments.enabled` defaults to `0` until a payment method is explicitly enabled in admin settings.
-- Payment gateway integration, automated payout execution, email/SMS delivery, language switching, advanced permissions, and full automated integration/security tests remain to be implemented.
+- iyzico Checkout Form supports the explicitly selected Sandbox or Production environment. Each payment transaction stores its originating environment so callback retrieval cannot silently switch between Sandbox and Production. The admin connection test performs a BIN lookup in the selected environment and does not create a payment or charge a card. Production requires valid live iyzico credentials and explicit enablement. PayTR is deferred because no merchant account is available. `payments.enabled` defaults to `0` until a payment method is explicitly enabled in admin settings.
+- Automated payout execution, email/SMS delivery, language switching, advanced permissions, provider certification, and real browser-based end-to-end payment tests remain to be implemented.
 - The current codebase is an active development build, not a production-ready booking service. Do not accept real payments or rely on it for live inventory until the remaining modules are implemented and a real PHP/MySQL deployment test and security review have passed.
 - Demo villa imagery is illustrative and should not be treated as verified photographs of real properties. Demo listings can be edited, unpublished, or deleted from the admin panel.
 
