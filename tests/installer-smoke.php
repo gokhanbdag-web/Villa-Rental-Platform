@@ -563,6 +563,29 @@ assertSmoke(str_contains($themeRoutesSource, "'sandbox-cpp.iyzipay.com'") && str
     $paymentTestViewSource = (string)file_get_contents($root . '/themes/default/templates/pages/admin/payment-tests.php');
     assertSmoke(str_contains($paymentTestViewSource, 'PayTR – Yerel iFrame simülatörü') && str_contains($paymentTestViewSource, 'Tutar uyuşmazlığı') && str_contains($paymentTestViewSource, 'Sipariş numarası uyuşmazlığı'), 'Admin payment test center must expose PayTR protocol failure scenarios.');
 
+    // A cache produced for another database must never suppress this
+    // installation's pending migrations. Seed a matching file signature with
+    // a deliberately foreign database identity and verify it is rejected.
+    $migrationFiles = glob($root . '/database/migrations/*.sql') ?: [];
+    sort($migrationFiles, SORT_STRING);
+    $signatureParts = [];
+    foreach ($migrationFiles as $migrationFile) {
+        $signatureParts[] = basename($migrationFile) . ':' . (string)filesize($migrationFile) . ':' . (string)filemtime($migrationFile);
+    }
+    $migrationSignature = hash('sha256', implode("\\n", $signatureParts));
+    $migrationStateFile = $root . '/storage/migrations-state.json';
+    file_put_contents($migrationStateFile, json_encode([
+        'signature' => $migrationSignature,
+        'database_identity' => 'foreign-database-cache',
+    ], JSON_UNESCAPED_SLASHES), LOCK_EX);
+
+    Migrator::run($pdo, $root);
+    $migrationState = json_decode((string)file_get_contents($migrationStateFile), true);
+    assertSmoke(is_array($migrationState)
+        && isset($migrationState['database_identity'])
+        && $migrationState['database_identity'] !== 'foreign-database-cache',
+        'Migration cache accepted a state file created for a different database.');
+
     // A second migration pass must be safe and leave the migration ledger intact.
     Migrator::run($pdo, $root);
     $migrationCountAfter = (int)$pdo->query('SELECT COUNT(*) FROM schema_migrations')->fetchColumn();
