@@ -2599,7 +2599,7 @@ $router->get('/admin/settings', static function (): void {
     $mailEnabled=($settings['mail.enabled']??'0')==='1';
     $mailConfigured=trim((string)($settings['mail.smtp.host']??''))!==''&&filter_var((string)($settings['mail.from_email']??''),FILTER_VALIDATE_EMAIL)!==false&&((string)($settings['mail.smtp.username']??'')===''||(string)($settings['mail.smtp.password']??'')!=='');
     $mailCronToken=\App\Core\EmailService::cronToken(Database::connection());
-    $emailCronUrl=$mailCronToken!==''?app_absolute_url('/tasks/email/process?token='.rawurlencode($mailCronToken)):'';
+    $emailCronUrl='';if($mailCronToken!==''){try{$emailCronUrl=app_absolute_url('/tasks/email/process?token='.rawurlencode($mailCronToken));}catch(Throwable $e){$emailCronUrl='HTTPS üzerinden açıldığında görev URL’si görüntülenir.';}}
     $mailTestMessage=(string)($_SESSION['villa_mail_test_message']??'');
     $mailTestMessageType=(string)($_SESSION['villa_mail_test_message_type']??'success');
     unset($_SESSION['villa_mail_test_message'],$_SESSION['villa_mail_test_message_type']);
