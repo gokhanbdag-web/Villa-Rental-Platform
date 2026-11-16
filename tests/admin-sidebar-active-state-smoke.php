@@ -11,6 +11,11 @@ $checks = [
     'dashboard is active only for the exact admin root' =>
         str_contains($shell, '($url === \'/admin\')')
         && str_contains($shell, '($requestPath === \'/admin\' || $requestPath === \'/admin/\')'),
+    'client active-state matching is scoped to the sidebar, not the header logo' =>
+        str_contains($shell, 'document.querySelectorAll(".vr-admin-sidebar [data-admin-link]")'),
+    'browser back and forward restore the active page without adding history entries' =>
+        str_contains($shell, 'window.addEventListener("popstate"')
+        && str_contains($shell, 'navigate(location.href,false)'),
     'client navigation clears all active states before selecting one' =>
         str_contains($shell, 'link.classList.remove("is-active");')
         && str_contains($shell, 'if(activeLink)activeLink.classList.add("is-active");'),
@@ -41,11 +46,14 @@ $resolve = static function (string $path, array $links, string $adminRoot): ?str
     return $active;
 };
 
-$links = ['/admin', '/admin/blog', '/admin/blog/categories', '/admin/bookings'];
+$links = ['/admin', '/admin/properties', '/admin/blog', '/admin/blog/categories', '/admin/bookings'];
 $scenarios = [
     '/admin' => '/admin',
     '/admin/blog' => '/admin/blog',
     '/admin/blog/categories' => '/admin/blog/categories',
+    '/admin/blog/42' => '/admin/blog',
+    '/admin/blog/categories/9' => '/admin/blog/categories',
+    '/admin/properties/42' => '/admin/properties',
     '/admin/bookings' => '/admin/bookings',
     '/admin/unknown' => null,
 ];
@@ -54,6 +62,20 @@ foreach ($scenarios as $path => $expected) {
     $ok = $actual === $expected;
     echo ($ok ? 'PASS' : 'FAIL') . ' active item for ' . $path . PHP_EOL;
     if (!$ok) $failed[] = 'active item for ' . $path . ' expected ' . var_export($expected, true) . ' got ' . var_export($actual, true);
+}
+
+$subdirectoryLinks = ['/villa/admin', '/villa/admin/blog', '/villa/admin/blog/categories'];
+$subdirectoryScenarios = [
+    '/villa/admin' => '/villa/admin',
+    '/villa/admin/blog' => '/villa/admin/blog',
+    '/villa/admin/blog/categories' => '/villa/admin/blog/categories',
+    '/villa/admin/blog/42' => '/villa/admin/blog',
+];
+foreach ($subdirectoryScenarios as $path => $expected) {
+    $actual = $resolve($path, $subdirectoryLinks, '/villa/admin');
+    $ok = $actual === $expected;
+    echo ($ok ? 'PASS' : 'FAIL') . ' subdirectory active item for ' . $path . PHP_EOL;
+    if (!$ok) $failed[] = 'subdirectory active item for ' . $path;
 }
 
 if ($failed) {
