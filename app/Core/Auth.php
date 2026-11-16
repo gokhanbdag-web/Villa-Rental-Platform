@@ -19,7 +19,7 @@ final class Auth
         if (function_exists('villa_perf_mark')) villa_perf_mark('auth_attempt:throttle_query_done');
         if ($attemptState && $attemptState['locked_until'] && strtotime($attemptState['locked_until']) > time()) return false;
         $stmt = $pdo->prepare(
-            'SELECT id, username, email, password_hash, role, status FROM users WHERE email = ? OR username = ? LIMIT 1'
+            'SELECT id, username, email, password_hash, role, status, session_version FROM users WHERE email = ? OR username = ? LIMIT 1'
         );
         if (function_exists('villa_perf_mark')) villa_perf_mark('auth_attempt:user_query_begin');
         $stmt->execute([$identity, $identity]);
@@ -45,6 +45,7 @@ final class Auth
             'username' => $user['username'],
             'email' => $user['email'],
             'role' => $user['role'],
+            'session_version' => (int)($user['session_version'] ?? 1),
         ];
         return true;
     }
@@ -54,10 +55,10 @@ final class Auth
         static $validated = false;
         if (!isset($_SESSION['user']) || !is_array($_SESSION['user'])) return null;
         if (!$validated) {
-            $stmt = Database::connection()->prepare('SELECT username,email,role,status FROM users WHERE id=? LIMIT 1');
+            $stmt = Database::connection()->prepare('SELECT username,email,role,status,session_version FROM users WHERE id=? LIMIT 1');
             $stmt->execute([(int)($_SESSION['user']['id'] ?? 0)]);
             $current = $stmt->fetch();
-            if (!$current || $current['status'] !== 'active') {
+            if (!$current || $current['status'] !== 'active' || !isset($_SESSION['user']['session_version']) || (int)$_SESSION['user']['session_version'] !== (int)$current['session_version']) {
                 unset($_SESSION['user']);
                 session_regenerate_id(true);
                 return null;
@@ -65,6 +66,7 @@ final class Auth
             $_SESSION['user']['username'] = $current['username'];
             $_SESSION['user']['email'] = $current['email'];
             $_SESSION['user']['role'] = $current['role'];
+            $_SESSION['user']['session_version'] = (int)$current['session_version'];
             $validated = true;
         }
         return $_SESSION['user'];

@@ -1525,6 +1525,116 @@ $router->post('/account/bookings/cancel-request', static function (): void {
     catch(Throwable $e){if($pdo->inTransaction())$pdo->rollBack();http_response_code(422);exit($e->getMessage());}
 });
 
+
+$router->get('/account/profile', static function (): void {
+    $user=Auth::user();if(!$user)redirect('/login');
+    villa_render_account_view('profile.php',get_defined_vars());
+});
+$router->post('/account/profile', static function (): void {
+    $user=Auth::user();if(!$user)redirect('/login');verify_csrf();
+    $pdo=Database::connection();$username=trim((string)($_POST['username']??''));$newEmail=strtolower(trim((string)($_POST['new_email']??'')));
+    if(mb_strlen($username)<3||mb_strlen($username)>80||preg_match('/[\x00-\x1F\x7F]/u',$username)){
+        $_SESSION['villa_profile_error']='Kullanıcı adı 3-80 karakter olmalı ve kontrol karakteri içermemelidir.';redirect('/account/profile');
+    }
+    try{
+        $check=$pdo->prepare('SELECT id FROM users WHERE username=? AND id<>? LIMIT 1');$check->execute([$username,(int)$user['id']]);
+        if($check->fetchColumn()){$_SESSION['villa_profile_error']='Bu kullanıcı adı başka bir hesap tarafından kullanılıyor.';redirect('/account/profile');}
+        $save=$pdo->prepare('UPDATE users SET username=?,updated_at=NOW() WHERE id=?');$save->execute([$username,(int)$user['id']]);
+        $_SESSION['user']['username']=$username;
+        if($newEmail!==''&&$newEmail!==strtolower((string)$user['email'])){
+            if(!filter_var($newEmail,FILTER_VALIDATE_EMAIL)||strlen($newEmail)>190){$_SESSION['villa_profile_error']='Yeni e-posta adresi geçerli değil.';redirect('/account/profile');}
+            $exists=$pdo->prepare('SELECT id FROM users WHERE email=? AND id<>? LIMIT 1');$exists->execute([$newEmail,(int)$user['id']]);
+            if($exists->fetchColumn()){$_SESSION['villa_profile_error']='Bu e-posta adresi başka bir hesap tarafından kullanılıyor.';redirect('/account/profile');}
+            $token=bin2hex(random_bytes(32));$hash=hash('sha256',$token);
+            $pdo->prepare("UPDATE account_security_tokens SET used_at=NOW() WHERE user_id=? AND purpose='email_change' AND used_at IS NULL")->execute([(int)$user['id']]);
+            $insert=$pdo->prepare("INSERT INTO account_security_tokens(user_id,purpose,token_hash,target_email,expires_at,created_at) VALUES(?,'email_change',?,?,DATE_ADD(NOW(),INTERVAL 60 MINUTE),NOW())");
+            $insert->execute([(int)$user['id'],$hash,$newEmail]);
+            $url=app_absolute_url('/account/email/verify?token='.$token);
+            \App\Core\EmailService::enqueue($pdo,$newEmail,'E-posta adresinizi doğrulayın','<p>E-posta adresinizi değiştirmek için aşağıdaki bağlantıyı kullanın. Bağlantı 60 dakika geçerlidir.</p><p><a href="'.e($url).'">E-posta adresimi doğrula</a></p>','E-posta adresinizi doğrulamak için: '.$url,'account.email.verify.'.(int)$user['id'].'.'.$hash);
+            $_SESSION['villa_profile_notice']='Profiliniz güncellendi. Yeni e-posta adresiniz, gönderilen doğrulama bağlantısını açana kadar değiştirilmeyecek.';
+        }else{
+            $_SESSION['villa_profile_notice']='Profil bilgileriniz güncellendi.';
+        }
+    }catch(Throwable $e){error_log('Account profile update failed: '.$e->getMessage());$_SESSION['villa_profile_error']='Profil bilgileri kaydedilemedi. Lütfen tekrar deneyin.';}
+    redirect('/account/profile');
+});
+$router->get('/account/email/verify', static function (): void {
+    $token=(string)($_GET['token']??'');
+    if(!preg_match('/^[a-f0-9]{64}$/',$token)){http_response_code(400);exit('Doğrulama bağlantısı geçersiz veya süresi dolmuş.');}
+    $pdo=Database::connection();
+    try{
+        $pdo->beginTransaction();
+        $find=$pdo->prepare("SELECT id,user_id,target_email FROM account_security_tokens WHERE purpose='email_change' AND token_hash=? AND used_at IS NULL AND expires_at>NOW() LIMIT 1 FOR UPDATE");
+        $find->execute([hash('sha256',$token)]);$record=$find->fetch(PDO::FETCH_ASSOC);
+        if(!$record)throw new RuntimeException('Doğrulama bağlantısı geçersiz veya süresi dolmuş.');
+        $exists=$pdo->prepare('SELECT id FROM users WHERE email=? AND id<>? LIMIT 1');$exists->execute([(string)$record['target_email'],(int)$record['user_id']]);
+        if($exists->fetchColumn())throw new RuntimeException('Bu e-posta adresi artık kullanılamıyor.');
+        $update=$pdo->prepare('UPDATE users SET email=?,updated_at=NOW() WHERE id=?');$update->execute([(string)$record['target_email'],(int)$record['user_id']]);
+        $pdo->prepare("UPDATE account_security_tokens SET used_at=NOW() WHERE user_id=? AND purpose='email_change' AND used_at IS NULL")->execute([(int)$record['user_id']]);
+        $pdo->commit();
+        if(isset($_SESSION['user'])&&(int)$_SESSION['user']['id']===(int)$record['user_id'])$_SESSION['user']['email']=(string)$record['target_email'];
+        $_SESSION['villa_profile_notice']='E-posta adresiniz başarıyla doğrulandı ve güncellendi.';
+        if(!isset($_SESSION['user'])||(int)($_SESSION['user']['id']??0)!==(int)$record['user_id'])redirect('/login');
+        redirect('/account/profile');
+    }catch(Throwable $e){if($pdo->inTransaction())$pdo->rollBack();http_response_code(400);exit(e($e->getMessage()));}
+});
+$router->post('/account/password', static function (): void {
+    $user=Auth::user();if(!$user)redirect('/login');verify_csrf();
+    $current=(string)($_POST['current_password']??'');$password=(string)($_POST['new_password']??'');$confirm=(string)($_POST['new_password_confirm']??'');
+    $pdo=Database::connection();$stmt=$pdo->prepare('SELECT password_hash FROM users WHERE id=? LIMIT 1');$stmt->execute([(int)$user['id']]);$hash=(string)($stmt->fetchColumn()?:'');
+    if($current===''||!password_verify($current,$hash)){$_SESSION['villa_profile_error']='Mevcut şifreniz doğru değil.';redirect('/account/profile');}
+    if(strlen($password)<12||strlen($password)>4096||!hash_equals($password,$confirm)){$_SESSION['villa_profile_error']='Yeni şifre en az 12 karakter olmalı ve tekrarıyla eşleşmelidir.';redirect('/account/profile');}
+    $save=$pdo->prepare('UPDATE users SET password_hash=?,session_version=session_version+1,updated_at=NOW() WHERE id=?');$save->execute([password_hash($password,PASSWORD_DEFAULT),(int)$user['id']]);
+    $pdo->prepare("UPDATE account_security_tokens SET used_at=NOW() WHERE user_id=? AND used_at IS NULL")->execute([(int)$user['id']]);
+    $versionStmt=$pdo->prepare('SELECT session_version FROM users WHERE id=?');$versionStmt->execute([(int)$user['id']]);$_SESSION['user']['session_version']=(int)$versionStmt->fetchColumn();session_regenerate_id(true);$_SESSION['villa_profile_notice']='Şifreniz güncellendi. Diğer açık oturumlar ve şifre sıfırlama bağlantıları iptal edildi.';redirect('/account/profile');
+});
+$router->get('/forgot-password', static function (): void {
+    header('Cache-Control: no-store');$message=(string)($_SESSION['villa_recovery_message']??'');unset($_SESSION['villa_recovery_message']);
+    csrf_token();if(session_status()===PHP_SESSION_ACTIVE)session_write_close();
+    ThemeManager::renderTemplate('templates/pages/auth/forgot-password.php',get_defined_vars());
+});
+$router->post('/forgot-password', static function (): void {
+    verify_csrf();$email=strtolower(trim((string)($_POST['email']??'')));$pdo=Database::connection();
+    if(filter_var($email,FILTER_VALIDATE_EMAIL)&&strlen($email)<=190){
+        $identityHash=hash('sha256',$email);$ipHash=hash('sha256',(string)($_SERVER['REMOTE_ADDR']??'unknown'));
+        $limit=$pdo->prepare('INSERT INTO account_recovery_limits(identity_hash,ip_hash,attempts,window_started_at) VALUES(?,?,1,NOW()) ON DUPLICATE KEY UPDATE attempts=IF(window_started_at<DATE_SUB(NOW(),INTERVAL 15 MINUTE),1,attempts+1),window_started_at=IF(window_started_at<DATE_SUB(NOW(),INTERVAL 15 MINUTE),NOW(),window_started_at)');
+        $limit->execute([$identityHash,$ipHash]);
+        $count=$pdo->prepare('SELECT attempts FROM account_recovery_limits WHERE identity_hash=? AND ip_hash=?');$count->execute([$identityHash,$ipHash]);
+        if((int)$count->fetchColumn()<=3){
+            $find=$pdo->prepare("SELECT id,email FROM users WHERE email=? AND status='active' LIMIT 1");$find->execute([$email]);$account=$find->fetch(PDO::FETCH_ASSOC);
+            if($account){
+                $token=bin2hex(random_bytes(32));$hash=hash('sha256',$token);
+                $pdo->prepare("UPDATE account_security_tokens SET used_at=NOW() WHERE user_id=? AND purpose='password_reset' AND used_at IS NULL")->execute([(int)$account['id']]);
+                $insert=$pdo->prepare("INSERT INTO account_security_tokens(user_id,purpose,token_hash,expires_at,created_at) VALUES(?,'password_reset',?,DATE_ADD(NOW(),INTERVAL 60 MINUTE),NOW())");$insert->execute([(int)$account['id'],$hash]);
+                $url=app_absolute_url('/reset-password?token='.$token);
+                \App\Core\EmailService::enqueue($pdo,(string)$account['email'],'Şifre yenileme bağlantınız','<p>Şifrenizi yenilemek için aşağıdaki bağlantıyı kullanın. Bağlantı 60 dakika geçerlidir ve yalnızca bir kez kullanılabilir.</p><p><a href="'.e($url).'">Yeni şifre belirle</a></p><p>Bu isteği siz yapmadıysanız bu e-postayı dikkate almayın.</p>','Şifrenizi yenilemek için (60 dakika geçerli): '.$url,'account.password.reset.'.(int)$account['id'].'.'.$hash);
+            }
+        }
+    }
+    $_SESSION['villa_recovery_message']='Bu e-posta adresi sistemde kayıtlıysa şifre yenileme bağlantısı gönderilecektir.';
+    redirect('/forgot-password');
+});
+$router->get('/reset-password', static function (): void {
+    header('Cache-Control: no-store');$token=(string)($_GET['token']??'');
+    if(!preg_match('/^[a-f0-9]{64}$/',$token)){http_response_code(400);exit('Şifre yenileme bağlantısı geçersiz veya süresi dolmuş.');}
+    $stmt=Database::connection()->prepare("SELECT id FROM account_security_tokens WHERE purpose='password_reset' AND token_hash=? AND used_at IS NULL AND expires_at>NOW() LIMIT 1");
+    $stmt->execute([hash('sha256',$token)]);if(!$stmt->fetchColumn()){http_response_code(400);exit('Şifre yenileme bağlantısı geçersiz veya süresi dolmuş.');}
+    $error='';ThemeManager::renderTemplate('templates/pages/auth/reset-password.php',get_defined_vars());
+});
+$router->post('/reset-password', static function (): void {
+    verify_csrf();$token=(string)($_POST['token']??'');$password=(string)($_POST['password']??'');$confirm=(string)($_POST['password_confirm']??'');
+    if(!preg_match('/^[a-f0-9]{64}$/',$token)||strlen($password)<12||strlen($password)>4096||!hash_equals($password,$confirm)){http_response_code(422);$error='Bağlantıyı ve şifre alanlarını kontrol edin. Şifre en az 12 karakter olmalıdır.';ThemeManager::renderTemplate('templates/pages/auth/reset-password.php',get_defined_vars());return;}
+    $pdo=Database::connection();
+    try{
+        $pdo->beginTransaction();$find=$pdo->prepare("SELECT id,user_id FROM account_security_tokens WHERE purpose='password_reset' AND token_hash=? AND used_at IS NULL AND expires_at>NOW() LIMIT 1 FOR UPDATE");$find->execute([hash('sha256',$token)]);$record=$find->fetch(PDO::FETCH_ASSOC);
+        if(!$record)throw new RuntimeException('Şifre yenileme bağlantısı geçersiz veya süresi dolmuş.');
+        $update=$pdo->prepare('UPDATE users SET password_hash=?,session_version=session_version+1,updated_at=NOW() WHERE id=? AND status=\'active\'');$update->execute([password_hash($password,PASSWORD_DEFAULT),(int)$record['user_id']]);
+        if($update->rowCount()!==1)throw new RuntimeException('Hesap güncellenemedi.');
+        $pdo->prepare("UPDATE account_security_tokens SET used_at=NOW() WHERE user_id=? AND used_at IS NULL")->execute([(int)$record['user_id']]);$pdo->commit();
+        Auth::logout();redirect('/login');
+    }catch(Throwable $e){if($pdo->inTransaction())$pdo->rollBack();http_response_code(400);$token='';$error='Şifre yenileme bağlantısı geçersiz veya süresi dolmuş. Yeni bir bağlantı isteyin.';ThemeManager::renderTemplate('templates/pages/auth/reset-password.php',get_defined_vars());}
+});
+
 $router->get('/login', static function (): void {
     header('Cache-Control: private, no-store, no-cache, must-revalidate, max-age=0');
     header('Pragma: no-cache');
@@ -1584,6 +1694,7 @@ $router->post('/login/ajax', static function (): void {
         if (in_array($role, ['super_admin', 'admin'], true)) {
             $menus = [
                 ['label'=>'Genel Bakış','url'=>'/admin','icon'=>'⌂'],
+                ['label'=>'Hesap Ayarları','url'=>'/account/profile','icon'=>'⚙'], 
                 ['label'=>'Rezervasyonlar','url'=>'/admin/bookings','icon'=>'▣'],
                 ['label'=>'Havale Bildirimleri','url'=>'/admin/payments/manual','icon'=>'₺'],
                 ['label'=>'Villalar','url'=>'/admin/properties','icon'=>'⌂'],
@@ -1598,6 +1709,7 @@ $router->post('/login/ajax', static function (): void {
         } elseif ($role === 'vendor') {
             $menus = [
                 ['label'=>'Ev Sahibi Paneli','url'=>'/vendor','icon'=>'⌂'],
+                ['label'=>'Hesap Ayarları','url'=>'/account/profile','icon'=>'⚙'], 
                 ['label'=>'Rezervasyonlarım','url'=>'/vendor/bookings','icon'=>'▣'],
                 ['label'=>'Villalarım','url'=>'/vendor/properties','icon'=>'⌂'],
                 ['label'=>'Yeni Villa Ekle','url'=>'/vendor/properties/new','icon'=>'+'],
@@ -1606,6 +1718,7 @@ $router->post('/login/ajax', static function (): void {
         } else {
             $menus = [
                 ['label'=>'Hesabım','url'=>'/account/bookings','icon'=>'♙'],
+                ['label'=>'Hesap Ayarları','url'=>'/account/profile','icon'=>'⚙'], 
                 ['label'=>'Rezervasyonlarım','url'=>'/account/bookings','icon'=>'▣'],
                 ['label'=>'Favorilerim','url'=>'/favorites','icon'=>'♡'],
                 ['label'=>'Bildirimler','url'=>'/account/notifications','icon'=>'♧'],
