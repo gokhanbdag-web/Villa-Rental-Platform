@@ -197,6 +197,84 @@ try {
     assertSmoke(($mismatchResult['result']??'')==='rejected'&&!($mismatchResult['payment_updated']??true),'iyzico callback with a mismatched amount was accepted.');
     $iyzicoPaymentState->execute(['iyzico',$mismatchReference]);
     assertSmoke($iyzicoPaymentState->fetchColumn()==='pending','Rejected iyzico callback changed the transaction status.');
+    
+    // MySQL-backed manual transfer lifecycle: reject, resubmit, validate
+    // amount and booking conflicts, then approve exactly once.
+    $makeManualBooking = static function (string $code, string $start, string $end) use ($pdo, $createBooking, $createFinancial, $property, $customerId, $customerEmail, $subtotal, $fees, $total): int {
+        $createBooking->execute([$code,(int)$property['id'],$customerId,'Manual Smoke Customer',$customerEmail,'+905551112233',$start,$end,1,$subtotal,$fees,$total,$property['currency']]);
+        $id = (int)$pdo->lastInsertId();
+        $createFinancial->execute([$id,$total,$total,$property['currency']]);
+        return $id;
+    };
+    $createManualReport = $pdo->prepare("INSERT INTO manual_payment_reports(booking_id,guest_user_id,amount,currency,sender_name,sender_bank,transfer_reference,note,status,submitted_at,created_at) VALUES(?,?,?,?,?,?,?,?,'pending',NOW(),NOW())");
+    $manualReportState = $pdo->prepare('SELECT status,amount,currency FROM manual_payment_reports WHERE id=?');
+    $manualPaymentCount = $pdo->prepare("SELECT COUNT(*) FROM payment_transactions WHERE booking_id=? AND provider='manual' AND status='paid'");
+
+    $resubmitBookingId = $makeManualBooking('VRMANREJ' . strtoupper(bin2hex(random_bytes(3))),(new DateTimeImmutable('+60 days'))->format('Y-m-d'),(new DateTimeImmutable('+62 days'))->format('Y-m-d'));
+    $createManualReport->execute([$resubmitBookingId,$customerId,$total,$property['currency'],'Smoke Sender','Smoke Bank','MANUAL-REJECT-'.bin2hex(random_bytes(3)),null]);
+    $rejectedReportId = (int)$pdo->lastInsertId();
+    $reject = $pdo->prepare("UPDATE manual_payment_reports SET status='rejected',reviewed_by=?,review_note='Smoke rejection',reviewed_at=NOW(),updated_at=NOW() WHERE id=? AND status='pending'");
+    $reject->execute([(int)$admin['id'],$rejectedReportId]);
+    assertSmoke($reject->rowCount()===1,'Manual transfer report could not be rejected.');
+    $manualReportState->execute([$rejectedReportId]);
+    assertSmoke(($manualReportState->fetch(PDO::FETCH_ASSOC)['status']??'')==='rejected','Rejected manual transfer report status was not persisted.');
+    $createManualReport->execute([$resubmitBookingId,$customerId,$total,$property['currency'],'Smoke Sender','Smoke Bank','MANUAL-RESUBMIT-'.bin2hex(random_bytes(3)),null]);
+    $resubmittedReportId = (int)$pdo->lastInsertId();
+    assertSmoke($resubmittedReportId>$rejectedReportId,'A rejected report prevented a new pending report from being submitted.');
+    $activeReportCount = $pdo->prepare("SELECT COUNT(*) FROM manual_payment_reports WHERE booking_id=? AND status='pending'");
+    $activeReportCount->execute([$resubmitBookingId]);
+    assertSmoke((int)$activeReportCount->fetchColumn()===1,'Resubmission did not leave exactly one active report.');
+
+    $mismatchBookingId = $makeManualBooking('VRMANAMT' . strtoupper(bin2hex(random_bytes(3))),(new DateTimeImmutable('+70 days'))->format('Y-m-d'),(new DateTimeImmutable('+72 days'))->format('Y-m-d'));
+    $createManualReport->execute([$mismatchBookingId,$customerId,$total+0.01,$property['currency'],'Smoke Sender','Smoke Bank','MANUAL-AMOUNT-'.bin2hex(random_bytes(3)),null]);
+    $mismatchReportId = (int)$pdo->lastInsertId();
+    $mismatchBooking = $pdo->prepare('SELECT total,currency FROM bookings WHERE id=?');
+    $mismatchBooking->execute([$mismatchBookingId]);
+    $mismatchBookingRow = $mismatchBooking->fetch(PDO::FETCH_ASSOC);
+    $manualReportState->execute([$mismatchReportId]);
+    $mismatchReportRow = $manualReportState->fetch(PDO::FETCH_ASSOC);
+    $amountMismatch = abs((float)$mismatchBookingRow['total']-(float)$mismatchReportRow['amount'])>0.009 || strtoupper((string)$mismatchBookingRow['currency'])!==strtoupper((string)$mismatchReportRow['currency']);
+    assertSmoke($amountMismatch,'Manual transfer amount mismatch fixture was not detected.');
+    $manualPaymentCount->execute([$mismatchBookingId]);
+    assertSmoke((int)$manualPaymentCount->fetchColumn()===0,'Amount-mismatched manual transfer created a paid transaction.');
+
+    $conflictBookingId = $makeManualBooking('VRMANCON' . strtoupper(bin2hex(random_bytes(3))),$checkIn,$checkOut);
+    $createManualReport->execute([$conflictBookingId,$customerId,$total,$property['currency'],'Smoke Sender','Smoke Bank','MANUAL-CONFLICT-'.bin2hex(random_bytes(3)),null]);
+    $conflictReportId = (int)$pdo->lastInsertId();
+    $conflictCheck = $pdo->prepare("SELECT id FROM bookings WHERE property_id=? AND id<>? AND status='confirmed' AND check_in < ? AND check_out > ? LIMIT 1 FOR UPDATE");
+    $conflictCheck->execute([(int)$property['id'],$conflictBookingId,$checkOut,$checkIn]);
+    assertSmoke((bool)$conflictCheck->fetchColumn(),'Overlapping confirmed booking was not detected before manual payment approval.');
+    $manualPaymentCount->execute([$conflictBookingId]);
+    assertSmoke((int)$manualPaymentCount->fetchColumn()===0,'Conflicting booking received a manual paid transaction.');
+
+    $approvedBookingId = $makeManualBooking('VRMANOK' . strtoupper(bin2hex(random_bytes(3))),(new DateTimeImmutable('+80 days'))->format('Y-m-d'),(new DateTimeImmutable('+82 days'))->format('Y-m-d'));
+    $createManualReport->execute([$approvedBookingId,$customerId,$total,$property['currency'],'Smoke Sender','Smoke Bank','MANUAL-APPROVE-'.bin2hex(random_bytes(3)),null]);
+    $approvedReportId = (int)$pdo->lastInsertId();
+    $approvedReport = $pdo->prepare('SELECT * FROM manual_payment_reports WHERE id=?');
+    $approvedReport->execute([$approvedReportId]);
+    $approvedReportRow = $approvedReport->fetch(PDO::FETCH_ASSOC);
+    $approvedProviderReference = 'MANUAL-REPORT-'.$approvedReportId;
+    $approvedIdempotencyKey = hash('sha256','manual-payment-report:'.$approvedReportId);
+    $pdo->beginTransaction();
+    $createManualTransaction = $pdo->prepare("INSERT INTO payment_transactions(booking_id,provider,provider_reference,idempotency_key,amount,currency,status,request_payload,response_payload,paid_at,created_at,updated_at) VALUES(?, 'manual', ?, ?, ?, ?, 'paid', ?, ?, NOW(), NOW(), NOW())");
+    $createManualTransaction->execute([$approvedBookingId,$approvedProviderReference,$approvedIdempotencyKey,(float)$approvedReportRow['amount'],(string)$approvedReportRow['currency'],json_encode(['transfer_reference'=>$approvedReportRow['transfer_reference']]),json_encode(['report_id'=>$approvedReportId,'reviewed_by'=>(int)$admin['id'],'decision'=>'approved'])]);
+    $confirmManualBooking = $pdo->prepare("UPDATE bookings SET status='confirmed' WHERE id=? AND status='pending'");
+    $confirmManualBooking->execute([$approvedBookingId]);
+    $approveManualReport = $pdo->prepare("UPDATE manual_payment_reports SET status='approved',reviewed_by=?,reviewed_at=NOW(),updated_at=NOW() WHERE id=? AND status='pending'");
+    $approveManualReport->execute([(int)$admin['id'],$approvedReportId]);
+    assertSmoke($confirmManualBooking->rowCount()===1&&$approveManualReport->rowCount()===1,'Manual transfer approval did not atomically confirm the booking and report.');
+    $pdo->commit();
+    $approvedBookingState = $pdo->prepare('SELECT status FROM bookings WHERE id=?');
+    $approvedBookingState->execute([$approvedBookingId]);
+    assertSmoke($approvedBookingState->fetchColumn()==='confirmed','Approved manual transfer did not confirm the booking.');
+    $manualPaymentCount->execute([$approvedBookingId]);
+    assertSmoke((int)$manualPaymentCount->fetchColumn()===1,'Manual approval did not create exactly one paid transaction.');
+    $duplicateApproval = $pdo->prepare("UPDATE manual_payment_reports SET status='approved',reviewed_by=?,reviewed_at=NOW() WHERE id=? AND status='pending'");
+    $duplicateApproval->execute([(int)$admin['id'],$approvedReportId]);
+    assertSmoke($duplicateApproval->rowCount()===0,'A second manual approval was not rejected as already reviewed.');
+    $manualPaymentCount->execute([$approvedBookingId]);
+    assertSmoke((int)$manualPaymentCount->fetchColumn()===1,'Repeated manual approval created a second paid transaction.');
+
 
 
 
