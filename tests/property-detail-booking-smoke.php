@@ -20,6 +20,9 @@ $checks = [
     'booking collects iyzico billing details' => str_contains($property, 'name="identity_number"') && str_contains($property, 'name="billing_city"') && str_contains($property, 'name="billing_address"'),
     'reservation stores one-time iyzico auto-start data in session' => str_contains($routes, 'villa_iyzico_autostart') && str_contains($routes, '?start_iyzico=1'),
     'checkout auto-submits the iyzico payment form' => str_contains($checkout, 'autoStartIyzicoPayment') && str_contains($checkout, 'paymentForm.submit()'),
+    'guest booking offers enabled early check-in and late checkout options' => str_contains($property, 'bookingEarlyCheckin') && str_contains($property, 'bookingLateCheckout'),
+    'guest booking refreshes quoted total when time extras change' => str_contains($property, 'early_checkin:early&&early.checked') && str_contains($property, 'late_checkout:late&&late.checked'),
+    'admin and vendor can manage booking time extras per property' => str_contains($routes, '/admin/properties/{id}/booking-time-options') && str_contains($routes, '/vendor/properties/{id}/booking-time-options'),
 ];
 
 $failed = [];
