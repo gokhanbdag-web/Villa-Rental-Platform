@@ -1606,8 +1606,9 @@ $router->get('/vendor', static function (): void {
     $s=$pdo->prepare('SELECT * FROM vendors WHERE user_id=?');$s->execute([(int)Auth::user()['id']]);$vendor=$s->fetch();
     if(!$vendor){http_response_code(403);return;}
     $s=$pdo->prepare('SELECT COUNT(*) FROM properties WHERE vendor_id=?');$s->execute([(int)$vendor['id']]);$propertyCount=(int)$s->fetchColumn();
-    $vendorPayoutIban=(string)($vendor['payout_iban']??'')!==''?\App\Core\PaymentSecretVault::decrypt((string)$vendor['payout_iban']):'';
-    $vendor['payout_iban']=$vendorPayoutIban;
+    $vendorProfileStmt=$pdo->prepare('SELECT bank_name,account_holder,iban_encrypted FROM vendor_payout_profiles WHERE vendor_id=? LIMIT 1');$vendorProfileStmt->execute([(int)$vendor['id']]);$vendorProfile=$vendorProfileStmt->fetch(PDO::FETCH_ASSOC)?:[];
+    $vendor['payout_bank_name']=(string)($vendorProfile['bank_name']??'');$vendor['payout_account_holder']=(string)($vendorProfile['account_holder']??'');
+    $vendor['payout_iban']=(string)($vendorProfile['iban_encrypted']??'')!==''?\App\Core\PaymentSecretVault::decrypt((string)$vendorProfile['iban_encrypted']):'';
     $vendorPayoutBalances=\App\Core\VendorPayoutService::availableBalances($pdo,(int)$vendor['id']);
     $vendorPayoutStmt=$pdo->prepare('SELECT id,amount,currency,status,payout_reference,requested_at,processed_at FROM vendor_payouts WHERE vendor_id=? ORDER BY requested_at DESC,id DESC LIMIT 20');
     $vendorPayoutStmt->execute([(int)$vendor['id']]);$vendorPayouts=$vendorPayoutStmt->fetchAll();
@@ -3057,9 +3058,9 @@ $router->get('/admin/finance', static function (): void {
     $payoutSummary = $pdo->query("SELECT currency, status, COUNT(*) AS payout_count,
         COALESCE(SUM(amount),0) AS payout_amount
         FROM vendor_payouts GROUP BY currency,status ORDER BY currency,status")->fetchAll();
-    $recentPayouts=$pdo->query("SELECT vp.id,vp.vendor_id,vp.amount,vp.currency,vp.status,vp.payout_reference,vp.notes,vp.requested_at,vp.processed_at,v.business_name,v.payout_bank_name,v.payout_account_holder,v.payout_iban,u.email AS vendor_email
+    $recentPayouts=$pdo->query("SELECT vp.id,vp.vendor_id,vp.amount,vp.currency,vp.status,vp.payout_reference,vp.notes,vp.requested_at,vp.processed_at,v.business_name,ppf.bank_name AS payout_bank_name,ppf.account_holder AS payout_account_holder,ppf.iban_encrypted AS payout_iban,u.email AS vendor_email
     foreach($recentPayouts as &$payoutRow){$payoutRow['payout_iban']=(string)($payoutRow['payout_iban']??'')!==''?\App\Core\PaymentSecretVault::decrypt((string)$payoutRow['payout_iban']):'';}unset($payoutRow);
-        FROM vendor_payouts vp JOIN vendors v ON v.id=vp.vendor_id JOIN users u ON u.id=v.user_id
+        FROM vendor_payouts vp JOIN vendors v ON v.id=vp.vendor_id JOIN users u ON u.id=v.user_id LEFT JOIN vendor_payout_profiles ppf ON ppf.vendor_id=v.id
         ORDER BY vp.requested_at DESC,vp.id DESC LIMIT 50")->fetchAll();
     $adminPayoutMessage=(string)($_SESSION['villa_admin_payout_message']??'');
     $adminPayoutMessageType=(string)($_SESSION['villa_admin_payout_message_type']??'success');
