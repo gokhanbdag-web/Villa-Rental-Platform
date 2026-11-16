@@ -118,11 +118,11 @@ try {
     assertSmoke($migrationCount >= 20, 'Expected database migrations were not applied.');
     $emailQueueTable = (int)$pdo->query("SELECT COUNT(*) FROM information_schema.TABLES WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='email_queue'")->fetchColumn();
     assertSmoke($emailQueueTable === 1, 'Email delivery queue migration did not create its table.');
-    \App\Core\\EmailService::enqueue($pdo,'mail.smoke@example.test','Smoke email','<p>Smoke email body</p>','Smoke email body','smoke.email.event');
-    \App\Core\\EmailService::enqueue($pdo,'mail.smoke@example.test','Smoke email duplicate','<p>Duplicate</p>','Duplicate','smoke.email.event');
+    \App\Core\EmailService::enqueue($pdo,'mail.smoke@example.test','Smoke email','<p>Smoke email body</p>','Smoke email body','smoke.email.event');
+    \App\Core\EmailService::enqueue($pdo,'mail.smoke@example.test','Smoke email duplicate','<p>Duplicate</p>','Duplicate','smoke.email.event');
     $queuedEmailCount = (int)$pdo->query("SELECT COUNT(*) FROM email_queue WHERE event_key='smoke.email.event'")->fetchColumn();
     assertSmoke($queuedEmailCount === 1, 'Email event idempotency allowed a duplicate queue item.');
-    $emailWorkerResult = \App\Core\\EmailService::processPending($pdo,5);
+    $emailWorkerResult = \App\Core\EmailService::processPending($pdo,5);
     $queuedEmailStatus = (string)$pdo->query("SELECT status FROM email_queue WHERE event_key='smoke.email.event'")->fetchColumn();
     assertSmoke(($emailWorkerResult['skipped']??'')==='disabled' && $queuedEmailStatus==='pending', 'Email worker must keep queued messages pending while SMTP delivery is disabled.');
 
