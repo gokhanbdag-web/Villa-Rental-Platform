@@ -138,7 +138,7 @@ final class CalendarSyncService
                 $blocked++;
             }
 
-            $stale=$pdo->prepare("UPDATE calendar_feed_events SET missed_syncs=LEAST(missed_syncs+1,255),updated_at=NOW() WHERE feed_id=? AND last_seen_at<? AND event_status NOT IN ('cancelled','conflict','stale')");
+            $stale=$pdo->prepare("UPDATE calendar_feed_events SET missed_syncs=LEAST(missed_syncs+1,255),updated_at=NOW() WHERE feed_id=? AND last_seen_at<? AND event_status NOT IN ('cancelled','stale')");
             $stale->execute([$feedId,$syncStartedAt]);
             $remove=$pdo->prepare("SELECT id,availability_id FROM calendar_feed_events WHERE feed_id=? AND missed_syncs>=2 AND event_status<>'stale'");
             $remove->execute([$feedId]);
