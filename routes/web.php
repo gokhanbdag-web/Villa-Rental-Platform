@@ -879,7 +879,7 @@ $router->get('/villa/{slug}/availability', static function (array $params): void
     foreach($rules as $rule){if($rule['status']!=='available'&&$rule['date_from']<$outRaw&&$rule['date_to']>$inRaw){$fail(409,'Seçtiğiniz tarih aralığında kapalı veya müsait olmayan günler var.');return;}}
     $seasonStmt=$pdo->prepare('SELECT name,date_from,date_to,nightly_price FROM property_seasonal_prices WHERE property_id=? AND date_from < ? AND date_to > ? ORDER BY date_from');
     $seasonStmt->execute([(int)$property['id'],$outRaw,$inRaw]);$seasons=$seasonStmt->fetchAll(PDO::FETCH_ASSOC);
-    $subtotal=\\App\\Core\\BookingRateCalculator::staySubtotal($property,$checkIn,$checkOut,$seasons,$rules);
+    $subtotal=\App\Core\\BookingRateCalculator::staySubtotal($property,$checkIn,$checkOut,$seasons,$rules);
     $fees = (float)($property['cleaning_fee'] ?? 0);
     echo json_encode([
         'ok'=>true,'nights'=>$nights,'subtotal'=>round($subtotal,2),'fees'=>round($fees,2),
@@ -948,7 +948,7 @@ $router->post('/villa/{slug}/reserve', static function (array $params): void {
         $seasonStmt=$pdo->prepare('SELECT name,date_from,date_to,nightly_price FROM property_seasonal_prices WHERE property_id=? AND date_from < ? AND date_to > ? ORDER BY date_from');
         $seasonStmt->execute([(int)$property['id'],$outRaw,$inRaw]);$seasons=$seasonStmt->fetchAll(PDO::FETCH_ASSOC);
         if($conflict->fetchColumn()||$unavailable){$pdo->rollBack();http_response_code(409);exit('Seçtiğiniz tarihler artık müsait değil. Lütfen yeni tarih seçin.');}
-        $subtotal=\\App\\Core\\BookingRateCalculator::staySubtotal($current,$checkIn,$checkOut,$seasons,$rules);
+        $subtotal=\App\Core\\BookingRateCalculator::staySubtotal($current,$checkIn,$checkOut,$seasons,$rules);
         if($createNewAccount){
             $create=$pdo->prepare("INSERT INTO users(username,email,password_hash,role,status,created_at) VALUES(?,?,?,'customer','active',NOW())");
             $create->execute([$newUsername,$email,password_hash($password,PASSWORD_DEFAULT)]);$userId=(int)$pdo->lastInsertId();
@@ -3041,7 +3041,7 @@ $router->post('/admin/bookings/manual', static function (): void {
         foreach($rules as $rule){if($rule['status']!=='available'){$pdo->rollBack();http_response_code(409);exit('Seçilen tarihlerden biri takvimde kapalı.');}}
         $seasonStmt=$pdo->prepare('SELECT name,date_from,date_to,nightly_price FROM property_seasonal_prices WHERE property_id=? AND date_from < ? AND date_to > ? ORDER BY date_from');
         $seasonStmt->execute([$propertyId,$outRaw,$inRaw]);$seasons=$seasonStmt->fetchAll(PDO::FETCH_ASSOC);
-        $subtotal=\\App\\Core\\BookingRateCalculator::staySubtotal($property,$checkIn,$checkOut,$seasons,$rules);
+        $subtotal=\App\Core\\BookingRateCalculator::staySubtotal($property,$checkIn,$checkOut,$seasons,$rules);
         $fees=(float)$property['cleaning_fee'];$calculated=round($subtotal+$fees,2);
         $entered=$totalInput;$total=$entered===''?$calculated:(float)$entered;
         if($total<0||!is_finite($total)){$pdo->rollBack();http_response_code(422);exit('Toplam tutar geçersiz.');}
