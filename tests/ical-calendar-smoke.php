@@ -25,6 +25,8 @@ $rejectedUrls=[
     'https://localhost/calendar.ics',
     'https://user:password@example.com/calendar.ics',
     'https://example.com:8443/calendar.ics',
+    'https://example.com./calendar.ics',
+    'https://internal.example.local/calendar.ics',
 ];
 foreach($rejectedUrls as $url){
     $rejected=false;
