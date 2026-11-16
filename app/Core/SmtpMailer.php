@@ -30,6 +30,9 @@ final class SmtpMailer
         if (preg_match('/[\r\n]/', (string)($config['from_name'] ?? ''))) {
             throw new \InvalidArgumentException('Gönderen adı geçersiz.');
         }
+        if (strlen($username) > 190 || strlen($password) > 512) {
+            throw new \\InvalidArgumentException('SMTP kimlik bilgileri izin verilen boyutu aşıyor.');
+        }
         if (($username === '') !== ($password === '')) {
             throw new \InvalidArgumentException('SMTP kullanıcı adı ve şifresi birlikte girilmelidir.');
         }
