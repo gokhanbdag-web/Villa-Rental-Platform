@@ -13,7 +13,7 @@ body{margin:0;background:#f3f6f4;color:#20332c;font-family:Inter,system-ui,-appl
 h1{font-size:clamp(24px,3vw,32px);margin:0 0 7px;letter-spacing:-.7px}
 .sub,.muted{color:#718078;font-size:13px;line-height:1.55}
 .actions{display:flex;gap:9px;flex-wrap:wrap}
-.btn{appearance:none;border:1px solid #d8e3dc;background:#fff;color:#176b50;border-radius:10px;padding:10px 14px;font:700 13px inherit;cursor:pointer}
+.btn{appearance:none;border:1px solid #d8e3dc;background:#fff;color:#176b50;border-radius:10px;padding:10px 14px;font:inherit;font-size:13px;font-weight:700;cursor:pointer}
 .btn.primary{background:#167c80;border-color:#167c80;color:#fff}
 .btn:disabled{opacity:.55;cursor:wait}
 .cards{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:13px;margin:20px 0}
