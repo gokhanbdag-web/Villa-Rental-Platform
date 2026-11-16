@@ -65,6 +65,8 @@ jobs:
         run: php tests/hero-video-start-smoke.php
       - name: Run admin version display smoke test
         run: php tests/admin-version-display-smoke.php
+      - name: Run system diagnostics UI and media logging smoke test
+        run: php tests/system-diagnostics-smoke.php
       - name: Run WordPress-style blog CMS smoke test
         run: php tests/blog-cms-smoke.php
       - name: Run account mobile layout and demo reviews smoke test
