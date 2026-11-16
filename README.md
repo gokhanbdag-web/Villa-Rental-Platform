@@ -13,6 +13,7 @@ Native PHP 8.2+ and MySQL villa rental platform. No PHP framework or Composer de
 - Multi-vendor onboarding, vendor approval, vendor listing management, vendor reservation inbox, vendor-specific calendars, and per-vendor commission rates.
 - Admin user activation controls, editable navigation, CMS pages with SEO fields, platform settings, and translation catalogue editing.
 - Booking financial ledger, platform commission calculation, payment transaction, payout and notification database structures; editable translation catalogue.
+- Admin-configurable manual bank transfer details (bank, account holder, IBAN, instructions, and reference prefix); this configuration does not itself confirm incoming transfers.
 - 36 editable Turkish demo villa listings with illustrative property imagery; listings and media remain editable from the admin panel.
 - A single shared villa card component is used on the homepage and search results, including image galleries, favorites, ratings, booking indicators, and installation-aware image URLs.
 - One active `default` theme. Shared top information markup is centralized in `themes/default/partials/shared-topbar.php`; common styling is in `themes/default/style.css`. The topbar has a taller layout and theme-specific height control.
