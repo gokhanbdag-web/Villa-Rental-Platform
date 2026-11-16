@@ -1033,6 +1033,8 @@ $router->post('/checkout/{bookingCode}/iyzico/start', static function (array $pa
     verify_csrf();
     $user=Auth::user();if(!$user)redirect('/login');
     $config=\App\Core\PaymentGatewayConfig::forProvider('iyzico');
+    $paymentEnvironment=(string)($config['environment']??'sandbox');
+    if(!in_array($paymentEnvironment,['sandbox','production'],true)){http_response_code(409);exit('iyzico ödeme ortamı geçersiz.');}
     if(!$config['enabled']||!$config['configured']){http_response_code(409);exit('iyzico ödeme altyapısı etkin değil veya API bilgileri eksik.');}
     $pdo=Database::connection();
     $stmt=$pdo->prepare("SELECT b.*,p.title AS property_title,p.slug AS property_slug,u.username,u.email AS account_email,u.created_at AS account_created FROM bookings b JOIN properties p ON p.id=b.property_id JOIN users u ON u.id=b.guest_user_id WHERE b.booking_code=? AND b.guest_user_id=? LIMIT 1");
@@ -1116,11 +1118,11 @@ $router->post('/checkout/{bookingCode}/iyzico/start', static function (array $pa
         if($token===''||$redirectUrl===null){
             $responseFields=array_keys($response);
             sort($responseFields);
-            throw new RuntimeException('iyzico yanıtında güvenli Sandbox ödeme sayfası adresi bulunamadı (alanlar: '.implode(',',$responseFields).').');
+            throw new RuntimeException('iyzico yanıtında güvenli ödeme sayfası adresi bulunamadı (alanlar: '.implode(',',$responseFields).').');
         }
         $storedResponse=json_encode([
             'token'=>$token,'conversationId'=>$conversationId,'checkoutFormContent'=>$checkoutFormContent,
-            'paymentPageUrl'=>$redirectUrl,'render_mode'=>'redirect','environment'=>'sandbox',
+            'paymentPageUrl'=>$redirectUrl,'render_mode'=>'redirect','environment'=>$paymentEnvironment,
         ],JSON_UNESCAPED_UNICODE|JSON_UNESCAPED_SLASHES);
         $update=$pdo->prepare("UPDATE payment_transactions SET provider_reference=?,checkout_url=?,response_payload=?,expires_at=DATE_ADD(NOW(),INTERVAL 30 MINUTE),updated_at=NOW() WHERE id=? AND status='pending'");
         $update->execute([$token,$redirectUrl,$storedResponse,$transactionId]);
@@ -1135,7 +1137,7 @@ $router->post('/checkout/{bookingCode}/iyzico/start', static function (array $pa
             $failurePayload=json_encode([
                 'initialization_error'=>$diagnostic,
                 'error_reference'=>$errorReference,
-                'environment'=>'sandbox',
+                'environment'=>$paymentEnvironment,
             ],JSON_UNESCAPED_UNICODE|JSON_UNESCAPED_SLASHES);
             $fail=$pdo->prepare("UPDATE payment_transactions SET status='failed',response_payload=?,updated_at=NOW() WHERE id=? AND status='pending'");
             $fail->execute([$failurePayload,$transactionId]);
