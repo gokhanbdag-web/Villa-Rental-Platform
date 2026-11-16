@@ -47,6 +47,14 @@ function villa_navigation_tree(PDO $pdo, string $location, string $locale): arra
 }
 
 
+/** Persist guest-facing early arrival and late departure options for a property. */
+function villa_store_booking_time_options(PDO $pdo,int $propertyId,bool $earlyEnabled,string $earlyFee,bool $lateEnabled,string $lateFee):void {
+    foreach([$earlyFee,$lateFee] as $fee){if(!is_numeric($fee)||!is_finite((float)$fee)||(float)$fee<0||(float)$fee>99999999.99)throw new InvalidArgumentException('Ek hizmet ücretleri 0 ile 99.999.999,99 arasında olmalıdır.');}
+    $save=$pdo->prepare('UPDATE properties SET early_checkin_enabled=?,early_checkin_fee=?,late_checkout_enabled=?,late_checkout_fee=?,updated_at=NOW() WHERE id=?');
+    $save->execute([$earlyEnabled?1:0,(float)$earlyFee,$lateEnabled?1:0,(float)$lateFee,$propertyId]);
+    if($save->rowCount()===0){$check=$pdo->prepare('SELECT id FROM properties WHERE id=?');$check->execute([$propertyId]);if(!$check->fetchColumn())throw new RuntimeException('Konaklama bulunamadı.');}
+}
+
 /** Store non-overlapping property seasonal prices while serializing edits per property. */
 function villa_store_seasonal_price(PDO $pdo,int $propertyId,int $seasonId,string $name,string $from,string $to,string $price,string $minNights,array $checkinDays,array $checkoutDays): void {
     $name=trim($name);
@@ -1824,6 +1832,20 @@ $router->post('/admin/properties/seasonal-pricing/delete', static function():voi
     Auth::requireRole(['super_admin','admin']);verify_csrf();$pdo=Database::connection();$pid=(int)($_POST['property_id']??0);$s=$pdo->prepare('DELETE FROM property_seasonal_prices WHERE id=? AND property_id=?');$s->execute([(int)($_POST['id']??0),$pid]);redirect('/admin/properties/'.$pid.'/seasonal-pricing');
 });
 
+$router->get('/admin/properties/{id}/booking-time-options', static function(array $params):void {
+    Auth::requireRole(['super_admin','admin']);$pdo=Database::connection();$s=$pdo->prepare('SELECT id,title,currency,early_checkin_enabled,early_checkin_fee,late_checkout_enabled,late_checkout_fee FROM properties WHERE id=? LIMIT 1');$s->execute([(int)$params['id']]);$property=$s->fetch(PDO::FETCH_ASSOC);
+    if(!$property){http_response_code(404);return;}
+    $ownerType='admin';$saveUrl='/admin/properties/booking-time-options/save';$backUrl='/admin/properties/'.(int)$property['id'].'/availability';
+    $message=(string)($_SESSION['villa_booking_time_message']??'');$messageType=(string)($_SESSION['villa_booking_time_message_type']??'success');unset($_SESSION['villa_booking_time_message'],$_SESSION['villa_booking_time_message_type']);
+    ThemeManager::renderTemplate('templates/pages/admin/booking-time-options.php',get_defined_vars());
+});
+$router->post('/admin/properties/booking-time-options/save', static function():void {
+    Auth::requireRole(['super_admin','admin']);verify_csrf();$pdo=Database::connection();$pid=(int)($_POST['property_id']??0);
+    try{villa_store_booking_time_options($pdo,$pid,($_POST['early_checkin_enabled']??'')==='1',(string)($_POST['early_checkin_fee']??'0'),($_POST['late_checkout_enabled']??'')==='1',(string)($_POST['late_checkout_fee']??'0'));$_SESSION['villa_booking_time_message']='Giriş ve çıkış ek hizmetleri kaydedildi.';$_SESSION['villa_booking_time_message_type']='success';}
+    catch(Throwable $e){$_SESSION['villa_booking_time_message']=$e->getMessage();$_SESSION['villa_booking_time_message_type']='error';}
+    redirect('/admin/properties/'.$pid.'/booking-time-options');
+});
+
 $router->get('/admin/properties/{id}/calendar-sync', static function (array $params): void {
     Auth::requireRole(['super_admin','admin']);$pdo=Database::connection();
     $propertyStmt=$pdo->prepare('SELECT id,title FROM properties WHERE id=? LIMIT 1');$propertyStmt->execute([(int)$params['id']]);$property=$propertyStmt->fetch(PDO::FETCH_ASSOC);
@@ -1909,6 +1931,24 @@ $router->post('/vendor/properties/seasonal-pricing/delete', static function():vo
     if(!$vendor||!Auth::canManageVendorBookings((string)$vendor['status'])){http_response_code(403);return;}
     $own=$pdo->prepare('SELECT id FROM properties WHERE id=? AND vendor_id=? LIMIT 1');$own->execute([$pid,(int)$vendor['id']]);if(!$own->fetchColumn()){http_response_code(404);return;}
     $s=$pdo->prepare('DELETE FROM property_seasonal_prices WHERE id=? AND property_id=?');$s->execute([(int)($_POST['id']??0),$pid]);redirect('/vendor/properties/'.$pid.'/seasonal-pricing');
+});
+
+$router->get('/vendor/properties/{id}/booking-time-options', static function(array $params):void {
+    Auth::requireRole(['vendor']);$pdo=Database::connection();$v=$pdo->prepare('SELECT id,status FROM vendors WHERE user_id=? LIMIT 1');$v->execute([(int)Auth::user()['id']]);$vendor=$v->fetch(PDO::FETCH_ASSOC);
+    if(!$vendor||!Auth::canManageVendorBookings((string)$vendor['status'])){http_response_code(403);return;}
+    $s=$pdo->prepare('SELECT id,title,currency,early_checkin_enabled,early_checkin_fee,late_checkout_enabled,late_checkout_fee FROM properties WHERE id=? AND vendor_id=? LIMIT 1');$s->execute([(int)$params['id'],(int)$vendor['id']]);$property=$s->fetch(PDO::FETCH_ASSOC);
+    if(!$property){http_response_code(404);return;}
+    $ownerType='vendor';$saveUrl='/vendor/properties/booking-time-options/save';$backUrl='/vendor/properties/'.(int)$property['id'].'/availability';
+    $message=(string)($_SESSION['villa_booking_time_message']??'');$messageType=(string)($_SESSION['villa_booking_time_message_type']??'success');unset($_SESSION['villa_booking_time_message'],$_SESSION['villa_booking_time_message_type']);
+    ThemeManager::renderTemplate('templates/pages/admin/booking-time-options.php',get_defined_vars());
+});
+$router->post('/vendor/properties/booking-time-options/save', static function():void {
+    Auth::requireRole(['vendor']);verify_csrf();$pdo=Database::connection();$v=$pdo->prepare('SELECT id,status FROM vendors WHERE user_id=? LIMIT 1');$v->execute([(int)Auth::user()['id']]);$vendor=$v->fetch(PDO::FETCH_ASSOC);$pid=(int)($_POST['property_id']??0);
+    if(!$vendor||!Auth::canManageVendorBookings((string)$vendor['status'])){http_response_code(403);return;}
+    $own=$pdo->prepare('SELECT id FROM properties WHERE id=? AND vendor_id=? LIMIT 1');$own->execute([$pid,(int)$vendor['id']]);if(!$own->fetchColumn()){http_response_code(404);return;}
+    try{villa_store_booking_time_options($pdo,$pid,($_POST['early_checkin_enabled']??'')==='1',(string)($_POST['early_checkin_fee']??'0'),($_POST['late_checkout_enabled']??'')==='1',(string)($_POST['late_checkout_fee']??'0'));$_SESSION['villa_booking_time_message']='Giriş ve çıkış ek hizmetleri kaydedildi.';$_SESSION['villa_booking_time_message_type']='success';}
+    catch(Throwable $e){$_SESSION['villa_booking_time_message']=$e->getMessage();$_SESSION['villa_booking_time_message_type']='error';}
+    redirect('/vendor/properties/'.$pid.'/booking-time-options');
 });
 
 $router->get('/vendor/properties/{id}/calendar-sync', static function (array $params): void {
