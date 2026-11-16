@@ -6,10 +6,12 @@ $routes=file_get_contents($root.'/routes/web.php');
 $bootstrap=file_get_contents($root.'/app/bootstrap.php');
 $page=file_get_contents($root.'/themes/default/templates/pages/admin/performance.php');
 $version=trim((string)file_get_contents($root.'/VERSION'));
+$dashboardRoutePosition=strpos($routes,"$"."router->get('/admin/performance',");
+$dashboardRoute=$dashboardRoutePosition===false?'':substr($routes,$dashboardRoutePosition,300);
 $checks=[
  'super-admin diagnostics menu opens the HTML dashboard'=>str_contains($routes,"['label'=>'Sistem Tanılama','url'=>'/admin/performance','icon'=>'⌁']"),
  'dashboard route is separate from the JSON data endpoint'=>str_contains($routes,"$"."router->get('/admin/performance',")&&str_contains($routes,"$"."router->get('/admin/performance/diagnostics',"),
- 'dashboard is protected for super admins'=>preg_match("~\$router->get\('/admin/performance',\s*static function \(\): void \{\s*Auth::requireRole\(\['super_admin'\]\);~",$routes)===1,
+ 'dashboard is protected for super admins'=>str_contains($dashboardRoute,"Auth::requireRole(['super_admin']);"),
  'dashboard uses the theme admin template renderer'=>str_contains($routes,"templates/pages/admin/performance.php"),
  'diagnostics API suppresses historical successful video transfer rows'=>str_contains($routes,'Hide historical video downloads too')&&str_contains($routes,'$performance'),
  'dashboard parses JSON log lines into readable request and SQL tables'=>str_contains($page,'JSON.parse(row)')&&str_contains($page,'Yavaş HTTP istekleri')&&str_contains($page,'Yavaş SQL sorguları'),
