@@ -151,11 +151,27 @@ return static function (string $html, string $requestPath, string $platformMode)
             '/admin/performance' => '⌁',
             '/admin/vendors' => '♧',
         ];
+        // Select exactly one active item: the most specific matching route.
+        // The dashboard is active only on the admin root, never as a prefix for every page.
+        $activeNavUrl = null;
+        $activeNavLength = -1;
+        foreach ($groups as $groupLinks) {
+            foreach ($groupLinks as $url => $_label) {
+                $matches = ($url === '/admin')
+                    ? ($requestPath === '/admin' || $requestPath === '/admin/')
+                    : ($requestPath === $url || str_starts_with($requestPath, $url . '/'));
+                if ($matches && strlen($url) > $activeNavLength) {
+                    $activeNavUrl = $url;
+                    $activeNavLength = strlen($url);
+                }
+            }
+        }
+
         $nav = '';
         foreach ($groups as $groupLabel => $groupLinks) {
             $nav .= '<div class="vr-admin-nav-title">' . e($groupLabel) . '</div>';
             foreach ($groupLinks as $url => $label) {
-                $active = ($url === '/admin') ? ($requestPath === '/admin' || $requestPath === '/admin/') : ($requestPath === $url || str_starts_with($requestPath, $url . '/'));
+                $active = ($url === $activeNavUrl);
                 $icon = $icons[$url] ?? '•';
                 $nav .= '<a class="vr-admin-link' . ($active ? ' is-active' : '') . '" href="' . e(app_url($url)) . '" data-admin-link>'
                     . '<span class="vr-admin-icon" aria-hidden="true">' . e($icon) . '</span><span class="vr-admin-link-label">' . e($label) . '</span></a>';
@@ -335,7 +351,17 @@ return static function (string $html, string $requestPath, string $platformMode)
             enhanceFileUploaders(content);
             burger&&burger.addEventListener("click",function(){const open=layout.classList.toggle("menu-open");burger.setAttribute("aria-expanded",open?"true":"false")});
             overlay&&overlay.addEventListener("click",closeMenu);
-            function activate(url){document.querySelectorAll("[data-admin-link]").forEach(a=>{const u=new URL(a.href,location.href);a.classList.toggle("is-active",u.pathname===url|| (url!=="/admin"&&u.pathname!=="/admin"&&url.startsWith(u.pathname+"/")));});}
+            function activate(url){
+                const path=new URL(url,location.href).pathname.replace(/\\/$/,"")||adminRootPath;
+                let activeLink=null,activeLength=-1;
+                document.querySelectorAll("[data-admin-link]").forEach(function(link){
+                    const linkPath=new URL(link.href,location.href).pathname.replace(/\\/$/,"")||adminRootPath;
+                    const matches=(linkPath===adminRootPath)?path===adminRootPath:(path===linkPath||path.startsWith(linkPath+"/"));
+                    if(matches&&linkPath.length>activeLength){activeLink=link;activeLength=linkPath.length;}
+                    link.classList.remove("is-active");
+                });
+                if(activeLink)activeLink.classList.add("is-active");
+            }
             // Re-apply the server-side green-to-theme-primary mapping to AJAX fragments.
             // The initial page is transformed in PHP, but subsequent admin navigation replaces
             // the content directly in the browser and must receive the same treatment.
