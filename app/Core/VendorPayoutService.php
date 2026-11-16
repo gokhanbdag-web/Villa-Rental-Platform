@@ -8,6 +8,36 @@ use Throwable;
 
 final class VendorPayoutService
 {
+    public static function savePayoutProfile(PDO $pdo, int $userId, string $bankName, string $accountHolder, string $iban): void
+    {
+        $bankName=trim($bankName);
+        $accountHolder=trim($accountHolder);
+        $iban=strtoupper(preg_replace('/\\s+/', '', $iban) ?? '');
+        if($userId<1||$bankName===''||strlen($bankName)>120||$accountHolder===''||strlen($accountHolder)>190||!self::validIban($iban)) {
+            throw new \\InvalidArgumentException('Banka adı, hesap sahibi ve geçerli IBAN bilgilerini kontrol edin.');
+        }
+        $stmt=$pdo->prepare('UPDATE vendors SET payout_bank_name=?,payout_account_holder=?,payout_iban=? WHERE user_id=?');
+        $stmt->execute([$bankName,$accountHolder,$iban,$userId]);
+        if($stmt->rowCount()===0) {
+            $exists=$pdo->prepare('SELECT 1 FROM vendors WHERE user_id=? LIMIT 1');
+            $exists->execute([$userId]);
+            if(!$exists->fetchColumn()) throw new \\RuntimeException('Ev sahibi hesabı bulunamadı.');
+        }
+    }
+
+    public static function validIban(string $iban): bool
+    {
+        $iban=strtoupper(preg_replace('/\\s+/', '', $iban) ?? '');
+        if(strlen($iban)<15||strlen($iban)>34||!preg_match('/^[A-Z]{2}[0-9]{2}[A-Z0-9]+$/',$iban)) return false;
+        $rearranged=substr($iban,4).substr($iban,0,4);
+        $remainder=0;
+        foreach(str_split($rearranged) as $char) {
+            $value=ctype_alpha($char)?(string)(ord($char)-55):$char;
+            foreach(str_split($value) as $digit) $remainder=($remainder*10+(int)$digit)%97;
+        }
+        return $remainder===1;
+    }
+
     public static function availableBalances(PDO $pdo, int $vendorId): array
     {
         $stmt = $pdo->prepare("SELECT bf.currency,
@@ -20,7 +50,7 @@ final class VendorPayoutService
             FROM booking_financials bf
             JOIN bookings b ON b.id=bf.booking_id
             JOIN properties p ON p.id=b.property_id
-            WHERE p.vendor_id=? AND b.status='confirmed' AND b.check_out<=CURDATE()
+            WHERE p.vendor_id=? AND b.status IN ('confirmed','completed') AND b.check_out<=CURDATE()
               AND EXISTS (SELECT 1 FROM payment_transactions pt WHERE pt.booking_id=b.id AND pt.status='paid')
             GROUP BY bf.currency
             HAVING available_amount > 0
@@ -38,11 +68,14 @@ final class VendorPayoutService
 
         $pdo->beginTransaction();
         try {
-            $vendorStmt = $pdo->prepare('SELECT id,status FROM vendors WHERE user_id=? LIMIT 1 FOR UPDATE');
+            $vendorStmt = $pdo->prepare('SELECT id,status,payout_bank_name,payout_account_holder,payout_iban FROM vendors WHERE user_id=? LIMIT 1 FOR UPDATE');
             $vendorStmt->execute([$userId]);
             $vendor = $vendorStmt->fetch(PDO::FETCH_ASSOC);
             if (!$vendor || (string)$vendor['status'] !== 'approved') {
                 throw new \RuntimeException('Ödeme talebi için onaylı ev sahibi hesabı gereklidir.');
+            }
+            if (trim((string)($vendor['payout_bank_name']??''))==='' || trim((string)($vendor['payout_account_holder']??''))==='' || !self::validIban((string)($vendor['payout_iban']??''))) {
+                throw new \\RuntimeException('Ödeme talebinden önce banka adı, hesap sahibi ve doğrulanmış IBAN bilgilerinizi kaydedin.');
             }
             $vendorId = (int)$vendor['id'];
 
@@ -56,7 +89,7 @@ final class VendorPayoutService
                 FROM booking_financials bf
                 JOIN bookings b ON b.id=bf.booking_id
                 JOIN properties p ON p.id=b.property_id
-                WHERE p.vendor_id=? AND bf.currency=? AND b.status='confirmed' AND b.check_out<=CURDATE()
+                WHERE p.vendor_id=? AND bf.currency=? AND b.status IN ('confirmed','completed') AND b.check_out<=CURDATE()
                   AND EXISTS (SELECT 1 FROM payment_transactions pt WHERE pt.booking_id=b.id AND pt.status='paid')
                 ORDER BY bf.booking_id
                 FOR UPDATE");
