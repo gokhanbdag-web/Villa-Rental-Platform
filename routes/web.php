@@ -2532,11 +2532,13 @@ $router->post('/admin/typography', static function (): void {
 
 $router->get('/admin/settings', static function (): void {
     Auth::requireRole(['super_admin','admin']);
-    $settings=Database::connection()->query("SELECT setting_key,setting_value FROM settings WHERE setting_key IN ('platform.commission_percent','app.currency','app.timezone','payments.iyzico.environment','payments.paytr.environment','payments.iyzico.enabled','payments.paytr.enabled','payments.iyzico.api_key','payments.iyzico.secret_key','payments.paytr.merchant_id','payments.paytr.merchant_key','payments.paytr.merchant_salt')")->fetchAll(PDO::FETCH_KEY_PAIR);
+    $settings=Database::connection()->query("SELECT setting_key,setting_value FROM settings WHERE setting_key IN ('platform.commission_percent','app.currency','app.timezone','payments.iyzico.environment','payments.paytr.environment','payments.iyzico.enabled','payments.paytr.enabled','payments.iyzico.api_key','payments.iyzico.secret_key','payments.paytr.merchant_id','payments.paytr.merchant_key','payments.paytr.merchant_salt','payments.manual.enabled','payments.manual.bank_name','payments.manual.account_holder','payments.manual.iban','payments.manual.instructions','payments.manual.reference_prefix')")->fetchAll(PDO::FETCH_KEY_PAIR);
     $iyzicoEnabled=($settings['payments.iyzico.enabled']??'0')==='1';
     $paytrEnabled=($settings['payments.paytr.enabled']??'0')==='1';
     $iyzicoConfigured=!empty($settings['payments.iyzico.api_key'])&&!empty($settings['payments.iyzico.secret_key']);
     $paytrConfigured=!empty($settings['payments.paytr.merchant_id'])&&!empty($settings['payments.paytr.merchant_key'])&&!empty($settings['payments.paytr.merchant_salt']);
+    $manualEnabled=($settings['payments.manual.enabled']??'0')==='1';
+    $manualConfigured=trim((string)($settings['payments.manual.bank_name']??''))!==''&&trim((string)($settings['payments.manual.account_holder']??''))!==''&&preg_match('/^[A-Z]{2}[0-9A-Z]{13,32}$/',strtoupper(preg_replace('/\\s+/','',(string)($settings['payments.manual.iban']??''))??''))===1;
     $iyzicoTestMessage=(string)($_SESSION['villa_iyzico_test_message']??'');
     $iyzicoTestMessageType=(string)($_SESSION['villa_iyzico_test_message_type']??'success');
     unset($_SESSION['villa_iyzico_test_message'],$_SESSION['villa_iyzico_test_message_type']);
@@ -2565,8 +2567,15 @@ $router->post('/admin/settings', static function (): void {
     $pdo=Database::connection();$save=$pdo->prepare('INSERT INTO settings(setting_key,setting_value,autoload) VALUES(?,?,1) ON DUPLICATE KEY UPDATE setting_value=VALUES(setting_value),autoload=1');
     $iyzicoEnabled=!empty($_POST['iyzico_enabled'])&&$_POST['iyzico_enabled']==='1';
     $paytrEnabled=!empty($_POST['paytr_enabled'])&&$_POST['paytr_enabled']==='1';
-    $anyPaymentEnabled=$iyzicoEnabled||$paytrEnabled;
-    foreach(['platform.commission_percent'=>(string)$commission,'app.currency'=>$currency,'app.timezone'=>$timezone,'payments.iyzico.environment'=>$iyzicoEnvironment,'payments.paytr.environment'=>$paytrEnvironment,'payments.iyzico.enabled'=>$iyzicoEnabled?'1':'0','payments.paytr.enabled'=>$paytrEnabled?'1':'0','payments.enabled'=>$anyPaymentEnabled?'1':'0','payments.provider'=>$anyPaymentEnabled?'multiple':'none'] as $key=>$value)$save->execute([$key,$value]);
+    $manualEnabled=!empty($_POST['manual_enabled'])&&$_POST['manual_enabled']==='1';
+    $manualBank=trim((string)($_POST['manual_bank_name']??''));
+    $manualHolder=trim((string)($_POST['manual_account_holder']??''));
+    $manualIban=strtoupper(preg_replace('/\\s+/','',(string)($_POST['manual_iban']??''))??'');
+    $manualInstructions=trim((string)($_POST['manual_instructions']??''));
+    $manualPrefix=trim((string)($_POST['manual_reference_prefix']??'VILLA'));
+    if($manualEnabled&&($manualBank===''||mb_strlen($manualBank)>120||$manualHolder===''||mb_strlen($manualHolder)>190||!preg_match('/^[A-Z]{2}[0-9A-Z]{13,32}$/',$manualIban)||mb_strlen($manualInstructions)>2000||!preg_match('/^[A-Z0-9_-]{2,16}$/i',$manualPrefix))){http_response_code(422);exit('Manuel havale için banka adı, hesap sahibi ve geçerli IBAN girilmelidir.');}
+    $anyPaymentEnabled=$iyzicoEnabled||$paytrEnabled||$manualEnabled;
+    foreach(['platform.commission_percent'=>(string)$commission,'app.currency'=>$currency,'app.timezone'=>$timezone,'payments.iyzico.environment'=>$iyzicoEnvironment,'payments.paytr.environment'=>$paytrEnvironment,'payments.iyzico.enabled'=>$iyzicoEnabled?'1':'0','payments.paytr.enabled'=>$paytrEnabled?'1':'0','payments.manual.enabled'=>$manualEnabled?'1':'0','payments.manual.bank_name'=>$manualBank,'payments.manual.account_holder'=>$manualHolder,'payments.manual.iban'=>$manualIban,'payments.manual.instructions'=>$manualInstructions,'payments.manual.reference_prefix'=>$manualPrefix,'payments.enabled'=>$anyPaymentEnabled?'1':'0','payments.provider'=>$anyPaymentEnabled?'multiple':'none'] as $key=>$value)$save->execute([$key,$value]);
     $secrets=['payments.iyzico.api_key'=>'iyzico_api_key','payments.iyzico.secret_key'=>'iyzico_secret_key','payments.paytr.merchant_id'=>'paytr_merchant_id','payments.paytr.merchant_key'=>'paytr_merchant_key','payments.paytr.merchant_salt'=>'paytr_merchant_salt'];
     foreach($secrets as $key=>$field){$value=trim((string)($_POST[$field]??''));if($value!=='')$save->execute([$key,\App\Core\PaymentSecretVault::encrypt($value)]);}
     $clear=[];if(!empty($_POST['clear_iyzico']))$clear=array_merge($clear,['payments.iyzico.api_key','payments.iyzico.secret_key']);if(!empty($_POST['clear_paytr']))$clear=array_merge($clear,['payments.paytr.merchant_id','payments.paytr.merchant_key','payments.paytr.merchant_salt']);
