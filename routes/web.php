@@ -3233,7 +3233,7 @@ $router->post('/admin/cancellations/review', static function (): void {
             $paid->execute([$bookingId,$bookingId]);$currentPaid=number_format((float)$paid->fetchColumn(),2,'.','');
             $request['refund_amount']=\App\Core\BookingCancellationPolicy::refundAmount($currentPaid,(int)$request['refund_percent_snapshot']);
             $pdo->prepare("UPDATE booking_cancellation_requests SET refund_amount=? WHERE id=? AND status='pending'")->execute([$request['refund_amount'],$requestId]);
-            $pdo->prepare("UPDATE bookings SET status='cancelled' WHERE id=? AND status IN ('pending','confirmed')")->execute([$bookingId]);
+            $pdo->prepare("UPDATE bookings SET status='cancelled' WHERE id=? AND (status='pending' OR status='confirmed')")->execute([$bookingId]);
             $noticeTitle='Rezervasyon iptal talebiniz onaylandı';
             $noticeBody='Rezervasyonunuz iptal edildi. Güncel hesaplanan iade tutarı: '.number_format((float)$request['refund_amount'],2,',','.').' '.(string)$request['currency'].'. İade ödeme yöntemi ve sağlayıcı koşullarına göre ayrıca işlenecektir.';
         }else{$noticeTitle='Rezervasyon iptal talebiniz reddedildi';$noticeBody=$note!==''?$note:'İptal talebiniz yönetici tarafından reddedildi.';}
