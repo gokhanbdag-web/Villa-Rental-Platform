@@ -17,6 +17,7 @@ $checks = [
     'late cancellation uses configured partial percentage' => BookingCancellationPolicy::evaluate(new DateTimeImmutable('2026-11-20'), $today, 7, 100, 25, '1000.00')['refund_amount'] === '250.00',
     'zero paid amount produces no refund' => BookingCancellationPolicy::evaluate(new DateTimeImmutable('2026-11-20'), $today, 7, 100, 0, '0.00')['refund_amount'] === '0.00',
     'fractional amount rounds to minor units' => BookingCancellationPolicy::evaluate(new DateTimeImmutable('2026-11-23'), $today, 7, 100, 0, '10.25')['refund_amount'] === '10.25',
+    'approval recalculates against the remaining paid balance' => BookingCancellationPolicy::refundAmount('800.00', 25) === '200.00',
 ];
 $checks += [
     'customer cancellation endpoint is authenticated and CSRF protected' => str_contains($routes, "'/account/bookings/cancel-request'") && str_contains($routes, 'verify_csrf();'),
