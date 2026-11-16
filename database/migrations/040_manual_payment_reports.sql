@@ -22,7 +22,6 @@ CREATE TABLE IF NOT EXISTS manual_payment_reports (
     UNIQUE KEY uq_manual_report_active_booking (active_booking_id),
     INDEX idx_manual_report_status_submitted (status, submitted_at),
     INDEX idx_manual_report_booking (booking_id, submitted_at),
-    CONSTRAINT fk_manual_report_booking FOREIGN KEY (booking_id) REFERENCES bookings(id) ON DELETE CASCADE,
-    CONSTRAINT fk_manual_report_guest FOREIGN KEY (guest_user_id) REFERENCES users(id) ON DELETE CASCADE,
-    CONSTRAINT fk_manual_report_reviewer FOREIGN KEY (reviewed_by) REFERENCES users(id) ON DELETE SET NULL
+    INDEX idx_manual_report_guest (guest_user_id),
+    INDEX idx_manual_report_reviewer (reviewed_by)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
