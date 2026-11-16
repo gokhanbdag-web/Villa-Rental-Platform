@@ -16,9 +16,9 @@ CREATE TABLE IF NOT EXISTS booking_cancellation_requests (
     active_booking_id BIGINT UNSIGNED GENERATED ALWAYS AS (CASE WHEN status='pending' THEN booking_id ELSE NULL END) STORED,
     UNIQUE KEY uq_cancellation_active_booking (active_booking_id),
     INDEX idx_cancellation_status_created (status,created_at),
-    CONSTRAINT fk_cancellation_booking FOREIGN KEY (booking_id) REFERENCES bookings(id) ON DELETE CASCADE,
-    CONSTRAINT fk_cancellation_requester FOREIGN KEY (requested_by) REFERENCES users(id) ON DELETE CASCADE,
-    CONSTRAINT fk_cancellation_reviewer FOREIGN KEY (reviewed_by) REFERENCES users(id) ON DELETE SET NULL
+    INDEX idx_cancellation_booking (booking_id),
+    INDEX idx_cancellation_requester (requested_by),
+    INDEX idx_cancellation_reviewer (reviewed_by)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 INSERT INTO settings(setting_key,setting_value,autoload) VALUES
