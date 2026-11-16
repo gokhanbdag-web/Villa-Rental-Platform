@@ -89,6 +89,8 @@ jobs:
         run: php tests/admin-language-management-smoke.php
       - name: Run multilingual site content smoke test
         run: php tests/multilingual-site-content-smoke.php
+      - name: Run multilingual CMS pages smoke test
+        run: php tests/multilingual-cms-pages-smoke.php
       - name: Run blog archive menu option smoke test
         run: php tests/navigation-blog-archive-smoke.php
       - name: Run SMTP message validation smoke test
