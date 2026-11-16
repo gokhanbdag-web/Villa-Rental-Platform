@@ -72,15 +72,15 @@ function villa_iyzico_checkout_redirect_url(string $url): ?string {
     $host=strtolower((string)($parts['host']??''));
     $path=(string)($parts['path']??'');
     if(strtolower((string)($parts['scheme']??''))!=='https'
-        ||!in_array($host,['sandbox-api.iyzipay.com','sandbox-cpp.iyzipay.com'],true)
+        ||!in_array($host,['sandbox-api.iyzipay.com','sandbox-cpp.iyzipay.com','api.iyzipay.com','cpp.iyzipay.com'],true)
         ||isset($parts['user'])||isset($parts['pass'])||isset($parts['fragment']))return null;
     parse_str((string)($parts['query']??''),$query);
-    $isSandboxCpp=$host==='sandbox-cpp.iyzipay.com'
+    $isHostedCpp=in_array($host,['sandbox-cpp.iyzipay.com','cpp.iyzipay.com'],true)
         &&in_array($path,['','/'],true)
         &&preg_match('/^[A-Za-z0-9-]{16,128}$/',(string)($query['token']??''))===1;
-    $isSandboxApi=$host==='sandbox-api.iyzipay.com'
+    $isHostedApi=in_array($host,['sandbox-api.iyzipay.com','api.iyzipay.com'],true)
         &&str_starts_with($path,'/checkoutform/');
-    return ($isSandboxCpp||$isSandboxApi)?$url:null;
+    return ($isHostedCpp||$isHostedApi)?$url:null;
 }
 function villa_safe_return_url(string $url): string { $path=parse_url($url,PHP_URL_PATH)?:'/'; if(!str_starts_with($path,'/')||str_starts_with($path,'//'))return '/'; $query=parse_url($url,PHP_URL_QUERY); return $path.($query!==null?'?'.$query:''); }
 function villa_return_with_status(string $url,string $key,string $value): string { $back=villa_safe_return_url($url); return $back.(str_contains($back,'?')?'&':'?').rawurlencode($key).'='.rawurlencode($value); }
@@ -880,7 +880,7 @@ $router->post('/villa/{slug}/reserve', static function (array $params): void {
     $identityNumber=preg_replace('/\\D+/','',(string)($_POST['identity_number']??''))??'';
     $billingAddress=trim((string)($_POST['billing_address']??''));$billingCity=trim((string)($_POST['billing_city']??''));
     $iyzicoBookingConfig=\App\Core\PaymentGatewayConfig::forProvider('iyzico');
-    $autoStartIyzico=!empty($iyzicoBookingConfig['enabled'])&&!empty($iyzicoBookingConfig['configured'])&&($iyzicoBookingConfig['environment']??'')==='sandbox';
+    $autoStartIyzico=!empty($iyzicoBookingConfig['enabled'])&&!empty($iyzicoBookingConfig['configured'])&&in_array(($iyzicoBookingConfig['environment']??''),['sandbox','production'],true);
     $inRaw=trim((string)($_POST['check_in']??''));$outRaw=trim((string)($_POST['check_out']??''));
     $checkIn=DateTimeImmutable::createFromFormat('!Y-m-d',$inRaw);$checkOut=DateTimeImmutable::createFromFormat('!Y-m-d',$outRaw);
     $guests=(int)($_POST['guests']??0);$fullName=trim($first.' '.$last);
@@ -960,7 +960,7 @@ $router->get('/checkout/{bookingCode}', static function(array $params):void {
     $latestManualReport->execute([(int)$booking['id']]);$latestManualReportRow=$latestManualReport->fetch(PDO::FETCH_ASSOC)?:[];
     $manualReportStatus=(string)($latestManualReportRow['status']??'');
     $iyzicoConfig=\App\Core\PaymentGatewayConfig::forProvider('iyzico');
-    $iyzicoPaymentAvailable=!empty($iyzicoConfig['enabled'])&&!empty($iyzicoConfig['configured'])&&($iyzicoConfig['environment']??'')==='sandbox';
+    $iyzicoPaymentAvailable=!empty($iyzicoConfig['enabled'])&&!empty($iyzicoConfig['configured'])&&in_array(($iyzicoConfig['environment']??''),['sandbox','production'],true);
     $autoStartIyzicoPayment=false;$iyzicoAutoStartData=[];
     if(!empty($_GET['start_iyzico'])&&$iyzicoPaymentAvailable){
         $pendingAutoStart=$_SESSION['villa_iyzico_autostart'][(string)$booking['booking_code']]??null;
@@ -1034,7 +1034,6 @@ $router->post('/checkout/{bookingCode}/iyzico/start', static function (array $pa
     $user=Auth::user();if(!$user)redirect('/login');
     $config=\App\Core\PaymentGatewayConfig::forProvider('iyzico');
     if(!$config['enabled']||!$config['configured']){http_response_code(409);exit('iyzico ödeme altyapısı etkin değil veya API bilgileri eksik.');}
-    if($config['environment']!=='sandbox'){http_response_code(409);exit('Bu aşamada yalnızca iyzico Sandbox ödemeleri açıktır. Canlı ödeme akışı ayrıca etkinleştirilecektir.');}
     $pdo=Database::connection();
     $stmt=$pdo->prepare("SELECT b.*,p.title AS property_title,p.slug AS property_slug,u.username,u.email AS account_email,u.created_at AS account_created FROM bookings b JOIN properties p ON p.id=b.property_id JOIN users u ON u.id=b.guest_user_id WHERE b.booking_code=? AND b.guest_user_id=? LIMIT 1");
     $stmt->execute([$params['bookingCode']??'',(int)$user['id']]);$booking=$stmt->fetch();
@@ -1155,7 +1154,6 @@ $router->post('/payments/iyzico/callback', static function (): void {
     if(!$transaction){http_response_code(404);exit('Ödeme işlemi bulunamadı.');}
     try{
         $config=\App\Core\PaymentGatewayConfig::forProvider('iyzico');
-        $config['environment']='sandbox';
         $requestData=json_decode((string)$transaction['request_payload'],true);
         $expectedConversationId=is_array($requestData)?trim((string)($requestData['conversationId']??'')):'';
         $expectedBasketId=is_array($requestData)?trim((string)($requestData['basketId']??'')):'';
@@ -1222,7 +1220,6 @@ foreach(['success','failed','review'] as $paymentResultType){
 $router->post('/payments/iyzico/webhook', static function (): void {
     $config=\App\Core\PaymentGatewayConfig::forProvider('iyzico');
     if(!$config['configured']){http_response_code(403);exit('Not configured');}
-    $config['environment']='sandbox';
     $payload=$_POST;
     if(!$payload){
         $raw=(string)file_get_contents('php://input');
@@ -2593,7 +2590,7 @@ $router->post('/admin/settings', static function (): void {
             $config=\App\Core\PaymentGatewayConfig::forProvider('iyzico');
             if (!$config['configured']) throw new RuntimeException('Önce iyzico API Key ve Secret Key bilgilerini kaydedin.');
             $result=\App\Core\IyzicoApiClient::testSandboxConnection($config);
-            $_SESSION['villa_iyzico_test_message']='iyzico Sandbox bağlantısı başarılı. BIN kontrolü yanıtı alındı; ödeme veya tahsilat oluşturulmadı.';
+            $_SESSION['villa_iyzico_test_message']='iyzico '.(($config['environment']??'sandbox')==='production'?'Production':'Sandbox').' API bağlantısı başarılı. BIN kontrolü yanıtı alındı; ödeme veya tahsilat oluşturulmadı.';
             $_SESSION['villa_iyzico_test_message_type']='success';
         } catch (Throwable $e) {
             error_log('iyzico sandbox connection test failed: '.$e->getMessage());
