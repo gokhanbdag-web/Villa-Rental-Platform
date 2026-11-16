@@ -3229,9 +3229,13 @@ $router->post('/admin/cancellations/review', static function (): void {
         if(!$booking||!$request||(string)$request['status']!=='pending')throw new RuntimeException('İptal talebi daha önce işlenmiş veya bulunamıyor.');
         if($decision==='approved'){
             if(!in_array((string)$booking['status'],['pending','confirmed'],true))throw new RuntimeException('Rezervasyon artık iptal edilebilir durumda değil.');
+            $paid=$pdo->prepare("SELECT GREATEST(0,COALESCE((SELECT SUM(amount) FROM payment_transactions WHERE booking_id=? AND status IN ('paid','refunded')),0)-COALESCE((SELECT SUM(amount) FROM payment_refunds WHERE booking_id=? AND status IN ('succeeded','processing','unknown')),0))");
+            $paid->execute([$bookingId,$bookingId]);$currentPaid=number_format((float)$paid->fetchColumn(),2,'.','');
+            $request['refund_amount']=\App\Core\BookingCancellationPolicy::refundAmount($currentPaid,(int)$request['refund_percent_snapshot']);
+            $pdo->prepare("UPDATE booking_cancellation_requests SET refund_amount=? WHERE id=? AND status='pending'")->execute([$request['refund_amount'],$requestId]);
             $pdo->prepare("UPDATE bookings SET status='cancelled' WHERE id=? AND status IN ('pending','confirmed')")->execute([$bookingId]);
             $noticeTitle='Rezervasyon iptal talebiniz onaylandı';
-            $noticeBody='Rezervasyonunuz iptal edildi. Hesaplanan iade tutarı: '.number_format((float)$request['refund_amount'],2,',','.').' '.(string)$request['currency'].'. İade ödeme yöntemi ve sağlayıcı koşullarına göre ayrıca işlenecektir.';
+            $noticeBody='Rezervasyonunuz iptal edildi. Güncel hesaplanan iade tutarı: '.number_format((float)$request['refund_amount'],2,',','.').' '.(string)$request['currency'].'. İade ödeme yöntemi ve sağlayıcı koşullarına göre ayrıca işlenecektir.';
         }else{$noticeTitle='Rezervasyon iptal talebiniz reddedildi';$noticeBody=$note!==''?$note:'İptal talebiniz yönetici tarafından reddedildi.';}
         $update=$pdo->prepare('UPDATE booking_cancellation_requests SET status=?,reviewed_by=?,decision_note=?,reviewed_at=NOW() WHERE id=? AND status=\'pending\'');
         $update->execute([$decision,(int)Auth::user()['id'],$note!==''?$note:null,$requestId]);
