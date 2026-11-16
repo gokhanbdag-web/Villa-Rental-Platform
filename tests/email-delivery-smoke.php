@@ -49,4 +49,13 @@ try {
     // Expected rejection.
 }
 
+$badAuth = $config;
+$badAuth['username'] = '';
+try {
+    SmtpMailer::validate($badAuth, 'guest@example.test', 'Test');
+    throw new RuntimeException('SMTP validation accepted a password without a username.');
+} catch (InvalidArgumentException) {
+    // Expected rejection.
+}
+
 fwrite(STDOUT, "SMTP message validation smoke tests passed.\n");
