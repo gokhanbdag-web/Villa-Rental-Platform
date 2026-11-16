@@ -1041,22 +1041,6 @@ $router->post('/checkout/{bookingCode}/iyzico/start', static function (array $pa
     $stmt->execute([$params['bookingCode']??'',(int)$user['id']]);$booking=$stmt->fetch();
     if(!$booking){http_response_code(404);exit('Rezervasyon bulunamadı.');}
     if(!in_array((string)$booking['status'],['pending'],true)){http_response_code(409);exit('Yalnızca ödeme bekleyen rezervasyonlar için ödeme başlatılabilir.');}
-    $existingPayment=$pdo->prepare("SELECT provider_reference,checkout_url,status,expires_at FROM payment_transactions WHERE booking_id=? AND provider='iyzico' AND status IN ('pending','processing') ORDER BY id DESC LIMIT 1");
-    $existingPayment->execute([(int)$booking['id']]);$activePayment=$existingPayment->fetch();
-    if($activePayment&&$activePayment['status']==='processing')redirect('/checkout/'.rawurlencode((string)$booking['booking_code']).'?payment=review');
-    if($activePayment&&$activePayment['status']==='pending'){
-        if(!empty($activePayment['expires_at'])&&strtotime((string)$activePayment['expires_at'])>time()){
-            $stored=$pdo->prepare("SELECT response_payload FROM payment_transactions WHERE provider='iyzico' AND provider_reference=? AND status='pending' LIMIT 1");
-            $stored->execute([(string)$activePayment['provider_reference']]);
-            $storedResponse=json_decode((string)($stored->fetchColumn()?:''),true);
-            $existingRedirectUrl=is_array($storedResponse)?villa_iyzico_checkout_redirect_url((string)($storedResponse['paymentPageUrl']??'')):null;
-            if($existingRedirectUrl!==null)redirect($existingRedirectUrl);
-        }
-        if(str_starts_with((string)$activePayment['provider_reference'],'init:')){http_response_code(409);exit('Ödeme oturumu hazırlanıyor. Lütfen birkaç saniye sonra tekrar deneyin.');}
-        $expire=$pdo->prepare("UPDATE payment_transactions SET status='expired',updated_at=NOW() WHERE provider='iyzico' AND provider_reference=? AND status='pending'");
-        $expire->execute([(string)$activePayment['provider_reference']]);
-    }
-
     $identityNumber=preg_replace('/\D+/','',(string)($_POST['identity_number']??''))??'';
     $address=trim((string)($_POST['billing_address']??''));
     $city=trim((string)($_POST['billing_city']??''));
@@ -1100,12 +1084,29 @@ $router->post('/checkout/{bookingCode}/iyzico/start', static function (array $pa
         ]],
     ];
 
-    $idempotency=hash('sha256','iyzico:'.$conversationId);
-    $placeholder='init:'.$conversationId;
     try{
-        $insert=$pdo->prepare("INSERT INTO payment_transactions(booking_id,provider,provider_reference,idempotency_key,amount,currency,status,request_payload,created_at,updated_at) VALUES(?,'iyzico',?,?,?,?, 'pending',?,NOW(),NOW())");
-        $insert->execute([(int)$booking['id'],$placeholder,$idempotency,$amount,$currency,json_encode(['conversationId'=>$conversationId,'basketId'=>$booking['booking_code'],'environment'=>$config['environment']],JSON_UNESCAPED_UNICODE)]);
-        $transactionId=(int)$pdo->lastInsertId();
+        $reservation=\App\Core\PaymentCheckoutGuard::reserveIyzico(
+            $pdo,
+            (int)$booking['id'],
+            $conversationId,
+            $amount,
+            $currency,
+            ['conversationId'=>$conversationId,'basketId'=>$booking['booking_code'],'environment'=>$paymentEnvironment]
+        );
+        $reservationResult=(string)($reservation['result']??'');
+        if($reservationResult==='already_paid'){http_response_code(409);exit('Bu rezervasyon için ödeme zaten doğrulanmış.');}
+        if($reservationResult==='booking_not_found'){http_response_code(404);exit('Rezervasyon bulunamadı.');}
+        if($reservationResult==='booking_not_pending'){http_response_code(409);exit('Yalnızca ödeme bekleyen rezervasyonlar için ödeme başlatılabilir.');}
+        if($reservationResult==='processing')redirect('/checkout/'.rawurlencode((string)$booking['booking_code']).'?payment=review');
+        if($reservationResult==='initializing'){http_response_code(409);exit('Ödeme oturumu hazırlanıyor. Lütfen birkaç saniye sonra tekrar deneyin.');}
+        if($reservationResult==='existing'){
+            $existingPayload=json_decode((string)($reservation['payment']['response_payload']??''),true);
+            $existingUrl=is_array($existingPayload)?villa_iyzico_checkout_redirect_url((string)($existingPayload['paymentPageUrl']??'')):null;
+            if($existingUrl!==null)redirect($existingUrl);
+            http_response_code(409);exit('Mevcut ödeme oturumu doğrulanamadı. Lütfen birkaç saniye sonra tekrar deneyin.');
+        }
+        if($reservationResult!=='reserved'){http_response_code(409);exit('Ödeme oturumu güvenli şekilde başlatılamadı.');}
+        $transactionId=(int)$reservation['transaction_id'];
         $response=\App\Core\IyzicoApiClient::initializeCheckoutForm($config,$payload);
         $token=trim((string)($response['token']??''));
         $checkoutFormContent=trim((string)($response['checkoutFormContent']??''));

@@ -8,6 +8,7 @@ use App\Core\Installer;
 use App\Core\Migrator;
 use App\Core\PaymentWebhookInbox;
 use App\Core\PaymentCallbackProcessor;
+use App\Core\PaymentCheckoutGuard;
 use App\Core\ThemeManager;
 use App\Core\Router;
 
@@ -255,6 +256,32 @@ try {
     assertSmoke(($latePaidResult['result']??'')==='rejected_booking_status'&&!($latePaidResult['payment_updated']??true),'A late successful callback was accepted for a cancelled booking.');
     $lifecyclePaymentState->execute([$latePaidCase['reference']]);
     assertSmoke(($lifecyclePaymentState->fetch(PDO::FETCH_ASSOC)['status']??'')==='pending','Rejected late payment callback changed the payment transaction.');
+
+    // The booking row lock serializes repeat checkout starts and stale init retries.
+    $checkoutCode='VRCHK'.strtoupper(bin2hex(random_bytes(4)));
+    $checkoutStart=(new DateTimeImmutable('+105 days'))->format('Y-m-d');
+    $checkoutEnd=(new DateTimeImmutable('+107 days'))->format('Y-m-d');
+    $createBooking->execute([$checkoutCode,(int)$property['id'],$customerId,'Checkout Guard Customer',$customerEmail,'+905551112233',$checkoutStart,$checkoutEnd,1,$subtotal,$fees,$total,$property['currency']]);
+    $checkoutBookingId=(int)$pdo->lastInsertId();
+    $checkoutConversation='VR'.$checkoutBookingId.'-'.strtoupper(bin2hex(random_bytes(5)));
+    $checkoutPayload=['conversationId'=>$checkoutConversation,'basketId'=>$checkoutCode,'environment'=>'sandbox'];
+    $checkoutAmount=number_format($total,2,'.','');
+    $firstCheckout=PaymentCheckoutGuard::reserveIyzico($pdo,$checkoutBookingId,$checkoutConversation,$checkoutAmount,$property['currency'],$checkoutPayload);
+    assertSmoke(($firstCheckout['result']??'')==='reserved'&&!empty($firstCheckout['transaction_id']),'First iyzico start did not reserve an initialization.');
+    $repeatCheckout=PaymentCheckoutGuard::reserveIyzico($pdo,$checkoutBookingId,'VR-REPEAT-'.strtoupper(bin2hex(random_bytes(4))),$checkoutAmount,$property['currency'],$checkoutPayload);
+    assertSmoke(($repeatCheckout['result']??'')==='initializing','Repeated iyzico start did not detect the active initialization.');
+    $activeCheckoutCount=$pdo->prepare("SELECT COUNT(*) FROM payment_transactions WHERE booking_id=? AND provider='iyzico' AND status IN ('pending','processing')");
+    $activeCheckoutCount->execute([$checkoutBookingId]);
+    assertSmoke((int)$activeCheckoutCount->fetchColumn()===1,'Repeated checkout start created multiple active iyzico transactions.');
+    $expireCheckout=$pdo->prepare("UPDATE payment_transactions SET expires_at=DATE_SUB(NOW(),INTERVAL 1 MINUTE) WHERE id=?");
+    $expireCheckout->execute([(int)$firstCheckout['transaction_id']]);
+    $retryCheckout=PaymentCheckoutGuard::reserveIyzico($pdo,$checkoutBookingId,'VR-RETRY-'.strtoupper(bin2hex(random_bytes(4))),$checkoutAmount,$property['currency'],$checkoutPayload);
+    assertSmoke(($retryCheckout['result']??'')==='reserved','Expired initialization placeholder could not be retried.');
+    $oldCheckout=$pdo->prepare('SELECT status FROM payment_transactions WHERE id=?');
+    $oldCheckout->execute([(int)$firstCheckout['transaction_id']]);
+    assertSmoke($oldCheckout->fetchColumn()==='expired','Expired initialization placeholder was not marked expired.');
+    $activeCheckoutCount->execute([$checkoutBookingId]);
+    assertSmoke((int)$activeCheckoutCount->fetchColumn()===1,'Retry left multiple active iyzico transactions.');
 
     
     // MySQL-backed manual transfer lifecycle: reject, resubmit, validate
