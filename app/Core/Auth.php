@@ -58,7 +58,7 @@ final class Auth
             $stmt = Database::connection()->prepare('SELECT username,email,role,status,session_version FROM users WHERE id=? LIMIT 1');
             $stmt->execute([(int)($_SESSION['user']['id'] ?? 0)]);
             $current = $stmt->fetch();
-            if (!$current || $current['status'] !== 'active' || (isset($_SESSION['user']['session_version']) && (int)$_SESSION['user']['session_version'] !== (int)$current['session_version'])) {
+            if (!$current || $current['status'] !== 'active' || !isset($_SESSION['user']['session_version']) || (int)$_SESSION['user']['session_version'] !== (int)$current['session_version']) {
                 unset($_SESSION['user']);
                 session_regenerate_id(true);
                 return null;
