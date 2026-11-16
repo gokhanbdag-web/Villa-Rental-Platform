@@ -77,12 +77,14 @@ final class IyzicoApiClient
         if (!is_array($decoded)) {
             throw new \RuntimeException('iyzico geçerli JSON yanıtı döndürmedi (HTTP ' . $httpCode . ').');
         }
-        if ($httpCode < 200 || $httpCode >= 300 || strtolower((string)($decoded['status'] ?? '')) !== 'success') {
-            if (!$allowFailure) {
-                $message = trim((string)($decoded['errorMessage'] ?? ''));
-                $code = trim((string)($decoded['errorCode'] ?? ''));
-                throw new \RuntimeException('iyzico API testi başarısız' . ($code !== '' ? ' (' . $code . ')' : '') . ($message !== '' ? ': ' . $message : '.'));
-            }
+        if ($httpCode < 200 || $httpCode >= 300) {
+            throw new \RuntimeException('iyzico API HTTP isteği başarısız (HTTP ' . $httpCode . ').');
+        }
+        if (strtolower((string)($decoded['status'] ?? '')) !== 'success' && !$allowFailure) {
+            $message = trim((string)($decoded['errorMessage'] ?? ''));
+            $code = trim((string)($decoded['errorCode'] ?? ''));
+            throw new \RuntimeException('iyzico API testi başarısız' . ($code !== '' ? ' (' . $code . ')' : '') . ($message !== '' ? ': ' . $message : '.'));
+        }
         }
         return $decoded;
     }
