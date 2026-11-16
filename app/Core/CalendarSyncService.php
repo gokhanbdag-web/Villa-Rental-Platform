@@ -195,7 +195,7 @@ final class CalendarSyncService
         $events=[];
         $bookings=$pdo->prepare("SELECT id,check_in,check_out FROM bookings WHERE property_id=? AND status IN ('confirmed','completed') AND check_out>CURDATE()");
         $bookings->execute([$propertyId]);
-        foreach($bookings->fetchAll(PDO::FETCH_ASSOC) as $row)$events[]=['uid'=>'booking-'.$row['id'].'@vill acms','from'=>$row['check_in'],'to'=>$row['check_out'],'summary'=>'Reserved'];
+        foreach($bookings->fetchAll(PDO::FETCH_ASSOC) as $row)$events[]=['uid'=>'booking-'.$row['id'].'@calendar.villacms','from'=>$row['check_in'],'to'=>$row['check_out'],'summary'=>'Reserved'];
         $availability=$pdo->prepare("SELECT a.id,a.date_from,a.date_to FROM availability a LEFT JOIN calendar_feed_events e ON e.availability_id=a.id WHERE a.property_id=? AND a.status='blocked' AND a.date_to>CURDATE() AND e.id IS NULL");
         $availability->execute([$propertyId]);
         foreach($availability->fetchAll(PDO::FETCH_ASSOC) as $row)$events[]=['uid'=>'availability-'.$row['id'].'@vill acms','from'=>$row['date_from'],'to'=>$row['date_to'],'summary'=>'Unavailable'];
@@ -213,6 +213,6 @@ final class CalendarSyncService
     private static function validDateRange(string $from,string $to): bool
     {
         $a=DateTimeImmutable::createFromFormat('!Y-m-d',$from);$b=DateTimeImmutable::createFromFormat('!Y-m-d',$to);
-        return $a!==false&&$b!==false&&$a->format('Y-m-d')===$from&&$b->format('Y-m-d')===$to&&$b>$a&&$a>=new DateTimeImmutable('today');
+        return $a!==false&&$b!==false&&$a->format('Y-m-d')===$from&&$b->format('Y-m-d')===$to&&$b>$a&&$b>new DateTimeImmutable('today')&&$a>=new DateTimeImmutable('-365 days');
     }
 }
