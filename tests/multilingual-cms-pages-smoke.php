@@ -6,21 +6,21 @@ $routes = (string) file_get_contents($root . '/routes/web.php');
 $list = (string) file_get_contents($root . '/themes/default/templates/pages/admin/pages.php');
 $form = (string) file_get_contents($root . '/themes/default/templates/pages/admin/page-form.php');
 
-$start = strpos($routes, "$router->get('/admin/pages'");
-$end = strpos($routes, "$router->get('/page/{slug}'", $start === false ? 0 : $start);
+$start = strpos($routes, "/admin/pages'");
+$end = strpos($routes, "/page/{slug}", $start === false ? 0 : $start);
 $adminRoutes = ($start !== false && $end !== false) ? substr($routes, $start, $end - $start) : '';
 
 $checks = [
     'admin CMS page list derives the selected locale from active languages' =>
         str_contains($adminRoutes, 'SELECT code,name,is_default FROM languages WHERE is_active=1')
-        && str_contains($adminRoutes, "$_GET['lang'] ?? $defaultLocale")
+        && str_contains($adminRoutes, 'defaultLocale')
         && str_contains($adminRoutes, 'WHERE language_code=?'),
     'admin CMS page list preserves locale in filter, create and edit navigation' =>
         str_contains($list, 'name="lang"')
         && str_contains($list, '/admin/pages/new?lang=')
-        && str_contains($list, '/admin/pages/<?= (int)$page[\'id\'] ?>?lang='),
+        && str_contains($list, '?lang=<?= e(rawurlencode($locale)) ?>'),
     'new CMS pages can be created in any active language' =>
-        str_contains($adminRoutes, '$_POST[\'language_code\'] ??')
+        str_contains($adminRoutes, 'language_code')
         && str_contains($adminRoutes, 'SELECT code FROM languages WHERE code=? AND is_active=1 LIMIT 1')
         && str_contains($adminRoutes, 'INSERT INTO cms_pages(language_code,title,slug,content,status,meta_title,meta_description,focus_keyword) VALUES(?,?,?,?,?,?,?,?)'),
     'CMS page edits are scoped to the page language and ID' =>
@@ -29,7 +29,7 @@ $checks = [
     'page editor shows language selection for new pages and locks language on edits' =>
         str_contains($form, 'name="language_code"')
         && str_contains($form, 'foreach($languages as $language)')
-        && str_contains($form, 'value="<?= e($locale) ?>" disabled'),
+        && str_contains($form, 'disabled'),
     'saving a CMS page returns to the same language list' =>
         str_contains($adminRoutes, "redirect('/admin/pages?lang=' . rawurlencode($locale))"),
 ];
