@@ -1,5 +1,12 @@
 # Changelog
 
+## 1.5.7 - 2026-11-16
+- Enable iyzico Checkout Form in the explicitly selected Sandbox or Production environment, with production hosted payment URL allow-listing.
+- Persist each transaction's originating environment and use it for callback and webhook result retrieval, preventing cross-environment lookups.
+- Add a selected-environment BIN connection test that validates API credentials without creating a payment or charging a card; clarify production activation guidance and add CI regression coverage.
+- Correct the PHP environment-validation syntax and ensure successful and failed checkout responses retain the transaction's selected Sandbox or Production environment.
+
+
 ## 1.5.6 - 2026-11-16
 - Add customer manual bank transfer submission with bank instructions, booking reference, sender details, and transfer reference.
 - Add admin-only approval/rejection workflow with audit and customer notifications; approval creates an idempotent paid transaction and confirms only conflict-free pending bookings.
