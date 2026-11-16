@@ -162,7 +162,7 @@ final class PaymentRefundService
             $financial = $financialLock->fetch(PDO::FETCH_ASSOC);
             if (!$financial) throw new \RuntimeException('Rezervasyon finans kaydı bulunamadı.');
 
-            $refundLock = $pdo->prepare("SELECT id,amount,currency,status,conversation_id FROM payment_refunds WHERE id=? AND payment_transaction_id=? LIMIT 1 FOR UPDATE");
+            $refundLock = $pdo->prepare("SELECT id,provider,amount,currency,status,conversation_id FROM payment_refunds WHERE id=? AND payment_transaction_id=? LIMIT 1 FOR UPDATE");
             $refundLock->execute([$refundId, (int)$payment['id']]);
             $refund = $refundLock->fetch(PDO::FETCH_ASSOC);
             if (!$refund || (string)$refund['status'] !== 'processing') throw new \RuntimeException('İade kaydı artık işlenebilir durumda değil.');
