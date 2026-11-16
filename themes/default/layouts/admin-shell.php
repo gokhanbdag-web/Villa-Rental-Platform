@@ -354,7 +354,7 @@ return static function (string $html, string $requestPath, string $platformMode)
             function activate(url){
                 const path=new URL(url,location.href).pathname.replace(/\\/$/,"")||adminRootPath;
                 let activeLink=null,activeLength=-1;
-                document.querySelectorAll("[data-admin-link]").forEach(function(link){
+                document.querySelectorAll(".vr-admin-sidebar [data-admin-link]").forEach(function(link){
                     const linkPath=new URL(link.href,location.href).pathname.replace(/\\/$/,"")||adminRootPath;
                     const matches=(linkPath===adminRootPath)?path===adminRootPath:(path===linkPath||path.startsWith(linkPath+"/"));
                     if(matches&&linkPath.length>activeLength){activeLink=link;activeLength=linkPath.length;}
