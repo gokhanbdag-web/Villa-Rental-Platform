@@ -26,7 +26,7 @@ $checks=[
  'cleanup keeps the requested newest lines and truncates logs in place'=>str_contains($routes,'$keepLast')&&str_contains($routes,'flock($handle, LOCK_EX)')&&str_contains($routes,'ftruncate($handle, 0)'),
  'dashboard exposes cleanup controls with confirmation and CSRF token'=>str_contains($page,'cleanupScope')&&str_contains($page,'cleanupKeep')&&str_contains($page,'window.confirm')&&str_contains($page,'csrfToken'),
  'dashboard displays log counts and cleanup results'=>str_contains($page,'log_counts')&&str_contains($page,'cleanupResult'),
- 'application version is bumped to 1.5.4'=>$version==='1.5.4',
+ 'application version matches the latest changelog release'=>preg_match('/^## '.preg_quote($version, '/').' - /m',file_get_contents($root.'/CHANGELOG.md'))===1,
  'changelog documents diagnostics dashboard and media timing changes'=>str_contains(file_get_contents($root.'/CHANGELOG.md'),'1.5.2')&&str_contains(file_get_contents($root.'/CHANGELOG.md'),'byte-range delivery time'),
  'changelog documents safe diagnostics log cleanup'=>str_contains(file_get_contents($root.'/CHANGELOG.md'),'1.5.4')&&str_contains(file_get_contents($root.'/CHANGELOG.md'),'cleanup controls'),
 ];

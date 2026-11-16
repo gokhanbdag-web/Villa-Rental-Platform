@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.5.5 - 2026-11-16
+- Add versioned manual bank transfer settings for bank name, account holder, IBAN, transfer instructions, and booking reference prefix.
+- Add server-side manual payment provider configuration with IBAN validation; manual transfers remain unconfirmed until an authenticated admin verifies the payment.
+- Keep online payment activation separate from the manual transfer setup; no new live card-charge path is enabled.
+
 ## 1.5.4 - 2026-11-16
 - Add super-admin-only cleanup controls for slow HTTP and SQL diagnostic logs, with keep-latest retention choices, explicit confirmation, CSRF protection, and exact removal counts.
 - Preserve selected newest log lines in place without touching application, booking, user, or other business data.

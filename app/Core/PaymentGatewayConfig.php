@@ -13,6 +13,40 @@ final class PaymentGatewayConfig
      */
     public static function forProvider(string $provider): array
     {
+        if ($provider === 'manual') {
+            $keys = [
+                'payments.manual.enabled',
+                'payments.manual.bank_name',
+                'payments.manual.account_holder',
+                'payments.manual.iban',
+                'payments.manual.instructions',
+                'payments.manual.reference_prefix',
+            ];
+            $placeholders = implode(',', array_fill(0, count($keys), '?'));
+            $stmt = Database::connection()->prepare(
+                "SELECT setting_key,setting_value FROM settings WHERE setting_key IN ($placeholders)"
+            );
+            $stmt->execute($keys);
+            $stored = $stmt->fetchAll(PDO::FETCH_KEY_PAIR);
+            $bankName = trim((string)($stored['payments.manual.bank_name'] ?? ''));
+            $accountHolder = trim((string)($stored['payments.manual.account_holder'] ?? ''));
+            $iban = strtoupper(preg_replace('/\\s+/', '', (string)($stored['payments.manual.iban'] ?? '')) ?? '');
+            $ibanValid = preg_match('/^[A-Z]{2}[0-9A-Z]{13,32}$/', $iban) === 1;
+            return [
+                'provider' => 'manual',
+                'environment' => 'manual',
+                'configured' => $bankName !== '' && $accountHolder !== '' && $ibanValid,
+                'enabled' => (string)($stored['payments.manual.enabled'] ?? '0') === '1',
+                'credentials' => [],
+                'bank_details' => [
+                    'bank_name' => $bankName,
+                    'account_holder' => $accountHolder,
+                    'iban' => $iban,
+                    'instructions' => trim((string)($stored['payments.manual.instructions'] ?? '')),
+                    'reference_prefix' => trim((string)($stored['payments.manual.reference_prefix'] ?? 'VILLA')),
+                ],
+            ];
+        }
         $definitions = [
             'iyzico' => [
                 'environment' => 'payments.iyzico.environment',
