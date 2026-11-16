@@ -65,7 +65,7 @@ final class CalendarSyncService
             $events=IcalParser::parse($calendar);
             $result=self::applyEvents($pdo,$feedId,$events);
             $update=$pdo->prepare("UPDATE property_calendar_feeds SET last_sync_status='success',last_sync_message=?,last_synced_at=NOW(),updated_at=NOW() WHERE id=?");
-            $update->execute([count($events).' etkinlik işlendi; '.$result['blocked'].' tarih aralığı engellendi.',$feedId]);
+            $update->execute([count($events).' etkinlik işlendi; '.$result['blocked'].' tarih aralığı engellendi, '.$result['cancelled'].' iptal işlendi, '.$result['conflicts'].' rezervasyon çakışması atlandı.',$feedId]);
             return $result;
         } catch(Throwable $e) {
             $update=$pdo->prepare("UPDATE property_calendar_feeds SET last_sync_status='error',last_sync_message=?,last_synced_at=NOW(),updated_at=NOW() WHERE id=?");
