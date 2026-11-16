@@ -953,6 +953,12 @@ $router->get('/checkout/{bookingCode}', static function(array $params):void {
     $pdo=Database::connection();$stmt=$pdo->prepare("SELECT b.*,p.title AS property_title,p.slug AS property_slug FROM bookings b JOIN properties p ON p.id=b.property_id WHERE b.booking_code=? AND b.guest_user_id=? LIMIT 1");
     $stmt->execute([$params['bookingCode']??'',(int)$user['id']]);$booking=$stmt->fetch();
     if(!$booking){http_response_code(404);exit('Rezervasyon bulunamadı.');}
+    $manualConfig=\App\Core\PaymentGatewayConfig::forProvider('manual');
+    $manualPaymentAvailable=!empty($manualConfig['enabled'])&&!empty($manualConfig['configured']);
+    $manualBankDetails=(array)($manualConfig['bank_details']??[]);
+    $latestManualReport=$pdo->prepare('SELECT id,status,transfer_reference,review_note,submitted_at,reviewed_at FROM manual_payment_reports WHERE booking_id=? ORDER BY id DESC LIMIT 1');
+    $latestManualReport->execute([(int)$booking['id']]);$latestManualReportRow=$latestManualReport->fetch(PDO::FETCH_ASSOC)?:[];
+    $manualReportStatus=(string)($latestManualReportRow['status']??'');
     $iyzicoConfig=\App\Core\PaymentGatewayConfig::forProvider('iyzico');
     $iyzicoPaymentAvailable=!empty($iyzicoConfig['enabled'])&&!empty($iyzicoConfig['configured'])&&($iyzicoConfig['environment']??'')==='sandbox';
     $autoStartIyzicoPayment=false;$iyzicoAutoStartData=[];
@@ -987,6 +993,40 @@ $router->get('/checkout/{bookingCode}', static function(array $params):void {
     $content=$contentStmt->fetchAll(PDO::FETCH_KEY_PAIR);
     $siteName=(string)($content['site_name']??'VillaStay');
     ThemeManager::render('checkout.php',get_defined_vars());
+});
+
+$router->post('/checkout/{bookingCode}/manual/notify', static function (array $params): void {
+    $user=Auth::user();if(!$user)redirect('/login');verify_csrf();
+    $config=\App\Core\PaymentGatewayConfig::forProvider('manual');
+    if(empty($config['enabled'])||empty($config['configured'])){http_response_code(409);exit('Manuel havale yöntemi şu anda kullanılamıyor.');}
+    $sender=trim((string)($_POST['sender_name']??''));
+    $bank=trim((string)($_POST['sender_bank']??''));
+    $reference=trim((string)($_POST['transfer_reference']??''));
+    $note=trim((string)($_POST['note']??''));
+    if($sender===''||strlen($sender)>190||strlen($bank)>120||$reference===''||strlen($reference)>120||strlen($note)>1000){http_response_code(422);exit('Gönderen adı, banka ve transfer referansı bilgilerini kontrol edin.');}
+    $pdo=Database::connection();
+    try{
+        $pdo->beginTransaction();
+        $lookup=$pdo->prepare('SELECT id,guest_user_id,total,currency,status,booking_code FROM bookings WHERE booking_code=? AND guest_user_id=? LIMIT 1 FOR UPDATE');
+        $lookup->execute([(string)($params['bookingCode']??''),(int)$user['id']]);$booking=$lookup->fetch(PDO::FETCH_ASSOC);
+        if(!$booking){$pdo->rollBack();http_response_code(404);exit('Rezervasyon bulunamadı.');}
+        if((string)$booking['status']!=='pending'){$pdo->rollBack();http_response_code(409);exit('Yalnızca ödeme bekleyen rezervasyonlar için havale bildirimi gönderilebilir.');}
+        $paid=$pdo->prepare("SELECT id FROM payment_transactions WHERE booking_id=? AND status='paid' LIMIT 1");
+        $paid->execute([(int)$booking['id']]);
+        if($paid->fetchColumn()){$pdo->rollBack();http_response_code(409);exit('Bu rezervasyon için ödeme zaten doğrulanmış.');}
+        $insert=$pdo->prepare("INSERT INTO manual_payment_reports(booking_id,guest_user_id,amount,currency,sender_name,sender_bank,transfer_reference,note,status,submitted_at,created_at) VALUES(?,?,?,?,?,?,?,?,'pending',NOW(),NOW())");
+        $insert->execute([(int)$booking['id'],(int)$user['id'],(float)$booking['total'],(string)$booking['currency'],$sender,$bank?:null,$reference,$note?:null]);
+        $reportId=(int)$pdo->lastInsertId();
+        $notify=$pdo->prepare("INSERT INTO notifications(user_id,notification_type,title,body,created_at) SELECT id,'manual_payment.received','Yeni havale bildirimi',?,NOW() FROM users WHERE role IN ('super_admin','admin') AND status='active'");
+        $notify->execute(['Rezervasyon '.$booking['booking_code'].' için yeni bir havale bildirimi gönderildi.']);
+        $audit=$pdo->prepare('INSERT INTO audit_logs(user_id,action,entity_type,entity_id,ip_address,details,created_at) VALUES(?,?,?,?,?,?,NOW())');
+        $audit->execute([(int)$user['id'],'manual_payment.reported','manual_payment_report',$reportId,$_SERVER['REMOTE_ADDR']??null,json_encode(['booking_id'=>(int)$booking['id'],'amount'=>(string)$booking['total'],'currency'=>(string)$booking['currency']],JSON_UNESCAPED_UNICODE)]);
+        $pdo->commit();redirect('/checkout/'.rawurlencode((string)$booking['booking_code']));
+    }catch(Throwable $e){
+        if($pdo->inTransaction())$pdo->rollBack();
+        if($e instanceof PDOException && (string)$e->getCode()==='23000'){http_response_code(409);exit('Bu rezervasyon için zaten incelemede bir havale bildirimi var.');}
+        error_log('Manual payment report submission failed: '.$e->getMessage());http_response_code(500);exit('Havale bildirimi kaydedilemedi. Lütfen tekrar deneyin.');
+    }
 });
 
 $router->post('/checkout/{bookingCode}/iyzico/start', static function (array $params): void {
@@ -1371,7 +1411,7 @@ $router->get('/account/bookings', static function (): void {
     if (!$user) redirect('/login');
     if (($user['role'] ?? '') !== 'customer') redirect('/admin');
     $pdo = Database::connection();
-    $stmt = $pdo->prepare('SELECT b.*,p.title,p.city,EXISTS(SELECT 1 FROM reviews r WHERE r.booking_id=b.id) AS has_review FROM bookings b JOIN properties p ON p.id=b.property_id WHERE b.guest_user_id=? ORDER BY b.created_at DESC');
+    $stmt = $pdo->prepare("SELECT b.*,p.title,p.city,EXISTS(SELECT 1 FROM reviews r WHERE r.booking_id=b.id) AS has_review,EXISTS(SELECT 1 FROM payment_transactions pt WHERE pt.booking_id=b.id AND pt.status='paid') AS has_paid_payment,(SELECT mr.status FROM manual_payment_reports mr WHERE mr.booking_id=b.id ORDER BY mr.id DESC LIMIT 1) AS manual_payment_status FROM bookings b JOIN properties p ON p.id=b.property_id WHERE b.guest_user_id=? ORDER BY b.created_at DESC");
     $stmt->execute([(int)$user['id']]);
     $bookings = $stmt->fetchAll();
 
@@ -1438,6 +1478,7 @@ $router->post('/login/ajax', static function (): void {
             $menus = [
                 ['label'=>'Genel Bakış','url'=>'/admin','icon'=>'⌂'],
                 ['label'=>'Rezervasyonlar','url'=>'/admin/bookings','icon'=>'▣'],
+                ['label'=>'Havale Bildirimleri','url'=>'/admin/payments/manual','icon'=>'₺'],
                 ['label'=>'Villalar','url'=>'/admin/properties','icon'=>'⌂'],
                 ['label'=>'Ev Sahipleri','url'=>'/admin/vendors','icon'=>'♧'],
                 ['label'=>'Kullanıcılar','url'=>'/admin/users','icon'=>'♙'],
@@ -2805,6 +2846,70 @@ $router->post('/admin/bookings/status', static function (): void {
         $log->execute([(int)Auth::user()['id'],'booking.status_changed','booking',$id,$_SERVER['REMOTE_ADDR']??null,json_encode(['from'=>$booking['status'],'to'=>$status],JSON_UNESCAPED_UNICODE)]);
         $pdo->commit();redirect('/admin/bookings');
     }catch(Throwable $e){if($pdo->inTransaction())$pdo->rollBack();error_log('Booking status update failed: '.$e->getMessage());http_response_code(500);exit('Rezervasyon güncellenemedi.');}
+});
+
+$router->get('/admin/payments/manual', static function (): void {
+    Auth::requireRole(['super_admin','admin']);
+    $pdo=Database::connection();$reportFilter=(string)($_GET['status']??'pending');
+    if(!in_array($reportFilter,['pending','approved','rejected','all'],true))$reportFilter='pending';
+    $pendingReportCount=(int)$pdo->query("SELECT COUNT(*) FROM manual_payment_reports WHERE status='pending'")->fetchColumn();
+    $sql="SELECT mr.*,b.booking_code,p.title AS property_title,u.username AS guest_name,u.email AS guest_email,ru.username AS reviewer_name FROM manual_payment_reports mr JOIN bookings b ON b.id=mr.booking_id JOIN properties p ON p.id=b.property_id JOIN users u ON u.id=mr.guest_user_id LEFT JOIN users ru ON ru.id=mr.reviewed_by";
+    if($reportFilter!=='all'){$s=$pdo->prepare($sql." WHERE mr.status=? ORDER BY CASE WHEN mr.status='pending' THEN 0 ELSE 1 END,mr.submitted_at DESC,mr.id DESC LIMIT 300");$s->execute([$reportFilter]);$manualPaymentReports=$s->fetchAll(PDO::FETCH_ASSOC);}
+    else{$manualPaymentReports=$pdo->query($sql.' ORDER BY mr.submitted_at DESC,mr.id DESC LIMIT 300')->fetchAll(PDO::FETCH_ASSOC);}
+    ThemeManager::renderTemplate('templates/pages/admin/manual-payment-reports.php',get_defined_vars());
+});
+$router->post('/admin/payments/manual/review', static function (): void {
+    Auth::requireRole(['super_admin','admin']);verify_csrf();
+    $reportId=(int)($_POST['report_id']??0);$decision=(string)($_POST['decision']??'');$reviewNote=trim((string)($_POST['review_note']??''));
+    if($reportId<1||!in_array($decision,['approved','rejected'],true)||strlen($reviewNote)>1000){http_response_code(422);exit('İnceleme bilgileri geçersiz.');}
+    $pdo=Database::connection();
+    try{
+        $pdo->beginTransaction();
+        $lookup=$pdo->prepare('SELECT booking_id FROM manual_payment_reports WHERE id=?');$lookup->execute([$reportId]);$bookingId=(int)($lookup->fetchColumn()?:0);
+        if($bookingId<1){$pdo->rollBack();http_response_code(404);exit('Havale bildirimi bulunamadı.');}
+        $propertyLookup=$pdo->prepare('SELECT property_id FROM bookings WHERE id=?');$propertyLookup->execute([$bookingId]);$propertyId=(int)($propertyLookup->fetchColumn()?:0);
+        if($propertyId<1){$pdo->rollBack();http_response_code(404);exit('Rezervasyon bulunamadı.');}
+        $propertyLock=$pdo->prepare('SELECT id FROM properties WHERE id=? FOR UPDATE');$propertyLock->execute([$propertyId]);
+        if(!$propertyLock->fetchColumn()){$pdo->rollBack();http_response_code(404);exit('Villa bulunamadı.');}
+        $reportStmt=$pdo->prepare('SELECT * FROM manual_payment_reports WHERE id=? FOR UPDATE');$reportStmt->execute([$reportId]);$report=$reportStmt->fetch(PDO::FETCH_ASSOC);
+        if(!$report){$pdo->rollBack();http_response_code(404);exit('Havale bildirimi bulunamadı.');}
+        if((string)$report['status']!=='pending'){$pdo->rollBack();http_response_code(409);exit('Bu bildirim daha önce incelenmiş.');}
+        $bookingStmt=$pdo->prepare('SELECT id,guest_user_id,check_in,check_out,status,total,currency,booking_code FROM bookings WHERE id=? FOR UPDATE');$bookingStmt->execute([$bookingId]);$booking=$bookingStmt->fetch(PDO::FETCH_ASSOC);
+        if(!$booking){$pdo->rollBack();http_response_code(404);exit('Rezervasyon bulunamadı.');}
+        if($decision==='approved'){
+            if(!in_array((string)$booking['status'],['pending','confirmed'],true)){$pdo->rollBack();http_response_code(409);exit('İptal edilmiş veya tamamlanmış rezervasyonun ödemesi onaylanamaz.');}
+            if(abs((float)$booking['total']-(float)$report['amount'])>0.009||strtoupper((string)$booking['currency'])!==strtoupper((string)$report['currency'])){$pdo->rollBack();http_response_code(409);exit('Rezervasyon tutarı bildirimden sonra değişmiş. Ödeme onaylanmadı.');}
+            $alreadyPaid=$pdo->prepare("SELECT id FROM payment_transactions WHERE booking_id=? AND status='paid' LIMIT 1 FOR UPDATE");$alreadyPaid->execute([$bookingId]);
+            if($alreadyPaid->fetchColumn()){$pdo->rollBack();http_response_code(409);exit('Bu rezervasyon için başka bir ödeme zaten doğrulanmış.');}
+            if((string)$booking['status']==='pending'){
+                $conflict=$pdo->prepare("SELECT id FROM bookings WHERE property_id=? AND id<>? AND status='confirmed' AND check_in < ? AND check_out > ? LIMIT 1 FOR UPDATE");
+                $conflict->execute([$propertyId,$bookingId,$booking['check_out'],$booking['check_in']]);
+                if($conflict->fetchColumn()){$pdo->rollBack();http_response_code(409);exit('Bu tarihlerde başka bir onaylı rezervasyon bulunuyor. Ödeme onaylanmadı.');}
+                $blocked=$pdo->prepare("SELECT id FROM availability WHERE property_id=? AND status<>'available' AND date_from < ? AND date_to > ? LIMIT 1 FOR UPDATE");
+                $blocked->execute([$propertyId,$booking['check_out'],$booking['check_in']]);
+                if($blocked->fetchColumn()){$pdo->rollBack();http_response_code(409);exit('Rezervasyon tarihleri takvimde kapatılmış. Ödeme onaylanmadı.');}
+            }
+            $providerReference='MANUAL-REPORT-'.$reportId;$idempotencyKey=hash('sha256','manual-payment-report:'.$reportId);
+            $requestPayload=json_encode(['sender_name'=>$report['sender_name'],'sender_bank'=>$report['sender_bank'],'transfer_reference'=>$report['transfer_reference'],'note'=>$report['note']],JSON_UNESCAPED_UNICODE|JSON_UNESCAPED_SLASHES);
+            $responsePayload=json_encode(['report_id'=>$reportId,'reviewed_by'=>(int)Auth::user()['id'],'decision'=>'approved'],JSON_UNESCAPED_UNICODE);
+            $payment=$pdo->prepare("INSERT INTO payment_transactions(booking_id,provider,provider_reference,idempotency_key,amount,currency,status,request_payload,response_payload,paid_at,created_at,updated_at) VALUES(?,?,?,?,?,?,'paid',?,?,NOW(),NOW(),NOW())");
+            $payment->execute([$bookingId,'manual',$providerReference,$idempotencyKey,(float)$report['amount'],(string)$report['currency'],$requestPayload,$responsePayload]);
+            if((string)$booking['status']==='pending'){$confirm=$pdo->prepare("UPDATE bookings SET status='confirmed' WHERE id=? AND status='pending'");$confirm->execute([$bookingId]);if($confirm->rowCount()!==1)throw new RuntimeException('Rezervasyon durumu güvenli biçimde güncellenemedi.');}
+        }
+        $update=$pdo->prepare("UPDATE manual_payment_reports SET status=?,reviewed_by=?,review_note=?,reviewed_at=NOW(),updated_at=NOW() WHERE id=? AND status='pending'");
+        $update->execute([$decision,(int)Auth::user()['id'],$reviewNote?:null,$reportId]);
+        if($update->rowCount()!==1)throw new RuntimeException('Havale bildirimi durumu güncellenemedi.');
+        if(!empty($booking['guest_user_id'])){
+            $notice=$pdo->prepare('INSERT INTO notifications(user_id,notification_type,title,body,created_at) VALUES(?,?,?,?,NOW())');
+            $notice->execute([(int)$booking['guest_user_id'],'manual_payment.'.$decision,$decision==='approved'?'Havale ödemeniz onaylandı':'Havale bildiriminiz reddedildi',$decision==='approved'?'Ödemeniz doğrulandı ve rezervasyonunuz onaylandı.':'Havale bildiriminiz doğrulanamadı. Hesabınızdan yeni bir bildirim gönderebilirsiniz.'.($reviewNote!==''?' Yönetici notu: '.$reviewNote:'')]);
+        }
+        $audit=$pdo->prepare('INSERT INTO audit_logs(user_id,action,entity_type,entity_id,ip_address,details,created_at) VALUES(?,?,?,?,?,?,NOW())');
+        $audit->execute([(int)Auth::user()['id'],'manual_payment.'.$decision,'manual_payment_report',$reportId,$_SERVER['REMOTE_ADDR']??null,json_encode(['booking_id'=>$bookingId,'decision'=>$decision],JSON_UNESCAPED_UNICODE)]);
+        $pdo->commit();redirect('/admin/payments/manual?status='.$decision);
+    }catch(Throwable $e){
+        if($pdo->inTransaction())$pdo->rollBack();
+        error_log('Manual payment review failed: '.$e->getMessage());http_response_code(500);exit('Havale bildirimi işlenemedi. İşlem geri alındı.');
+    }
 });
 
 $router->get('/admin/payment-tests', static function (): void {
