@@ -13,7 +13,7 @@ Native PHP 8.2+ and MySQL villa rental platform. No PHP framework or Composer de
 - Multi-vendor onboarding, vendor approval, vendor listing management, vendor reservation inbox, vendor-specific calendars, and per-vendor commission rates.
 - Admin user activation controls, editable navigation, CMS pages with SEO fields, platform settings, and translation catalogue editing.
 - Booking financial ledger, platform commission calculation, payment transaction, payout and notification database structures; editable translation catalogue.
-- Admin-configurable manual bank transfer details (bank, account holder, IBAN, instructions, and reference prefix); this configuration does not itself confirm incoming transfers.
+- Admin-configurable manual bank transfer details plus customer transfer reports, booking-scoped pending-report protection, admin approval/rejection, payment ledger entries, audit trail, and customer notifications.
 - 36 editable Turkish demo villa listings with illustrative property imagery; listings and media remain editable from the admin panel.
 - A single shared villa card component is used on the homepage and search results, including image galleries, favorites, ratings, booking indicators, and installation-aware image URLs.
 - One active `default` theme. Shared top information markup is centralized in `themes/default/partials/shared-topbar.php`; common styling is in `themes/default/style.css`. The topbar has a taller layout and theme-specific height control.
@@ -22,7 +22,8 @@ Native PHP 8.2+ and MySQL villa rental platform. No PHP framework or Composer de
 
 ## Important operational notes
 
-- Payment gateway processing is not connected yet. `payments.enabled` defaults to `0`; booking requests are stored as unpaid and no card payment is taken.
+- Manual bank transfers can be reported by customers and are only marked paid after an authenticated admin verifies and approves the report. Approval also checks booking date conflicts before confirming a pending reservation. No automated bank statement matching is provided.
+- iyzico remains sandbox-only and PayTR live checkout is not enabled by this manual-transfer workflow. `payments.enabled` defaults to `0` until a payment method is explicitly enabled in admin settings.
 - Payment gateway integration, automated payout execution, email/SMS delivery, language switching, advanced permissions, and full automated integration/security tests remain to be implemented.
 - The current codebase is an active development build, not a production-ready booking service. Do not accept real payments or rely on it for live inventory until the remaining modules are implemented and a real PHP/MySQL deployment test and security review have passed.
 - Demo villa imagery is illustrative and should not be treated as verified photographs of real properties. Demo listings can be edited, unpublished, or deleted from the admin panel.
