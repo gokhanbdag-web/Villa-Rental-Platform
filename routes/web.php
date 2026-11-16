@@ -1468,11 +1468,49 @@ $router->get('/account/bookings', static function (): void {
     if (!$user) redirect('/login');
     if (($user['role'] ?? '') !== 'customer') redirect('/admin');
     $pdo = Database::connection();
-    $stmt = $pdo->prepare("SELECT b.*,p.title,p.city,EXISTS(SELECT 1 FROM reviews r WHERE r.booking_id=b.id) AS has_review,EXISTS(SELECT 1 FROM payment_transactions pt WHERE pt.booking_id=b.id AND pt.status='paid') AS has_paid_payment,(SELECT mr.status FROM manual_payment_reports mr WHERE mr.booking_id=b.id ORDER BY mr.id DESC LIMIT 1) AS manual_payment_status FROM bookings b JOIN properties p ON p.id=b.property_id WHERE b.guest_user_id=? ORDER BY b.created_at DESC");
+    $stmt = $pdo->prepare("SELECT b.*,p.title,p.city,
+        EXISTS(SELECT 1 FROM reviews r WHERE r.booking_id=b.id) AS has_review,
+        EXISTS(SELECT 1 FROM payment_transactions pt WHERE pt.booking_id=b.id AND pt.status='paid') AS has_paid_payment,
+        (SELECT mr.status FROM manual_payment_reports mr WHERE mr.booking_id=b.id ORDER BY mr.id DESC LIMIT 1) AS manual_payment_status,
+        EXISTS(SELECT 1 FROM booking_cancellation_requests cr WHERE cr.booking_id=b.id AND cr.status='pending') AS has_pending_cancellation,
+        GREATEST(0,COALESCE((SELECT SUM(pt.amount) FROM payment_transactions pt WHERE pt.booking_id=b.id AND pt.status IN ('paid','refunded')),0)-COALESCE((SELECT SUM(pr.amount) FROM payment_refunds pr WHERE pr.booking_id=b.id AND pr.status IN ('succeeded','processing','unknown')),0)) AS refundable_paid_amount
+        FROM bookings b JOIN properties p ON p.id=b.property_id WHERE b.guest_user_id=? ORDER BY b.created_at DESC");
     $stmt->execute([(int)$user['id']]);
-    $bookings = $stmt->fetchAll();
+    $bookings = $stmt->fetchAll(PDO::FETCH_ASSOC);
+    $policyRows=$pdo->query("SELECT setting_key,setting_value FROM settings WHERE setting_key IN ('booking.cancellation.free_days','booking.cancellation.early_refund_percent','booking.cancellation.late_refund_percent')")->fetchAll(PDO::FETCH_KEY_PAIR);
+    foreach($bookings as &$booking){
+        $booking['estimated_refund']=0.0;$booking['estimated_refund_percent']=0;
+        if(in_array((string)$booking['status'],['pending','confirmed'],true)&&empty($booking['has_pending_cancellation'])){
+            try{
+                $estimate=\App\Core\BookingCancellationPolicy::evaluate(new DateTimeImmutable((string)$booking['check_in']),new DateTimeImmutable('today'),(int)($policyRows['booking.cancellation.free_days']??7),(int)($policyRows['booking.cancellation.early_refund_percent']??100),(int)($policyRows['booking.cancellation.late_refund_percent']??0),number_format((float)$booking['refundable_paid_amount'],2,'.',''));
+                $booking['estimated_refund']=(float)$estimate['refund_amount'];$booking['estimated_refund_percent']=$estimate['refund_percent'];
+            }catch(InvalidArgumentException $e){}
+        }
+    }
+    unset($booking);
 
     villa_render_account_view('bookings.php', get_defined_vars());
+});
+$router->post('/account/bookings/cancel-request', static function (): void {
+    $user=Auth::user();if(!$user)redirect('/login');
+    if(($user['role']??'')!=='customer'){http_response_code(403);exit('Bu işlem yalnızca müşteri hesabından yapılabilir.');}
+    verify_csrf();$bookingId=(int)($_POST['booking_id']??0);$reason=trim((string)($_POST['reason']??''));
+    if($bookingId<1||mb_strlen($reason)>1000){http_response_code(422);exit('İptal talebi bilgileri geçersiz.');}
+    $pdo=Database::connection();
+    try{
+        $pdo->beginTransaction();
+        $lock=$pdo->prepare("SELECT id,check_in,status,currency FROM bookings WHERE id=? AND guest_user_id=? LIMIT 1 FOR UPDATE");
+        $lock->execute([$bookingId,(int)$user['id']]);$booking=$lock->fetch(PDO::FETCH_ASSOC);
+        if(!$booking||!in_array((string)$booking['status'],['pending','confirmed'],true)){throw new RuntimeException('Bu rezervasyon için iptal talebi oluşturulamıyor.');}
+        $policy=$pdo->query("SELECT setting_key,setting_value FROM settings WHERE setting_key IN ('booking.cancellation.free_days','booking.cancellation.early_refund_percent','booking.cancellation.late_refund_percent')")->fetchAll(PDO::FETCH_KEY_PAIR);
+        $paid=$pdo->prepare("SELECT GREATEST(0,COALESCE((SELECT SUM(amount) FROM payment_transactions WHERE booking_id=? AND status IN ('paid','refunded')),0)-COALESCE((SELECT SUM(amount) FROM payment_refunds WHERE booking_id=? AND status IN ('succeeded','processing','unknown')),0))");
+        $paid->execute([$bookingId,$bookingId]);$paidAmount=number_format((float)$paid->fetchColumn(),2,'.','');
+        $estimate=\App\Core\BookingCancellationPolicy::evaluate(new DateTimeImmutable((string)$booking['check_in']),new DateTimeImmutable('today'),(int)($policy['booking.cancellation.free_days']??7),(int)($policy['booking.cancellation.early_refund_percent']??100),(int)($policy['booking.cancellation.late_refund_percent']??0),$paidAmount);
+        $insert=$pdo->prepare("INSERT INTO booking_cancellation_requests(booking_id,requested_by,reason,status,days_before_checkin,policy_days_snapshot,refund_percent_snapshot,refund_amount,currency,created_at) VALUES(?,?,?,'pending',?,?,?,?,?,NOW())");
+        $insert->execute([$bookingId,(int)$user['id'],$reason,$estimate['days_before_checkin'],(int)($policy['booking.cancellation.free_days']??7),$estimate['refund_percent'],$estimate['refund_amount'],(string)$booking['currency']]);
+        $pdo->commit();redirect('/account/bookings');
+    }catch(PDOException $e){if($pdo->inTransaction())$pdo->rollBack();if((string)$e->getCode()==='23000'){http_response_code(409);exit('Bu rezervasyon için zaten bekleyen bir iptal talebi var.');}error_log('Cancellation request failed: '.$e->getMessage());http_response_code(500);exit('İptal talebi kaydedilemedi.');}
+    catch(Throwable $e){if($pdo->inTransaction())$pdo->rollBack();http_response_code(422);exit($e->getMessage());}
 });
 
 $router->get('/login', static function (): void {
@@ -3160,6 +3198,53 @@ $router->post('/admin/bookings/status', static function (): void {
         $log->execute([(int)Auth::user()['id'],'booking.status_changed','booking',$id,$_SERVER['REMOTE_ADDR']??null,json_encode(['from'=>$booking['status'],'to'=>$status],JSON_UNESCAPED_UNICODE)]);
         $pdo->commit();redirect('/admin/bookings');
     }catch(Throwable $e){if($pdo->inTransaction())$pdo->rollBack();error_log('Booking status update failed: '.$e->getMessage());http_response_code(500);exit('Rezervasyon güncellenemedi.');}
+});
+
+$router->get('/admin/cancellations', static function (): void {
+    Auth::requireRole(['super_admin','admin']);$pdo=Database::connection();
+    $policyRows=$pdo->query("SELECT setting_key,setting_value FROM settings WHERE setting_key IN ('booking.cancellation.free_days','booking.cancellation.early_refund_percent','booking.cancellation.late_refund_percent')")->fetchAll(PDO::FETCH_KEY_PAIR);
+    $policy=['free_days'=>(int)($policyRows['booking.cancellation.free_days']??7),'early_percent'=>(int)($policyRows['booking.cancellation.early_refund_percent']??100),'late_percent'=>(int)($policyRows['booking.cancellation.late_refund_percent']??0)];
+    $requests=$pdo->query("SELECT cr.*,b.booking_code,b.check_in,b.check_out,p.title AS property_title,COALESCE(u.username,u.email,'Müşteri') AS guest_name,u.email AS guest_email,ru.username AS reviewer_name FROM booking_cancellation_requests cr JOIN bookings b ON b.id=cr.booking_id JOIN properties p ON p.id=b.property_id JOIN users u ON u.id=cr.requested_by LEFT JOIN users ru ON ru.id=cr.reviewed_by ORDER BY CASE WHEN cr.status='pending' THEN 0 ELSE 1 END,cr.created_at DESC,cr.id DESC LIMIT 300")->fetchAll(PDO::FETCH_ASSOC);
+    ThemeManager::renderTemplate('templates/pages/admin/cancellations.php',get_defined_vars());
+});
+$router->post('/admin/cancellations/policy', static function (): void {
+    Auth::requireRole(['super_admin','admin']);verify_csrf();
+    $days=(int)($_POST['free_days']??7);$early=(int)($_POST['early_percent']??100);$late=(int)($_POST['late_percent']??0);
+    if($days<0||$days>365||$early<0||$early>100||$late<0||$late>100){http_response_code(422);exit('İptal politikası değerleri geçersiz.');}
+    $save=Database::connection()->prepare('INSERT INTO settings(setting_key,setting_value,autoload) VALUES(?,?,1) ON DUPLICATE KEY UPDATE setting_value=VALUES(setting_value),autoload=1');
+    foreach(['booking.cancellation.free_days'=>(string)$days,'booking.cancellation.early_refund_percent'=>(string)$early,'booking.cancellation.late_refund_percent'=>(string)$late] as $key=>$value)$save->execute([$key,$value]);
+    redirect('/admin/cancellations');
+});
+$router->post('/admin/cancellations/review', static function (): void {
+    Auth::requireRole(['super_admin','admin']);verify_csrf();
+    $requestId=(int)($_POST['request_id']??0);$decision=(string)($_POST['decision']??'');$note=trim((string)($_POST['decision_note']??''));
+    if($requestId<1||!in_array($decision,['approved','rejected'],true)||mb_strlen($note)>1000){http_response_code(422);exit('İptal kararı bilgileri geçersiz.');}
+    $pdo=Database::connection();
+    try{
+        $pdo->beginTransaction();
+        $lookup=$pdo->prepare('SELECT booking_id FROM booking_cancellation_requests WHERE id=?');$lookup->execute([$requestId]);$bookingId=(int)($lookup->fetchColumn()?:0);
+        if($bookingId<1)throw new RuntimeException('İptal talebi bulunamadı.');
+        $bookingLock=$pdo->prepare('SELECT id,guest_user_id,status FROM bookings WHERE id=? FOR UPDATE');$bookingLock->execute([$bookingId]);$booking=$bookingLock->fetch(PDO::FETCH_ASSOC);
+        $requestLock=$pdo->prepare("SELECT * FROM booking_cancellation_requests WHERE id=? AND booking_id=? FOR UPDATE");$requestLock->execute([$requestId,$bookingId]);$request=$requestLock->fetch(PDO::FETCH_ASSOC);
+        if(!$booking||!$request||(string)$request['status']!=='pending')throw new RuntimeException('İptal talebi daha önce işlenmiş veya bulunamıyor.');
+        if($decision==='approved'){
+            if(!in_array((string)$booking['status'],['pending','confirmed'],true))throw new RuntimeException('Rezervasyon artık iptal edilebilir durumda değil.');
+            $paid=$pdo->prepare("SELECT GREATEST(0,COALESCE((SELECT SUM(amount) FROM payment_transactions WHERE booking_id=? AND status IN ('paid','refunded')),0)-COALESCE((SELECT SUM(amount) FROM payment_refunds WHERE booking_id=? AND status IN ('succeeded','processing','unknown')),0))");
+            $paid->execute([$bookingId,$bookingId]);$currentPaid=number_format((float)$paid->fetchColumn(),2,'.','');
+            $request['refund_amount']=\App\Core\BookingCancellationPolicy::refundAmount($currentPaid,(int)$request['refund_percent_snapshot']);
+            $pdo->prepare("UPDATE booking_cancellation_requests SET refund_amount=? WHERE id=? AND status='pending'")->execute([$request['refund_amount'],$requestId]);
+            $pdo->prepare("UPDATE bookings SET status='cancelled' WHERE id=? AND (status='pending' OR status='confirmed')")->execute([$bookingId]);
+            $noticeTitle='Rezervasyon iptal talebiniz onaylandı';
+            $noticeBody='Rezervasyonunuz iptal edildi. Güncel hesaplanan iade tutarı: '.number_format((float)$request['refund_amount'],2,',','.').' '.(string)$request['currency'].'. İade ödeme yöntemi ve sağlayıcı koşullarına göre ayrıca işlenecektir.';
+        }else{$noticeTitle='Rezervasyon iptal talebiniz reddedildi';$noticeBody=$note!==''?$note:'İptal talebiniz yönetici tarafından reddedildi.';}
+        $update=$pdo->prepare('UPDATE booking_cancellation_requests SET status=?,reviewed_by=?,decision_note=?,reviewed_at=NOW() WHERE id=? AND status=\'pending\'');
+        $update->execute([$decision,(int)Auth::user()['id'],$note!==''?$note:null,$requestId]);
+        if($update->rowCount()!==1)throw new RuntimeException('İptal talebi eşzamanlı olarak değişti.');
+        if((int)$booking['guest_user_id']>0){$notice=$pdo->prepare('INSERT INTO notifications(user_id,notification_type,title,body,created_at) VALUES(?,?,?,?,NOW())');$notice->execute([(int)$booking['guest_user_id'],'booking.cancellation_'.$decision,$noticeTitle,$noticeBody]);}
+        $audit=$pdo->prepare('INSERT INTO audit_logs(user_id,action,entity_type,entity_id,ip_address,details,created_at) VALUES(?,?,?,?,?,?,NOW())');
+        $audit->execute([(int)Auth::user()['id'],'booking.cancellation_'.$decision,'booking',$bookingId,$_SERVER['REMOTE_ADDR']??null,json_encode(['request_id'=>$requestId,'refund_amount'=>$request['refund_amount'],'refund_percent'=>$request['refund_percent_snapshot'],'note'=>$note],JSON_UNESCAPED_UNICODE)]);
+        $pdo->commit();redirect('/admin/cancellations');
+    }catch(Throwable $e){if($pdo->inTransaction())$pdo->rollBack();http_response_code(409);exit($e->getMessage());}
 });
 
 $router->get('/admin/payments/manual', static function (): void {
