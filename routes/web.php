@@ -243,8 +243,20 @@ $router->get('/admin/performance/diagnostics', static function (): void {
         return villa_read_file_tail_lines($file, $limit, 262144);
     };
     $root = dirname(__DIR__);
+    $performance = array_values(array_filter(
+        $readTail($root . '/storage/performance.log'),
+        static function (string $line): bool {
+            $record = json_decode($line, true);
+            if (!is_array($record)) return true;
+            $path = (string)($record['path'] ?? '');
+            $status = (int)($record['http_status'] ?? 0);
+            // Hide historical video downloads too; their duration reflects client transfer time.
+            return !(preg_match('~/(?:brand-assets)/[^/]+\\.(?:mp4|webm)$~i', $path) === 1
+                && in_array($status, [200, 206, 304], true));
+        }
+    ));
     echo json_encode([
-        'performance' => $readTail($root . '/storage/performance.log'),
+        'performance' => $performance,
         'slow_sql' => $readTail($root . '/storage/sql-performance.log'),
         'note' => 'Only slow requests and SQL statements are recorded. Request bodies, cookies, session IDs and SQL bound values are not logged.',
     ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
