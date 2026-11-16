@@ -19,3 +19,4 @@ CREATE TABLE IF NOT EXISTS account_recovery_limits (
     PRIMARY KEY (identity_hash, ip_hash),
     INDEX idx_account_recovery_window (window_started_at)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+ALTER TABLE users ADD COLUMN session_version INT UNSIGNED NOT NULL DEFAULT 1;
