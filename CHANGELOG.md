@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.6.8 - 2026-11-16
+- Add SSRF-safe HTTPS iCal import with encrypted source URLs, event reconciliation, cancellation handling, and two-successful-sync stale-event cleanup.
+- Add per-property iCal export feeds, token-protected cPanel Cron synchronization, and vendor/admin calendar management screens.
+- Add MySQL import/export integration coverage plus parser and private-network URL rejection smoke tests.
+
 ## 1.6.7 - 2026-11-16
 - Add iyzico Refund V2 with response-signature verification, duplicate-safe refund reservations, partial/full refund ledger reconciliation, and administrator refund history.
 - Persist verified Checkout Form payment identifiers and safely recover identifiers for earlier transactions before refunding.

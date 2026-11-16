@@ -83,6 +83,8 @@ jobs:
         run: php tests/navigation-blog-archive-smoke.php
       - name: Run SMTP message validation smoke test
         run: php tests/email-delivery-smoke.php
+      - name: Run iCalendar parser and SSRF validation smoke tests
+        run: php tests/ical-calendar-smoke.php
       - name: Run browser-installer backend smoke test
         env:
           DB_HOST: 127.0.0.1

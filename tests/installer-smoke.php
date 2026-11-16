@@ -679,6 +679,54 @@ assertSmoke(str_contains($themeRoutesSource, "'sandbox-cpp.iyzipay.com'") && str
     $finalPaymentStatus=(string)$pdo->query('SELECT status FROM payment_transactions WHERE id='.(int)$refundPaymentId)->fetchColumn();
     assertSmoke((float)$finalValues['gross_amount']===0.0&&(float)$finalValues['platform_fee']===0.0&&(float)$finalValues['vendor_net_amount']===0.0&&$finalPaymentStatus==='refunded','Full refund did not zero the booking ledger and mark the payment refunded.');
 
+    // Exercise iCal event import, update, cancellation, stale-feed cleanup,
+    // export tokens, and cron-token protection without any external requests.
+    $calendarFeedStmt=$pdo->prepare("INSERT INTO property_calendar_feeds(property_id,label,direction,feed_url_encrypted,enabled,created_at) VALUES(?,'iCal smoke source','import',?,1,NOW())");
+    $calendarFeedStmt->execute([$payoutPropertyId,\App\Core\PaymentSecretVault::encrypt('https://calendar.example.invalid/ical')]);
+    $calendarFeedId=(int)$pdo->lastInsertId();
+    $calendarStart=(new DateTimeImmutable('+10 days'))->format('Y-m-d');
+    $calendarEnd=(new DateTimeImmutable('+12 days'))->format('Y-m-d');
+    $calendarEvent=['uid'=>'ical-smoke-uid','date_from'=>$calendarStart,'date_to'=>$calendarEnd,'cancelled'=>false,'summary'=>'External booking'];
+    $calendarApply=\App\Core\CalendarSyncService::applyEvents($pdo,$calendarFeedId,[$calendarEvent]);
+    $calendarAvailability=$pdo->prepare("SELECT id,status,date_from,date_to FROM availability WHERE property_id=? AND date_from=? AND date_to=? AND status='blocked'");
+    $calendarAvailability->execute([$payoutPropertyId,$calendarStart,$calendarEnd]);$calendarBlock=$calendarAvailability->fetch(PDO::FETCH_ASSOC);
+    assertSmoke($calendarApply['blocked']===1&&$calendarBlock&&$calendarBlock['status']==='blocked','iCal import did not create a blocked availability range.');
+
+    $updatedStart=(new DateTimeImmutable('+15 days'))->format('Y-m-d');
+    $updatedEnd=(new DateTimeImmutable('+17 days'))->format('Y-m-d');
+    $calendarEvent['date_from']=$updatedStart;$calendarEvent['date_to']=$updatedEnd;
+    \App\Core\CalendarSyncService::applyEvents($pdo,$calendarFeedId,[$calendarEvent]);
+    $updatedBlock=$pdo->prepare('SELECT COUNT(*) FROM availability WHERE id=? AND date_from=? AND date_to=?');$updatedBlock->execute([(int)$calendarBlock['id'],$updatedStart,$updatedEnd]);
+    assertSmoke((int)$updatedBlock->fetchColumn()===1,'Changed external iCal dates did not update the linked availability row.');
+
+    $calendarEvent['cancelled']=true;
+    \App\Core\CalendarSyncService::applyEvents($pdo,$calendarFeedId,[$calendarEvent]);
+    $cancelledBlock=$pdo->prepare('SELECT COUNT(*) FROM availability WHERE id=?');$cancelledBlock->execute([(int)$calendarBlock['id']]);
+    assertSmoke((int)$cancelledBlock->fetchColumn()===0,'Cancelled iCal event did not release its availability block.');
+
+    $calendarEvent['cancelled']=false;
+    \App\Core\CalendarSyncService::applyEvents($pdo,$calendarFeedId,[$calendarEvent]);
+    \App\Core\CalendarSyncService::applyEvents($pdo,$calendarFeedId,[]);
+    $staleOnce=$pdo->prepare('SELECT missed_syncs FROM calendar_feed_events WHERE feed_id=? AND external_uid=?');$staleOnce->execute([$calendarFeedId,'ical-smoke-uid']);
+    assertSmoke((int)$staleOnce->fetchColumn()===1,'One missing feed sync removed an event too early.');
+    \App\Core\CalendarSyncService::applyEvents($pdo,$calendarFeedId,[]);
+    $staleStatus=$pdo->prepare("SELECT event_status,availability_id FROM calendar_feed_events WHERE feed_id=? AND external_uid=?");$staleStatus->execute([$calendarFeedId,'ical-smoke-uid']);$staleRow=$staleStatus->fetch(PDO::FETCH_ASSOC);
+    assertSmoke($staleRow['event_status']==='stale'&&$staleRow['availability_id']===null,'Two consecutive missing feed syncs did not safely expire a stale event.');
+
+    $manualBlockFrom=(new DateTimeImmutable('+30 days'))->format('Y-m-d');
+    $manualBlockTo=(new DateTimeImmutable('+32 days'))->format('Y-m-d');
+    $manualCalendarBlock=$pdo->prepare("INSERT INTO availability(property_id,date_from,date_to,status,nightly_price) VALUES(?,?,?,'blocked',NULL)");
+    $manualCalendarBlock->execute([$payoutPropertyId,$manualBlockFrom,$manualBlockTo]);
+    $exportCreated=\App\Core\CalendarSyncService::createExportFeed($pdo,$payoutPropertyId,'Smoke export');
+    $exportFound=\App\Core\CalendarSyncService::exportFeed($pdo,$exportCreated['token']);
+    $exportCalendar=\App\Core\CalendarSyncService::exportIcs($pdo,$payoutPropertyId);
+    assertSmoke($exportFound&&str_contains($exportCalendar,'BEGIN:VCALENDAR')&&str_contains($exportCalendar,'SUMMARY:Unavailable')&&!str_contains($exportCalendar,'ical-smoke-uid'),'iCal export did not expose manual blocks or included an imported event loop.');
+    $cronToken=\App\Core\CalendarSyncService::cronToken($pdo);
+    assertSmoke(\App\Core\CalendarSyncService::verifyCronToken($pdo,$cronToken)&&!\App\Core\CalendarSyncService::verifyCronToken($pdo,'invalid-calendar-token'),'Calendar cron token verification failed.');
+    \App\Core\CalendarSyncService::deleteFeed($pdo,$calendarFeedId,$payoutPropertyId);
+    $deletedFeed=$pdo->prepare('SELECT COUNT(*) FROM property_calendar_feeds WHERE id=?');$deletedFeed->execute([$calendarFeedId]);
+    assertSmoke((int)$deletedFeed->fetchColumn()===0,'Vendor calendar feed deletion did not remove the feed record.');
+
 
     echo "Installer smoke tests passed: admin, platform mode, {$villaCount} demo villas, customer account authentication, booking persistence, financial record, checkout ownership, {$migrationCount} migrations, required tables, theme fallback architecture, and repeat migration.\n";
 } finally {
