@@ -197,6 +197,65 @@ try {
     assertSmoke(($mismatchResult['result']??'')==='rejected'&&!($mismatchResult['payment_updated']??true),'iyzico callback with a mismatched amount was accepted.');
     $iyzicoPaymentState->execute(['iyzico',$mismatchReference]);
     assertSmoke($iyzicoPaymentState->fetchColumn()==='pending','Rejected iyzico callback changed the transaction status.');
+
+    // Exercise terminal payment lifecycle transitions in MySQL through the
+    // same verified callback processor used by gateway callbacks.
+    $createLifecycleCase = static function (string $label, string $bookingStatus='pending') use ($pdo, $createBooking, $createFinancial, $property, $customerId, $customerEmail, $subtotal, $fees, $total): array {
+        $start=(new DateTimeImmutable('+95 days'))->format('Y-m-d');
+        $end=(new DateTimeImmutable('+97 days'))->format('Y-m-d');
+        $code='VRLIFE'.strtoupper(bin2hex(random_bytes(4)));
+        $createBooking->execute([$code,(int)$property['id'],$customerId,'Lifecycle Smoke Customer',$customerEmail,'+905551112233',$start,$end,1,$subtotal,$fees,$total,$property['currency']]);
+        $bookingId=(int)$pdo->lastInsertId();
+        $financial=$pdo->prepare("INSERT INTO booking_financials(booking_id,gross_amount,platform_fee,vendor_net_amount,currency,payout_status,created_at) VALUES(?,?,0,?,?,'unpaid',NOW())");
+        $financial->execute([$bookingId,$total,$total,$property['currency']]);
+        if($bookingStatus!=='pending'){
+            $update=$pdo->prepare('UPDATE bookings SET status=? WHERE id=?');
+            $update->execute([$bookingStatus,$bookingId]);
+        }
+        $reference='VILLA-LIFECYCLE-'.strtoupper(bin2hex(random_bytes(5)));
+        $payment=$pdo->prepare("INSERT INTO payment_transactions(booking_id,provider,provider_reference,amount,currency,status,created_at) VALUES(?,'paytr',?,?,?,'pending',NOW())");
+        $payment->execute([$bookingId,$reference,number_format($total,2,'.',''),$property['currency']]);
+        return ['booking_id'=>$bookingId,'reference'=>$reference];
+    };
+    $runLifecycleCallback = static function (array $case, string $status, string $eventType='payment_callback') use ($paymentProcessor,$total,$property): array {
+        $eventId='VILLA-LIFECYCLE-EVENT-'.strtoupper(bin2hex(random_bytes(5)));
+        $callback=['booking_id'=>$case['booking_id'],'provider'=>'paytr','provider_reference'=>$case['reference'],'amount'=>number_format($total,2,'.',''),'currency'=>$property['currency'],'status'=>$status];
+        return $paymentProcessor->processVerified('paytr',$eventId,$eventType,$case['reference'],['reference'=>$case['reference'],'status'=>$status,'amount'=>$callback['amount']],$callback);
+    };
+    $lifecyclePaymentState=$pdo->prepare('SELECT status,paid_at FROM payment_transactions WHERE provider_reference=?');
+    $lifecycleBookingState=$pdo->prepare('SELECT status FROM bookings WHERE id=?');
+
+    $cancelCase=$createLifecycleCase('cancel');
+    $cancelResult=$runLifecycleCallback($cancelCase,'cancelled');
+    assertSmoke(($cancelResult['result']??'')==='processed'&&($cancelResult['payment_status']??'')==='cancelled','Verified cancellation callback was not applied.');
+    $lifecyclePaymentState->execute([$cancelCase['reference']]);
+    assertSmoke(($lifecyclePaymentState->fetch(PDO::FETCH_ASSOC)['status']??'')==='cancelled','Cancelled payment status was not persisted.');
+    $lifecycleBookingState->execute([$cancelCase['booking_id']]);
+    assertSmoke($lifecycleBookingState->fetchColumn()==='pending','A cancelled checkout attempt unexpectedly changed the booking status.');
+
+    $expiryCase=$createLifecycleCase('expire');
+    $expiryResult=$runLifecycleCallback($expiryCase,'expired');
+    assertSmoke(($expiryResult['result']??'')==='processed'&&($expiryResult['payment_status']??'')==='expired','Verified expiry callback was not applied.');
+    $lifecyclePaymentState->execute([$expiryCase['reference']]);
+    assertSmoke(($lifecyclePaymentState->fetch(PDO::FETCH_ASSOC)['status']??'')==='expired','Expired payment status was not persisted.');
+
+    $refundCase=$createLifecycleCase('refund');
+    $refundPaid=$runLifecycleCallback($refundCase,'success');
+    assertSmoke(($refundPaid['result']??'')==='processed','Refund lifecycle fixture could not first reach paid status.');
+    $refundResult=$runLifecycleCallback($refundCase,'refunded');
+    assertSmoke(($refundResult['result']??'')==='processed'&&($refundResult['payment_status']??'')==='refunded','Verified refund callback was not applied to a paid transaction.');
+    $lifecyclePaymentState->execute([$refundCase['reference']]);
+    $refundPaymentRow=$lifecyclePaymentState->fetch(PDO::FETCH_ASSOC);
+    assertSmoke(($refundPaymentRow['status']??'')==='refunded'&&!empty($refundPaymentRow['paid_at']),'Refund did not preserve the paid timestamp and terminal refund status.');
+    $lifecycleBookingState->execute([$refundCase['booking_id']]);
+    assertSmoke($lifecycleBookingState->fetchColumn()==='confirmed','A payment refund callback unexpectedly rewrote the booking lifecycle; booking cancellation remains a separate business decision.');
+
+    $latePaidCase=$createLifecycleCase('late-paid','cancelled');
+    $latePaidResult=$runLifecycleCallback($latePaidCase,'success');
+    assertSmoke(($latePaidResult['result']??'')==='rejected_booking_status'&&!($latePaidResult['payment_updated']??true),'A late successful callback was accepted for a cancelled booking.');
+    $lifecyclePaymentState->execute([$latePaidCase['reference']]);
+    assertSmoke(($lifecyclePaymentState->fetch(PDO::FETCH_ASSOC)['status']??'')==='pending','Rejected late payment callback changed the payment transaction.');
+
     
     // MySQL-backed manual transfer lifecycle: reject, resubmit, validate
     // amount and booking conflicts, then approve exactly once.
