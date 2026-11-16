@@ -114,9 +114,9 @@ final class Migrator
     {
         $row = $pdo->query('SELECT DATABASE() AS database_name, @@hostname AS server_host, @@port AS server_port')->fetch(PDO::FETCH_ASSOC);
         if (!is_array($row) || !is_string($row['database_name'] ?? null) || $row['database_name'] === '') {
-            throw new \\RuntimeException('Migration database identity could not be determined.');
+            throw new \RuntimeException('Migration database identity could not be determined.');
         }
-        return hash('sha256', implode("\\0", [
+        return hash('sha256', implode("\0", [
             (string)($row['server_host'] ?? ''),
             (string)($row['server_port'] ?? ''),
             $row['database_name'],
