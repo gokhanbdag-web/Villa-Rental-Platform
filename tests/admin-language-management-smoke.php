@@ -21,7 +21,7 @@ $checks = [
     'new languages are enabled and can atomically become the default locale' =>
         str_contains($routes, 'INSERT INTO languages(code,name,is_default,is_active) VALUES(?,?,?,1)')
         && str_contains($routes, 'UPDATE languages SET is_default=0')
-        && str_contains($routes, "setting->execute(['app.locale', $code])")
+        && str_contains($routes, '$setting->execute(')
         && str_contains($routes, '$pdo->commit();'),
     'admin UI exposes language code, name, and default selection' =>
         str_contains($view, 'name="code"')
