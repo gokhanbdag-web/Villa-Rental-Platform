@@ -9,8 +9,8 @@ $checks = [
         str_contains($shell, '$activeNavLength = -1;')
         && str_contains($shell, '$active = ($url === $activeNavUrl);'),
     'dashboard is active only for the exact admin root' =>
-        str_contains($shell, "($url === '/admin')")
-        && str_contains($shell, "($requestPath === '/admin' || $requestPath === '/admin/')"),
+        str_contains($shell, '($url === \'/admin\')')
+        && str_contains($shell, '($requestPath === \'/admin\' || $requestPath === \'/admin/\')'),
     'client navigation clears all active states before selecting one' =>
         str_contains($shell, 'link.classList.remove("is-active");')
         && str_contains($shell, 'if(activeLink)activeLink.classList.add("is-active");'),
