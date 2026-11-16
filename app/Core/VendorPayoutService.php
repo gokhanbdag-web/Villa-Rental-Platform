@@ -14,14 +14,14 @@ final class VendorPayoutService
         $accountHolder=trim($accountHolder);
         $iban=strtoupper(preg_replace('/\\s+/', '', $iban) ?? '');
         if($userId<1||$bankName===''||strlen($bankName)>120||$accountHolder===''||strlen($accountHolder)>190||!self::validIban($iban)) {
-            throw new \\InvalidArgumentException('Banka adı, hesap sahibi ve geçerli IBAN bilgilerini kontrol edin.');
+            throw new \InvalidArgumentException('Banka adı, hesap sahibi ve geçerli IBAN bilgilerini kontrol edin.');
         }
         $stmt=$pdo->prepare('UPDATE vendors SET payout_bank_name=?,payout_account_holder=?,payout_iban=? WHERE user_id=?');
         $stmt->execute([$bankName,$accountHolder,PaymentSecretVault::encrypt($iban),$userId]);
         if($stmt->rowCount()===0) {
             $exists=$pdo->prepare('SELECT 1 FROM vendors WHERE user_id=? LIMIT 1');
             $exists->execute([$userId]);
-            if(!$exists->fetchColumn()) throw new \\RuntimeException('Ev sahibi hesabı bulunamadı.');
+            if(!$exists->fetchColumn()) throw new \RuntimeException('Ev sahibi hesabı bulunamadı.');
         }
     }
 
@@ -68,16 +68,18 @@ final class VendorPayoutService
 
         $pdo->beginTransaction();
         try {
-            $vendorStmt = $pdo->prepare('SELECT id,status,payout_bank_name,payout_account_holder,payout_iban FROM vendors WHERE user_id=? LIMIT 1 FOR UPDATE');
+            $vendorStmt = $pdo->prepare('SELECT id,status FROM vendors WHERE user_id=? LIMIT 1 FOR UPDATE');
             $vendorStmt->execute([$userId]);
             $vendor = $vendorStmt->fetch(PDO::FETCH_ASSOC);
             if (!$vendor || (string)$vendor['status'] !== 'approved') {
                 throw new \RuntimeException('Ödeme talebi için onaylı ev sahibi hesabı gereklidir.');
             }
-            if (trim((string)($vendor['payout_bank_name']??''))==='' || trim((string)($vendor['payout_account_holder']??''))==='' || !self::validIban(PaymentSecretVault::decrypt((string)($vendor['payout_iban']??'')))) {
-                throw new \\RuntimeException('Ödeme talebinden önce banka adı, hesap sahibi ve doğrulanmış IBAN bilgilerinizi kaydedin.');
-            }
             $vendorId = (int)$vendor['id'];
+            $profileStmt=$pdo->prepare('SELECT bank_name,account_holder,iban_encrypted FROM vendor_payout_profiles WHERE vendor_id=? LIMIT 1 FOR UPDATE');
+            $profileStmt->execute([$vendorId]);$profile=$profileStmt->fetch(PDO::FETCH_ASSOC);
+            if(!$profile||trim((string)$profile['bank_name'])===''||trim((string)$profile['account_holder'])===''||!self::validIban(PaymentSecretVault::decrypt((string)$profile['iban_encrypted']))) {
+                throw new \RuntimeException('Ödeme talebinden önce banka adı, hesap sahibi ve doğrulanmış IBAN bilgilerinizi kaydedin.');
+            }
 
             $rowsStmt = $pdo->prepare("SELECT bf.booking_id,bf.vendor_net_amount,bf.currency,
                 GREATEST(0, bf.vendor_net_amount - COALESCE((
