@@ -1025,9 +1025,8 @@ $router->post('/checkout/{bookingCode}/paytr/start', static function (array $par
     try{$okUrl=app_absolute_url('/payments/paytr/return/'.rawurlencode($merchantOid));$failUrl=$okUrl;}
     catch(Throwable $e){http_response_code(503);exit('PayTR için geçerli HTTPS site adresi gereklidir.');}
     $basket=base64_encode(json_encode([[mb_substr((string)$booking['property_title'],0,90),number_format((float)$booking['total'],2,'.',''),1]],JSON_UNESCAPED_UNICODE|JSON_THROW_ON_ERROR));
-    $name=trim((string)($booking['username']??'Misafir'));
-    $address=trim((string)($_POST['billing_address']??'Türkiye'));if($address==='')$address='Türkiye';
-    $phone=$phone!==''?$phone:'0000000000';
+    $name=trim((string)($booking['guest_name']??$booking['username']??'Misafir'));
+    $address=trim((string)($_POST['billing_address']??''));if($address===''||mb_strlen($address)>500){http_response_code(422);exit('Fatura adresi alanını doldurun.');}
     $idempotency=hash('sha256','paytr:'.$merchantOid);
     $insert=$pdo->prepare("INSERT INTO payment_transactions(booking_id,provider,provider_reference,idempotency_key,amount,currency,status,request_payload,created_at,updated_at) VALUES(?,'paytr',?,?,?,?,'pending',?,NOW(),NOW())");
     $insert->execute([(int)$booking['id'],$merchantOid,$idempotency,number_format((float)$booking['total'],2,'.',''),$currency,json_encode(['merchant_oid'=>$merchantOid,'payment_amount'=>$amountKurus,'currency'=>$currency,'environment'=>$config['environment']],JSON_UNESCAPED_UNICODE)]);
