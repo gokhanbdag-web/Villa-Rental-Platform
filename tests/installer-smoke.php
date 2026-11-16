@@ -155,6 +155,25 @@ try {
     assertSmoke(($duplicatePayment['result']??'')==='duplicate'&&!($duplicatePayment['payment_updated']??true),'Duplicate payment callback changed the payment a second time.');
     $secondProviderEvent = $paymentProcessor->processVerified('paytr','VILLA-SECOND-EVENT-' . strtoupper(bin2hex(random_bytes(4))),'payment_callback',$paymentReference,['reference'=>$paymentReference,'status'=>'success','amount'=>number_format($total,2,'.','')],$paymentCallback);
     assertSmoke(($secondProviderEvent['result']??'')==='already_applied'&&!($secondProviderEvent['payment_updated']??true),'A second provider event for an already-paid transaction was not handled idempotently.');
+
+    // A different provider must not be able to mark a second transaction paid
+    // for the same booking, even when its callback is otherwise valid.
+    $competingReference = 'VILLA-COMPETING-' . strtoupper(bin2hex(random_bytes(4)));
+    $createCompetingPayment = $pdo->prepare("INSERT INTO payment_transactions(booking_id,provider,provider_reference,amount,currency,status,created_at) VALUES(?,'iyzico',?,?,?,'pending',NOW())");
+    $createCompetingPayment->execute([$bookingId,$competingReference,number_format($total,2,'.',''),$property['currency']]);
+    $competingCallback = [
+        'booking_id'=>$bookingId,
+        'provider'=>'iyzico',
+        'provider_reference'=>$competingReference,
+        'amount'=>number_format($total,2,'.',''),
+        'currency'=>$property['currency'],
+        'status'=>'success',
+    ];
+    $competingResult = $paymentProcessor->processVerified('iyzico','VILLA-COMPETING-EVENT-' . strtoupper(bin2hex(random_bytes(4))),'checkout_form_auth',$competingReference,['reference'=>$competingReference,'status'=>'success'],$competingCallback);
+    assertSmoke(($competingResult['result']??'')==='rejected_duplicate_booking_payment'&&!($competingResult['payment_updated']??true),'A second provider was allowed to confirm a second payment for the same booking.');
+    $competingState = $pdo->prepare('SELECT status FROM payment_transactions WHERE provider=? AND provider_reference=? LIMIT 1');
+    $competingState->execute(['iyzico',$competingReference]);
+    assertSmoke($competingState->fetchColumn()==='pending','Rejected competing payment changed its transaction status.');
     
     // Exercise the iyzico callback processor against MySQL without contacting
     // iyzico or creating a real charge. This verifies provider-specific
