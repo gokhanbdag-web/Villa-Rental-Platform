@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.5.6 - 2026-11-16
+- Add customer manual bank transfer submission with bank instructions, booking reference, sender details, and transfer reference.
+- Add admin-only approval/rejection workflow with audit and customer notifications; approval creates an idempotent paid transaction and confirms only conflict-free pending bookings.
+- Enforce one pending transfer report per booking and preserve rejected reports for audit while allowing resubmission.
+
 ## 1.5.5 - 2026-11-16
 - Add versioned manual bank transfer settings for bank name, account holder, IBAN, transfer instructions, and booking reference prefix.
 - Add server-side manual payment provider configuration with IBAN validation; manual transfers remain unconfirmed until an authenticated admin verifies the payment.
