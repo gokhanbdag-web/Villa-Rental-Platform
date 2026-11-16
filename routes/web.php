@@ -1574,6 +1574,7 @@ $router->get('/account/email/verify', static function (): void {
         $pdo->commit();
         if(isset($_SESSION['user'])&&(int)$_SESSION['user']['id']===(int)$record['user_id'])$_SESSION['user']['email']=(string)$record['target_email'];
         $_SESSION['villa_profile_notice']='E-posta adresiniz başarıyla doğrulandı ve güncellendi.';
+        if(!isset($_SESSION['user'])||(int)($_SESSION['user']['id']??0)!==(int)$record['user_id'])redirect('/login');
         redirect('/account/profile');
     }catch(Throwable $e){if($pdo->inTransaction())$pdo->rollBack();http_response_code(400);exit(e($e->getMessage()));}
 });
