@@ -21,7 +21,7 @@ $checks=[
  'dashboard provides summary metrics, filters and expandable raw details'=>str_contains($page,'requestCount')&&str_contains($page,'requestFilter')&&str_contains($page,'Ham kaydı göster'),
  'dashboard fetch URL respects subdirectory installation'=>str_contains($page,"app_url('/admin/performance/data')"),
  'successful video byte-range transfers are excluded from slow app request logs'=>str_contains($bootstrap,'successful MP4/WebM byte-range response')&&str_contains($bootstrap,'in_array($status, [200, 206, 304], true)'),
- 'application version is bumped to 1.5.2'=>$version==='1.5.2',
+ 'application version is bumped to 1.5.2'=>$version==='1.5.3',
  'changelog documents diagnostics dashboard and media timing changes'=>str_contains(file_get_contents($root.'/CHANGELOG.md'),'1.5.2')&&str_contains(file_get_contents($root.'/CHANGELOG.md'),'byte-range delivery time'),
 ];
 $failed=[];
