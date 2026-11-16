@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.6.9 - 2026-11-16
+- Add property-specific seasonal nightly prices with admin/vendor management, overlap prevention, and shared-hosting-safe SQL migration.
+- Apply consistent rate precedence across live availability quotes, customer bookings, and administrator-entered bookings: base weekday, weekend, season, then explicit calendar price.
+- Add calculator precedence tests and MySQL migration/integration coverage; no Composer or shell migration step required.
+
 ## 1.6.8 - 2026-11-16
 - Add SSRF-safe HTTPS iCal import with encrypted source URLs, event reconciliation, cancellation handling, and two-successful-sync stale-event cleanup.
 - Add per-property iCal export feeds, token-protected cPanel Cron synchronization, and vendor/admin calendar management screens.
