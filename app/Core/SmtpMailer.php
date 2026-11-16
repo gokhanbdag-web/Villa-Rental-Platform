@@ -38,6 +38,79 @@ final class SmtpMailer
         }
     }
 
+
+    /**
+     * Diagnose PHP mail support, DNS, SMTP listeners and TLS without authenticating
+     * or sending a message. Each network probe is bounded by a short timeout.
+     */
+    public static function diagnose(array $config): array
+    {
+        $host = trim((string)($config['host'] ?? ''));
+        $results = [
+            'PHP mail()' => function_exists('mail') ? 'PHP mail() mevcut (bu, gönderimin çalıştığını kanıtlamaz).' : 'PHP mail() devre dışı veya mevcut değil.',
+            'PHP socket' => function_exists('stream_socket_client') ? 'stream_socket_client kullanılabilir.' : 'stream_socket_client devre dışı; SMTP testi yapılamaz.',
+        ];
+        if ($host === '' || strlen($host) > 253 || preg_match('/[\\s\r\n]/', $host) === 1
+            || (!filter_var($host, FILTER_VALIDATE_IP) && preg_match('/^(?=.{1,253}$)(?:[A-Za-z0-9](?:[A-Za-z0-9-]{0,61}[A-Za-z0-9])?)(?:\\.(?:[A-Za-z0-9](?:[A-Za-z0-9-]{0,61}[A-Za-z0-9])?))*$/', $host) !== 1)) {
+            $results['DNS'] = 'SMTP sunucu adı boş veya geçersiz.';
+            return $results;
+        }
+        $addresses = filter_var($host, FILTER_VALIDATE_IP) ? [$host] : (@gethostbynamel($host) ?: []);
+        $results['DNS'] = $addresses ? 'Sunucu adı çözümlendi: ' . implode(', ', array_slice($addresses, 0, 3)) : 'DNS çözümlemesi başarısız; hostname veya DNS kaydı kontrol edilmeli.';
+        if (!function_exists('stream_socket_client')) return $results;
+
+        foreach ([25, 465, 587] as $port) {
+            $scheme = $port === 465 ? 'ssl://' : 'tcp://';
+            $context = stream_context_create(['ssl' => ['verify_peer' => true, 'verify_peer_name' => true, 'allow_self_signed' => false]]);
+            $errno = 0; $error = '';
+            $socket = @stream_socket_client($scheme . $host . ':' . $port, $errno, $error, 4, STREAM_CLIENT_CONNECT, $context);
+            if (!is_resource($socket)) {
+                $detail = trim(preg_replace('/[\r\n\\t]+/', ' ', (string)$error) ?? '');
+                $results['Port ' . $port] = 'Bağlantı başarısız' . ($detail !== '' ? ': ' . mb_substr($detail, 0, 160) : ' (kod ' . $errno . ')');
+                continue;
+            }
+            stream_set_timeout($socket, 4);
+            $status = 'TCP bağlantısı kuruldu';
+            try {
+                $readReply = static function ($stream): string {
+                    $reply = '';
+                    while (($line = fgets($stream, 515)) !== false) {
+                        $reply .= $line;
+                        if (preg_match('/^[0-9]{3} /', $line) === 1) break;
+                    }
+                    return $reply;
+                };
+                $greeting = $readReply($socket);
+                if (!str_starts_with($greeting, '220')) throw new \RuntimeException('SMTP karşılama yanıtı alınamadı.');
+                $status = 'SMTP servisi 220 karşılama yanıtı verdi';
+                fwrite($socket, "EHLO villaplatform.local\r\n");
+                $ehlo = $readReply($socket);
+                if (!str_starts_with($ehlo, '250')) throw new \RuntimeException('EHLO komutu kabul edilmedi.');
+                if ($port !== 465 && preg_match('/^250[- ]STARTTLS/im', $ehlo) === 1) {
+                    fwrite($socket, "STARTTLS\r\n");
+                    $startTls = $readReply($socket);
+                    if (!str_starts_with($startTls, '220')) throw new \RuntimeException('STARTTLS komutu reddedildi.');
+                    $crypto = @stream_socket_enable_crypto($socket, true, STREAM_CRYPTO_METHOD_TLS_CLIENT);
+                    if ($crypto !== true) throw new \RuntimeException('TLS el sıkışması başarısız.');
+                    $status .= '; STARTTLS/TLS başarılı';
+                } elseif ($port === 587) {
+                    $status .= '; STARTTLS sunucuda ilan edilmedi';
+                } elseif ($port === 465) {
+                    $status .= '; SSL/TLS bağlantısı ve SMTP karşılama başarılı';
+                } else {
+                    $status .= '; STARTTLS ilanı bulunamadı';
+                }
+            } catch (\Throwable $e) {
+                $status .= '; ' . $e->getMessage();
+            } finally {
+                fclose($socket);
+            }
+            $results['Port ' . $port] = $status;
+        }
+        $results['Kimlik doğrulama'] = 'Bu tanılama kullanıcı adı/parolayı kullanmadı; e-posta göndermedi.';
+        return $results;
+    }
+
     public static function send(array $config, string $recipient, string $subject, string $html, string $text = ''): void
     {
         self::validate($config, $recipient, $subject);
