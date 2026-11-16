@@ -66,19 +66,28 @@ final class Router
     {
         $path = $this->normalize($path);
 
-        foreach ($this->compiledRoutes[strtoupper($method)] ?? [] as $route) {
-            if (!preg_match($route['regex'], $path, $matches)) {
-                continue;
-            }
+        $routes = $this->compiledRoutes[strtoupper($method)] ?? [];
 
-            array_shift($matches);
-            $params = [];
-            foreach ($route['names'] as $index => $name) {
-                $params[$name] = rawurldecode($matches[$index] ?? '');
-            }
+        // Literal routes must win over parameterized routes regardless of
+        // registration order (for example /admin/blog/categories vs /admin/blog/{id}).
+        foreach ([true, false] as $literalPass) {
+            foreach ($routes as $route) {
+                if (($route['names'] === []) !== $literalPass) {
+                    continue;
+                }
+                if (!preg_match($route['regex'], $path, $matches)) {
+                    continue;
+                }
 
-            ($route['handler'])($params);
-            return true;
+                array_shift($matches);
+                $params = [];
+                foreach ($route['names'] as $index => $name) {
+                    $params[$name] = rawurldecode($matches[$index] ?? '');
+                }
+
+                ($route['handler'])($params);
+                return true;
+            }
         }
 
         return false;
