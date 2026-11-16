@@ -1810,7 +1810,7 @@ $router->get('/admin/properties/{id}/availability', static function (array $para
     $s=$pdo->prepare('SELECT * FROM availability WHERE property_id=? AND date_from < ? AND date_to > ? ORDER BY date_from');$s->execute([(int)$property['id'],$monthEnd,$monthStart]);$ranges=$s->fetchAll();
     $s=$pdo->prepare("SELECT id,check_in,check_out,status,booking_code,guest_user_id FROM bookings WHERE property_id=? AND status='confirmed' AND check_in < ? AND check_out > ? ORDER BY check_in");$s->execute([(int)$property['id'],$monthEnd,$monthStart]);$calendarBookings=$s->fetchAll();
     $calendarPrev=$monthDate->modify('-1 month')->format('Y-m');$calendarNext=$monthDate->modify('+1 month')->format('Y-m');
-    $saveUrl='/admin/properties/availability/save';$deleteUrl='/admin/properties/availability/delete';$backUrl='/admin/properties';$calendarSyncUrl='/admin/properties/'.(int)$property['id'].'/calendar-sync';$seasonalPricingUrl='/admin/properties/'.(int)$property['id'].'/seasonal-pricing';ThemeManager::renderTemplate('templates/pages/admin/availability.php', get_defined_vars());
+    $saveUrl='/admin/properties/availability/save';$deleteUrl='/admin/properties/availability/delete';$backUrl='/admin/properties';$calendarSyncUrl='/admin/properties/'.(int)$property['id'].'/calendar-sync';$seasonalPricingUrl='/admin/properties/'.(int)$property['id'].'/seasonal-pricing';$arrivalOptionsUrl='/admin/properties/'.(int)$property['id'].'/booking-time-options';ThemeManager::renderTemplate('templates/pages/admin/availability.php', get_defined_vars());
 });
 
 $router->get('/admin/properties/{id}/seasonal-pricing', static function(array $params):void {
@@ -1905,7 +1905,7 @@ $router->get('/vendor/properties/{id}/availability', static function (array $par
     $s=$pdo->prepare('SELECT * FROM availability WHERE property_id=? AND date_from < ? AND date_to > ? ORDER BY date_from');$s->execute([(int)$property['id'],$monthEnd,$monthStart]);$ranges=$s->fetchAll();
     $s=$pdo->prepare("SELECT id,check_in,check_out,status,booking_code,guest_user_id FROM bookings WHERE property_id=? AND status='confirmed' AND check_in < ? AND check_out > ? ORDER BY check_in");$s->execute([(int)$property['id'],$monthEnd,$monthStart]);$calendarBookings=$s->fetchAll();
     $calendarPrev=$monthDate->modify('-1 month')->format('Y-m');$calendarNext=$monthDate->modify('+1 month')->format('Y-m');
-    $saveUrl='/vendor/properties/availability/save';$deleteUrl='/vendor/properties/availability/delete';$backUrl='/vendor/properties';$calendarSyncUrl='/vendor/properties/'.(int)$property['id'].'/calendar-sync';$seasonalPricingUrl='/vendor/properties/'.(int)$property['id'].'/seasonal-pricing';ThemeManager::renderTemplate('templates/pages/admin/availability.php', get_defined_vars());
+    $saveUrl='/vendor/properties/availability/save';$deleteUrl='/vendor/properties/availability/delete';$backUrl='/vendor/properties';$calendarSyncUrl='/vendor/properties/'.(int)$property['id'].'/calendar-sync';$seasonalPricingUrl='/vendor/properties/'.(int)$property['id'].'/seasonal-pricing';$arrivalOptionsUrl='/vendor/properties/'.(int)$property['id'].'/booking-time-options';ThemeManager::renderTemplate('templates/pages/admin/availability.php', get_defined_vars());
 });
 
 $router->get('/vendor/properties/{id}/seasonal-pricing', static function(array $params):void {
