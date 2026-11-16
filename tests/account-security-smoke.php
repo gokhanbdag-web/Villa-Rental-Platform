@@ -14,7 +14,7 @@ $checks = [
     'profile route and CSRF-protected updates' => str_contains($routes, "\$router->get('/account/profile'") && str_contains($routes, "verify_csrf();"),
     'current password verification' => str_contains($routes, 'password_verify($current,$hash)'),
     'password reset request and completion routes' => str_contains($routes, "\$router->post('/forgot-password'") && str_contains($routes, "\$router->post('/reset-password'"),
-    'hashed random recovery tokens' => str_contains($routes, "bin2hex(random_bytes(32))") && str_contains($routes, "hash('sha256',$token)"),
+    'hashed random recovery tokens' => str_contains($routes, "bin2hex(random_bytes(32))") && str_contains($routes, 'hash(\'sha256\',$token)'),
     'single-use expiring recovery tokens' => str_contains($routes, "used_at IS NULL AND expires_at>NOW()") && str_contains($routes, "SET used_at=NOW()"),
     'generic recovery response and throttling' => str_contains($routes, 'Bu e-posta adresi sistemde kayıtlıysa') && str_contains($routes, 'account_recovery_limits'),
     'email change verification' => str_contains($routes, "purpose='email_change'") && str_contains($routes, '/account/email/verify'),
