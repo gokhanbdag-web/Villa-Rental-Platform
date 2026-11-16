@@ -31,7 +31,7 @@ $checks = [
         && str_contains($form, 'foreach($languages as $language)')
         && str_contains($form, 'disabled'),
     'saving a CMS page returns to the same language list' =>
-        str_contains($adminRoutes, "redirect('/admin/pages?lang=' . rawurlencode($locale))"),
+        str_contains($adminRoutes, 'redirect(\'/admin/pages?lang=\' . rawurlencode($locale))'),
 ];
 
 $failed = [];
