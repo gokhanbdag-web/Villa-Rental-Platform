@@ -48,12 +48,15 @@ function villa_navigation_tree(PDO $pdo, string $location, string $locale): arra
 
 
 /** Store non-overlapping property seasonal prices while serializing edits per property. */
-function villa_store_seasonal_price(PDO $pdo,int $propertyId,int $seasonId,string $name,string $from,string $to,string $price): void {
+function villa_store_seasonal_price(PDO $pdo,int $propertyId,int $seasonId,string $name,string $from,string $to,string $price,string $minNights,array $checkinDays,array $checkoutDays): void {
     $name=trim($name);
     $start=DateTimeImmutable::createFromFormat('!Y-m-d',$from);
     $end=DateTimeImmutable::createFromFormat('!Y-m-d',$to);
-    if($propertyId<1||$name===''||mb_strlen($name)>120||!$start||!$end||$start->format('Y-m-d')!==$from||$end->format('Y-m-d')!==$to||$end<=$start||($seasonId<1&&$start<new DateTimeImmutable('today'))||$start->diff($end)->days>730||!is_numeric($price)||!is_finite((float)$price)||(float)$price<0||(float)$price>99999999.99) {
-        throw new InvalidArgumentException('Sezon adı, tarih aralığı ve gecelik fiyatı kontrol edin.');
+    $min=(int)$minNights;
+    $checkinMask=\\App\\Core\\BookingStayRules::weekdayMask($checkinDays);
+    $checkoutMask=\\App\\Core\\BookingStayRules::weekdayMask($checkoutDays);
+    if($propertyId<1||$name===''||mb_strlen($name)>120||!$start||!$end||$start->format('Y-m-d')!==$from||$end->format('Y-m-d')!==$to||$end<=$start||($seasonId<1&&$start<new DateTimeImmutable('today'))||$start->diff($end)->days>730||!is_numeric($price)||!is_finite((float)$price)||(float)$price<0||(float)$price>99999999.99||$min<1||$min>365) {
+        throw new InvalidArgumentException('Sezon adı, tarih aralığı, gecelik fiyat ve minimum gece sayısını kontrol edin.');
     }
     $pdo->beginTransaction();
     try {
@@ -64,16 +67,16 @@ function villa_store_seasonal_price(PDO $pdo,int $propertyId,int $seasonId,strin
         $overlap->execute([$propertyId,$seasonId,$to,$from]);
         if($overlap->fetchColumn()) throw new RuntimeException('Bu tarihler başka bir sezon fiyatıyla çakışıyor.');
         if($seasonId>0) {
-            $save=$pdo->prepare('UPDATE property_seasonal_prices SET name=?,date_from=?,date_to=?,nightly_price=?,updated_at=NOW() WHERE id=? AND property_id=?');
-            $save->execute([$name,$from,$to,(float)$price,$seasonId,$propertyId]);
+            $save=$pdo->prepare('UPDATE property_seasonal_prices SET name=?,date_from=?,date_to=?,nightly_price=?,min_nights=?,checkin_weekdays=?,checkout_weekdays=?,updated_at=NOW() WHERE id=? AND property_id=?');
+            $save->execute([$name,$from,$to,(float)$price,$min,$checkinMask,$checkoutMask,$seasonId,$propertyId]);
             if($save->rowCount()===0) {
                 $exists=$pdo->prepare('SELECT id FROM property_seasonal_prices WHERE id=? AND property_id=?');
                 $exists->execute([$seasonId,$propertyId]);
                 if(!$exists->fetchColumn()) throw new RuntimeException('Sezon kaydı bulunamadı.');
             }
         } else {
-            $save=$pdo->prepare('INSERT INTO property_seasonal_prices(property_id,name,date_from,date_to,nightly_price,created_at) VALUES(?,?,?,?,?,NOW())');
-            $save->execute([$propertyId,$name,$from,$to,(float)$price]);
+            $save=$pdo->prepare('INSERT INTO property_seasonal_prices(property_id,name,date_from,date_to,nightly_price,min_nights,checkin_weekdays,checkout_weekdays,created_at) VALUES(?,?,?,?,?,?,?,?,NOW())');
+            $save->execute([$propertyId,$name,$from,$to,(float)$price,$min,$checkinMask,$checkoutMask]);
         }
         $pdo->commit();
     } catch(Throwable $e) {
@@ -1808,7 +1811,7 @@ $router->get('/admin/properties/{id}/seasonal-pricing', static function(array $p
 });
 $router->post('/admin/properties/seasonal-pricing/save', static function():void {
     Auth::requireRole(['super_admin','admin']);verify_csrf();$pdo=Database::connection();$pid=(int)($_POST['property_id']??0);
-    try{villa_store_seasonal_price($pdo,$pid,(int)($_POST['id']??0),(string)($_POST['name']??''),(string)($_POST['date_from']??''),(string)($_POST['date_to']??''),(string)($_POST['nightly_price']??''));$_SESSION['villa_seasonal_message']='Sezon fiyatı kaydedildi.';$_SESSION['villa_seasonal_message_type']='success';}
+    try{villa_store_seasonal_price($pdo,$pid,(int)($_POST['id']??0),(string)($_POST['name']??''),(string)($_POST['date_from']??''),(string)($_POST['date_to']??''),(string)($_POST['nightly_price']??''),(string)($_POST['min_nights']??'1'),(array)($_POST['checkin_weekdays']??[]),(array)($_POST['checkout_weekdays']??[]));$_SESSION['villa_seasonal_message']='Sezon fiyatı kaydedildi.';$_SESSION['villa_seasonal_message_type']='success';}
     catch(Throwable $e){$_SESSION['villa_seasonal_message']=$e->getMessage();$_SESSION['villa_seasonal_message_type']='error';}
     redirect('/admin/properties/'.$pid.'/seasonal-pricing');
 });
@@ -1855,7 +1858,7 @@ $router->post('/admin/properties/calendar-feed/delete', static function (): void
 });
 
 $router->post('/admin/properties/availability/save', static function (): void {
-    Auth::requireRole(['super_admin','admin']);verify_csrf();$pdo=Database::connection();$pid=(int)($_POST['property_id']??0);$ruleId=(int)($_POST['id']??0);$from=(string)($_POST['date_from']??'');$to=(string)($_POST['date_to']??'');$status=($_POST['status']??'')==='available'?'available':'blocked';$price=trim((string)($_POST['nightly_price']??''));$a=DateTimeImmutable::createFromFormat('!Y-m-d',$from);$b=DateTimeImmutable::createFromFormat('!Y-m-d',$to);
+    Auth::requireRole(['super_admin','admin']);verify_csrf();$pdo=Database::connection();$pid=(int)($_POST['property_id']??0);$ruleId=(int)($_POST['id']??0);$from=(string)($_POST['date_from']??'');$to=(string)($_POST['date_to']??'');$status=($_POST['status']??'')==='available'?'available':'blocked';$price=trim((string)($_POST['nightly_price']??''),(string)($_POST['min_nights']??'1'),(array)($_POST['checkin_weekdays']??[]),(array)($_POST['checkout_weekdays']??[]));$a=DateTimeImmutable::createFromFormat('!Y-m-d',$from);$b=DateTimeImmutable::createFromFormat('!Y-m-d',$to);
     if(!$a||!$b||$a->format('Y-m-d')!==$from||$b->format('Y-m-d')!==$to||$a<new DateTimeImmutable('today')||$b<=$a){http_response_code(422);exit('Tarih aralığı geçersiz.');}
     $over=$pdo->prepare('SELECT id FROM availability WHERE property_id=? AND id<>? AND date_from < ? AND date_to > ? LIMIT 1');$over->execute([$pid,$ruleId,$to,$from]);if($over->fetchColumn()){http_response_code(409);exit('Bu tarih aralığı mevcut bir takvim kuralıyla çakışıyor.');}
     $amount=$price===''?null:max(0,(float)$price);
@@ -1892,7 +1895,7 @@ $router->post('/vendor/properties/seasonal-pricing/save', static function():void
     Auth::requireRole(['vendor']);verify_csrf();$pdo=Database::connection();$v=$pdo->prepare('SELECT id,status FROM vendors WHERE user_id=? LIMIT 1');$v->execute([(int)Auth::user()['id']]);$vendor=$v->fetch(PDO::FETCH_ASSOC);$pid=(int)($_POST['property_id']??0);
     if(!$vendor||!Auth::canManageVendorBookings((string)$vendor['status'])){http_response_code(403);return;}
     $own=$pdo->prepare('SELECT id FROM properties WHERE id=? AND vendor_id=? LIMIT 1');$own->execute([$pid,(int)$vendor['id']]);if(!$own->fetchColumn()){http_response_code(404);return;}
-    try{villa_store_seasonal_price($pdo,$pid,(int)($_POST['id']??0),(string)($_POST['name']??''),(string)($_POST['date_from']??''),(string)($_POST['date_to']??''),(string)($_POST['nightly_price']??''));$_SESSION['villa_seasonal_message']='Sezon fiyatı kaydedildi.';$_SESSION['villa_seasonal_message_type']='success';}
+    try{villa_store_seasonal_price($pdo,$pid,(int)($_POST['id']??0),(string)($_POST['name']??''),(string)($_POST['date_from']??''),(string)($_POST['date_to']??''),(string)($_POST['nightly_price']??''),(string)($_POST['min_nights']??'1'),(array)($_POST['checkin_weekdays']??[]),(array)($_POST['checkout_weekdays']??[]));$_SESSION['villa_seasonal_message']='Sezon fiyatı kaydedildi.';$_SESSION['villa_seasonal_message_type']='success';}
     catch(Throwable $e){$_SESSION['villa_seasonal_message']=$e->getMessage();$_SESSION['villa_seasonal_message_type']='error';}
     redirect('/vendor/properties/'.$pid.'/seasonal-pricing');
 });
@@ -1953,7 +1956,7 @@ $router->post('/vendor/properties/calendar-feed/delete', static function (): voi
 });
 $router->post('/vendor/properties/availability/save', static function (): void {
     Auth::requireRole(['vendor']);verify_csrf();$pdo=Database::connection();$v=$pdo->prepare('SELECT id FROM vendors WHERE user_id=?');$v->execute([(int)Auth::user()['id']]);$vid=(int)$v->fetchColumn();$pid=(int)($_POST['property_id']??0);$own=$pdo->prepare('SELECT id FROM properties WHERE id=? AND vendor_id=?');$own->execute([$pid,$vid]);if(!$own->fetchColumn()){http_response_code(404);return;}
-    $ruleId=(int)($_POST['id']??0);$from=(string)($_POST['date_from']??'');$to=(string)($_POST['date_to']??'');$status=($_POST['status']??'')==='available'?'available':'blocked';$price=trim((string)($_POST['nightly_price']??''));$a=DateTimeImmutable::createFromFormat('!Y-m-d',$from);$b=DateTimeImmutable::createFromFormat('!Y-m-d',$to);
+    $ruleId=(int)($_POST['id']??0);$from=(string)($_POST['date_from']??'');$to=(string)($_POST['date_to']??'');$status=($_POST['status']??'')==='available'?'available':'blocked';$price=trim((string)($_POST['nightly_price']??''),(string)($_POST['min_nights']??'1'),(array)($_POST['checkin_weekdays']??[]),(array)($_POST['checkout_weekdays']??[]));$a=DateTimeImmutable::createFromFormat('!Y-m-d',$from);$b=DateTimeImmutable::createFromFormat('!Y-m-d',$to);
     if(!$a||!$b||$a->format('Y-m-d')!==$from||$b->format('Y-m-d')!==$to||$a<new DateTimeImmutable('today')||$b<=$a){http_response_code(422);exit('Tarih aralığı geçersiz.');}
     $over=$pdo->prepare('SELECT id FROM availability WHERE property_id=? AND id<>? AND date_from < ? AND date_to > ? LIMIT 1');$over->execute([$pid,$ruleId,$to,$from]);if($over->fetchColumn()){http_response_code(409);exit('Bu tarih aralığı mevcut bir takvim kuralıyla çakışıyor.');}
     $amount=$price===''?null:max(0,(float)$price);
