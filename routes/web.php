@@ -1606,7 +1606,7 @@ $router->get('/vendor', static function (): void {
     $s=$pdo->prepare('SELECT * FROM vendors WHERE user_id=?');$s->execute([(int)Auth::user()['id']]);$vendor=$s->fetch();
     if(!$vendor){http_response_code(403);return;}
     $s=$pdo->prepare('SELECT COUNT(*) FROM properties WHERE vendor_id=?');$s->execute([(int)$vendor['id']]);$propertyCount=(int)$s->fetchColumn();
-    $vendorPayoutBalances=\\App\\Core\\VendorPayoutService::availableBalances($pdo,(int)$vendor['id']);
+    $vendorPayoutBalances=\App\Core\VendorPayoutService::availableBalances($pdo,(int)$vendor['id']);
     $vendorPayoutStmt=$pdo->prepare('SELECT id,amount,currency,status,payout_reference,requested_at,processed_at FROM vendor_payouts WHERE vendor_id=? ORDER BY requested_at DESC,id DESC LIMIT 20');
     $vendorPayoutStmt->execute([(int)$vendor['id']]);$vendorPayouts=$vendorPayoutStmt->fetchAll();
     $vendorPayoutMessage=(string)($_SESSION['villa_vendor_payout_message']??'');
@@ -1614,6 +1614,20 @@ $router->get('/vendor', static function (): void {
     unset($_SESSION['villa_vendor_payout_message'],$_SESSION['villa_vendor_payout_message_type']);
     ThemeManager::renderTemplate('templates/pages/vendor/dashboard.php', get_defined_vars());
 });
+$router->post('/vendor/payout-profile', static function (): void {
+    Auth::requireRole(['vendor']);verify_csrf();$pdo=Database::connection();
+    if((string)$pdo->query("SELECT setting_value FROM settings WHERE setting_key='app.mode'")->fetchColumn()!=='multi_vendor'){http_response_code(404);return;}
+    try{
+        \\App\\Core\\VendorPayoutService::savePayoutProfile($pdo,(int)Auth::user()['id'],(string)($_POST['payout_bank_name']??''),(string)($_POST['payout_account_holder']??''),(string)($_POST['payout_iban']??''));
+        $_SESSION['villa_vendor_payout_message']='Banka ödeme bilgileriniz güvenli biçimde kaydedildi.';
+        $_SESSION['villa_vendor_payout_message_type']='success';
+    }catch(Throwable $e){
+        $_SESSION['villa_vendor_payout_message']=$e->getMessage();
+        $_SESSION['villa_vendor_payout_message_type']='error';
+    }
+    redirect('/vendor');
+});
+
 $router->post('/vendor/payouts/request', static function (): void {
     Auth::requireRole(['vendor']);verify_csrf();$pdo=Database::connection();
     if((string)$pdo->query("SELECT setting_value FROM settings WHERE setting_key='app.mode'")->fetchColumn()!=='multi_vendor'){http_response_code(404);return;}
@@ -1621,7 +1635,7 @@ $router->post('/vendor/payouts/request', static function (): void {
     $vendorStmt=$pdo->prepare('SELECT id,status FROM vendors WHERE user_id=? LIMIT 1');$vendorStmt->execute([(int)$user['id']]);$vendor=$vendorStmt->fetch();
     if(!$vendor||!Auth::canManageVendorBookings((string)$vendor['status'])){http_response_code(403);exit('Ödeme talebi için onaylı ev sahibi hesabı gereklidir.');}
     try{
-        $result=\\App\\Core\\VendorPayoutService::request($pdo,(int)$user['id'],(string)($_POST['currency']??''));
+        $result=\App\Core\VendorPayoutService::request($pdo,(int)$user['id'],(string)($_POST['currency']??''));
         $notice=$pdo->prepare("INSERT INTO notifications(user_id,notification_type,title,body,created_at) VALUES(?,'payout.requested','Ödeme talebiniz alındı',?,NOW())");
         $notice->execute([(int)$user['id'],'Talep numarası #'.$result['id'].': '.$result['amount'].' '.$result['currency']]);
         $_SESSION['villa_vendor_payout_message']='Ödeme talebiniz oluşturuldu. Talep numarası: #'.$result['id'];
@@ -3011,7 +3025,7 @@ $router->post('/admin/finance/payout/update', static function (): void {
     $payoutId=(int)($_POST['payout_id']??0);
     $toStatus=(string)($_POST['status']??'');
     try{
-        $result=\\App\\Core\\VendorPayoutService::transition($pdo,(int)Auth::user()['id'],$payoutId,$toStatus,(string)($_POST['payout_reference']??''),(string)($_POST['notes']??''));
+        $result=\App\Core\VendorPayoutService::transition($pdo,(int)Auth::user()['id'],$payoutId,$toStatus,(string)($_POST['payout_reference']??''),(string)($_POST['notes']??''));
         $vendorUserStmt=$pdo->prepare('SELECT user_id FROM vendors WHERE id=? LIMIT 1');$vendorUserStmt->execute([(int)$result['vendor_id']]);$vendorUserId=(int)($vendorUserStmt->fetchColumn()?:0);
         if($vendorUserId>0){
             $label=['processing'=>'İşleniyor','paid'=>'Ödendi','failed'=>'Başarısız','cancelled'=>'İptal edildi'][$toStatus]??$toStatus;
@@ -3041,7 +3055,7 @@ $router->get('/admin/finance', static function (): void {
     $payoutSummary = $pdo->query("SELECT currency, status, COUNT(*) AS payout_count,
         COALESCE(SUM(amount),0) AS payout_amount
         FROM vendor_payouts GROUP BY currency,status ORDER BY currency,status")->fetchAll();
-    $recentPayouts=$pdo->query("SELECT vp.id,vp.vendor_id,vp.amount,vp.currency,vp.status,vp.payout_reference,vp.notes,vp.requested_at,vp.processed_at,v.business_name,u.email AS vendor_email
+    $recentPayouts=$pdo->query("SELECT vp.id,vp.vendor_id,vp.amount,vp.currency,vp.status,vp.payout_reference,vp.notes,vp.requested_at,vp.processed_at,v.business_name,v.payout_bank_name,v.payout_account_holder,v.payout_iban,u.email AS vendor_email
         FROM vendor_payouts vp JOIN vendors v ON v.id=vp.vendor_id JOIN users u ON u.id=v.user_id
         ORDER BY vp.requested_at DESC,vp.id DESC LIMIT 50")->fetchAll();
     $adminPayoutMessage=(string)($_SESSION['villa_admin_payout_message']??'');
