@@ -19,7 +19,7 @@ final class Auth
         if (function_exists('villa_perf_mark')) villa_perf_mark('auth_attempt:throttle_query_done');
         if ($attemptState && $attemptState['locked_until'] && strtotime($attemptState['locked_until']) > time()) return false;
         $stmt = $pdo->prepare(
-            'SELECT id, username, email, password_hash, role, status FROM users WHERE email = ? OR username = ? LIMIT 1'
+            'SELECT id, username, email, password_hash, role, status, session_version FROM users WHERE email = ? OR username = ? LIMIT 1'
         );
         if (function_exists('villa_perf_mark')) villa_perf_mark('auth_attempt:user_query_begin');
         $stmt->execute([$identity, $identity]);
