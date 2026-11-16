@@ -3114,6 +3114,41 @@ $router->post('/admin/finance/payout/update', static function (): void {
     redirect('/admin/finance');
 });
 
+$router->get('/calendar/export/{token}', static function (array $params): void {
+    $pdo=Database::connection();$feed=\\App\\Core\\CalendarSyncService::exportFeed($pdo,(string)($params['token']??''));
+    if(!$feed){http_response_code(404);exit('Calendar feed not found.');}
+    $calendar=\\App\\Core\\CalendarSyncService::exportIcs($pdo,(int)$feed['property_id']);
+    header('Content-Type: text/calendar; charset=utf-8');header('Content-Disposition: inline; filename="villa-calendar.ics"');header('Cache-Control: no-store, max-age=0');header('X-Content-Type-Options: nosniff');
+    echo $calendar;exit;
+});
+$router->get('/cron/calendar-sync', static function (): void {
+    $pdo=Database::connection();
+    if(!\\App\\Core\\CalendarSyncService::verifyCronToken($pdo,(string)($_GET['token']??''))){http_response_code(403);header('Content-Type:text/plain; charset=utf-8');exit('Forbidden');}
+    try{$result=\\App\\Core\\CalendarSyncService::cronSync($pdo);header('Content-Type:text/plain; charset=utf-8');echo 'Calendar sync completed. Total: '.$result['total'].'; success: '.$result['success'].'; failed: '.$result['failed'];}
+    catch(Throwable $e){error_log('Calendar cron failed: '.$e->getMessage());http_response_code(500);header('Content-Type:text/plain; charset=utf-8');echo 'Calendar sync failed.';}
+    exit;
+});
+$router->get('/admin/calendar-sync', static function (): void {
+    Auth::requireRole(['super_admin','admin']);$pdo=Database::connection();
+    $cronToken=\\App\\Core\\CalendarSyncService::cronToken($pdo);
+    $cronUrl=app_url('/cron/calendar-sync?token='.rawurlencode($cronToken));
+    $feeds=$pdo->query('SELECT f.id,f.label,f.direction,f.enabled,f.last_sync_status,f.last_sync_message,f.last_synced_at,p.title AS property_title,p.city FROM property_calendar_feeds f JOIN properties p ON p.id=f.property_id ORDER BY f.id DESC LIMIT 100')->fetchAll(PDO::FETCH_ASSOC);
+    $calendarMessage=(string)($_SESSION['villa_admin_calendar_message']??'');unset($_SESSION['villa_admin_calendar_message']);
+    ThemeManager::renderTemplate('templates/pages/admin/calendar-sync.php',get_defined_vars());
+});
+$router->post('/admin/calendar-sync/rotate-token', static function (): void {
+    Auth::requireRole(['super_admin','admin']);verify_csrf();$pdo=Database::connection();
+    \\App\\Core\\CalendarSyncService::rotateCronToken($pdo);
+    $_SESSION['villa_admin_calendar_message']='Cron tokeni yenilendi. Önceki Cron URL artık çalışmayacak.';
+    redirect('/admin/calendar-sync');
+});
+$router->post('/admin/calendar-sync/run-now', static function (): void {
+    Auth::requireRole(['super_admin','admin']);verify_csrf();$pdo=Database::connection();
+    try{$result=\\App\\Core\\CalendarSyncService::cronSync($pdo);$_SESSION['villa_admin_calendar_message']='Senkronizasyon tamamlandı. Başarılı: '.$result['success'].'; başarısız: '.$result['failed'].'.';}
+    catch(Throwable $e){$_SESSION['villa_admin_calendar_message']=$e->getMessage();}
+    redirect('/admin/calendar-sync');
+});
+
 $router->get('/admin/finance', static function (): void {
     Auth::requireRole(['super_admin','admin']);
     $pdo = Database::connection();
