@@ -69,6 +69,7 @@ $currentLocale = \App\Core\Translator::locale();
           </select>
           <noscript><button type="submit">Uygula</button></noscript>
         </form>
+      <?php endif; ?>
       <?php $drawerSocialLinks = \App\Core\ThemeManager::desktopSocialLinks(); ?>
       <?php if ($drawerSocialLinks !== ''): ?>
         <div class="site-drawer-social" aria-label="Sosyal medya">
