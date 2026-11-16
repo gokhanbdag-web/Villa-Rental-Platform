@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.8.0 - 2026-11-16
+- Add per-property early check-in and late checkout options with independent enable switches and configurable fees for administrators and vendors.
+- Let guests request enabled extras during booking; refresh availability quotes as options change and calculate all charges server-side from saved property settings.
+- Persist request flags and fee snapshots on reservations, include add-ons in gross totals and financial ledger amounts, and display requests in checkout and admin/vendor booking lists.
+- Extend administrator manual reservations, add migration 047, and cover fee validation, disabled-option rejection, installer schema and booking UI in CI smoke tests.
+
 ## 1.7.0 - 2026-11-16
 - Add seasonal minimum-night requirements and configurable check-in/check-out weekdays to admin and vendor season management.
 - Enforce stay restrictions in live availability quotes, customer booking submissions, manual reservations, and admin/vendor confirmation workflows.
