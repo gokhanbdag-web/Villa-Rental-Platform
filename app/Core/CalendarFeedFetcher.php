@@ -17,13 +17,14 @@ final class CalendarFeedFetcher
             || (isset($parts['port']) && (int)$parts['port'] !== 443)) {
             throw new RuntimeException('Takvim adresi yalnızca HTTPS üzerinden, standart 443 portunda ve kullanıcı/parola içermeden kullanılabilir.');
         }
-        $host = strtolower(rtrim((string)$parts['host'], '.'));
-        if ($host === '' || $host === 'localhost' || str_ends_with($host,'.localhost') || str_ends_with($host,'.local')) {
-            throw new RuntimeException('Yerel ağ veya localhost adresleri takvim kaynağı olarak kullanılamaz.');
+        $host = strtolower((string)$parts['host']);
+        if ($host === '' || str_ends_with($host,'.') || $host === 'localhost' || str_ends_with($host,'.localhost') || str_ends_with($host,'.local')) {
+            throw new RuntimeException('Yerel ağ, localhost ve son noktalı host adresleri takvim kaynağı olarak kullanılamaz.');
         }
         if (filter_var($host,FILTER_VALIDATE_IP)) {
             $ips = [$host];
         } else {
+            if (preg_match('/^[a-z0-9.-]+$/',$host)!==1) throw new RuntimeException('Takvim host adı geçersiz.');
             $records = dns_get_record($host,DNS_A);
             $ips = [];
             foreach (($records ?: []) as $record) if (!empty($record['ip'])) $ips[] = (string)$record['ip'];
