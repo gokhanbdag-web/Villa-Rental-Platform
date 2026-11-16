@@ -41,6 +41,7 @@ return static function (string $html, string $requestPath, string $platformMode)
                 '/admin/updates' => 'Güncelleme Merkezi',
                 '/admin/header-settings' => 'Üst Bilgi Ayarları',
                 '/admin/translations' => 'Çeviriler',
+                '/admin/performance' => 'Sistem Tanılama',
             ],
         ];
         if ($platformMode === 'multi_vendor') {
@@ -145,6 +146,7 @@ return static function (string $html, string $requestPath, string $platformMode)
             '/admin/updates' => '↻',
             '/admin/header-settings' => '☷',
             '/admin/translations' => '文',
+            '/admin/performance' => '⌁',
             '/admin/vendors' => '♧',
         ];
         $nav = '';
