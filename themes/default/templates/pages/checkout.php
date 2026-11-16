@@ -116,7 +116,17 @@ $navigation = is_array($navigation ?? null) ? $navigation : [];
 </form>
 </section>
 <?php else: ?>
-<div class="checkout-notice"><span class="checkout-notice-icon">i</span><div><strong>Ödeme bilgisi</strong><?php if(!empty($manualPaymentAvailable)): ?>Kartla ödeme şu anda kullanılamıyor. Banka havalesi / EFT seçeneğini aşağıda kullanabilirsiniz.<?php else: ?>Ödeme yöntemi şu anda etkin değil veya rezervasyonunuzun ödeme durumu güncelleniyor.<?php endif; ?></div></div>
+<div class="checkout-notice"><span class="checkout-notice-icon">i</span><div><strong>Ödeme bilgisi</strong><?php if(!empty($manualPaymentAvailable)): ?>Çevrim içi kart ödemesi etkin değil. Banka havalesi / EFT seçeneğini aşağıda kullanabilirsiniz.<?php else: ?>Ödeme yöntemi şu anda etkin değil veya rezervasyonunuzun ödeme durumu güncelleniyor.<?php endif; ?></div></div>
+<?php endif; ?>
+<?php if(!empty($paytrPaymentAvailable)&&$booking['status']==='pending'&&($paymentStatus??'')!=='review'): ?>
+<section class="checkout-payment">
+<div class="checkout-section-title"><span class="checkout-step"><?= !empty($iyzicoPaymentAvailable)?3:2 ?></span><div><h2>PayTR ile güvenli ödeme</h2></div></div>
+<p class="checkout-payment-copy">PayTR'ın güvenli iFrame ödeme ekranı açılır. Kart bilgileriniz VillaCMS sunucusunda saklanmaz. Ödeme sonucu PayTR'ın imzalı sunucu bildirimiyle doğrulanır.</p>
+<form method="post" action="<?= e(app_url('/checkout/'.rawurlencode((string)$booking['booking_code']).'/paytr/start')) ?>">
+<?= csrf_field() ?>
+<button class="checkout-pay-button" type="submit">PayTR güvenli ödeme ekranına geç</button>
+</form>
+</section>
 <?php endif; ?>
 <?php if(!empty($manualPaymentAvailable)&&$booking['status']==='pending'&&($manualReportStatus??'')!=='approved'): ?>
 <section class="checkout-payment">
@@ -161,7 +171,7 @@ $navigation = is_array($navigation ?? null) ? $navigation : [];
 <div class="checkout-summary-detail"><span>Durum</span><strong><?= e($booking['status']==='pending'?'Ödeme bekleniyor':$booking['status']) ?></strong></div>
 </div>
 <div class="checkout-summary-amount"><span>Toplam tutar</span><strong><?= e(number_format((float)$booking['total'],2,',','.')) ?> <?= e($booking['currency']) ?></strong></div>
-<div class="checkout-secure"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M6 10V7a6 6 0 0 1 12 0v3M5 10h14v11H5z" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/><path d="M12 14v3" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg><span>Ödeme işlemi iyzico'nun güvenli altyapısı üzerinden gerçekleştirilir.</span></div>
+<div class="checkout-secure"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M6 10V7a6 6 0 0 1 12 0v3M5 10h14v11H5z" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/><path d="M12 14v3" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg><span>Kart ödemeleri, etkinleştirilen sağlayıcının güvenli ödeme altyapısında gerçekleştirilir.</span></div>
 </aside>
 </div>
 </div>
