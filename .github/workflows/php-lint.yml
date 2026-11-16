@@ -81,6 +81,8 @@ jobs:
         run: php tests/admin-blog-responsive-smoke.php
       - name: Run blog archive menu option smoke test
         run: php tests/navigation-blog-archive-smoke.php
+      - name: Run SMTP message validation smoke test
+        run: php tests/email-delivery-smoke.php
       - name: Run browser-installer backend smoke test
         env:
           DB_HOST: 127.0.0.1
