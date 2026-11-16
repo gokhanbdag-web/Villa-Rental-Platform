@@ -21,7 +21,6 @@ final class VendorPayoutService
         if($vendorId<1) throw new \RuntimeException('Ev sahibi hesabı bulunamadı.');
         $stmt=$pdo->prepare('INSERT INTO vendor_payout_profiles(vendor_id,bank_name,account_holder,iban_encrypted,created_at,updated_at) VALUES(?,?,?,?,NOW(),NOW()) ON DUPLICATE KEY UPDATE bank_name=VALUES(bank_name),account_holder=VALUES(account_holder),iban_encrypted=VALUES(iban_encrypted),updated_at=NOW()');
         $stmt->execute([$vendorId,$bankName,$accountHolder,PaymentSecretVault::encrypt($iban)]);
-        }
     }
 
     public static function validIban(string $iban): bool
