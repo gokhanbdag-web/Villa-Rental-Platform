@@ -938,7 +938,7 @@ $router->post('/villa/{slug}/reserve', static function (array $params): void {
         }
         $financial=$pdo->prepare("INSERT INTO booking_financials(booking_id,gross_amount,platform_fee,vendor_net_amount,currency,payout_status,created_at) VALUES(?,?,?,?,?,'unpaid',NOW())");$financial->execute([$bookingId,$total,$platformFee,$vendorNet,$current['currency']]);
         $notice=$pdo->prepare("INSERT INTO notifications(user_id,notification_type,title,body,created_at) VALUES(?,'booking.created','Rezervasyonunuz oluşturuldu',?,NOW())");$notice->execute([$userId,'Rezervasyon kodunuz: '.$code]);
-        \\App\\Core\\EmailService::enqueue($pdo,$email,'Rezervasyon talebiniz alındı','<h2>Rezervasyon talebiniz alındı</h2><p>Merhaba '.e($fullName).',</p><p><strong>'.e($property['title']).'</strong> için rezervasyon talebiniz oluşturuldu.</p><p>Rezervasyon kodunuz: <strong>'.e($code).'</strong></p><p>Giriş: '.e($inRaw).' · Çıkış: '.e($outRaw).'</p><p>Toplam: '.e(number_format($total,2,',','.')).' '.e($current['currency']).'</p><p><a href="'.e(app_absolute_url('/checkout/'.rawurlencode($code))).'">Rezervasyon ayrıntılarını görüntüle</a></p>','Rezervasyon talebiniz alındı. Kod: '.$code,'booking.created.'.$bookingId);
+        \App\Core\\EmailService::enqueue($pdo,$email,'Rezervasyon talebiniz alındı','<h2>Rezervasyon talebiniz alındı</h2><p>Merhaba '.e($fullName).',</p><p><strong>'.e($property['title']).'</strong> için rezervasyon talebiniz oluşturuldu.</p><p>Rezervasyon kodunuz: <strong>'.e($code).'</strong></p><p>Giriş: '.e($inRaw).' · Çıkış: '.e($outRaw).'</p><p>Toplam: '.e(number_format($total,2,',','.')).' '.e($current['currency']).'</p><p><a href="'.e(app_absolute_url('/checkout/'.rawurlencode($code))).'">Rezervasyon ayrıntılarını görüntüle</a></p>','Rezervasyon talebiniz alındı. Kod: '.$code,'booking.created.'.$bookingId);
         $pdo->commit();
         if($createNewAccount)Auth::attempt($email,$password);
         if($autoStartIyzico){
@@ -1303,7 +1303,7 @@ $router->post('/account/messages/send', static function (): void {
     $save=$pdo->prepare('INSERT INTO messages(conversation_key,sender_user_id,recipient_user_id,booking_id,body,created_at) VALUES(?,?,?,?,?,NOW())');$save->execute([$key,$currentId,$recipientId,$bookingId,$body]);
     $notice=$pdo->prepare("INSERT INTO notifications(user_id,notification_type,title,body,created_at) VALUES(?,'message.received','Yeni mesaj',?,NOW())");$notice->execute([$recipientId,'Rezervasyon görüşmesinde yeni bir mesajınız var.']);
     $recipientStmt=$pdo->prepare('SELECT email FROM users WHERE id=? LIMIT 1');$recipientStmt->execute([$recipientId]);$recipientEmail=(string)($recipientStmt->fetchColumn()?:'');
-    if($recipientEmail!=='')\\App\\Core\\EmailService::enqueue($pdo,$recipientEmail,'Rezervasyon görüşmesinde yeni mesajınız var','<p>Rezervasyon görüşmesinde yeni bir mesajınız var.</p><p><a href="'.e(app_absolute_url('/account/messages/'.$bookingId)).'">Mesajı görüntüle</a></p>','Rezervasyon görüşmesinde yeni mesajınız var.','message.received.'.$bookingId.'.'.(int)$pdo->lastInsertId());
+    if($recipientEmail!=='')\App\Core\\EmailService::enqueue($pdo,$recipientEmail,'Rezervasyon görüşmesinde yeni mesajınız var','<p>Rezervasyon görüşmesinde yeni bir mesajınız var.</p><p><a href="'.e(app_absolute_url('/account/messages/'.$bookingId)).'">Mesajı görüntüle</a></p>','Rezervasyon görüşmesinde yeni mesajınız var.','message.received.'.$bookingId.'.'.(int)$pdo->lastInsertId());
     redirect('/account/messages/'.$bookingId);
 });
 
@@ -2580,11 +2580,11 @@ $router->post('/admin/typography', static function (): void {
 $router->get('/tasks/email/process', static function (): void {
     header('Cache-Control: no-store');
     $pdo=Database::connection();
-    $expected=\\App\\Core\\EmailService::cronToken($pdo);
+    $expected=\App\Core\\EmailService::cronToken($pdo);
     $provided=(string)($_GET['token']??'');
     if($expected===''||$provided===''||!hash_equals($expected,$provided)){http_response_code(404);exit;}
     header('Content-Type: application/json; charset=utf-8');
-    echo json_encode(\\App\\Core\\EmailService::processPending($pdo,10),JSON_UNESCAPED_SLASHES|JSON_UNESCAPED_UNICODE);
+    echo json_encode(\App\Core\\EmailService::processPending($pdo,10),JSON_UNESCAPED_SLASHES|JSON_UNESCAPED_UNICODE);
 });
 
 $router->get('/admin/settings', static function (): void {
@@ -2598,7 +2598,7 @@ $router->get('/admin/settings', static function (): void {
     $manualConfigured=trim((string)($settings['payments.manual.bank_name']??''))!==''&&trim((string)($settings['payments.manual.account_holder']??''))!==''&&preg_match('/^[A-Z]{2}[0-9A-Z]{13,32}$/',strtoupper(preg_replace('/\\s+/','',(string)($settings['payments.manual.iban']??''))??''))===1;
     $mailEnabled=($settings['mail.enabled']??'0')==='1';
     $mailConfigured=trim((string)($settings['mail.smtp.host']??''))!==''&&filter_var((string)($settings['mail.from_email']??''),FILTER_VALIDATE_EMAIL)!==false&&((string)($settings['mail.smtp.username']??'')===''||(string)($settings['mail.smtp.password']??'')!=='');
-    $mailCronToken=\\App\\Core\\EmailService::cronToken(Database::connection());
+    $mailCronToken=\App\Core\\EmailService::cronToken(Database::connection());
     $emailCronUrl=$mailCronToken!==''?app_absolute_url('/tasks/email/process?token='.rawurlencode($mailCronToken)):'';
     $mailTestMessage=(string)($_SESSION['villa_mail_test_message']??'');
     $mailTestMessageType=(string)($_SESSION['villa_mail_test_message_type']??'success');
@@ -2615,7 +2615,7 @@ $router->post('/admin/settings', static function (): void {
         try {
             $recipient=trim((string)($_POST['mail_test_email']??''));
             if (!filter_var($recipient,FILTER_VALIDATE_EMAIL)) throw new RuntimeException('Test e-postası için geçerli bir alıcı adresi girin.');
-            \\App\\Core\\EmailService::sendTest(Database::connection(),$recipient);
+            \App\Core\\EmailService::sendTest(Database::connection(),$recipient);
             $_SESSION['villa_mail_test_message']='SMTP test e-postası başarıyla gönderildi: '.$recipient;
             $_SESSION['villa_mail_test_message_type']='success';
         } catch (Throwable $e) {
@@ -2658,15 +2658,17 @@ $router->post('/admin/settings', static function (): void {
     $mailUsername=trim((string)($_POST['mail_smtp_username']??''));
     $mailFrom=trim((string)($_POST['mail_from_email']??''));
     $mailFromName=trim((string)($_POST['mail_from_name']??''));
-    if($mailPort<1||$mailPort>65535||!in_array($mailEncryption,['tls','ssl','none'],true)||strlen($mailHost)>253||preg_match('/[\\s\\r\\n\\\\\\/]/',$mailHost)||strlen($mailUsername)>190||!filter_var($mailFrom,FILTER_VALIDATE_EMAIL)||strlen($mailFromName)>120||preg_match('/[\\r\\n]/',$mailFromName)||($mailEnabled&&$mailHost==='')){http_response_code(422);exit('SMTP sunucu, port, şifreleme ve gönderen bilgilerini kontrol edin.');}
+    $mailPassword=trim((string)($_POST['mail_smtp_password']??''));
+    $storedMailPasswordStmt=$pdo->prepare("SELECT setting_value FROM settings WHERE setting_key='mail.smtp.password' LIMIT 1");$storedMailPasswordStmt->execute();
+    $storedMailPassword=(string)($storedMailPasswordStmt->fetchColumn()?:'');
+    if($mailPort<1||$mailPort>65535||!in_array($mailEncryption,['tls','ssl','none'],true)||strlen($mailHost)>253||preg_match('/[\\s\\r\\n\\\\\\/]/',$mailHost)||strlen($mailUsername)>190||($mailFrom!==''&&!filter_var($mailFrom,FILTER_VALIDATE_EMAIL))||strlen($mailFromName)>120||preg_match('/[\\r\\n]/',$mailFromName)||strlen($mailPassword)>512||($mailEnabled&&($mailHost===''||!filter_var($mailFrom,FILTER_VALIDATE_EMAIL)))||($mailUsername===''&&$mailPassword!=='')||($mailEnabled&&$mailUsername!==''&&$mailPassword===''&&($storedMailPassword===''||!empty($_POST['mail_clear_password'])))){http_response_code(422);exit('SMTP sunucu, port, şifreleme, kullanıcı adı/parola ve gönderen bilgilerini kontrol edin.');}
     if($manualEnabled&&($manualBank===''||mb_strlen($manualBank)>120||$manualHolder===''||mb_strlen($manualHolder)>190||!preg_match('/^[A-Z]{2}[0-9A-Z]{13,32}$/',$manualIban)||mb_strlen($manualInstructions)>2000||!preg_match('/^[A-Z0-9_-]{2,16}$/i',$manualPrefix))){http_response_code(422);exit('Manuel havale için banka adı, hesap sahibi ve geçerli IBAN girilmelidir.');}
     $anyPaymentEnabled=$iyzicoEnabled||$paytrEnabled||$manualEnabled;
     foreach(['platform.commission_percent'=>(string)$commission,'app.currency'=>$currency,'app.timezone'=>$timezone,'payments.iyzico.environment'=>$iyzicoEnvironment,'payments.paytr.environment'=>$paytrEnvironment,'payments.iyzico.enabled'=>$iyzicoEnabled?'1':'0','payments.paytr.enabled'=>$paytrEnabled?'1':'0','payments.manual.enabled'=>$manualEnabled?'1':'0','payments.manual.bank_name'=>$manualBank,'payments.manual.account_holder'=>$manualHolder,'payments.manual.iban'=>$manualIban,'payments.manual.instructions'=>$manualInstructions,'payments.manual.reference_prefix'=>$manualPrefix,'payments.enabled'=>$anyPaymentEnabled?'1':'0','payments.provider'=>$anyPaymentEnabled?'multiple':'none','mail.enabled'=>$mailEnabled?'1':'0','mail.smtp.host'=>$mailHost,'mail.smtp.port'=>(string)$mailPort,'mail.smtp.encryption'=>$mailEncryption,'mail.smtp.username'=>$mailUsername,'mail.from_email'=>$mailFrom,'mail.from_name'=>$mailFromName] as $key=>$value)$save->execute([$key,$value]);
-    $mailPassword=trim((string)($_POST['mail_smtp_password']??''));
-    if($mailPassword!=='')$save->execute(['mail.smtp.password',\\App\\Core\\PaymentSecretVault::encrypt($mailPassword)]);
+    if($mailPassword!=='')$save->execute(['mail.smtp.password',\App\Core\\PaymentSecretVault::encrypt($mailPassword)]);
     if(!empty($_POST['mail_clear_password']))$pdo->prepare("DELETE FROM settings WHERE setting_key='mail.smtp.password'")->execute();
     $cronTokenStmt=$pdo->prepare("SELECT setting_value FROM settings WHERE setting_key='mail.cron_token' LIMIT 1");$cronTokenStmt->execute();
-    if(!(string)($cronTokenStmt->fetchColumn()?:''))$save->execute(['mail.cron_token',\\App\\Core\\PaymentSecretVault::encrypt(bin2hex(random_bytes(32)))]);
+    if(!(string)($cronTokenStmt->fetchColumn()?:''))$save->execute(['mail.cron_token',\App\Core\\PaymentSecretVault::encrypt(bin2hex(random_bytes(32)))]);
     $secrets=['payments.iyzico.api_key'=>'iyzico_api_key','payments.iyzico.secret_key'=>'iyzico_secret_key','payments.paytr.merchant_id'=>'paytr_merchant_id','payments.paytr.merchant_key'=>'paytr_merchant_key','payments.paytr.merchant_salt'=>'paytr_merchant_salt'];
     foreach($secrets as $key=>$field){$value=trim((string)($_POST[$field]??''));if($value!=='')$save->execute([$key,\App\Core\PaymentSecretVault::encrypt($value)]);}
     $clear=[];if(!empty($_POST['clear_iyzico']))$clear=array_merge($clear,['payments.iyzico.api_key','payments.iyzico.secret_key']);if(!empty($_POST['clear_paytr']))$clear=array_merge($clear,['payments.paytr.merchant_id','payments.paytr.merchant_key','payments.paytr.merchant_salt']);
