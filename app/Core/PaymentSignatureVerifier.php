@@ -77,6 +77,26 @@ final class PaymentSignatureVerifier
         return hash_equals(strtolower($expected), strtolower((string)$response['signature']));
     }
 
+    public static function verifyIyzicoRefund(array $response, string $secretKey): bool
+    {
+        if ($secretKey === '') return false;
+        foreach (['paymentId','price','currency','conversationId','signature'] as $field) {
+            if (!isset($response[$field]) || !is_scalar($response[$field]) || (string)$response[$field] === '') return false;
+        }
+        $price = trim((string)$response['price']);
+        if (!preg_match('/^[0-9]+(?:\.[0-9]+)?$/', $price)) return false;
+        if (str_contains($price, '.')) $price = rtrim(rtrim($price, '0'), '.');
+        if ($price === '') $price = '0';
+        $message = implode(':', [
+            (string)$response['paymentId'],
+            $price,
+            (string)$response['currency'],
+            (string)$response['conversationId'],
+        ]);
+        $expected = hash_hmac('sha256', $message, $secretKey);
+        return hash_equals(strtolower($expected), strtolower((string)$response['signature']));
+    }
+
     public static function verifyIyzicoV3(array $payload, string $signature, string $secretKey): bool
     {
         if ($signature === '' || $secretKey === '') return false;
