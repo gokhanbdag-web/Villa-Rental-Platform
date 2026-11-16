@@ -1,8 +1,13 @@
 -- Store vendor bank details and track the exact completed-booking balances reserved by each payout.
-ALTER TABLE vendors
-    ADD COLUMN payout_bank_name VARCHAR(120) NULL,
-    ADD COLUMN payout_account_holder VARCHAR(190) NULL,
-    ADD COLUMN payout_iban VARCHAR(255) NULL;
+CREATE TABLE IF NOT EXISTS vendor_payout_profiles (
+    vendor_id BIGINT UNSIGNED PRIMARY KEY,
+    bank_name VARCHAR(120) NOT NULL,
+    account_holder VARCHAR(190) NOT NULL,
+    iban_encrypted VARCHAR(255) NOT NULL,
+    created_at DATETIME NOT NULL,
+    updated_at DATETIME NULL,
+    CONSTRAINT fk_vendor_payout_profile_vendor FOREIGN KEY (vendor_id) REFERENCES vendors(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 CREATE TABLE IF NOT EXISTS vendor_payout_allocations (
     id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
