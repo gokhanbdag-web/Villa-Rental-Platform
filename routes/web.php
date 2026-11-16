@@ -995,6 +995,111 @@ $router->get('/checkout/{bookingCode}', static function(array $params):void {
     ThemeManager::render('checkout.php',get_defined_vars());
 });
 
+
+$router->post('/checkout/{bookingCode}/paytr/start', static function (array $params): void {
+    verify_csrf();
+    $user=Auth::user();if(!$user)redirect('/login');
+    $config=\\App\\Core\\PaymentGatewayConfig::forProvider('paytr');
+    if(empty($config['enabled'])||empty($config['configured'])){http_response_code(409);exit('PayTR ödeme altyapısı etkin değil veya mağaza bilgileri eksik.');}
+    $pdo=Database::connection();
+    $stmt=$pdo->prepare("SELECT b.*,p.title AS property_title,u.email AS guest_email,u.username FROM bookings b JOIN properties p ON p.id=b.property_id JOIN users u ON u.id=b.guest_user_id WHERE b.booking_code=? AND b.guest_user_id=? LIMIT 1");
+    $stmt->execute([(string)($params['bookingCode']??''),(int)$user['id']]);$booking=$stmt->fetch(PDO::FETCH_ASSOC);
+    if(!$booking){http_response_code(404);exit('Rezervasyon bulunamadı.');}
+    if((string)$booking['status']!=='pending'){http_response_code(409);exit('Yalnızca ödeme bekleyen rezervasyonlar için ödeme başlatılabilir.');}
+    $paid=$pdo->prepare("SELECT id FROM payment_transactions WHERE booking_id=? AND status='paid' LIMIT 1");$paid->execute([(int)$booking['id']]);
+    if($paid->fetchColumn()){http_response_code(409);exit('Bu rezervasyon için ödeme zaten doğrulanmış.');}
+    $active=$pdo->prepare("SELECT provider_reference,checkout_url,expires_at FROM payment_transactions WHERE booking_id=? AND provider='paytr' AND status='pending' ORDER BY id DESC LIMIT 1");
+    $active->execute([(int)$booking['id']]);$old=$active->fetch(PDO::FETCH_ASSOC);
+    if($old&&!empty($old['expires_at'])&&strtotime((string)$old['expires_at'])>time()&&!empty($old['checkout_url'])) redirect('/payments/paytr/frame/'.rawurlencode((string)$old['provider_reference']));
+    if($old){$expire=$pdo->prepare("UPDATE payment_transactions SET status='expired',updated_at=NOW() WHERE provider='paytr' AND provider_reference=? AND status='pending'");$expire->execute([(string)$old['provider_reference']]);}
+    $currency=strtoupper((string)$booking['currency']);if($currency==='TRY')$currency='TL';
+    if(!in_array($currency,['TL','USD','EUR','GBP','RUB'],true)){http_response_code(422);exit('PayTR bu rezervasyonun para birimini desteklemiyor.');}
+    $amountKurus=(int)round((float)$booking['total']*100);if($amountKurus<1){http_response_code(422);exit('Ödeme tutarı geçersiz.');}
+    $email=iconv('UTF-8','ASCII//TRANSLIT//IGNORE',(string)$booking['guest_email']);$email=preg_replace('/[^A-Za-z0-9@._+-]/','',$email?:'')??'';
+    if($email===''||strlen($email)>100||!filter_var($email,FILTER_VALIDATE_EMAIL)){http_response_code(422);exit('PayTR için geçerli e-posta adresi gereklidir.');}
+    $phone=preg_replace('/\\D+/','',(string)($booking['guest_phone']??''))??'';
+    $ip=(string)($_SERVER['REMOTE_ADDR']??'');if(filter_var($ip,FILTER_VALIDATE_IP)===false){http_response_code(422);exit('Müşteri IP adresi doğrulanamadı.');}
+    $merchantOid='VILLA'.(int)$booking['id'].strtoupper(bin2hex(random_bytes(6)));
+    try{$okUrl=app_absolute_url('/payments/paytr/return/'.rawurlencode($merchantOid));$failUrl=$okUrl;}
+    catch(Throwable $e){http_response_code(503);exit('PayTR için geçerli HTTPS site adresi gereklidir.');}
+    $basket=base64_encode(json_encode([[mb_substr((string)$booking['property_title'],0,90),number_format((float)$booking['total'],2,'.',''),1]],JSON_UNESCAPED_UNICODE|JSON_THROW_ON_ERROR));
+    $name=trim((string)($booking['username']??'Misafir'));
+    $address=trim((string)($_POST['billing_address']??'Türkiye'));if($address==='')$address='Türkiye';
+    $phone=$phone!==''?$phone:'0000000000';
+    $idempotency=hash('sha256','paytr:'.$merchantOid);
+    $insert=$pdo->prepare("INSERT INTO payment_transactions(booking_id,provider,provider_reference,idempotency_key,amount,currency,status,request_payload,created_at,updated_at) VALUES(?,'paytr',?,?,?,?,'pending',?,NOW(),NOW())");
+    $insert->execute([(int)$booking['id'],$merchantOid,$idempotency,number_format((float)$booking['total'],2,'.',''),$currency,json_encode(['merchant_oid'=>$merchantOid,'payment_amount'=>$amountKurus,'currency'=>$currency,'environment'=>$config['environment']],JSON_UNESCAPED_UNICODE)]);
+    $transactionId=(int)$pdo->lastInsertId();
+    try{
+        $tokenData=\\App\\Core\\PaytrIframeClient::requestToken($config,[
+            'user_ip'=>$ip,'merchant_oid'=>$merchantOid,'email'=>$email,'payment_amount'=>(string)$amountKurus,
+            'user_basket'=>$basket,'user_name'=>$name,'user_address'=>$address,'user_phone'=>$phone,
+            'merchant_ok_url'=>$okUrl,'merchant_fail_url'=>$failUrl,'currency'=>$currency,
+        ]);
+        $response=json_encode(['token'=>$tokenData['token'],'test_mode'=>$tokenData['test_mode']],JSON_UNESCAPED_UNICODE);
+        $url='https://www.paytr.com/odeme/guvenli/'.rawurlencode($tokenData['token']);
+        $update=$pdo->prepare("UPDATE payment_transactions SET checkout_url=?,response_payload=?,expires_at=DATE_ADD(NOW(),INTERVAL 30 MINUTE),updated_at=NOW() WHERE id=? AND status='pending'");
+        $update->execute([$url,$response,$transactionId]);
+        redirect('/payments/paytr/frame/'.rawurlencode($merchantOid));
+    }catch(Throwable $e){
+        $diagnostic=mb_substr(trim((string)$e->getMessage()),0,240);
+        $fail=$pdo->prepare("UPDATE payment_transactions SET status='failed',response_payload=?,updated_at=NOW() WHERE id=? AND status='pending'");
+        $fail->execute([json_encode(['initialization_error'=>$diagnostic],JSON_UNESCAPED_UNICODE),$transactionId]);
+        error_log('PayTR iFrame initialize failed: '.$diagnostic);
+        redirect('/checkout/'.rawurlencode((string)$booking['booking_code']).'?payment=init_error');
+    }
+});
+
+$router->get('/payments/paytr/frame/{merchantOid}', static function (array $params): void {
+    $user=Auth::user();if(!$user)redirect('/login');
+    $pdo=Database::connection();
+    $stmt=$pdo->prepare("SELECT pt.provider_reference,pt.response_payload,pt.status,b.booking_code FROM payment_transactions pt JOIN bookings b ON b.id=pt.booking_id WHERE pt.provider='paytr' AND pt.provider_reference=? AND b.guest_user_id=? LIMIT 1");
+    $stmt->execute([(string)($params['merchantOid']??''),(int)$user['id']]);$row=$stmt->fetch(PDO::FETCH_ASSOC);
+    if(!$row){http_response_code(404);exit('Ödeme oturumu bulunamadı.');}
+    if($row['status']!=='pending'){redirect('/payments/paytr/return/'.rawurlencode((string)$row['provider_reference']));}
+    $data=json_decode((string)$row['response_payload'],true);$token=is_array($data)?(string)($data['token']??''):'';
+    if(!preg_match('/^[A-Za-z0-9_-]{16,512}$/',$token)){http_response_code(409);exit('PayTR ödeme formu hazır değil.');}
+    $iframeUrl='https://www.paytr.com/odeme/guvenli/'.rawurlencode($token);
+    $locale='tr';$navigation=villa_navigation_tree($pdo,'header',$locale);$footerNavigation=villa_navigation_tree($pdo,'footer',$locale);
+    $contentStmt=$pdo->prepare('SELECT content_key,content_value FROM site_content WHERE language_code=?');$contentStmt->execute([$locale]);$content=$contentStmt->fetchAll(PDO::FETCH_KEY_PAIR);
+    $siteName=(string)($content['site_name']??'VillaStay');
+    ThemeManager::renderTemplate('templates/pages/paytr-iframe.php',get_defined_vars());
+});
+
+$router->post('/payments/paytr/callback', static function (): void {
+    $payload=$_POST;
+    $config=\\App\\Core\\PaymentGatewayConfig::forProvider('paytr');
+    if(empty($config['configured'])){http_response_code(503);exit('Not configured');}
+    $credentials=$config['credentials'];$oid=trim((string)($payload['merchant_oid']??''));
+    if($oid===''||!\\App\\Core\\PaymentSignatureVerifier::verifyPaytr($payload,(string)$credentials['merchant_key'],(string)$credentials['merchant_salt'])){http_response_code(400);exit('Invalid callback');}
+    $pdo=Database::connection();
+    $find=$pdo->prepare("SELECT id,booking_id,provider_reference,amount,currency,status FROM payment_transactions WHERE provider='paytr' AND provider_reference=? LIMIT 1");
+    $find->execute([$oid]);$transaction=$find->fetch(PDO::FETCH_ASSOC);
+    if(!$transaction){http_response_code(404);exit('Unknown payment');}
+    $status=strtolower((string)$payload['status']);if(!in_array($status,['success','failed'],true)){http_response_code(400);exit('Invalid status');}
+    $total=(string)$payload['total_amount'];if(!ctype_digit($total)){http_response_code(400);exit('Invalid amount');}
+    $expected=(int)round((float)$transaction['amount']*100);
+    if((int)$total!==$expected){error_log('PayTR callback amount mismatch for '.$oid);http_response_code(200);exit('OK');}
+    $callback=['provider'=>'paytr','provider_reference'=>$oid,'booking_id'=>(int)$transaction['booking_id'],
+        'amount'=>number_format(((int)$total)/100,2,'.',''),'currency'=>strtoupper((string)$transaction['currency']),'status'=>$status==='success'?'paid':'failed'];
+    $eventId=hash('sha256',$oid.'|'.$status.'|'.$total);
+    try{
+        $result=(new \\App\\Core\\PaymentCallbackProcessor($pdo))->processVerified('paytr',$eventId,'iframe_payment_result',$oid,$payload,$callback);
+        if(in_array($result['result']??'', ['processed','duplicate','already_applied','in_progress'],true)){http_response_code(200);exit('OK');}
+        error_log('PayTR callback rejected after signature verification: '.(string)($result['result']??'unknown'));
+        http_response_code(200);exit('OK');
+    }catch(Throwable $e){error_log('PayTR callback processing failed: '.$e->getMessage());http_response_code(503);exit('Retry');}
+});
+
+$router->get('/payments/paytr/return/{merchantOid}', static function (array $params): void {
+    $oid=(string)($params['merchantOid']??'');$pdo=Database::connection();
+    $stmt=$pdo->prepare("SELECT b.booking_code,pt.status FROM payment_transactions pt JOIN bookings b ON b.id=pt.booking_id WHERE pt.provider='paytr' AND pt.provider_reference=? LIMIT 1");
+    $stmt->execute([$oid]);$row=$stmt->fetch(PDO::FETCH_ASSOC);
+    if(!$row){http_response_code(404);exit('Ödeme işlemi bulunamadı.');}
+    $status=(string)$row['status'];$query=$status==='paid'?'paid':($status==='failed'?'failed':'review');
+    redirect('/checkout/'.rawurlencode((string)$row['booking_code']).'?payment='.$query);
+});
+
 $router->post('/checkout/{bookingCode}/manual/notify', static function (array $params): void {
     $user=Auth::user();if(!$user)redirect('/login');verify_csrf();
     $config=\App\Core\PaymentGatewayConfig::forProvider('manual');
