@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.5.2 - 2026-11-16
+- Replace the raw JSON diagnostics endpoint in the admin menu with a responsive system diagnostics dashboard, parsed performance/SQL tables, summary metrics, filtering, and expandable record details.
+- Exclude successful MP4/WebM byte-range delivery time from PHP slow-request logs so large hero-video downloads are not misreported as slow application requests.
+
+
 ## 1.5.1 - 2026-11-16
 - Make villa average ratings and individual guest review scores more prominent with larger, high-contrast gold rating badges, including mobile sizing.
 
