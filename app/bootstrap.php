@@ -44,9 +44,16 @@ function villa_perf_mark(string $stage): void
 register_shutdown_function(static function (): void {
     $started = (float)($GLOBALS['villa_perf_started_at'] ?? microtime(true));
     $totalMs = (microtime(true) - $started) * 1000;
-    if ($totalMs < 1000) return;
     $path = parse_url((string)($_SERVER['REQUEST_URI'] ?? '/'), PHP_URL_PATH) ?: '/';
     $path = substr($path, 0, 180);
+    $status = http_response_code();
+    // A successful MP4/WebM byte-range response measures client download time,
+    // not PHP application execution. Keep it out of slow-request diagnostics.
+    if (preg_match('~/(?:brand-assets)/[^/]+\\.(?:mp4|webm)$~i', $path) === 1
+        && in_array($status, [200, 206, 304], true)) {
+        return;
+    }
+    if ($totalMs < 1000) return;
     $method = (string)($_SERVER['REQUEST_METHOD'] ?? 'CLI');
     $stage = (string)($GLOBALS['villa_perf_stage'] ?? 'unknown');
     $sessionWait = (float)($GLOBALS['villa_perf_session_wait_ms'] ?? 0);
