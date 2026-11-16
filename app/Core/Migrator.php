@@ -26,10 +26,14 @@ final class Migrator
             $signatureParts[] = basename($file) . ':' . (string)filesize($file) . ':' . (string)filemtime($file);
         }
         $signature = hash('sha256', implode("\n", $signatureParts));
+        // A shared-hosting installation may be re-pointed to another database
+        // without changing the application files. Never let a cache written for
+        // one database suppress migrations for a different database.
+        $databaseIdentity = self::databaseIdentity($pdo);
         $stateFile = $root . '/storage/migrations-state.json';
 
-        // Fast path: no SQL, metadata queries, or MySQL lock for normal requests.
-        if (self::stateMatches($stateFile, $signature)) {
+        // Fast path: no SQL migration work or MySQL lock for normal requests.
+        if (self::stateMatches($stateFile, $signature, $databaseIdentity)) {
             return;
         }
 
@@ -48,7 +52,7 @@ final class Migrator
 
         try {
             // Another request may have completed migrations while this request waited.
-            if (self::stateMatches($stateFile, $signature)) {
+            if (self::stateMatches($stateFile, $signature, $databaseIdentity)) {
                 return;
             }
 
@@ -95,7 +99,7 @@ final class Migrator
             // Write state only after every migration and self-heal step succeeded.
             @file_put_contents(
                 $stateFile,
-                json_encode(['signature' => $signature, 'checked_at' => date(DATE_ATOM)], JSON_UNESCAPED_SLASHES),
+                json_encode(['signature' => $signature, 'database_identity' => $databaseIdentity, 'checked_at' => date(DATE_ATOM)], JSON_UNESCAPED_SLASHES),
                 LOCK_EX
             );
         } finally {
@@ -106,14 +110,30 @@ final class Migrator
         }
     }
 
-    private static function stateMatches(string $stateFile, string $signature): bool
+    private static function databaseIdentity(PDO $pdo): string
+    {
+        $row = $pdo->query('SELECT DATABASE() AS database_name, @@hostname AS server_host, @@port AS server_port')->fetch(PDO::FETCH_ASSOC);
+        if (!is_array($row) || !is_string($row['database_name'] ?? null) || $row['database_name'] === '') {
+            throw new \RuntimeException('Migration database identity could not be determined.');
+        }
+        return hash('sha256', implode("\0", [
+            (string)($row['server_host'] ?? ''),
+            (string)($row['server_port'] ?? ''),
+            $row['database_name'],
+        ]));
+    }
+
+    private static function stateMatches(string $stateFile, string $signature, string $databaseIdentity): bool
     {
         if (!is_file($stateFile) || !is_readable($stateFile)) return false;
         $state = json_decode((string)@file_get_contents($stateFile), true);
         return is_array($state)
             && isset($state['signature'])
             && is_string($state['signature'])
-            && hash_equals($signature, $state['signature']);
+            && hash_equals($signature, $state['signature'])
+            && isset($state['database_identity'])
+            && is_string($state['database_identity'])
+            && hash_equals($databaseIdentity, $state['database_identity']);
     }
 
     private static function selfHealNavigationHierarchy(PDO $pdo): void

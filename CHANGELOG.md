@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.6.4 - 2026-11-16
+- Bind the migration fast-path cache to the connected MySQL server and database so a shared-hosting database switch cannot skip pending migrations.
+- Add a regression smoke test proving a migration cache from another database is rejected while repeat migrations remain idempotent.
+
 ## 1.6.3 - 2026-11-16
 - Serialize payment callbacks using a consistent booking-first database lock order to prevent cross-provider deadlocks.
 - Reject and regression-test a second successful payment from another provider for an already-paid booking.
