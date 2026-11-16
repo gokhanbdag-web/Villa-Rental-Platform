@@ -892,7 +892,6 @@ $router->get('/villa/{slug}/availability', static function (array $params): void
     $seasonStmt->execute([(int)$property['id'],$outRaw,$inRaw]);$seasons=$seasonStmt->fetchAll(PDO::FETCH_ASSOC);
     try{\App\Core\BookingStayRules::validate($checkIn,$checkOut,$seasons);}catch(InvalidArgumentException $e){$fail(422,$e->getMessage());return;}
     $subtotal=\App\Core\BookingRateCalculator::staySubtotal($property,$checkIn,$checkOut,$seasons,$rules);
-        try{$extras=\App\Core\BookingExtras::calculate($property,$earlyRequested,$lateRequested);}catch(InvalidArgumentException $e){$pdo->rollBack();http_response_code(422);exit($e->getMessage());}
     $earlyRequested=(string)($_GET['early_checkin']??'')==='1';$lateRequested=(string)($_GET['late_checkout']??'')==='1';
     try{$extras=\App\Core\BookingExtras::calculate($property,$earlyRequested,$lateRequested);}catch(InvalidArgumentException $e){$fail(422,$e->getMessage());return;}
     $cleaningFee=(float)($property['cleaning_fee']??0);$fees=round($cleaningFee+(float)$extras['fees'],2);
@@ -3098,6 +3097,7 @@ $router->post('/admin/bookings/manual', static function (): void {
         $seasonStmt->execute([$propertyId,$outRaw,$inRaw]);$seasons=$seasonStmt->fetchAll(PDO::FETCH_ASSOC);
         try{\App\Core\BookingStayRules::validate($checkIn,$checkOut,$seasons);}catch(InvalidArgumentException $e){$pdo->rollBack();http_response_code(422);exit($e->getMessage());}
         $subtotal=\App\Core\BookingRateCalculator::staySubtotal($property,$checkIn,$checkOut,$seasons,$rules);
+        try{$extras=\App\Core\BookingExtras::calculate($property,$earlyRequested,$lateRequested);}catch(InvalidArgumentException $e){$pdo->rollBack();http_response_code(422);exit($e->getMessage());}
         $fees=round((float)$property['cleaning_fee']+(float)$extras['fees'],2);$calculated=round($subtotal+$fees,2);
         $entered=$totalInput;$total=$entered===''?$calculated:(float)$entered;
         if($total<0||!is_finite($total)){$pdo->rollBack();http_response_code(422);exit('Toplam tutar geçersiz.');}
