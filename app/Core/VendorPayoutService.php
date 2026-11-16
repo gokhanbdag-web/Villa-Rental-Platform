@@ -90,6 +90,8 @@ final class VendorPayoutService
                 $itemAmount = intdiv($allocation['cents'], 100) . '.' . str_pad((string)($allocation['cents'] % 100), 2, '0', STR_PAD_LEFT);
                 $allocationInsert->execute([$payoutId, $allocation['booking_id'], $itemAmount, $currency]);
             }
+            $markReserved = $pdo->prepare("UPDATE booking_financials SET payout_status='processing',updated_at=NOW() WHERE booking_id IN (SELECT booking_id FROM vendor_payout_allocations WHERE payout_id=?)");
+            $markReserved->execute([$payoutId]);
             $event = $pdo->prepare("INSERT INTO vendor_payout_events(payout_id,actor_user_id,from_status,to_status,notes,created_at) VALUES(?,?,NULL,'requested','Ev sahibi ödeme talebi oluşturdu.',NOW())");
             $event->execute([$payoutId, $userId]);
             $pdo->commit();
