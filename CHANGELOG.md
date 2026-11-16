@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.6.3 - 2026-11-16
+- Serialize payment callbacks using a consistent booking-first database lock order to prevent cross-provider deadlocks.
+- Reject and regression-test a second successful payment from another provider for an already-paid booking.
+
 ## 1.6.2 - 2026-11-16
 - Reserve iyzico checkout initialization atomically under the booking row lock, reject starts after any provider has been paid, and reuse an active session instead of creating duplicate sessions.
 - Expire stale five-minute initialization placeholders so interrupted requests cannot block checkout indefinitely.
