@@ -10,6 +10,7 @@ Native PHP 8.2+ and MySQL villa rental platform. No PHP framework or Composer de
 - Admin content editor for homepage copy, site name and footer content.
 - Admin listing CRUD, category and amenity catalogues, local image upload/removal (JPEG/PNG/WebP with MIME validation and size limits), and availability / seasonal price rules.
 - Guest registration, authenticated booking requests, date-overlap checks, nightly pricing from calendar rules, guest booking history, admin booking approval/cancellation, favorites, booking-scoped guest/host messaging, guest reviews with admin moderation, and in-app notifications.
+- Native SMTP email delivery with encrypted credentials, an idempotent retrying outbox, token-protected shared-hosting cron processing, administrator test email, and booking / new-message email notifications. SMTP delivery stays disabled until configured.
 - Multi-vendor onboarding, vendor approval, vendor listing management, vendor reservation inbox, vendor-specific calendars, and per-vendor commission rates.
 - Admin user activation controls, editable navigation, CMS pages with SEO fields, platform settings, and translation catalogue editing.
 - Booking financial ledger, platform commission calculation, payment transaction, payout and notification database structures; editable translation catalogue.
@@ -24,7 +25,7 @@ Native PHP 8.2+ and MySQL villa rental platform. No PHP framework or Composer de
 
 - Manual bank transfers can be reported by customers and are only marked paid after an authenticated admin verifies and approves the report. Approval also checks booking date conflicts before confirming a pending reservation. No automated bank statement matching is provided.
 - iyzico Checkout Form supports the explicitly selected Sandbox or Production environment. Each payment transaction stores its originating environment so callback retrieval cannot silently switch between Sandbox and Production. The admin connection test performs a BIN lookup in the selected environment and does not create a payment or charge a card. Production requires valid live iyzico credentials and explicit enablement. PayTR is deferred because no merchant account is available. `payments.enabled` defaults to `0` until a payment method is explicitly enabled in admin settings.
-- Automated payout execution, email/SMS delivery, language switching, advanced permissions, provider certification, and real browser-based end-to-end payment tests remain to be implemented.
+- Automated payout execution, SMS delivery, full language switching, advanced permissions, provider certification, and real browser-based end-to-end payment tests remain to be implemented. SMTP email delivery requires administrator configuration and a cPanel cron job; no real SMTP provider credentials are included.
 - The current codebase is an active development build, not a production-ready booking service. Do not accept real payments or rely on it for live inventory until the remaining modules are implemented and a real PHP/MySQL deployment test and security review have passed.
 - Demo villa imagery is illustrative and should not be treated as verified photographs of real properties. Demo listings can be edited, unpublished, or deleted from the admin panel.
 
@@ -32,7 +33,7 @@ Native PHP 8.2+ and MySQL villa rental platform. No PHP framework or Composer de
 
 GitHub Actions runs PHP syntax checks and an installer smoke test against MySQL 8. The smoke test creates a clean installation, verifies the initial administrator and selected platform mode, checks the demo villa seed and required tables, confirms that retired Page Builder/theme-demo tables and navigation entries are absent, checks the shared topbar partial, and applies migrations twice.
 
-These automated checks do not replace testing on the target shared-hosting provider, real browser testing, payment-provider certification, or a professional security review.
+These automated checks do not replace testing on the target shared-hosting provider, real SMTP delivery with the operator's mail provider, real browser testing, payment-provider certification, or a professional security review.
 
 ## Installation
 
