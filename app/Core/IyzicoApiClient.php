@@ -11,7 +11,7 @@ final class IyzicoApiClient
     private const SANDBOX_BASE_URL = 'https://sandbox-api.iyzipay.com';
     private const PRODUCTION_BASE_URL = 'https://api.iyzipay.com';
 
-    public static function post(array $config, string $path, array $payload, ?string $environment = null): array
+    public static function post(array $config, string $path, array $payload, ?string $environment = null, bool $allowFailure = false): array
     {
         $apiKey = (string)($config['credentials']['api_key'] ?? '');
         $secretKey = (string)($config['credentials']['secret_key'] ?? '');
@@ -77,7 +77,10 @@ final class IyzicoApiClient
         if (!is_array($decoded)) {
             throw new \RuntimeException('iyzico geçerli JSON yanıtı döndürmedi (HTTP ' . $httpCode . ').');
         }
-        if ($httpCode < 200 || $httpCode >= 300 || strtolower((string)($decoded['status'] ?? '')) !== 'success') {
+        if ($httpCode < 200 || $httpCode >= 300) {
+            throw new \RuntimeException('iyzico API HTTP isteği başarısız (HTTP ' . $httpCode . ').');
+        }
+        if (strtolower((string)($decoded['status'] ?? '')) !== 'success' && !$allowFailure) {
             $message = trim((string)($decoded['errorMessage'] ?? ''));
             $code = trim((string)($decoded['errorCode'] ?? ''));
             throw new \RuntimeException('iyzico API testi başarısız' . ($code !== '' ? ' (' . $code . ')' : '') . ($message !== '' ? ': ' . $message : '.'));
@@ -107,6 +110,11 @@ final class IyzicoApiClient
             'conversationId' => $conversationId,
             'token' => $token,
         ]);
+    }
+
+    public static function refundV2(array $config, array $payload, ?string $environment = null): array
+    {
+        return self::post($config, '/v2/payment/refund', $payload, $environment, true);
     }
 
     public static function testConnection(array $config): array

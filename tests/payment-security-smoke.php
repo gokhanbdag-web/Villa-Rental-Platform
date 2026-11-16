@@ -104,6 +104,13 @@ paymentAssert(PaymentSignatureVerifier::verifyIyzicoCheckoutFormRetrieve($retrie
 $retrieveResponse['paidPrice'] = '1250.01';
 paymentAssert(!PaymentSignatureVerifier::verifyIyzicoCheckoutFormRetrieve($retrieveResponse,$secret), 'Tampered iyzico retrieve amount was accepted.');
 
+paymentAssert(method_exists(\App\Core\IyzicoApiClient::class,'refundV2'), 'iyzico Refund V2 method is missing.');
+$refundResponse=['status'=>'success','paymentId'=>'99887766','price'=>'25.00','currency'=>'TRY','conversationId'=>'VILLA-REFUND-0001'];
+$refundResponse['signature']=hash_hmac('sha256','99887766:25:TRY:VILLA-REFUND-0001',$secret);
+paymentAssert(PaymentSignatureVerifier::verifyIyzicoRefund($refundResponse,$secret), 'Valid iyzico refund signature was rejected.');
+$refundResponse['price']='25.01';
+paymentAssert(!PaymentSignatureVerifier::verifyIyzicoRefund($refundResponse,$secret), 'Tampered iyzico refund amount was accepted.');
+
 
 foreach (['iyzico','paytr'] as $provider) {
     $success=PaymentSandboxSimulator::run($provider,'success');

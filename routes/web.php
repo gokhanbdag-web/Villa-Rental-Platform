@@ -1153,7 +1153,7 @@ $router->post('/payments/iyzico/callback', static function (): void {
     $token=trim((string)($_POST['token']??''));
     if($token===''||strlen($token)>128){http_response_code(400);exit('Ödeme bildirimi geçersiz.');}
     $pdo=Database::connection();
-    $find=$pdo->prepare("SELECT pt.id,pt.booking_id,pt.amount,pt.currency,pt.status,pt.request_payload,b.booking_code FROM payment_transactions pt JOIN bookings b ON b.id=pt.booking_id WHERE pt.provider='iyzico' AND pt.provider_reference=? LIMIT 1");
+    $find=$pdo->prepare("SELECT pt.id,pt.booking_id,pt.amount,pt.currency,pt.status,pt.request_payload,pt.response_payload,b.booking_code FROM payment_transactions pt JOIN bookings b ON b.id=pt.booking_id WHERE pt.provider='iyzico' AND pt.provider_reference=? LIMIT 1");
     $find->execute([$token]);$transaction=$find->fetch();
     if(!$transaction){http_response_code(404);exit('Ödeme işlemi bulunamadı.');}
     try{
@@ -1189,9 +1189,11 @@ $router->post('/payments/iyzico/callback', static function (): void {
         $processed=(new \App\Core\PaymentCallbackProcessor($pdo))->processVerified(
             'iyzico',$eventId,'CHECKOUT_FORM_AUTH',$token,$eventPayload,$callback
         );
-        $currentPayment=$pdo->prepare('SELECT status FROM payment_transactions WHERE id=? LIMIT 1');
+$currentPayment=$pdo->prepare('SELECT status,response_payload FROM payment_transactions WHERE id=? LIMIT 1');
         $currentPayment->execute([(int)$transaction['id']]);
-        $storedStatus=(string)($currentPayment->fetchColumn()?:'');
+        $currentPaymentRow=$currentPayment->fetch(PDO::FETCH_ASSOC)?:[];
+        $storedStatus=(string)($currentPaymentRow['status']??'');
+        if($storedStatus==='paid'&&in_array($processed['result']??'', ['processed','duplicate','already_applied','in_progress'],true)) \App\Core\PaymentRefundService::storeVerifiedPaymentDetails($pdo,(int)$transaction['id'],(string)($currentPaymentRow['response_payload']??''),$result);
         $suffix=match($storedStatus){'paid'=>'success','processing'=>'review','failed'=>'failed',default=>'review'};
         redirect('/payment/'.$suffix.'/'.rawurlencode($token));
     }catch(Throwable $e){
@@ -1273,7 +1275,11 @@ $router->post('/payments/iyzico/webhook', static function (): void {
         $processed=(new \App\Core\PaymentCallbackProcessor($pdo))->processVerified(
             'iyzico',$eventId,$eventType,$token,$eventPayload,$callback
         );
-        if(in_array($processed['result']??'', ['processed','duplicate','already_applied','in_progress'],true)){http_response_code(200);exit('OK');}
+        if(in_array($processed['result']??'', ['processed','duplicate','already_applied','in_progress'],true)){
+            $currentPayment=$pdo->prepare('SELECT status,response_payload FROM payment_transactions WHERE id=? LIMIT 1');$currentPayment->execute([(int)$transaction['id']]);$currentPaymentRow=$currentPayment->fetch(PDO::FETCH_ASSOC)?:[];
+            if(($currentPaymentRow['status']??'')==='paid') \App\Core\PaymentRefundService::storeVerifiedPaymentDetails($pdo,(int)$transaction['id'],(string)($currentPaymentRow['response_payload']??''),$result);
+            http_response_code(200);exit('OK');
+        }
         error_log('iyzico webhook was signature-valid but rejected by payment guards: '.(string)($processed['result']??'unknown'));
         http_response_code(200);exit('Rejected');
     }catch(Throwable $e){
@@ -3022,6 +3028,22 @@ $router->post('/admin/payment-tests', static function (): void {
     }    ThemeManager::renderTemplate('templates/pages/admin/payment-tests.php', get_defined_vars());
 });
 
+$router->post('/admin/finance/refund/iyzico', static function (): void {
+    Auth::requireRole(['super_admin','admin']);verify_csrf();
+    if(empty($_POST['confirm_real_refund'])){http_response_code(422);exit('Gerçek iade işlemi için açık onay gereklidir.');}
+    $pdo=Database::connection();
+    try{
+        $result=\App\Core\PaymentRefundService::refundIyzico($pdo,(int)Auth::user()['id'],(int)($_POST['payment_transaction_id']??0),(string)($_POST['amount']??''),(string)($_POST['reason']??''));
+        $_SESSION['villa_admin_refund_message']='iyzico iadesi başarıyla tamamlandı: '.$result['amount'].' '.$result['currency'].' (İade #'.$result['id'].').';
+        $_SESSION['villa_admin_refund_message_type']='success';
+    }catch(Throwable $e){
+        error_log('iyzico refund action: '.$e->getMessage());
+        $_SESSION['villa_admin_refund_message']=$e->getMessage();
+        $_SESSION['villa_admin_refund_message_type']='error';
+    }
+    redirect('/admin/finance');
+});
+
 $router->post('/admin/finance/payout/update', static function (): void {
     Auth::requireRole(['super_admin','admin']);verify_csrf();
     $pdo=Database::connection();
@@ -3075,11 +3097,19 @@ $router->get('/admin/finance', static function (): void {
         ORDER BY b.created_at DESC,b.id DESC LIMIT 30")->fetchAll();
 
     $recentTransactions = $pdo->query("SELECT pt.id,pt.provider,pt.provider_reference,pt.amount,
-        pt.currency,pt.status,pt.paid_at,pt.created_at,b.booking_code,p.title AS property_title
+        pt.currency,pt.status,pt.paid_at,pt.created_at,b.booking_code,p.title AS property_title,
+        COALESCE((SELECT SUM(pr.amount) FROM payment_refunds pr WHERE pr.payment_transaction_id=pt.id AND pr.status IN ('succeeded','processing','unknown')),0) AS refunded_amount,
+        (SELECT COUNT(*) FROM payment_refunds pr WHERE pr.payment_transaction_id=pt.id AND pr.status IN ('processing','unknown')) AS unresolved_refunds
         FROM payment_transactions pt
         JOIN bookings b ON b.id=pt.booking_id
         JOIN properties p ON p.id=b.property_id
         ORDER BY pt.created_at DESC,pt.id DESC LIMIT 20")->fetchAll();
+    $recentRefunds=$pdo->query("SELECT pr.id,pr.amount,pr.currency,pr.status,pr.provider_reference,pr.conversation_id,pr.reason,pr.error_message,pr.created_at,b.booking_code,p.title AS property_title,u.email AS admin_email
+        FROM payment_refunds pr JOIN bookings b ON b.id=pr.booking_id JOIN properties p ON p.id=b.property_id LEFT JOIN users u ON u.id=pr.actor_user_id
+        ORDER BY pr.created_at DESC,pr.id DESC LIMIT 30")->fetchAll();
+    $adminRefundMessage=(string)($_SESSION['villa_admin_refund_message']??'');
+    $adminRefundMessageType=(string)($_SESSION['villa_admin_refund_message_type']??'error');
+    unset($_SESSION['villa_admin_refund_message'],$_SESSION['villa_admin_refund_message_type']);
 
     $paymentProvider = (string)($pdo->query("SELECT setting_value FROM settings WHERE setting_key='payments.provider'")->fetchColumn() ?: 'none');
     $paymentsEnabled = (string)($pdo->query("SELECT setting_value FROM settings WHERE setting_key='payments.enabled'")->fetchColumn() ?: '0') === '1';
