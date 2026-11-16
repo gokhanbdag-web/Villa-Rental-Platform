@@ -866,7 +866,7 @@ $router->get('/villa/{slug}/availability', static function (array $params): void
     };
     try {
     $pdo = Database::connection();
-    $propertyStmt = $pdo->prepare("SELECT id,base_nightly_price,weekend_nightly_price,cleaning_fee,currency,max_guests FROM properties WHERE slug=? AND status='published' LIMIT 1");
+    $propertyStmt = $pdo->prepare("SELECT id,base_nightly_price,weekend_nightly_price,cleaning_fee,early_checkin_enabled,early_checkin_fee,late_checkout_enabled,late_checkout_fee,currency,max_guests FROM properties WHERE slug=? AND status='published' LIMIT 1");
     $propertyStmt->execute([$params['slug'] ?? '']);
     $property = $propertyStmt->fetch();
     if (!$property) { $fail(404, 'Konaklama bulunamadı.'); return; }
@@ -892,11 +892,15 @@ $router->get('/villa/{slug}/availability', static function (array $params): void
     $seasonStmt->execute([(int)$property['id'],$outRaw,$inRaw]);$seasons=$seasonStmt->fetchAll(PDO::FETCH_ASSOC);
     try{\App\Core\BookingStayRules::validate($checkIn,$checkOut,$seasons);}catch(InvalidArgumentException $e){$fail(422,$e->getMessage());return;}
     $subtotal=\App\Core\BookingRateCalculator::staySubtotal($property,$checkIn,$checkOut,$seasons,$rules);
-    $fees = (float)($property['cleaning_fee'] ?? 0);
+    $earlyRequested=(string)($_GET['early_checkin']??'')==='1';$lateRequested=(string)($_GET['late_checkout']??'')==='1';
+    try{$extras=\App\Core\BookingExtras::calculate($property,$earlyRequested,$lateRequested);}catch(InvalidArgumentException $e){$fail(422,$e->getMessage());return;}
+    $cleaningFee=(float)($property['cleaning_fee']??0);$fees=round($cleaningFee+(float)$extras['fees'],2);
     echo json_encode([
-        'ok'=>true,'nights'=>$nights,'subtotal'=>round($subtotal,2),'fees'=>round($fees,2),
+        'ok'=>true,'nights'=>$nights,'subtotal'=>round($subtotal,2),'cleaning_fee'=>round($cleaningFee,2),'fees'=>$fees,
+        'early_checkin_requested'=>$extras['early_checkin_requested'],'early_checkin_fee'=>$extras['early_checkin_fee'],
+        'late_checkout_requested'=>$extras['late_checkout_requested'],'late_checkout_fee'=>$extras['late_checkout_fee'],
         'total'=>round($subtotal+$fees,2),'currency'=>(string)$property['currency'],
-        'message'=>'Seçtiğiniz tarihler müsait görünüyor. Son kontrol rezervasyon gönderilirken tekrar yapılır.'
+        'message'=>'Seçtiğiniz tarihler müsait görünüyor. Ek hizmet talepleri rezervasyon gönderilirken yeniden doğrulanır.'
     ], JSON_UNESCAPED_UNICODE|JSON_THROW_ON_ERROR);
     } catch (Throwable $e) {
         error_log('Villa availability check failed: '.$e->getMessage());
@@ -922,6 +926,7 @@ $router->post('/villa/{slug}/reserve', static function (array $params): void {
     $iyzicoBookingConfig=\App\Core\PaymentGatewayConfig::forProvider('iyzico');
     $autoStartIyzico=!empty($iyzicoBookingConfig['enabled'])&&!empty($iyzicoBookingConfig['configured'])&&in_array(($iyzicoBookingConfig['environment']??''),['sandbox','production'],true);
     $inRaw=trim((string)($_POST['check_in']??''));$outRaw=trim((string)($_POST['check_out']??''));
+    $earlyRequested=(string)($_POST['early_checkin']??'')==='1';$lateRequested=(string)($_POST['late_checkout']??'')==='1';
     $checkIn=DateTimeImmutable::createFromFormat('!Y-m-d',$inRaw);$checkOut=DateTimeImmutable::createFromFormat('!Y-m-d',$outRaw);
     $guests=(int)($_POST['guests']??0);$fullName=trim($first.' '.$last);
     if($first===''||$last===''||mb_strlen($first)>90||mb_strlen($last)>90||!filter_var($email,FILTER_VALIDATE_EMAIL)||strlen($email)>190||$phone===''||strlen($phone)>40||strlen($password)<10||strlen($password)>128||!$checkIn||!$checkOut||$checkIn->format('Y-m-d')!==$inRaw||$checkOut->format('Y-m-d')!==$outRaw||$checkIn<new DateTimeImmutable('today')||$checkOut<=$checkIn||(int)$checkIn->diff($checkOut)->days>365||$guests<1||$guests>(int)$property['max_guests']||($autoStartIyzico&&(!preg_match('/^[0-9]{11}$/',$identityNumber)||$billingAddress===''||mb_strlen($billingAddress)>500||$billingCity===''||mb_strlen($billingCity)>100))){
@@ -948,7 +953,7 @@ $router->post('/villa/{slug}/reserve', static function (array $params): void {
     }
     try{
         $pdo->beginTransaction();
-        $lock=$pdo->prepare('SELECT id,base_nightly_price,weekend_nightly_price,cleaning_fee,currency,max_guests FROM properties WHERE id=? AND status=\'published\' FOR UPDATE');
+        $lock=$pdo->prepare('SELECT id,base_nightly_price,weekend_nightly_price,cleaning_fee,early_checkin_enabled,early_checkin_fee,late_checkout_enabled,late_checkout_fee,currency,max_guests FROM properties WHERE id=? AND status=\'published\' FOR UPDATE');
         $lock->execute([(int)$property['id']]);$current=$lock->fetch();
         if(!$current){$pdo->rollBack();http_response_code(404);exit('Konaklama artık yayında değil.');}
         if($guests<1||$guests>(int)$current['max_guests']){$pdo->rollBack();http_response_code(422);exit('Misafir sayısı konaklamanın güncel kapasitesini aşıyor.');}
@@ -962,13 +967,14 @@ $router->post('/villa/{slug}/reserve', static function (array $params): void {
         if($conflict->fetchColumn()||$unavailable){$pdo->rollBack();http_response_code(409);exit('Seçtiğiniz tarihler artık müsait değil. Lütfen yeni tarih seçin.');}
         try{\App\Core\BookingStayRules::validate($checkIn,$checkOut,$seasons);}catch(InvalidArgumentException $e){$pdo->rollBack();http_response_code(422);exit($e->getMessage());}
         $subtotal=\App\Core\BookingRateCalculator::staySubtotal($current,$checkIn,$checkOut,$seasons,$rules);
+        try{$extras=\\App\\Core\\BookingExtras::calculate($current,$earlyRequested,$lateRequested);}catch(InvalidArgumentException $e){$pdo->rollBack();http_response_code(422);exit($e->getMessage());}
         if($createNewAccount){
             $create=$pdo->prepare("INSERT INTO users(username,email,password_hash,role,status,created_at) VALUES(?,?,?,'customer','active',NOW())");
             $create->execute([$newUsername,$email,password_hash($password,PASSWORD_DEFAULT)]);$userId=(int)$pdo->lastInsertId();
         }
-        $fees=(float)($current['cleaning_fee']??0);$total=round($subtotal+$fees,2);$code='VR'.date('Ymd').strtoupper(bin2hex(random_bytes(3)));
-        $save=$pdo->prepare("INSERT INTO bookings(booking_code,property_id,guest_user_id,guest_name,guest_email,guest_phone,booking_source,check_in,check_out,guests,subtotal,fees,total,currency,status,created_at) VALUES(?,?,?,?,?,?,'website',?,?,?,?,?,?,?,'pending',NOW())");
-        $save->execute([$code,(int)$property['id'],$userId,$fullName,$email,$phone,$inRaw,$outRaw,$guests,$subtotal,$fees,$total,$current['currency']]);
+        $fees=round((float)($current['cleaning_fee']??0)+(float)$extras['fees'],2);$total=round($subtotal+$fees,2);$code='VR'.date('Ymd').strtoupper(bin2hex(random_bytes(3)));
+        $save=$pdo->prepare("INSERT INTO bookings(booking_code,property_id,guest_user_id,guest_name,guest_email,guest_phone,booking_source,check_in,check_out,guests,subtotal,fees,early_checkin_requested,early_checkin_fee,late_checkout_requested,late_checkout_fee,total,currency,status,created_at) VALUES(?,?,?,?,?,?,'website',?,?,?,?,?,?,?,?,?,?,?,'pending',NOW())");
+        $save->execute([$code,(int)$property['id'],$userId,$fullName,$email,$phone,$inRaw,$outRaw,$guests,$subtotal,$fees,$extras['early_checkin_requested'],$extras['early_checkin_fee'],$extras['late_checkout_requested'],$extras['late_checkout_fee'],$total,$current['currency']]);
         $bookingId=(int)$pdo->lastInsertId();
         $vendorNet=$total;$platformFee=0.0;
         if(!empty($property['vendor_id'])){
