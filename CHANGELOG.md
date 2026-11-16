@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.6.5 - 2026-11-16
+- Add native PHP SMTP delivery with encrypted credentials, an idempotent retrying outbox, and a token-protected shared-hosting cron endpoint.
+- Add administrator SMTP settings and test-email delivery; queue booking and new-message notifications while keeping mail disabled by default.
+- Add SMTP header-injection validation and MySQL queue/idempotency smoke coverage.
+
 ## 1.6.4 - 2026-11-16
 - Bind the migration fast-path cache to the connected MySQL server and database so a shared-hosting database switch cannot skip pending migrations.
 - Add a regression smoke test proving a migration cache from another database is rejected while repeat migrations remain idempotent.
