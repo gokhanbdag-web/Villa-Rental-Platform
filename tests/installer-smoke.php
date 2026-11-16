@@ -600,6 +600,53 @@ assertSmoke(str_contains($themeRoutesSource, "'sandbox-cpp.iyzipay.com'") && str
     $migrationCountAfter = (int)$pdo->query('SELECT COUNT(*) FROM schema_migrations')->fetchColumn();
     assertSmoke($migrationCountAfter === $migrationCount, 'Second migration pass changed the migration ledger.');
 
+    // Exercise vendor payout eligibility, bank-profile encryption, allocation
+    // idempotency, admin transitions, and the booking financial ledger.
+    $vendorSuffix=strtolower(bin2hex(random_bytes(4)));
+    $vendorEmail='payout.vendor.'.$vendorSuffix.'@example.test';
+    $vendorUserStmt=$pdo->prepare("INSERT INTO users(username,email,password_hash,role,status,created_at) VALUES(?,?,?,'vendor','active',NOW())");
+    $vendorUserStmt->execute(['payout_vendor_'.$vendorSuffix,$vendorEmail,password_hash('PayoutSmokePassword!2026',PASSWORD_DEFAULT)]);
+    $vendorUserId=(int)$pdo->lastInsertId();
+    $vendorInsert=$pdo->prepare("INSERT INTO vendors(user_id,business_name,status,created_at) VALUES(?,?,'approved',NOW())");
+    $vendorInsert->execute([$vendorUserId,'Payout Smoke Vendor']);
+    $vendorId=(int)$pdo->lastInsertId();
+    $testIban='TR330006100519786457841326';
+    assertSmoke(\\App\\Core\\VendorPayoutService::validIban($testIban), 'Valid Turkish IBAN checksum was rejected.');
+    assertSmoke(!\\App\\Core\\VendorPayoutService::validIban('TR000000000000000000000000'), 'Invalid IBAN checksum was accepted.');
+    \\App\\Core\\VendorPayoutService::savePayoutProfile($pdo,$vendorUserId,'Test Bank','Payout Smoke Vendor',$testIban);
+    $payoutProfile=$pdo->prepare('SELECT iban_encrypted FROM vendor_payout_profiles WHERE vendor_id=?');
+    $payoutProfile->execute([$vendorId]);$encryptedIban=(string)$payoutProfile->fetchColumn();
+    assertSmoke(str_starts_with($encryptedIban,'enc:v1:') && \\App\\Core\\PaymentSecretVault::decrypt($encryptedIban)===$testIban, 'Vendor IBAN was not encrypted at rest or could not be decrypted.');
+
+    $payoutPropertySlug='payout-smoke-'.$vendorSuffix;
+    $payoutProperty=$pdo->prepare("INSERT INTO properties(vendor_id,title,slug,max_guests,bedrooms,beds,bathrooms,base_nightly_price,currency,status,booking_type,created_at) VALUES(?,?,?,4,2,2,1,100,'TRY','published','request',NOW())");
+    $payoutProperty->execute([$vendorId,'Payout Smoke Villa',$payoutPropertySlug]);
+    $payoutPropertyId=(int)$pdo->lastInsertId();
+    $payoutBookingCode='PAYOUTSMOKE'.strtoupper($vendorSuffix);
+    $payoutBooking=$pdo->prepare("INSERT INTO bookings(booking_code,property_id,guest_user_id,guest_name,guest_email,guest_phone,booking_source,check_in,check_out,guests,subtotal,fees,total,currency,status,created_at) VALUES(?,?,?,'Payout Smoke Guest',?,'','website',?,?,2,100,0,100,'TRY','completed',NOW())");
+    $payoutBooking->execute([$payoutBookingCode,$payoutPropertyId,$customerId,$customerEmail,(new DateTimeImmutable('-3 days'))->format('Y-m-d'),(new DateTimeImmutable('-1 day'))->format('Y-m-d')]);
+    $payoutBookingId=(int)$pdo->lastInsertId();
+    $payoutFinancial=$pdo->prepare("INSERT INTO booking_financials(booking_id,gross_amount,platform_fee,vendor_net_amount,currency,payout_status,created_at) VALUES(?,100,10,90,'TRY','unpaid',NOW())");
+    $payoutFinancial->execute([$payoutBookingId]);
+    $payoutPayment=$pdo->prepare("INSERT INTO payment_transactions(booking_id,provider,provider_reference,amount,currency,status,paid_at,created_at) VALUES(?,'manual',?,100,'TRY','paid',NOW(),NOW())");
+    $payoutPayment->execute([$payoutBookingId,'PAYOUT-SMOKE-'.$vendorSuffix]);
+
+    $availablePayouts=\\App\\Core\\VendorPayoutService::availableBalances($pdo,$vendorId);
+    assertSmoke(count($availablePayouts)===1 && (float)$availablePayouts[0]['available_amount']===90.0, 'Completed, paid vendor balance was not calculated correctly.');
+    $payoutRequest=\\App\\Core\\VendorPayoutService::request($pdo,$vendorUserId,'TRY');
+    assertSmoke((float)$payoutRequest['amount']===90.0 && $payoutRequest['allocation_count']===1, 'Vendor payout request did not reserve the exact available balance.');
+    $duplicatePayoutRejected=false;
+    try { \\App\\Core\\VendorPayoutService::request($pdo,$vendorUserId,'TRY'); } catch (RuntimeException) { $duplicatePayoutRejected=true; }
+    assertSmoke($duplicatePayoutRejected, 'A vendor was able to request the same booking balance twice.');
+    \\App\\Core\\VendorPayoutService::transition($pdo,(int)$admin['id'],(int)$payoutRequest['id'],'processing','','Smoke processing');
+    $reservedStatus=(string)$pdo->query("SELECT payout_status FROM booking_financials WHERE booking_id=".(int)$payoutBookingId)->fetchColumn();
+    assertSmoke($reservedStatus==='processing', 'Payout processing status was not reflected in the booking ledger.');
+    \\App\\Core\\VendorPayoutService::transition($pdo,(int)$admin['id'],(int)$payoutRequest['id'],'paid','BANK-SMOKE-'.$vendorSuffix,'Smoke paid');
+    $paidStatus=(string)$pdo->query("SELECT payout_status FROM booking_financials WHERE booking_id=".(int)$payoutBookingId)->fetchColumn();
+    $payoutEventCount=$pdo->prepare('SELECT COUNT(*) FROM vendor_payout_events WHERE payout_id=?');$payoutEventCount->execute([(int)$payoutRequest['id']]);
+    assertSmoke($paidStatus==='paid' && (int)$payoutEventCount->fetchColumn()===3, 'Paid payout did not finalize the ledger and record the complete audit trail.');
+    assertSmoke(\\App\\Core\\VendorPayoutService::availableBalances($pdo,$vendorId)===[], 'Already-paid vendor funds remained available for another payout request.');
+
     echo "Installer smoke tests passed: admin, platform mode, {$villaCount} demo villas, customer account authentication, booking persistence, financial record, checkout ownership, {$migrationCount} migrations, required tables, theme fallback architecture, and repeat migration.\n";
 } finally {
     if (is_file($configFile)) unlink($configFile);
