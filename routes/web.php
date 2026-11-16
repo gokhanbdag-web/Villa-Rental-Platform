@@ -1001,7 +1001,7 @@ $router->get('/checkout/{bookingCode}', static function(array $params):void {
 $router->post('/checkout/{bookingCode}/paytr/start', static function (array $params): void {
     verify_csrf();
     $user=Auth::user();if(!$user)redirect('/login');
-    $config=\\App\\Core\\PaymentGatewayConfig::forProvider('paytr');
+    $config=\App\Core\PaymentGatewayConfig::forProvider('paytr');
     if(empty($config['enabled'])||empty($config['configured'])){http_response_code(409);exit('PayTR ödeme altyapısı etkin değil veya mağaza bilgileri eksik.');}
     $pdo=Database::connection();
     $stmt=$pdo->prepare("SELECT b.*,p.title AS property_title,u.email AS guest_email,u.username FROM bookings b JOIN properties p ON p.id=b.property_id JOIN users u ON u.id=b.guest_user_id WHERE b.booking_code=? AND b.guest_user_id=? LIMIT 1");
@@ -1019,7 +1019,7 @@ $router->post('/checkout/{bookingCode}/paytr/start', static function (array $par
     $amountKurus=(int)round((float)$booking['total']*100);if($amountKurus<1){http_response_code(422);exit('Ödeme tutarı geçersiz.');}
     $email=iconv('UTF-8','ASCII//TRANSLIT//IGNORE',(string)$booking['guest_email']);$email=preg_replace('/[^A-Za-z0-9@._+-]/','',$email?:'')??'';
     if($email===''||strlen($email)>100||!filter_var($email,FILTER_VALIDATE_EMAIL)){http_response_code(422);exit('PayTR için geçerli e-posta adresi gereklidir.');}
-    $phone=preg_replace('/\\D+/','',(string)($booking['guest_phone']??''))??'';
+    $phone=preg_replace('/\D+/','',(string)($booking['guest_phone']??''))??'';
     $ip=(string)($_SERVER['REMOTE_ADDR']??'');if(filter_var($ip,FILTER_VALIDATE_IP)===false){http_response_code(422);exit('Müşteri IP adresi doğrulanamadı.');}
     $merchantOid='VILLA'.(int)$booking['id'].strtoupper(bin2hex(random_bytes(6)));
     try{$okUrl=app_absolute_url('/payments/paytr/return/'.rawurlencode($merchantOid));$failUrl=$okUrl;}
@@ -1033,7 +1033,7 @@ $router->post('/checkout/{bookingCode}/paytr/start', static function (array $par
     $insert->execute([(int)$booking['id'],$merchantOid,$idempotency,number_format((float)$booking['total'],2,'.',''),$currency,json_encode(['merchant_oid'=>$merchantOid,'payment_amount'=>$amountKurus,'currency'=>$currency,'environment'=>$config['environment']],JSON_UNESCAPED_UNICODE)]);
     $transactionId=(int)$pdo->lastInsertId();
     try{
-        $tokenData=\\App\\Core\\PaytrIframeClient::requestToken($config,[
+        $tokenData=\App\Core\PaytrIframeClient::requestToken($config,[
             'user_ip'=>$ip,'merchant_oid'=>$merchantOid,'email'=>$email,'payment_amount'=>(string)$amountKurus,
             'user_basket'=>$basket,'user_name'=>$name,'user_address'=>$address,'user_phone'=>$phone,
             'merchant_ok_url'=>$okUrl,'merchant_fail_url'=>$failUrl,'currency'=>$currency,
@@ -1070,10 +1070,10 @@ $router->get('/payments/paytr/frame/{merchantOid}', static function (array $para
 
 $router->post('/payments/paytr/callback', static function (): void {
     $payload=$_POST;
-    $config=\\App\\Core\\PaymentGatewayConfig::forProvider('paytr');
+    $config=\App\Core\PaymentGatewayConfig::forProvider('paytr');
     if(empty($config['configured'])){http_response_code(503);exit('Not configured');}
     $credentials=$config['credentials'];$oid=trim((string)($payload['merchant_oid']??''));
-    if($oid===''||!\\App\\Core\\PaymentSignatureVerifier::verifyPaytr($payload,(string)$credentials['merchant_key'],(string)$credentials['merchant_salt'])){http_response_code(400);exit('Invalid callback');}
+    if($oid===''||!\App\Core\PaymentSignatureVerifier::verifyPaytr($payload,(string)$credentials['merchant_key'],(string)$credentials['merchant_salt'])){http_response_code(400);exit('Invalid callback');}
     $pdo=Database::connection();
     $find=$pdo->prepare("SELECT id,booking_id,provider_reference,amount,currency,status FROM payment_transactions WHERE provider='paytr' AND provider_reference=? LIMIT 1");
     $find->execute([$oid]);$transaction=$find->fetch(PDO::FETCH_ASSOC);
@@ -1086,7 +1086,7 @@ $router->post('/payments/paytr/callback', static function (): void {
         'amount'=>number_format(((int)$total)/100,2,'.',''),'currency'=>strtoupper((string)$transaction['currency']),'status'=>$status==='success'?'paid':'failed'];
     $eventId=hash('sha256',$oid.'|'.$status.'|'.$total);
     try{
-        $result=(new \\App\\Core\\PaymentCallbackProcessor($pdo))->processVerified('paytr',$eventId,'iframe_payment_result',$oid,$payload,$callback);
+        $result=(new \App\Core\PaymentCallbackProcessor($pdo))->processVerified('paytr',$eventId,'iframe_payment_result',$oid,$payload,$callback);
         if(in_array($result['result']??'', ['processed','duplicate','already_applied','in_progress'],true)){http_response_code(200);exit('OK');}
         error_log('PayTR callback rejected after signature verification: '.(string)($result['result']??'unknown'));
         http_response_code(200);exit('OK');
