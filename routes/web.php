@@ -1583,9 +1583,9 @@ $router->post('/account/password', static function (): void {
     $pdo=Database::connection();$stmt=$pdo->prepare('SELECT password_hash FROM users WHERE id=? LIMIT 1');$stmt->execute([(int)$user['id']]);$hash=(string)($stmt->fetchColumn()?:'');
     if($current===''||!password_verify($current,$hash)){$_SESSION['villa_profile_error']='Mevcut şifreniz doğru değil.';redirect('/account/profile');}
     if(strlen($password)<12||strlen($password)>4096||!hash_equals($password,$confirm)){$_SESSION['villa_profile_error']='Yeni şifre en az 12 karakter olmalı ve tekrarıyla eşleşmelidir.';redirect('/account/profile');}
-    $save=$pdo->prepare('UPDATE users SET password_hash=?,updated_at=NOW() WHERE id=?');$save->execute([password_hash($password,PASSWORD_DEFAULT),(int)$user['id']]);
+    $save=$pdo->prepare('UPDATE users SET password_hash=?,session_version=session_version+1,updated_at=NOW() WHERE id=?');$save->execute([password_hash($password,PASSWORD_DEFAULT),(int)$user['id']]);
     $pdo->prepare("UPDATE account_security_tokens SET used_at=NOW() WHERE user_id=? AND used_at IS NULL")->execute([(int)$user['id']]);
-    session_regenerate_id(true);$_SESSION['villa_profile_notice']='Şifreniz güncellendi. Diğer açık şifre sıfırlama bağlantıları iptal edildi.';redirect('/account/profile');
+    session_regenerate_id(true);$_SESSION['user']['session_version']=(int)$_SESSION['user']['session_version']+1;$_SESSION['villa_profile_notice']='Şifreniz güncellendi. Diğer açık oturumlar ve şifre sıfırlama bağlantıları iptal edildi.';redirect('/account/profile');
 });
 $router->get('/forgot-password', static function (): void {
     header('Cache-Control: no-store');$message=(string)($_SESSION['villa_recovery_message']??'');unset($_SESSION['villa_recovery_message']);
@@ -1627,7 +1627,7 @@ $router->post('/reset-password', static function (): void {
     try{
         $pdo->beginTransaction();$find=$pdo->prepare("SELECT id,user_id FROM account_security_tokens WHERE purpose='password_reset' AND token_hash=? AND used_at IS NULL AND expires_at>NOW() LIMIT 1 FOR UPDATE");$find->execute([hash('sha256',$token)]);$record=$find->fetch(PDO::FETCH_ASSOC);
         if(!$record)throw new RuntimeException('Şifre yenileme bağlantısı geçersiz veya süresi dolmuş.');
-        $update=$pdo->prepare('UPDATE users SET password_hash=?,updated_at=NOW() WHERE id=? AND status=\'active\'');$update->execute([password_hash($password,PASSWORD_DEFAULT),(int)$record['user_id']]);
+        $update=$pdo->prepare('UPDATE users SET password_hash=?,session_version=session_version+1,updated_at=NOW() WHERE id=? AND status=\'active\'');$update->execute([password_hash($password,PASSWORD_DEFAULT),(int)$record['user_id']]);
         if($update->rowCount()!==1)throw new RuntimeException('Hesap güncellenemedi.');
         $pdo->prepare("UPDATE account_security_tokens SET used_at=NOW() WHERE user_id=? AND used_at IS NULL")->execute([(int)$record['user_id']]);$pdo->commit();
         Auth::logout();redirect('/login');
