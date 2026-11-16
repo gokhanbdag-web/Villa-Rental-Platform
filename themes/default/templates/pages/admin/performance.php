@@ -44,6 +44,12 @@ td.path{font-weight:750;color:#243b30;overflow-wrap:anywhere;max-width:340px}
 pre{white-space:pre-wrap;overflow-wrap:anywhere;max-height:240px;overflow:auto;background:#f6f8f6;border:1px solid #e5ece7;border-radius:8px;padding:10px;font-size:11px;color:#46564d}
 .note{padding:14px 17px;background:#f1f7f3;border:1px solid #dcebe0;border-radius:12px;color:#52665a;font-size:12px;line-height:1.6}
 .loading{padding:24px;text-align:center;color:#77847d}
+.cleanup-grid{display:grid;grid-template-columns:minmax(0,1fr) minmax(180px,220px) auto;gap:12px;align-items:end;padding:18px 20px}
+.field label{display:block;font-size:11px;font-weight:800;color:#65736b;margin-bottom:7px}
+.field select{width:100%;min-height:40px;border:1px solid #dce6df;border-radius:9px;padding:8px 10px;background:#fff;color:#263b31;font:inherit;font-size:12px}
+.cleanup-help{padding:0 20px 18px;color:#7a877f;font-size:12px;line-height:1.5}
+.cleanup-result{padding:0 20px 16px;color:#176b50;font-size:12px;font-weight:700}
+@media(max-width:760px){.cleanup-grid{grid-template-columns:1fr}.cleanup-grid .btn{width:100%}.cleanup-help,.cleanup-result{padding-left:15px;padding-right:15px}}
 @media(max-width:760px){.wrap{width:calc(100% - 24px);margin:20px auto 34px}.head{display:block}.actions{margin-top:14px}.cards{grid-template-columns:repeat(2,minmax(0,1fr));gap:9px}.card{padding:13px}.card .value{font-size:23px}.panel-head{align-items:flex-start;flex-direction:column;padding:15px}.filter{width:100%}}
 @media(max-width:380px){.cards{grid-template-columns:1fr 1fr}.card .value{font-size:21px}}
 </style>
@@ -61,6 +67,16 @@ pre{white-space:pre-wrap;overflow-wrap:anywhere;max-height:240px;overflow:auto;b
     <article class="card"><div class="label">En uzun SQL</div><div class="value" id="maxSql">—</div><div class="hint">Sorgu süresi</div></article>
   </section>
   <div class="note" id="diagnosticNote">Tanılama kayıtları yükleniyor…</div>
+  <section class="panel" aria-labelledby="cleanupTitle">
+    <div class="panel-head"><div><h2 id="cleanupTitle">Eski kayıtları temizle</h2><p>Yalnızca performans günlükleri etkilenir; rezervasyonlar ve site verileri silinmez.</p></div><span class="pill" id="logStorageCount">— kayıt</span></div>
+    <div class="cleanup-grid">
+      <div class="field"><label for="cleanupScope">Temizlenecek kayıt türü</label><select id="cleanupScope"><option value="performance">Yavaş HTTP istekleri</option><option value="slow_sql">Yavaş SQL sorguları</option><option value="all">Tüm tanılama kayıtları</option></select></div>
+      <div class="field"><label for="cleanupKeep">İşlemden sonra saklanacak son kayıt</label><select id="cleanupKeep"><option value="20">Son 20 kaydı sakla</option><option value="50">Son 50 kaydı sakla</option><option value="100">Son 100 kaydı sakla</option><option value="0">Tümünü sil</option></select></div>
+      <button class="btn primary" type="button" id="cleanupButton">Eski kayıtları temizle</button>
+    </div>
+    <div class="cleanup-help">Kayıtlar tarih damgası içermeyen eski günlük formatıyla da uyumlu olacak şekilde, en yeni satırlar korunarak temizlenir. İşlem geri alınamaz.</div>
+    <div class="cleanup-result" id="cleanupResult" role="status" aria-live="polite"></div>
+  </section>
   <section class="panel">
     <div class="panel-head"><div><h2>Yavaş HTTP istekleri</h2><p>İstek yolu, süre, HTTP durumu, bellek ve son ölçülen aşama</p></div><input class="filter" id="requestFilter" type="search" placeholder="İstek yolu veya aşama ara…"></div>
     <div class="table-wrap" id="requestTable"><div class="loading">Kayıtlar yükleniyor…</div></div>
@@ -74,6 +90,8 @@ pre{white-space:pre-wrap;overflow-wrap:anywhere;max-height:240px;overflow:auto;b
 <script>
 (() => {
   const endpoint = <?= json_encode(app_url('/admin/performance/data'), JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE) ?>;
+  const cleanupEndpoint = <?= json_encode(app_url('/admin/performance/cleanup'), JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE) ?>;
+  const csrfToken = <?= json_encode(csrf_token(), JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE) ?>;
   const $ = id => document.getElementById(id);
   let requests = [], sqlRows = [];
   const esc = value => String(value ?? '').replace(/[&<>"']/g, ch => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]));
@@ -124,6 +142,8 @@ pre{white-space:pre-wrap;overflow-wrap:anywhere;max-height:240px;overflow:auto;b
       if(!response.ok) throw new Error('Sunucu '+response.status+' yanıtı verdi. Yetkinizi ve oturumunuzu kontrol edin.');
       const data=await response.json();
       requests=parseRows(data.performance); sqlRows=parseRows(data.slow_sql);
+      const counts=data.log_counts||{};
+      $('logStorageCount').textContent=(Number(counts.performance||0)+Number(counts.slow_sql||0)).toLocaleString('tr-TR')+' kayıt';
       $('diagnosticNote').textContent=data.note||'Performans kayıtları başarıyla yüklendi.';
       render();
       $('updatedAt').textContent='Son güncelleme: '+new Date().toLocaleString('tr-TR');
@@ -134,6 +154,23 @@ pre{white-space:pre-wrap;overflow-wrap:anywhere;max-height:240px;overflow:auto;b
     } finally {button.disabled=false;button.textContent='Yenile';}
   }
   $('refresh').addEventListener('click',load);
+  $('cleanupButton').addEventListener('click',async()=>{
+    const scope=$('cleanupScope').value, keep=Number($('cleanupKeep').value);
+    const labels={performance:'yavaş HTTP istekleri',slow_sql:'yavaş SQL sorguları',all:'tüm tanılama kayıtları'};
+    const action=keep===0?'tamamen silinecek':'son '+keep+' kayıt korunarak eski satırlar silinecek';
+    if(!window.confirm(labels[scope]+' '+action+'. Bu işlem geri alınamaz. Devam edilsin mi?'))return;
+    const button=$('cleanupButton');button.disabled=true;button.textContent='Temizleniyor…';$('cleanupResult').textContent='';
+    try{
+      const body=new URLSearchParams({_csrf:csrfToken,scope,keep_last:String(keep)});
+      const response=await fetch(cleanupEndpoint,{method:'POST',credentials:'same-origin',headers:{'Accept':'application/json','X-Requested-With':'XMLHttpRequest','Content-Type':'application/x-www-form-urlencoded;charset=UTF-8'},body});
+      const result=await response.json();
+      if(!response.ok||!result.success)throw new Error(result.error||'Temizleme işlemi başarısız oldu.');
+      const removed=Object.values(result.results||{}).reduce((sum,item)=>sum+Number(item.removed||0),0);
+      $('cleanupResult').textContent=removed.toLocaleString('tr-TR')+' eski kayıt silindi. Kalan kayıtlar: '+Object.values(result.results||{}).reduce((sum,item)=>sum+Number(item.remaining||0),0).toLocaleString('tr-TR')+'.';
+      await load();
+    }catch(error){$('cleanupResult').textContent='Temizleme hatası: '+error.message;}
+    finally{button.disabled=false;button.textContent='Eski kayıtları temizle';}
+  });
   $('requestFilter').addEventListener('input',()=>{$('requestTable').innerHTML=table(requests,'requests',$('requestFilter').value);});
   $('sqlFilter').addEventListener('input',()=>{$('sqlTable').innerHTML=table(sqlRows,'sql',$('sqlFilter').value);});
   load();
