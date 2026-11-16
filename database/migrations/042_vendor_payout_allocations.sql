@@ -2,7 +2,7 @@
 ALTER TABLE vendors
     ADD COLUMN payout_bank_name VARCHAR(120) NULL,
     ADD COLUMN payout_account_holder VARCHAR(190) NULL,
-    ADD COLUMN payout_iban VARCHAR(34) NULL;
+    ADD COLUMN payout_iban VARCHAR(255) NULL;
 
 CREATE TABLE IF NOT EXISTS vendor_payout_allocations (
     id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
