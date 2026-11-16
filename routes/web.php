@@ -3033,7 +3033,7 @@ $router->post('/admin/finance/refund/iyzico', static function (): void {
     if(empty($_POST['confirm_real_refund'])){http_response_code(422);exit('Gerçek iade işlemi için açık onay gereklidir.');}
     $pdo=Database::connection();
     try{
-        $result=\\App\\Core\\PaymentRefundService::refundIyzico($pdo,(int)Auth::user()['id'],(int)($_POST['payment_transaction_id']??0),(string)($_POST['amount']??''),(string)($_POST['reason']??''));
+        $result=\App\Core\PaymentRefundService::refundIyzico($pdo,(int)Auth::user()['id'],(int)($_POST['payment_transaction_id']??0),(string)($_POST['amount']??''),(string)($_POST['reason']??''));
         $_SESSION['villa_admin_refund_message']='iyzico iadesi başarıyla tamamlandı: '.$result['amount'].' '.$result['currency'].' (İade #'.$result['id'].').';
         $_SESSION['villa_admin_refund_message_type']='success';
     }catch(Throwable $e){
