@@ -8,6 +8,41 @@ use Throwable;
 
 final class PaymentRefundService
 {
+    private static function ensureVerifiedPaymentDetails(PDO $pdo, int $paymentTransactionId): void
+    {
+        $stmt=$pdo->prepare('SELECT id,provider,provider_reference,amount,currency,status,request_payload,response_payload FROM payment_transactions WHERE id=? LIMIT 1');
+        $stmt->execute([$paymentTransactionId]);$payment=$stmt->fetch(PDO::FETCH_ASSOC);
+        if(!$payment||(string)$payment['provider']!=='iyzico'||(string)$payment['status']!=='paid') throw new \RuntimeException('İade için tahsil edilmiş iyzico ödemesi bulunamadı.');
+        $stored=json_decode((string)$payment['response_payload'],true);
+        if(is_array($stored)&&trim((string)($stored['verified_checkout_form']['paymentId']??''))!=='') return;
+
+        $request=json_decode((string)$payment['request_payload'],true);
+        $token=trim((string)$payment['provider_reference']);
+        $conversationId=is_array($request)?trim((string)($request['conversationId']??'')):'';
+        $basketId=is_array($request)?trim((string)($request['basketId']??'')):'';
+        $environment=is_array($request)?(string)($request['environment']??'sandbox'):'sandbox';
+        if($token===''||$conversationId===''||$basketId===''||!in_array($environment,['sandbox','production'],true)) {
+            throw new \RuntimeException('Eski ödeme kaydında iyzico ödeme kimliğini doğrulamak için gereken yerel referanslar eksik.');
+        }
+        $config=PaymentGatewayConfig::forProvider('iyzico');
+        if(empty($config['configured'])) throw new \RuntimeException('iyzico bağlantı bilgileri yapılandırılmamış.');
+        $config['environment']=$environment;
+        $result=IyzicoApiClient::retrieveCheckoutForm($config,$token,$conversationId);
+        $secret=(string)($config['credentials']['secret_key']??'');
+        if(strtolower((string)($result['status']??''))!=='success'
+            ||!PaymentSignatureVerifier::verifyIyzicoCheckoutFormRetrieve($result,$secret)
+            ||!hash_equals($conversationId,(string)($result['conversationId']??''))
+            ||!hash_equals($basketId,(string)($result['basketId']??''))
+            ||strtoupper((string)($result['paymentStatus']??''))!=='SUCCESS'
+            ||(int)($result['fraudStatus']??-1)!==1
+            ||self::toMinorUnits((string)($result['paidPrice']??''))!==self::toMinorUnits((string)$payment['amount'])
+            ||strtoupper((string)($result['currency']??''))!==strtoupper((string)$payment['currency'])) {
+            throw new \RuntimeException('iyzico ödeme ayrıntıları iade öncesi yeniden doğrulanamadı.');
+        }
+        self::storeVerifiedPaymentDetails($pdo,$paymentTransactionId,(string)$payment['response_payload'],$result);
+    }
+
+
     public static function storeVerifiedPaymentDetails(PDO $pdo, int $paymentTransactionId, string $existingPayload, array $verified): void
     {
         $paymentId=trim((string)($verified['paymentId']??''));
@@ -33,6 +68,7 @@ final class PaymentRefundService
         }
         $amountCents = self::toMinorUnits($amount);
         if ($amountCents < 1) throw new \InvalidArgumentException('İade tutarı sıfırdan büyük ve en fazla iki ondalık basamaklı olmalıdır.');
+        self::ensureVerifiedPaymentDetails($pdo,$paymentTransactionId);
 
         $reserved = self::reserve($pdo, $actorUserId, $paymentTransactionId, $amountCents, trim($reason));
         $refundId = (int)$reserved['id'];
