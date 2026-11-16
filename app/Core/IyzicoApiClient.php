@@ -85,7 +85,6 @@ final class IyzicoApiClient
             $code = trim((string)($decoded['errorCode'] ?? ''));
             throw new \RuntimeException('iyzico API testi başarısız' . ($code !== '' ? ' (' . $code . ')' : '') . ($message !== '' ? ': ' . $message : '.'));
         }
-        }
         return $decoded;
     }
 
