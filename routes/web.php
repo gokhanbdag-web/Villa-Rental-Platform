@@ -1809,7 +1809,7 @@ $router->post('/vendor/properties/calendar-feed/add', static function (): void {
     $vendorStmt=$pdo->prepare('SELECT id,status FROM vendors WHERE user_id=? LIMIT 1');$vendorStmt->execute([$userId]);$vendor=$vendorStmt->fetch(PDO::FETCH_ASSOC);$pid=(int)($_POST['property_id']??0);
     if(!$vendor||!Auth::canManageVendorBookings((string)$vendor['status'])){http_response_code(403);return;}
     $own=$pdo->prepare('SELECT id FROM properties WHERE id=? AND vendor_id=? LIMIT 1');$own->execute([$pid,(int)$vendor['id']]);if(!$own->fetchColumn()){http_response_code(404);return;}
-    try{\\App\\Core\\CalendarSyncService::createImportFeed($pdo,$pid,(string)($_POST['label']??''),(string)($_POST['url']??''));$_SESSION['villa_calendar_message']='Harici takvim kaynağı eklendi.';$_SESSION['villa_calendar_message_type']='success';}
+    try{\App\Core\CalendarSyncService::createImportFeed($pdo,$pid,(string)($_POST['label']??''),(string)($_POST['url']??''));$_SESSION['villa_calendar_message']='Harici takvim kaynağı eklendi.';$_SESSION['villa_calendar_message_type']='success';}
     catch(Throwable $e){$_SESSION['villa_calendar_message']=$e->getMessage();$_SESSION['villa_calendar_message_type']='error';}
     redirect('/vendor/properties/'.$pid.'/calendar-sync');
 });
@@ -1819,7 +1819,7 @@ $router->post('/vendor/properties/calendar-feed/export', static function (): voi
     if(!$vendor||!Auth::canManageVendorBookings((string)$vendor['status'])){http_response_code(403);return;}
     $own=$pdo->prepare('SELECT title FROM properties WHERE id=? AND vendor_id=? LIMIT 1');$own->execute([$pid,(int)$vendor['id']]);$title=(string)($own->fetchColumn()?:'');
     if($title===''){http_response_code(404);return;}
-    try{$created=\\App\\Core\\CalendarSyncService::createExportFeed($pdo,$pid,$title.' takvimi');$_SESSION['villa_calendar_export_url']=app_url('/calendar/export/'.$created['token']);$_SESSION['villa_calendar_message']='Dışa aktarma bağlantısı oluşturuldu. Güvenli yerde saklayın.';$_SESSION['villa_calendar_message_type']='success';}
+    try{$created=\App\Core\CalendarSyncService::createExportFeed($pdo,$pid,$title.' takvimi');$_SESSION['villa_calendar_export_url']=app_url('/calendar/export/'.$created['token']);$_SESSION['villa_calendar_message']='Dışa aktarma bağlantısı oluşturuldu. Güvenli yerde saklayın.';$_SESSION['villa_calendar_message_type']='success';}
     catch(Throwable $e){$_SESSION['villa_calendar_message']=$e->getMessage();$_SESSION['villa_calendar_message_type']='error';}
     redirect('/vendor/properties/'.$pid.'/calendar-sync');
 });
@@ -1828,7 +1828,7 @@ $router->post('/vendor/properties/calendar-feed/sync', static function (): void 
     $vendorStmt=$pdo->prepare('SELECT id,status FROM vendors WHERE user_id=? LIMIT 1');$vendorStmt->execute([$userId]);$vendor=$vendorStmt->fetch(PDO::FETCH_ASSOC);
     if(!$vendor||!Auth::canManageVendorBookings((string)$vendor['status'])){http_response_code(403);return;}
     $own=$pdo->prepare('SELECT id FROM properties WHERE id=? AND vendor_id=? LIMIT 1');$own->execute([$pid,(int)$vendor['id']]);if(!$own->fetchColumn()){http_response_code(404);return;}
-    try{$result=\\App\\Core\\CalendarSyncService::syncFeed($pdo,$feedId);$_SESSION['villa_calendar_message']=$result['blocked'].' tarih aralığı engellendi; '.$result['conflicts'].' rezervasyon çakışması atlandı.';$_SESSION['villa_calendar_message_type']='success';}
+    try{$result=\App\Core\CalendarSyncService::syncFeed($pdo,$feedId);$_SESSION['villa_calendar_message']=$result['blocked'].' tarih aralığı engellendi; '.$result['conflicts'].' rezervasyon çakışması atlandı.';$_SESSION['villa_calendar_message_type']='success';}
     catch(Throwable $e){$_SESSION['villa_calendar_message']=$e->getMessage();$_SESSION['villa_calendar_message_type']='error';}
     redirect('/vendor/properties/'.$pid.'/calendar-sync');
 });
@@ -1837,7 +1837,7 @@ $router->post('/vendor/properties/calendar-feed/delete', static function (): voi
     $vendorStmt=$pdo->prepare('SELECT id,status FROM vendors WHERE user_id=? LIMIT 1');$vendorStmt->execute([$userId]);$vendor=$vendorStmt->fetch(PDO::FETCH_ASSOC);
     if(!$vendor||!Auth::canManageVendorBookings((string)$vendor['status'])){http_response_code(403);return;}
     $own=$pdo->prepare('SELECT id FROM properties WHERE id=? AND vendor_id=? LIMIT 1');$own->execute([$pid,(int)$vendor['id']]);if(!$own->fetchColumn()){http_response_code(404);return;}
-    try{\\App\\Core\\CalendarSyncService::deleteFeed($pdo,$feedId,$pid);$_SESSION['villa_calendar_message']='Takvim bağlantısı kaldırıldı ve içe aktarılan tarih blokları silindi.';$_SESSION['villa_calendar_message_type']='success';}
+    try{\App\Core\CalendarSyncService::deleteFeed($pdo,$feedId,$pid);$_SESSION['villa_calendar_message']='Takvim bağlantısı kaldırıldı ve içe aktarılan tarih blokları silindi.';$_SESSION['villa_calendar_message_type']='success';}
     catch(Throwable $e){$_SESSION['villa_calendar_message']=$e->getMessage();$_SESSION['villa_calendar_message_type']='error';}
     redirect('/vendor/properties/'.$pid.'/calendar-sync');
 });
@@ -3115,22 +3115,22 @@ $router->post('/admin/finance/payout/update', static function (): void {
 });
 
 $router->get('/calendar/export/{token}', static function (array $params): void {
-    $pdo=Database::connection();$feed=\\App\\Core\\CalendarSyncService::exportFeed($pdo,(string)($params['token']??''));
+    $pdo=Database::connection();$feed=\App\Core\CalendarSyncService::exportFeed($pdo,(string)($params['token']??''));
     if(!$feed){http_response_code(404);exit('Calendar feed not found.');}
-    $calendar=\\App\\Core\\CalendarSyncService::exportIcs($pdo,(int)$feed['property_id']);
+    $calendar=\App\Core\CalendarSyncService::exportIcs($pdo,(int)$feed['property_id']);
     header('Content-Type: text/calendar; charset=utf-8');header('Content-Disposition: inline; filename="villa-calendar.ics"');header('Cache-Control: no-store, max-age=0');header('X-Content-Type-Options: nosniff');
     echo $calendar;exit;
 });
 $router->get('/cron/calendar-sync', static function (): void {
     $pdo=Database::connection();
-    if(!\\App\\Core\\CalendarSyncService::verifyCronToken($pdo,(string)($_GET['token']??''))){http_response_code(403);header('Content-Type:text/plain; charset=utf-8');exit('Forbidden');}
-    try{$result=\\App\\Core\\CalendarSyncService::cronSync($pdo);header('Content-Type:text/plain; charset=utf-8');echo 'Calendar sync completed. Total: '.$result['total'].'; success: '.$result['success'].'; failed: '.$result['failed'];}
+    if(!\App\Core\CalendarSyncService::verifyCronToken($pdo,(string)($_GET['token']??''))){http_response_code(403);header('Content-Type:text/plain; charset=utf-8');exit('Forbidden');}
+    try{$result=\App\Core\CalendarSyncService::cronSync($pdo);header('Content-Type:text/plain; charset=utf-8');echo 'Calendar sync completed. Total: '.$result['total'].'; success: '.$result['success'].'; failed: '.$result['failed'];}
     catch(Throwable $e){error_log('Calendar cron failed: '.$e->getMessage());http_response_code(500);header('Content-Type:text/plain; charset=utf-8');echo 'Calendar sync failed.';}
     exit;
 });
 $router->get('/admin/calendar-sync', static function (): void {
     Auth::requireRole(['super_admin','admin']);$pdo=Database::connection();
-    $cronToken=\\App\\Core\\CalendarSyncService::cronToken($pdo);
+    $cronToken=\App\Core\CalendarSyncService::cronToken($pdo);
     $cronUrl=app_url('/cron/calendar-sync?token='.rawurlencode($cronToken));
     $feeds=$pdo->query('SELECT f.id,f.label,f.direction,f.enabled,f.last_sync_status,f.last_sync_message,f.last_synced_at,p.title AS property_title,p.city FROM property_calendar_feeds f JOIN properties p ON p.id=f.property_id ORDER BY f.id DESC LIMIT 100')->fetchAll(PDO::FETCH_ASSOC);
     $calendarMessage=(string)($_SESSION['villa_admin_calendar_message']??'');unset($_SESSION['villa_admin_calendar_message']);
@@ -3138,13 +3138,13 @@ $router->get('/admin/calendar-sync', static function (): void {
 });
 $router->post('/admin/calendar-sync/rotate-token', static function (): void {
     Auth::requireRole(['super_admin','admin']);verify_csrf();$pdo=Database::connection();
-    \\App\\Core\\CalendarSyncService::rotateCronToken($pdo);
+    \App\Core\CalendarSyncService::rotateCronToken($pdo);
     $_SESSION['villa_admin_calendar_message']='Cron tokeni yenilendi. Önceki Cron URL artık çalışmayacak.';
     redirect('/admin/calendar-sync');
 });
 $router->post('/admin/calendar-sync/run-now', static function (): void {
     Auth::requireRole(['super_admin','admin']);verify_csrf();$pdo=Database::connection();
-    try{$result=\\App\\Core\\CalendarSyncService::cronSync($pdo);$_SESSION['villa_admin_calendar_message']='Senkronizasyon tamamlandı. Başarılı: '.$result['success'].'; başarısız: '.$result['failed'].'.';}
+    try{$result=\App\Core\CalendarSyncService::cronSync($pdo);$_SESSION['villa_admin_calendar_message']='Senkronizasyon tamamlandı. Başarılı: '.$result['success'].'; başarısız: '.$result['failed'].'.';}
     catch(Throwable $e){$_SESSION['villa_admin_calendar_message']=$e->getMessage();}
     redirect('/admin/calendar-sync');
 });
