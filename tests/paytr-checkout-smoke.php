@@ -16,7 +16,7 @@ foreach([
     'verifyPaytr($payload',
 ] as $needle) paytrCheckoutAssert(str_contains($routes,$needle),'Missing PayTR integration route or verification: '.$needle);
 $view=(string)file_get_contents(dirname(__DIR__).'/themes/default/templates/pages/paytr-iframe.php');
-paytrCheckoutAssert(str_contains($view,'https://www.paytr.com/odeme/guvenli/'),'Hosted PayTR iFrame URL missing.');
+paytrCheckoutAssert(str_contains($routes,'https://www.paytr.com/odeme/guvenli/'),'Hosted PayTR iFrame URL missing.');
 paytrCheckoutAssert(str_contains($view,'id="paytriframe"'),'PayTR iframe element missing.');
 $checkout=(string)file_get_contents(dirname(__DIR__).'/themes/default/templates/pages/checkout.php');
 paytrCheckoutAssert(str_contains($checkout,"'/paytr/start'))"),'Customer checkout does not expose PayTR.');
