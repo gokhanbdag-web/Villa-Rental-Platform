@@ -95,6 +95,8 @@ jobs:
         run: php tests/navigation-blog-archive-smoke.php
       - name: Run SMTP message validation smoke test
         run: php tests/email-delivery-smoke.php
+      - name: Run account profile and security smoke tests
+        run: php tests/account-security-smoke.php
       - name: Run iCalendar parser and SSRF validation smoke tests
         run: php tests/ical-calendar-smoke.php
       - name: Run seasonal pricing precedence smoke tests
