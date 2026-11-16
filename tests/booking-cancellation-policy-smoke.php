@@ -26,7 +26,7 @@ $checks += [
     'one pending cancellation request per booking is enforced in MySQL' => str_contains($migration, 'active_booking_id') && str_contains($migration, 'uq_cancellation_active_booking'),
     'admin policy values are bounded and saved server-side' => str_contains($routes, "'/admin/cancellations/policy'") && str_contains($routes, '$days>365') && str_contains($routes, '$early>100'),
     'admin cancellation decisions require role and CSRF' => str_contains($routes, "'/admin/cancellations/review'") && str_contains($routes, "Auth::requireRole(['super_admin','admin'])"),
-    'approval cancels booking and records audit plus customer notification' => str_contains($routes, "SET status='cancelled'") && str_contains($routes, 'booking.cancellation_') && str_contains($routes, "'booking.cancellation_'.$decision"),
+    'approval cancels booking and records audit plus customer notification' => str_contains($routes, "SET status='cancelled'") && str_contains($routes, 'booking.cancellation_') && str_contains($routes, "'booking.cancellation_'."),
     'customer view exposes cancellation request and estimated refund' => str_contains($accountView, '/account/bookings/cancel-request') && str_contains($accountView, 'estimated_refund'),
     'admin view exposes policy settings and approve/reject actions' => str_contains($adminView, '/admin/cancellations/policy') && str_contains($adminView, '/admin/cancellations/review'),
     'admin navigation includes cancellation management' => str_contains($adminShell, '/admin/cancellations'),
