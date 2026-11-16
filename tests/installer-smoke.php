@@ -118,6 +118,19 @@ try {
     assertSmoke($migrationCount >= 20, 'Expected database migrations were not applied.');
     $emailQueueTable = (int)$pdo->query("SELECT COUNT(*) FROM information_schema.TABLES WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='email_queue'")->fetchColumn();
     assertSmoke($emailQueueTable === 1, 'Email delivery queue migration did not create its table.');
+
+    $seasonTable=(int)$pdo->query("SELECT COUNT(*) FROM information_schema.TABLES WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='property_seasonal_prices'")->fetchColumn();
+    assertSmoke($seasonTable===1,'Seasonal property pricing migration did not create its table.');
+    $seasonFrom=(new DateTimeImmutable('+400 days'))->format('Y-m-d');
+    $seasonTo=(new DateTimeImmutable('+402 days'))->format('Y-m-d');
+    $seasonInsert=$pdo->prepare('INSERT INTO property_seasonal_prices(property_id,name,date_from,date_to,nightly_price,created_at) VALUES(?,?,?,?,?,NOW())');
+    $seasonInsert->execute([(int)$property['id'],'Installer seasonal pricing smoke',$seasonFrom,$seasonTo,432.10]);
+    $seasonLookup=$pdo->prepare('SELECT name,date_from,date_to,nightly_price FROM property_seasonal_prices WHERE property_id=? AND name=?');
+    $seasonLookup->execute([(int)$property['id'],'Installer seasonal pricing smoke']);$seasonRow=$seasonLookup->fetch(PDO::FETCH_ASSOC);
+    $seasonTotal=\\App\\Core\\BookingRateCalculator::staySubtotal($property,new DateTimeImmutable($seasonFrom),new DateTimeImmutable($seasonTo),[$seasonRow]);
+    assertSmoke($seasonRow&&$seasonTotal===864.2,'MySQL seasonal price could not be loaded into the shared booking rate calculator.');
+    $seasonDelete=$pdo->prepare('DELETE FROM property_seasonal_prices WHERE property_id=? AND name=?');$seasonDelete->execute([(int)$property['id'],'Installer seasonal pricing smoke']);
+    assertSmoke(str_contains($webRoutesSource,'/admin/properties/{id}/seasonal-pricing')&&str_contains($webRoutesSource,'/vendor/properties/{id}/seasonal-pricing')&&substr_count($webRoutesSource,'BookingRateCalculator::staySubtotal')>=3,'Seasonal pricing management routes or booking quote integration are missing.');
     \App\Core\EmailService::enqueue($pdo,'mail.smoke@example.test','Smoke email','<p>Smoke email body</p>','Smoke email body','smoke.email.event');
     \App\Core\EmailService::enqueue($pdo,'mail.smoke@example.test','Smoke email duplicate','<p>Duplicate</p>','Duplicate','smoke.email.event');
     $queuedEmailCount = (int)$pdo->query("SELECT COUNT(*) FROM email_queue WHERE event_key='smoke.email.event'")->fetchColumn();
