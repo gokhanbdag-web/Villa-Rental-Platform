@@ -50,10 +50,10 @@ pre{white-space:pre-wrap;overflow-wrap:anywhere;max-height:240px;overflow:auto;b
 </head>
 <body>
 <main class="wrap">
-  <header class="head">
+  <div class="head">
     <div><h1>Sistem tanılama</h1><div class="sub">Yavaş istekleri ve SQL sorgularını okunabilir şekilde inceleyin. Kayıtlar sunucudaki son günlük satırlarından alınır.</div></div>
     <div class="actions"><button class="btn" type="button" id="refresh">Yenile</button><a class="btn" href="<?= e(app_url('/admin')) ?>">Yönetim paneline dön</a></div>
-  </header>
+  </div>
   <section class="cards" aria-label="Tanılama özeti">
     <article class="card"><div class="label">Yavaş istek kaydı</div><div class="value" id="requestCount">—</div><div class="hint">Son günlük kayıtları</div></article>
     <article class="card"><div class="label">Yavaş SQL kaydı</div><div class="value" id="sqlCount">—</div><div class="hint">Son günlük kayıtları</div></article>
@@ -73,7 +73,7 @@ pre{white-space:pre-wrap;overflow-wrap:anywhere;max-height:240px;overflow:auto;b
 </main>
 <script>
 (() => {
-  const endpoint = <?= json_encode(app_url('/admin/performance/diagnostics'), JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE) ?>;
+  const endpoint = <?= json_encode(app_url('/admin/performance/data'), JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE) ?>;
   const $ = id => document.getElementById(id);
   let requests = [], sqlRows = [];
   const esc = value => String(value ?? '').replace(/[&<>"']/g, ch => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]));
