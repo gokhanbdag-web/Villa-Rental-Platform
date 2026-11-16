@@ -281,7 +281,7 @@ try {
 
     $iyzicoClientSource = (string)file_get_contents($root . '/app/Core/IyzicoApiClient.php');
     assertSmoke(str_contains($iyzicoClientSource, 'IYZWSv2 ') && str_contains($iyzicoClientSource, 'hash_hmac') && str_contains($iyzicoClientSource, '/payment/bin/check'), 'Native iyzico connection client must use HMAC authentication and a non-payment BIN check.');
-    assertSmoke(str_contains($iyzicoClientSource, 'sandbox-api.iyzipay.com') && str_contains($iyzicoClientSource, 'CURLOPT_SSL_VERIFYPEER => true'), 'iyzico client must target both supported environments and verify TLS certificates.');
+    assertSmoke(str_contains($iyzicoClientSource, 'sandbox-api.iyzipay.com') && str_contains($iyzicoClientSource, 'api.iyzipay.com') && str_contains($iyzicoClientSource, 'CURLOPT_SSL_VERIFYPEER => true'), 'iyzico client must target both supported environments and verify TLS certificates.');
     assertSmoke(str_contains($iyzicoClientSource, 'function testSandboxConnection') && str_contains($iyzicoClientSource, 'binNumber'), 'iyzico admin connection test must use a non-payment BIN lookup.');
     assertSmoke(str_contains($themeRoutesSource, 'test_iyzico_sandbox') && str_contains($themeRoutesSource, 'IyzicoApiClient::testConnection'), 'Admin settings must expose the selected-environment iyzico connection test.');
     assertSmoke(str_contains($themeRoutesSource, "/checkout/{bookingCode}/iyzico/start") && str_contains($themeRoutesSource, "/payments/iyzico/callback"), 'iyzico Checkout Form start and callback routes must be registered.');
@@ -296,7 +296,7 @@ assertSmoke(str_contains($themeRoutesSource, "'sandbox-cpp.iyzipay.com'") && str
     $paymentSettingsViewSource = (string)file_get_contents($root . '/themes/default/templates/pages/admin/settings.php');
     assertSmoke(str_contains($paymentSettingsViewSource, '/payments/iyzico/webhook') && str_contains($paymentSettingsViewSource, 'Webhook V3'), 'Admin payment settings must display the iyzico webhook endpoint and setup note.');
 
-    assertSmoke(str_contains($themeRoutesSource, "fraudStatus") && str_contains($themeRoutesSource, "$paymentEnvironment=(string)") && str_contains($themeRoutesSource, "'environment'=>$paymentEnvironment"), 'iyzico checkout must honor fraud review and persist the selected Sandbox or Production environment.');
+    assertSmoke(str_contains($themeRoutesSource, "fraudStatus") && str_contains($themeRoutesSource, '$paymentEnvironment=(string)') && str_contains($themeRoutesSource, "'environment'=>$paymentEnvironment"), 'iyzico checkout must honor fraud review and persist the selected Sandbox or Production environment.');
     $checkoutViewSource = (string)file_get_contents($root . '/themes/default/templates/pages/checkout.php');
     assertSmoke(str_contains($checkoutViewSource, 'iyzico güvenli ödeme sayfasına git') && str_contains($checkoutViewSource, 'identity_number') && str_contains($checkoutViewSource, 'billing_address') && !str_contains($checkoutViewSource, 'checkout-iframe-shell') && !str_contains($checkoutViewSource, 'iyzipay-checkout-form'), 'Booking checkout must collect buyer billing details and send the customer to iyzico hosted checkout instead of embedding it.');
     assertSmoke(str_contains($themeRoutesSource, "/payment/") && str_contains($themeRoutesSource, "foreach(['success','failed','review']") && str_contains($themeRoutesSource, "payment-result.php") && str_contains($themeRoutesSource, "paymentToken"), 'iyzico callback must return to token-bound local success, failure or review result pages.');
