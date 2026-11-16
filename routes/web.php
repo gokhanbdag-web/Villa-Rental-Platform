@@ -729,8 +729,7 @@ $router->get('/konaklamalar', static function (): void {
 });
 
 $router->get('/destinasyonlar', static function (): void {
-    $pdo=Database::connection();$user=Auth::user();$locale='tr';
-    try{$locale=(string)($pdo->query("SELECT setting_value FROM settings WHERE setting_key='app.locale' LIMIT 1")->fetchColumn() ?: 'tr');}catch(Throwable $e){}
+    $pdo=Database::connection();$user=Auth::user();$locale=Translator::locale();
     $contentStmt=$pdo->prepare('SELECT content_key,content_value FROM site_content WHERE language_code=?');$contentStmt->execute([$locale]);$content=$contentStmt->fetchAll(PDO::FETCH_KEY_PAIR);
     $navigation=villa_navigation_tree($pdo,'header',$locale);$footerNavigation=villa_navigation_tree($pdo,'footer',$locale);
     $destinationsSql = "SELECT l.id AS location_id,l.name AS city,COUNT(DISTINCT p.id) AS property_count,(SELECT pm.file_path FROM property_media pm JOIN properties p2 ON p2.id=pm.property_id WHERE p2.status='published' AND p2.location_city_id=l.id ORDER BY pm.is_cover DESC,pm.sort_order,pm.id LIMIT 1) AS cover_image FROM locations l JOIN properties p ON p.location_city_id=l.id AND p.status='published' WHERE l.location_type='city' AND l.is_active=1 GROUP BY l.id,l.name,l.sort_order ORDER BY property_count DESC,l.sort_order,l.name";
@@ -1362,8 +1361,7 @@ $router->post('/account/messages/send', static function (): void {
 $router->get('/karsilastir', static function (): void {
     $pdo = Database::connection();
     $user = Auth::user();
-    $locale = 'tr';
-    try { $locale = (string)($pdo->query("SELECT setting_value FROM settings WHERE setting_key='app.locale' LIMIT 1")->fetchColumn() ?: 'tr'); } catch (Throwable $e) {}
+    $locale = Translator::locale();
     $contentStmt = $pdo->prepare('SELECT content_key,content_value FROM site_content WHERE language_code=?');
     $contentStmt->execute([$locale]);
     $content = $contentStmt->fetchAll(PDO::FETCH_KEY_PAIR);
@@ -2309,15 +2307,16 @@ $router->post('/admin/pages/save', static function (): void {
     redirect('/admin/pages');
 });
 $router->get('/page/{slug}', static function (array $params): void {
-    $s=Database::connection()->prepare("SELECT * FROM cms_pages WHERE slug=? AND language_code='tr' AND status='published' LIMIT 1");$s->execute([$params['slug']]);$page=$s->fetch();
-    if(!$page){http_response_code(404);echo 'Sayfa bulunamadı.';return;}
     $pdo=Database::connection();
-    $content=$pdo->query("SELECT content_key,content_value FROM site_content WHERE language_code='tr'")->fetchAll(PDO::FETCH_KEY_PAIR);
+    $locale=Translator::locale();
+    $s=$pdo->prepare("SELECT * FROM cms_pages WHERE slug=? AND language_code=? AND status='published' LIMIT 1");$s->execute([$params['slug'],$locale]);$page=$s->fetch();
+    if(!$page){http_response_code(404);echo 'Sayfa bulunamadı.';return;}
+    $contentStmt=$pdo->prepare('SELECT content_key,content_value FROM site_content WHERE language_code=?');$contentStmt->execute([$locale]);$content=$contentStmt->fetchAll(PDO::FETCH_KEY_PAIR);
     $siteName=$content['site_name']??'VillaStay';
-    $navigation=villa_navigation_tree($pdo,'header','tr');
-    $footerNavigation=villa_navigation_tree($pdo,'footer','tr');
+    $navigation=villa_navigation_tree($pdo,'header',$locale);
+    $footerNavigation=villa_navigation_tree($pdo,'footer',$locale);
     $mode=(string)($pdo->query("SELECT setting_value FROM settings WHERE setting_key='app.mode' LIMIT 1")->fetchColumn() ?: 'single_vendor');
-    $user=Auth::user(); $locale='tr';
+    $user=Auth::user();
     $destinations=[];$featuredProperties=[];$latestProperties=[];$categories=[];$stylePhotos=[];
     $blogPosts=$pdo->query("SELECT id,title,slug,excerpt,featured_image,published_at FROM blog_posts WHERE status='published' AND (published_at IS NULL OR published_at<=NOW()) ORDER BY COALESCE(published_at,created_at) DESC,id DESC LIMIT 12")->fetchAll(PDO::FETCH_ASSOC);
     ThemeManager::render('page.php', get_defined_vars());
