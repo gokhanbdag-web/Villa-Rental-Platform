@@ -3028,6 +3028,22 @@ $router->post('/admin/payment-tests', static function (): void {
     }    ThemeManager::renderTemplate('templates/pages/admin/payment-tests.php', get_defined_vars());
 });
 
+$router->post('/admin/finance/refund/iyzico', static function (): void {
+    Auth::requireRole(['super_admin','admin']);verify_csrf();
+    if(empty($_POST['confirm_real_refund'])){http_response_code(422);exit('Gerçek iade işlemi için açık onay gereklidir.');}
+    $pdo=Database::connection();
+    try{
+        $result=\\App\\Core\\PaymentRefundService::refundIyzico($pdo,(int)Auth::user()['id'],(int)($_POST['payment_transaction_id']??0),(string)($_POST['amount']??''),(string)($_POST['reason']??''));
+        $_SESSION['villa_admin_refund_message']='iyzico iadesi başarıyla tamamlandı: '.$result['amount'].' '.$result['currency'].' (İade #'.$result['id'].').';
+        $_SESSION['villa_admin_refund_message_type']='success';
+    }catch(Throwable $e){
+        error_log('iyzico refund action: '.$e->getMessage());
+        $_SESSION['villa_admin_refund_message']=$e->getMessage();
+        $_SESSION['villa_admin_refund_message_type']='error';
+    }
+    redirect('/admin/finance');
+});
+
 $router->post('/admin/finance/payout/update', static function (): void {
     Auth::requireRole(['super_admin','admin']);verify_csrf();
     $pdo=Database::connection();
@@ -3081,11 +3097,19 @@ $router->get('/admin/finance', static function (): void {
         ORDER BY b.created_at DESC,b.id DESC LIMIT 30")->fetchAll();
 
     $recentTransactions = $pdo->query("SELECT pt.id,pt.provider,pt.provider_reference,pt.amount,
-        pt.currency,pt.status,pt.paid_at,pt.created_at,b.booking_code,p.title AS property_title
+        pt.currency,pt.status,pt.paid_at,pt.created_at,b.booking_code,p.title AS property_title,
+        COALESCE((SELECT SUM(pr.amount) FROM payment_refunds pr WHERE pr.payment_transaction_id=pt.id AND pr.status IN ('succeeded','processing','unknown')),0) AS refunded_amount,
+        (SELECT COUNT(*) FROM payment_refunds pr WHERE pr.payment_transaction_id=pt.id AND pr.status IN ('processing','unknown')) AS unresolved_refunds
         FROM payment_transactions pt
         JOIN bookings b ON b.id=pt.booking_id
         JOIN properties p ON p.id=b.property_id
         ORDER BY pt.created_at DESC,pt.id DESC LIMIT 20")->fetchAll();
+    $recentRefunds=$pdo->query("SELECT pr.id,pr.amount,pr.currency,pr.status,pr.provider_reference,pr.conversation_id,pr.reason,pr.error_message,pr.created_at,b.booking_code,p.title AS property_title,u.email AS admin_email
+        FROM payment_refunds pr JOIN bookings b ON b.id=pr.booking_id JOIN properties p ON p.id=b.property_id LEFT JOIN users u ON u.id=pr.actor_user_id
+        ORDER BY pr.created_at DESC,pr.id DESC LIMIT 30")->fetchAll();
+    $adminRefundMessage=(string)($_SESSION['villa_admin_refund_message']??'');
+    $adminRefundMessageType=(string)($_SESSION['villa_admin_refund_message_type']??'error');
+    unset($_SESSION['villa_admin_refund_message'],$_SESSION['villa_admin_refund_message_type']);
 
     $paymentProvider = (string)($pdo->query("SELECT setting_value FROM settings WHERE setting_key='payments.provider'")->fetchColumn() ?: 'none');
     $paymentsEnabled = (string)($pdo->query("SELECT setting_value FROM settings WHERE setting_key='payments.enabled'")->fetchColumn() ?: '0') === '1';
