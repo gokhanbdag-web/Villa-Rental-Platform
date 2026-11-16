@@ -17,6 +17,15 @@ $config = [
 
 SmtpMailer::validate($config, 'guest@example.test', 'Rezervasyon bildirimi');
 
+$badHost = $config;
+$badHost['host'] = 'smtp.example.test/path';
+try {
+    SmtpMailer::validate($badHost, 'guest@example.test', 'Test');
+    throw new RuntimeException('SMTP validation accepted a hostname containing a path.');
+} catch (InvalidArgumentException) {
+    // Expected rejection.
+}
+
 $invalid = [
     ['recipient' => "guest@example.test\r\nBcc: attacker@example.test", 'subject' => 'Test'],
     ['recipient' => 'guest@example.test', 'subject' => "Test\r\nBcc: attacker@example.test"],
