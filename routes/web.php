@@ -1102,7 +1102,7 @@ $router->post('/checkout/{bookingCode}/iyzico/start', static function (array $pa
     $placeholder='init:'.$conversationId;
     try{
         $insert=$pdo->prepare("INSERT INTO payment_transactions(booking_id,provider,provider_reference,idempotency_key,amount,currency,status,request_payload,created_at,updated_at) VALUES(?,'iyzico',?,?,?,?, 'pending',?,NOW(),NOW())");
-        $insert->execute([(int)$booking['id'],$placeholder,$idempotency,$amount,$currency,json_encode(['conversationId'=>$conversationId,'basketId'=>$booking['booking_code'],'environment'=>'sandbox'],JSON_UNESCAPED_UNICODE)]);
+        $insert->execute([(int)$booking['id'],$placeholder,$idempotency,$amount,$currency,json_encode(['conversationId'=>$conversationId,'basketId'=>$booking['booking_code'],'environment'=>$config['environment']],JSON_UNESCAPED_UNICODE)]);
         $transactionId=(int)$pdo->lastInsertId();
         $response=\App\Core\IyzicoApiClient::initializeCheckoutForm($config,$payload);
         $token=trim((string)($response['token']??''));
@@ -1155,6 +1155,9 @@ $router->post('/payments/iyzico/callback', static function (): void {
     try{
         $config=\App\Core\PaymentGatewayConfig::forProvider('iyzico');
         $requestData=json_decode((string)$transaction['request_payload'],true);
+        $storedEnvironment=is_array($requestData)?(string)($requestData['environment']??'sandbox'):'sandbox';
+        if(!in_array($storedEnvironment,['sandbox','production'],true))throw new RuntimeException('Ödeme ortamı yerel kayıtta geçersiz.');
+        $config['environment']=$storedEnvironment;
         $expectedConversationId=is_array($requestData)?trim((string)($requestData['conversationId']??'')):'';
         $expectedBasketId=is_array($requestData)?trim((string)($requestData['basketId']??'')):'';
         if($expectedConversationId===''||$expectedBasketId==='')throw new RuntimeException('Yerel ödeme referansları eksik veya okunamadı.');
@@ -2589,12 +2592,12 @@ $router->post('/admin/settings', static function (): void {
         try {
             $config=\App\Core\PaymentGatewayConfig::forProvider('iyzico');
             if (!$config['configured']) throw new RuntimeException('Önce iyzico API Key ve Secret Key bilgilerini kaydedin.');
-            $result=\App\Core\IyzicoApiClient::testSandboxConnection($config);
+            $result=\App\Core\IyzicoApiClient::testConnection($config);
             $_SESSION['villa_iyzico_test_message']='iyzico '.(($config['environment']??'sandbox')==='production'?'Production':'Sandbox').' API bağlantısı başarılı. BIN kontrolü yanıtı alındı; ödeme veya tahsilat oluşturulmadı.';
             $_SESSION['villa_iyzico_test_message_type']='success';
         } catch (Throwable $e) {
-            error_log('iyzico sandbox connection test failed: '.$e->getMessage());
-            $_SESSION['villa_iyzico_test_message']='Sandbox bağlantı testi başarısız: '.$e->getMessage();
+            error_log('iyzico connection test failed: '.$e->getMessage());
+            $_SESSION['villa_iyzico_test_message']=(($config['environment']??'sandbox')==='production'?'Production':'Sandbox').' bağlantı testi başarısız: '.$e->getMessage();
             $_SESSION['villa_iyzico_test_message_type']='error';
         }
         redirect('/admin/settings');
