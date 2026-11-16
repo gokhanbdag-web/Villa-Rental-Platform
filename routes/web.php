@@ -252,7 +252,7 @@ $router->get('/admin/updates', static function (): void {
     if($logReadable&&($handle=@fopen($logFile,'rb'))){
         $size=filesize($logFile);
         if($size!==false){fseek($handle,max(0,$size-16384));$chunk=stream_get_contents($handle);
-            if(is_string($chunk))foreach(preg_split('/\\r?\\n/',$chunk)?:[] as $line){$line=trim($line);if($line!==''&&preg_match('/^(=== DEPLOY |BAŞARILI:|SUCCESS:|PHP dosyaları kontrol ediliyor|Canlı kod yedekleniyor|Yeni sürüm aktarılıyor|Canlı PHP kontrolü|ERROR:|HATA:)/iu',$line))$logLines[]=mb_substr($line,0,240);}
+            if(is_string($chunk))foreach(preg_split('/\\r?\n/',$chunk)?:[] as $line){$line=trim($line);if($line!==''&&preg_match('/^(=== DEPLOY |BAŞARILI:|SUCCESS:|PHP dosyaları kontrol ediliyor|Canlı kod yedekleniyor|Yeni sürüm aktarılıyor|Canlı PHP kontrolü|ERROR:|HATA:)/iu',$line))$logLines[]=mb_substr($line,0,240);}
             $logLines=array_slice($logLines,-25);
             foreach(array_reverse($logLines) as $line)if(str_contains($line,'BAŞARILI:')||str_contains($line,'SUCCESS:')){$lastSuccess=$line;break;}
         }fclose($handle);
@@ -3116,9 +3116,9 @@ $router->post('/admin/settings', static function (): void {
     Auth::requireRole(['super_admin','admin']);verify_csrf();
     if (!empty($_POST['test_mail_connection'])) {
         try {
-            $config = \\App\\Core\\EmailService::smtpConfig(Database::connection());
-            $diagnostics = \\App\\Core\\SmtpMailer::diagnose($config);
-            $_SESSION['villa_mail_test_message'] = "Sunucu tanılama sonucu (e-posta gönderilmedi):\\n" . implode("\\n", array_map(static fn($key, $value) => $key . ': ' . $value, array_keys($diagnostics), array_values($diagnostics)));
+            $config = \App\Core\EmailService::smtpConfig(Database::connection());
+            $diagnostics = \App\Core\SmtpMailer::diagnose($config);
+            $_SESSION['villa_mail_test_message'] = "Sunucu tanılama sonucu (e-posta gönderilmedi):\n" . implode("\n", array_map(static fn($key, $value) => $key . ': ' . $value, array_keys($diagnostics), array_values($diagnostics)));
             $_SESSION['villa_mail_test_message_type'] = 'success';
         } catch (Throwable $e) {
             error_log('SMTP diagnostics failed: ' . $e->getMessage());
