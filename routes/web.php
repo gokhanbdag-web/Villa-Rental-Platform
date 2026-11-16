@@ -1153,7 +1153,7 @@ $router->post('/payments/iyzico/callback', static function (): void {
     $token=trim((string)($_POST['token']??''));
     if($token===''||strlen($token)>128){http_response_code(400);exit('Ödeme bildirimi geçersiz.');}
     $pdo=Database::connection();
-    $find=$pdo->prepare("SELECT pt.id,pt.booking_id,pt.amount,pt.currency,pt.status,pt.request_payload,b.booking_code FROM payment_transactions pt JOIN bookings b ON b.id=pt.booking_id WHERE pt.provider='iyzico' AND pt.provider_reference=? LIMIT 1");
+    $find=$pdo->prepare("SELECT pt.id,pt.booking_id,pt.amount,pt.currency,pt.status,pt.request_payload,pt.response_payload,b.booking_code FROM payment_transactions pt JOIN bookings b ON b.id=pt.booking_id WHERE pt.provider='iyzico' AND pt.provider_reference=? LIMIT 1");
     $find->execute([$token]);$transaction=$find->fetch();
     if(!$transaction){http_response_code(404);exit('Ödeme işlemi bulunamadı.');}
     try{
@@ -1189,8 +1189,9 @@ $router->post('/payments/iyzico/callback', static function (): void {
         $processed=(new \App\Core\PaymentCallbackProcessor($pdo))->processVerified(
             'iyzico',$eventId,'CHECKOUT_FORM_AUTH',$token,$eventPayload,$callback
         );
-        $currentPayment=$pdo->prepare('SELECT status FROM payment_transactions WHERE id=? LIMIT 1');
+$currentPayment=$pdo->prepare('SELECT status,response_payload FROM payment_transactions WHERE id=? LIMIT 1');
         $currentPayment->execute([(int)$transaction['id']]);
+        if(($currentPaymentRow['status']??'')==='paid') \App\Core\PaymentRefundService::storeVerifiedPaymentDetails($pdo,(int)$transaction['id'],(string)($currentPaymentRow['response_payload']??''),$result);
         $storedStatus=(string)($currentPayment->fetchColumn()?:'');
         $suffix=match($storedStatus){'paid'=>'success','processing'=>'review','failed'=>'failed',default=>'review'};
         redirect('/payment/'.$suffix.'/'.rawurlencode($token));
@@ -1273,6 +1274,8 @@ $router->post('/payments/iyzico/webhook', static function (): void {
         $processed=(new \App\Core\PaymentCallbackProcessor($pdo))->processVerified(
             'iyzico',$eventId,$eventType,$token,$eventPayload,$callback
         );
+        $currentPayment=$pdo->prepare('SELECT status,response_payload FROM payment_transactions WHERE id=? LIMIT 1');$currentPayment->execute([(int)$transaction['id']]);$currentPaymentRow=$currentPayment->fetch(PDO::FETCH_ASSOC)?:[];
+        if(($currentPaymentRow['status']??'')==='paid') \App\Core\PaymentRefundService::storeVerifiedPaymentDetails($pdo,(int)$transaction['id'],(string)($currentPaymentRow['response_payload']??''),$result);
         if(in_array($processed['result']??'', ['processed','duplicate','already_applied','in_progress'],true)){http_response_code(200);exit('OK');}
         error_log('iyzico webhook was signature-valid but rejected by payment guards: '.(string)($processed['result']??'unknown'));
         http_response_code(200);exit('Rejected');
