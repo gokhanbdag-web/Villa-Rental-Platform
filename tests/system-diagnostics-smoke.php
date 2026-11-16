@@ -21,8 +21,14 @@ $checks=[
  'dashboard provides summary metrics, filters and expandable raw details'=>str_contains($page,'requestCount')&&str_contains($page,'requestFilter')&&str_contains($page,'Ham kaydı göster'),
  'dashboard fetch URL respects subdirectory installation'=>str_contains($page,"app_url('/admin/performance/data')"),
  'successful video byte-range transfers are excluded from slow app request logs'=>str_contains($bootstrap,'successful MP4/WebM byte-range response')&&str_contains($bootstrap,'in_array($status, [200, 206, 304], true)'),
- 'application version is bumped to 1.5.2'=>$version==='1.5.3',
+ 'cleanup endpoint is restricted to super admins and verifies CSRF'=>str_contains($routes,"$"."router->post('/admin/performance/cleanup'")&&str_contains($routes,"Auth::requireRole(['super_admin']);")&&str_contains($routes,'verify_csrf();'),
+ 'cleanup supports HTTP, SQL and all diagnostic logs'=>str_contains($routes,"['performance', 'slow_sql', 'all']")&&str_contains("['performance', 'slow_sql', 'all']","all"),
+ 'cleanup keeps the requested newest lines and truncates logs in place'=>str_contains($routes,'$keepLast')&&str_contains($routes,'flock($handle, LOCK_EX)')&&str_contains($routes,'ftruncate($handle, 0)'),
+ 'dashboard exposes cleanup controls with confirmation and CSRF token'=>str_contains($page,'cleanupScope')&&str_contains($page,'cleanupKeep')&&str_contains($page,'window.confirm')&&str_contains($page,'csrfToken'),
+ 'dashboard displays log counts and cleanup results'=>str_contains($page,'log_counts')&&str_contains($page,'cleanupResult'),
+ 'application version is bumped to 1.5.4'=>$version==='1.5.4',
  'changelog documents diagnostics dashboard and media timing changes'=>str_contains(file_get_contents($root.'/CHANGELOG.md'),'1.5.2')&&str_contains(file_get_contents($root.'/CHANGELOG.md'),'byte-range delivery time'),
+ 'changelog documents safe diagnostics log cleanup'=>str_contains(file_get_contents($root.'/CHANGELOG.md'),'1.5.4')&&str_contains(file_get_contents($root.'/CHANGELOG.md'),'log cleanup'),
 ];
 $failed=[];
 foreach($checks as $label=>$passed){echo ($passed?'[PASS] ':'[FAIL] ').$label.PHP_EOL;if(!$passed)$failed[]=$label;}
