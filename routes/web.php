@@ -236,6 +236,11 @@ $router->get('/admin/performance', static function (): void {
 
 $router->get('/admin/performance/diagnostics', static function (): void {
     Auth::requireRole(['super_admin']);
+    redirect('/admin/performance');
+});
+
+$router->get('/admin/performance/data', static function (): void {
+    Auth::requireRole(['super_admin']);
     header('Content-Type: application/json; charset=utf-8');
     header('Cache-Control: no-store, private');
     $readTail = static function (string $file, int $limit = 120): array {
