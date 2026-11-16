@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.5.7 - 2026-11-16
+- Add native PHP PayTR iFrame token creation and hosted checkout page with Sandbox/Production mode selection.
+- Add signed, idempotent PayTR callback processing with reservation, amount, currency, and payment-state checks; card data remains hosted by PayTR.
+- Expose configured PayTR as a customer checkout option and add CI smoke coverage. Live payments remain opt-in and require merchant credentials.
+
+
 ## 1.5.6 - 2026-11-16
 - Add customer manual bank transfer submission with bank instructions, booking reference, sender details, and transfer reference.
 - Add admin-only approval/rejection workflow with audit and customer notifications; approval creates an idempotent paid transaction and confirms only conflict-free pending bookings.
