@@ -18,6 +18,7 @@ function assertSmoke(bool $condition, string $message): void
 }
 
 $root = dirname(__DIR__);
+$webRoutesSource = (string)file_get_contents($root . '/routes/web.php');
 $configFile = $root . '/config/config.php';
 $lockFile = $root . '/storage/installed.lock';
 if (Installer::isInstalled()) throw new RuntimeException('Smoke test requires a clean checkout.');
