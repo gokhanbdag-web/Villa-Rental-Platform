@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.5.3 - 2026-11-16
+- Add the diagnostics dashboard to the actual shared admin-shell navigation.
+- Move the JSON feed to a dedicated data URL and redirect the former raw diagnostics URL to the styled dashboard.
+- Keep the dashboard title visible inside the shared admin shell.
+
+
 ## 1.5.2 - 2026-11-16
 - Replace the raw JSON diagnostics endpoint in the admin menu with a responsive system diagnostics dashboard, parsed performance/SQL tables, summary metrics, filtering, and expandable record details.
 - Exclude successful MP4/WebM byte-range delivery time from PHP slow-request logs so large hero-video downloads are not misreported as slow application requests.
