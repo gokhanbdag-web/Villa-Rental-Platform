@@ -46,6 +46,42 @@ function villa_navigation_tree(PDO $pdo, string $location, string $locale): arra
     unset($root);return $roots;
 }
 
+
+/** Store non-overlapping property seasonal prices while serializing edits per property. */
+function villa_store_seasonal_price(PDO $pdo,int $propertyId,int $seasonId,string $name,string $from,string $to,string $price): void {
+    $name=trim($name);
+    $start=DateTimeImmutable::createFromFormat('!Y-m-d',$from);
+    $end=DateTimeImmutable::createFromFormat('!Y-m-d',$to);
+    if($propertyId<1||$name===''||mb_strlen($name)>120||!$start||!$end||$start->format('Y-m-d')!==$from||$end->format('Y-m-d')!==$to||$end<=$start||$start<new DateTimeImmutable('today')||$start->diff($end)->days>730||!is_numeric($price)||!is_finite((float)$price)||(float)$price<0||(float)$price>99999999.99) {
+        throw new InvalidArgumentException('Sezon adı, tarih aralığı ve gecelik fiyatı kontrol edin.');
+    }
+    $pdo->beginTransaction();
+    try {
+        $lock=$pdo->prepare('SELECT id FROM properties WHERE id=? FOR UPDATE');
+        $lock->execute([$propertyId]);
+        if(!$lock->fetchColumn()) throw new RuntimeException('Konaklama bulunamadı.');
+        $overlap=$pdo->prepare('SELECT id FROM property_seasonal_prices WHERE property_id=? AND id<>? AND date_from < ? AND date_to > ? LIMIT 1');
+        $overlap->execute([$propertyId,$seasonId,$to,$from]);
+        if($overlap->fetchColumn()) throw new RuntimeException('Bu tarihler başka bir sezon fiyatıyla çakışıyor.');
+        if($seasonId>0) {
+            $save=$pdo->prepare('UPDATE property_seasonal_prices SET name=?,date_from=?,date_to=?,nightly_price=?,updated_at=NOW() WHERE id=? AND property_id=?');
+            $save->execute([$name,$from,$to,(float)$price,$seasonId,$propertyId]);
+            if($save->rowCount()===0) {
+                $exists=$pdo->prepare('SELECT id FROM property_seasonal_prices WHERE id=? AND property_id=?');
+                $exists->execute([$seasonId,$propertyId]);
+                if(!$exists->fetchColumn()) throw new RuntimeException('Sezon kaydı bulunamadı.');
+            }
+        } else {
+            $save=$pdo->prepare('INSERT INTO property_seasonal_prices(property_id,name,date_from,date_to,nightly_price,created_at) VALUES(?,?,?,?,?,NOW())');
+            $save->execute([$propertyId,$name,$from,$to,(float)$price]);
+        }
+        $pdo->commit();
+    } catch(Throwable $e) {
+        if($pdo->inTransaction())$pdo->rollBack();
+        throw $e;
+    }
+}
+
 function villa_render_account_view(string $view, array $variables): void {
     $pdo = Database::connection();
     $locale = 'tr';
@@ -1768,8 +1804,28 @@ $router->get('/admin/properties/{id}/availability', static function (array $para
     $s=$pdo->prepare('SELECT * FROM availability WHERE property_id=? AND date_from < ? AND date_to > ? ORDER BY date_from');$s->execute([(int)$property['id'],$monthEnd,$monthStart]);$ranges=$s->fetchAll();
     $s=$pdo->prepare("SELECT id,check_in,check_out,status,booking_code,guest_user_id FROM bookings WHERE property_id=? AND status='confirmed' AND check_in < ? AND check_out > ? ORDER BY check_in");$s->execute([(int)$property['id'],$monthEnd,$monthStart]);$calendarBookings=$s->fetchAll();
     $calendarPrev=$monthDate->modify('-1 month')->format('Y-m');$calendarNext=$monthDate->modify('+1 month')->format('Y-m');
-    $saveUrl='/admin/properties/availability/save';$deleteUrl='/admin/properties/availability/delete';$backUrl='/admin/properties';$calendarSyncUrl='/admin/properties/'.(int)$property['id'].'/calendar-sync';ThemeManager::renderTemplate('templates/pages/admin/availability.php', get_defined_vars());
+    $saveUrl='/admin/properties/availability/save';$deleteUrl='/admin/properties/availability/delete';$backUrl='/admin/properties';$calendarSyncUrl='/admin/properties/'.(int)$property['id'].'/calendar-sync';$seasonalPricingUrl='/admin/properties/'.(int)$property['id'].'/seasonal-pricing';ThemeManager::renderTemplate('templates/pages/admin/availability.php', get_defined_vars());
 });
+
+$router->get('/admin/properties/{id}/seasonal-pricing', static function(array $params):void {
+    Auth::requireRole(['super_admin','admin']);$pdo=Database::connection();
+    $s=$pdo->prepare('SELECT id,title,currency FROM properties WHERE id=? LIMIT 1');$s->execute([(int)$params['id']]);$property=$s->fetch(PDO::FETCH_ASSOC);
+    if(!$property){http_response_code(404);return;}
+    $s=$pdo->prepare('SELECT * FROM property_seasonal_prices WHERE property_id=? ORDER BY date_from,id');$s->execute([(int)$property['id']]);$seasons=$s->fetchAll(PDO::FETCH_ASSOC);
+    $ownerType='admin';$saveUrl='/admin/properties/seasonal-pricing/save';$deleteUrl='/admin/properties/seasonal-pricing/delete';$backUrl='/admin/properties/'.(int)$property['id'].'/availability';
+    $message=(string)($_SESSION['villa_seasonal_message']??'');$messageType=(string)($_SESSION['villa_seasonal_message_type']??'success');unset($_SESSION['villa_seasonal_message'],$_SESSION['villa_seasonal_message_type']);
+    ThemeManager::renderTemplate('templates/pages/admin/seasonal-pricing.php',get_defined_vars());
+});
+$router->post('/admin/properties/seasonal-pricing/save', static function():void {
+    Auth::requireRole(['super_admin','admin']);verify_csrf();$pdo=Database::connection();$pid=(int)($_POST['property_id']??0);
+    try{villa_store_seasonal_price($pdo,$pid,(int)($_POST['id']??0),(string)($_POST['name']??''),(string)($_POST['date_from']??''),(string)($_POST['date_to']??''),(string)($_POST['nightly_price']??''));$_SESSION['villa_seasonal_message']='Sezon fiyatı kaydedildi.';$_SESSION['villa_seasonal_message_type']='success';}
+    catch(Throwable $e){$_SESSION['villa_seasonal_message']=$e->getMessage();$_SESSION['villa_seasonal_message_type']='error';}
+    redirect('/admin/properties/'.$pid.'/seasonal-pricing');
+});
+$router->post('/admin/properties/seasonal-pricing/delete', static function():void {
+    Auth::requireRole(['super_admin','admin']);verify_csrf();$pdo=Database::connection();$pid=(int)($_POST['property_id']??0);$s=$pdo->prepare('DELETE FROM property_seasonal_prices WHERE id=? AND property_id=?');$s->execute([(int)($_POST['id']??0),$pid]);redirect('/admin/properties/'.$pid.'/seasonal-pricing');
+});
+
 $router->get('/admin/properties/{id}/calendar-sync', static function (array $params): void {
     Auth::requireRole(['super_admin','admin']);$pdo=Database::connection();
     $propertyStmt=$pdo->prepare('SELECT id,title FROM properties WHERE id=? LIMIT 1');$propertyStmt->execute([(int)$params['id']]);$property=$propertyStmt->fetch(PDO::FETCH_ASSOC);
@@ -1829,8 +1885,34 @@ $router->get('/vendor/properties/{id}/availability', static function (array $par
     $s=$pdo->prepare('SELECT * FROM availability WHERE property_id=? AND date_from < ? AND date_to > ? ORDER BY date_from');$s->execute([(int)$property['id'],$monthEnd,$monthStart]);$ranges=$s->fetchAll();
     $s=$pdo->prepare("SELECT id,check_in,check_out,status,booking_code,guest_user_id FROM bookings WHERE property_id=? AND status='confirmed' AND check_in < ? AND check_out > ? ORDER BY check_in");$s->execute([(int)$property['id'],$monthEnd,$monthStart]);$calendarBookings=$s->fetchAll();
     $calendarPrev=$monthDate->modify('-1 month')->format('Y-m');$calendarNext=$monthDate->modify('+1 month')->format('Y-m');
-    $saveUrl='/vendor/properties/availability/save';$deleteUrl='/vendor/properties/availability/delete';$backUrl='/vendor/properties';$calendarSyncUrl='/vendor/properties/'.(int)$property['id'].'/calendar-sync';ThemeManager::renderTemplate('templates/pages/admin/availability.php', get_defined_vars());
+    $saveUrl='/vendor/properties/availability/save';$deleteUrl='/vendor/properties/availability/delete';$backUrl='/vendor/properties';$calendarSyncUrl='/vendor/properties/'.(int)$property['id'].'/calendar-sync';$seasonalPricingUrl='/vendor/properties/'.(int)$property['id'].'/seasonal-pricing';ThemeManager::renderTemplate('templates/pages/admin/availability.php', get_defined_vars());
 });
+
+$router->get('/vendor/properties/{id}/seasonal-pricing', static function(array $params):void {
+    Auth::requireRole(['vendor']);$pdo=Database::connection();$v=$pdo->prepare('SELECT id,status FROM vendors WHERE user_id=? LIMIT 1');$v->execute([(int)Auth::user()['id']]);$vendor=$v->fetch(PDO::FETCH_ASSOC);
+    if(!$vendor||!Auth::canManageVendorBookings((string)$vendor['status'])){http_response_code(403);return;}
+    $s=$pdo->prepare('SELECT id,title,currency FROM properties WHERE id=? AND vendor_id=? LIMIT 1');$s->execute([(int)$params['id'],(int)$vendor['id']]);$property=$s->fetch(PDO::FETCH_ASSOC);
+    if(!$property){http_response_code(404);return;}
+    $s=$pdo->prepare('SELECT * FROM property_seasonal_prices WHERE property_id=? ORDER BY date_from,id');$s->execute([(int)$property['id']]);$seasons=$s->fetchAll(PDO::FETCH_ASSOC);
+    $ownerType='vendor';$saveUrl='/vendor/properties/seasonal-pricing/save';$deleteUrl='/vendor/properties/seasonal-pricing/delete';$backUrl='/vendor/properties/'.(int)$property['id'].'/availability';
+    $message=(string)($_SESSION['villa_seasonal_message']??'');$messageType=(string)($_SESSION['villa_seasonal_message_type']??'success');unset($_SESSION['villa_seasonal_message'],$_SESSION['villa_seasonal_message_type']);
+    ThemeManager::renderTemplate('templates/pages/admin/seasonal-pricing.php',get_defined_vars());
+});
+$router->post('/vendor/properties/seasonal-pricing/save', static function():void {
+    Auth::requireRole(['vendor']);verify_csrf();$pdo=Database::connection();$v=$pdo->prepare('SELECT id,status FROM vendors WHERE user_id=? LIMIT 1');$v->execute([(int)Auth::user()['id']]);$vendor=$v->fetch(PDO::FETCH_ASSOC);$pid=(int)($_POST['property_id']??0);
+    if(!$vendor||!Auth::canManageVendorBookings((string)$vendor['status'])){http_response_code(403);return;}
+    $own=$pdo->prepare('SELECT id FROM properties WHERE id=? AND vendor_id=? LIMIT 1');$own->execute([$pid,(int)$vendor['id']]);if(!$own->fetchColumn()){http_response_code(404);return;}
+    try{villa_store_seasonal_price($pdo,$pid,(int)($_POST['id']??0),(string)($_POST['name']??''),(string)($_POST['date_from']??''),(string)($_POST['date_to']??''),(string)($_POST['nightly_price']??''));$_SESSION['villa_seasonal_message']='Sezon fiyatı kaydedildi.';$_SESSION['villa_seasonal_message_type']='success';}
+    catch(Throwable $e){$_SESSION['villa_seasonal_message']=$e->getMessage();$_SESSION['villa_seasonal_message_type']='error';}
+    redirect('/vendor/properties/'.$pid.'/seasonal-pricing');
+});
+$router->post('/vendor/properties/seasonal-pricing/delete', static function():void {
+    Auth::requireRole(['vendor']);verify_csrf();$pdo=Database::connection();$v=$pdo->prepare('SELECT id,status FROM vendors WHERE user_id=? LIMIT 1');$v->execute([(int)Auth::user()['id']]);$vendor=$v->fetch(PDO::FETCH_ASSOC);$pid=(int)($_POST['property_id']??0);
+    if(!$vendor||!Auth::canManageVendorBookings((string)$vendor['status'])){http_response_code(403);return;}
+    $own=$pdo->prepare('SELECT id FROM properties WHERE id=? AND vendor_id=? LIMIT 1');$own->execute([$pid,(int)$vendor['id']]);if(!$own->fetchColumn()){http_response_code(404);return;}
+    $s=$pdo->prepare('DELETE FROM property_seasonal_prices WHERE id=? AND property_id=?');$s->execute([(int)($_POST['id']??0),$pid]);redirect('/vendor/properties/'.$pid.'/seasonal-pricing');
+});
+
 $router->get('/vendor/properties/{id}/calendar-sync', static function (array $params): void {
     Auth::requireRole(['vendor']);$pdo=Database::connection();
     $vendorStmt=$pdo->prepare('SELECT id,status FROM vendors WHERE user_id=? LIMIT 1');$vendorStmt->execute([(int)Auth::user()['id']]);$vendor=$vendorStmt->fetch(PDO::FETCH_ASSOC);
