@@ -45,6 +45,7 @@ final class Auth
             'username' => $user['username'],
             'email' => $user['email'],
             'role' => $user['role'],
+            'session_version' => (int)($user['session_version'] ?? 1),
         ];
         return true;
     }
