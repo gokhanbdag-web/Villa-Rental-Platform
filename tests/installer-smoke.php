@@ -334,6 +334,30 @@ try {
     $manualPaymentCount->execute([$approvedBookingId]);
     assertSmoke((int)$manualPaymentCount->fetchColumn()===1,'Repeated manual approval created a second paid transaction.');
 
+    // A second provider must not collect a second payment for a booking that
+    // already has a verified manual transfer. The booking lock serializes
+    // callbacks from different providers before this invariant is checked.
+    $crossProviderReference = 'VILLA-CROSS-PROVIDER-' . strtoupper(bin2hex(random_bytes(4)));
+    $createCrossProviderPayment = $pdo->prepare("INSERT INTO payment_transactions(booking_id,provider,provider_reference,amount,currency,status,created_at) VALUES(?,'iyzico',?,?,?,'pending',NOW())");
+    $createCrossProviderPayment->execute([$approvedBookingId,$crossProviderReference,(string)$approvedReportRow['amount'],(string)$approvedReportRow['currency']]);
+    $crossProviderCallback = [
+        'booking_id'=>$approvedBookingId,'provider'=>'iyzico',
+        'provider_reference'=>$crossProviderReference,
+        'amount'=>(string)$approvedReportRow['amount'],
+        'currency'=>(string)$approvedReportRow['currency'],'status'=>'success',
+    ];
+    $crossProviderEvent = 'VILLA-CROSS-EVENT-' . strtoupper(bin2hex(random_bytes(4)));
+    $crossProviderResult = (new PaymentCallbackProcessor($pdo))->processVerified(
+        'iyzico',$crossProviderEvent,'CHECKOUT_FORM_AUTH',$crossProviderReference,
+        ['reference'=>$crossProviderReference,'status'=>'success'],$crossProviderCallback
+    );
+    assertSmoke(($crossProviderResult['result']??'')==='rejected_duplicate_booking_payment'&&!($crossProviderResult['payment_updated']??true),'A second provider payment was accepted for a booking already paid by manual transfer.');
+    $crossProviderState = $pdo->prepare('SELECT status FROM payment_transactions WHERE provider=? AND provider_reference=?');
+    $crossProviderState->execute(['iyzico',$crossProviderReference]);
+    assertSmoke($crossProviderState->fetchColumn()==='pending','Rejected cross-provider callback changed its pending transaction.');
+    $approvedBookingState->execute([$approvedBookingId]);
+    assertSmoke($approvedBookingState->fetchColumn()==='confirmed','Rejected cross-provider callback changed the already-confirmed booking.');
+
 
 
 
