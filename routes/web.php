@@ -52,7 +52,7 @@ function villa_store_seasonal_price(PDO $pdo,int $propertyId,int $seasonId,strin
     $name=trim($name);
     $start=DateTimeImmutable::createFromFormat('!Y-m-d',$from);
     $end=DateTimeImmutable::createFromFormat('!Y-m-d',$to);
-    if($propertyId<1||$name===''||mb_strlen($name)>120||!$start||!$end||$start->format('Y-m-d')!==$from||$end->format('Y-m-d')!==$to||$end<=$start||$start<new DateTimeImmutable('today')||$start->diff($end)->days>730||!is_numeric($price)||!is_finite((float)$price)||(float)$price<0||(float)$price>99999999.99) {
+    if($propertyId<1||$name===''||mb_strlen($name)>120||!$start||!$end||$start->format('Y-m-d')!==$from||$end->format('Y-m-d')!==$to||$end<=$start||($seasonId<1&&$start<new DateTimeImmutable('today'))||$start->diff($end)->days>730||!is_numeric($price)||!is_finite((float)$price)||(float)$price<0||(float)$price>99999999.99) {
         throw new InvalidArgumentException('Sezon adı, tarih aralığı ve gecelik fiyatı kontrol edin.');
     }
     $pdo->beginTransaction();
