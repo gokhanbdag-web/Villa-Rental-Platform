@@ -1020,6 +1020,7 @@ $router->post('/checkout/{bookingCode}/paytr/start', static function (array $par
     $email=iconv('UTF-8','ASCII//TRANSLIT//IGNORE',(string)$booking['guest_email']);$email=preg_replace('/[^A-Za-z0-9@._+-]/','',$email?:'')??'';
     if($email===''||strlen($email)>100||!filter_var($email,FILTER_VALIDATE_EMAIL)){http_response_code(422);exit('PayTR için geçerli e-posta adresi gereklidir.');}
     $phone=preg_replace('/\D+/','',(string)($booking['guest_phone']??''))??'';
+    if(strlen($phone)<10||strlen($phone)>15){http_response_code(422);exit('PayTR için geçerli telefon numarası gereklidir. Hesap telefon bilginizi güncelleyin.');}
     $ip=(string)($_SERVER['REMOTE_ADDR']??'');if(filter_var($ip,FILTER_VALIDATE_IP)===false){http_response_code(422);exit('Müşteri IP adresi doğrulanamadı.');}
     $merchantOid='VILLA'.(int)$booking['id'].strtoupper(bin2hex(random_bytes(6)));
     try{$okUrl=app_absolute_url('/payments/paytr/return/'.rawurlencode($merchantOid));$failUrl=$okUrl;}
