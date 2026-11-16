@@ -218,6 +218,24 @@ function villa_github_update_info(string $root): array {
     return $info;
 }
 
+$router->post('/language', static function (): void {
+    verify_csrf();
+    $locale = trim((string)($_POST['locale'] ?? ''));
+    if ($locale === '' || !preg_match('/^[A-Za-z0-9_-]{2,12}$/', $locale)) {
+        http_response_code(422);
+        exit('Geçerli bir dil seçin.');
+    }
+    $language = Database::connection()->prepare('SELECT code FROM languages WHERE code=? AND is_active=1 LIMIT 1');
+    $language->execute([$locale]);
+    if (!$language->fetchColumn()) {
+        http_response_code(422);
+        exit('Seçilen dil kullanılamıyor.');
+    }
+    $_SESSION['villa_locale'] = $locale;
+    $returnTo = villa_safe_return_url((string)($_POST['return_to'] ?? '/'));
+    redirect($returnTo);
+});
+
 $router->get('/admin/updates', static function (): void {
     Auth::requireRole(['super_admin','admin']);
     $root=dirname(__DIR__);
