@@ -131,7 +131,7 @@ $navigation = is_array($navigation ?? null) ? $navigation : [];
 <?php endif; ?>
 <?php if(!empty($manualPaymentAvailable)&&$booking['status']==='pending'&&($manualReportStatus??'')!=='approved'): ?>
 <section class="checkout-payment">
-<div class="checkout-section-title"><span class="checkout-step"><?= !empty($iyzicoPaymentAvailable)?3:2 ?></span><div><h2>Banka havalesi / EFT</h2></div></div>
+<div class="checkout-section-title"><span class="checkout-step"><?= (int)($manualPaymentStep??2) ?></span><div><h2>Banka havalesi / EFT</h2></div></div>
 <p class="checkout-payment-copy">Aşağıdaki hesaba rezervasyon tutarını gönderin. Açıklama alanında rezervasyon kodunuzu kullanın. Ödeme, banka hareketi yönetici tarafından doğrulandıktan sonra onaylanır.</p>
 <div class="checkout-booking-grid">
 <div class="checkout-data"><span>Banka</span><strong><?= e($manualBankDetails['bank_name']??'') ?></strong></div>
