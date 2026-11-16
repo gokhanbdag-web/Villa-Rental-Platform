@@ -89,6 +89,8 @@ $navigation = is_array($navigation ?? null) ? $navigation : [];
 <div class="checkout-data"><span>Rezervasyon kodu</span><strong><?= e($booking['booking_code']) ?></strong></div>
 <div class="checkout-data"><span>Giriş tarihi</span><strong><?= e(date('d.m.Y',strtotime($booking['check_in']))) ?></strong></div>
 <div class="checkout-data"><span>Çıkış tarihi</span><strong><?= e(date('d.m.Y',strtotime($booking['check_out']))) ?></strong></div>
+<?php if(!empty($booking['early_checkin_requested'])): ?><div class="checkout-data"><span>Ek hizmet</span><strong>Erken giriş · <?= e(number_format((float)$booking['early_checkin_fee'],2,',','.')) ?> <?= e($booking['currency']) ?></strong></div><?php endif; ?>
+<?php if(!empty($booking['late_checkout_requested'])): ?><div class="checkout-data"><span>Ek hizmet</span><strong>Geç çıkış · <?= e(number_format((float)$booking['late_checkout_fee'],2,',','.')) ?> <?= e($booking['currency']) ?></strong></div><?php endif; ?>
 <div class="checkout-data"><span>Misafir sayısı</span><strong><?= (int)$booking['guests'] ?> kişi</strong></div>
 <div class="checkout-data"><span>Rezervasyon durumu</span><strong><?= e($booking['status']==='pending'?'Ödeme bekleniyor':$booking['status']) ?></strong></div>
 <div class="checkout-total"><span>Ödenecek toplam</span><strong><?= e(number_format((float)$booking['total'],2,',','.')) ?> <?= e($booking['currency']) ?></strong></div>
@@ -157,6 +159,8 @@ $navigation = is_array($navigation ?? null) ? $navigation : [];
 <div class="checkout-summary-details">
 <div class="checkout-summary-detail"><span>Giriş</span><strong><?= e(date('d.m.Y',strtotime($booking['check_in']))) ?></strong></div>
 <div class="checkout-summary-detail"><span>Çıkış</span><strong><?= e(date('d.m.Y',strtotime($booking['check_out']))) ?></strong></div>
+<?php if(!empty($booking['early_checkin_requested'])): ?><div class="checkout-summary-detail"><span>Ek hizmet</span><strong>Erken giriş · <?= e(number_format((float)$booking['early_checkin_fee'],2,',','.')) ?> <?= e($booking['currency']) ?></strong></div><?php endif; ?>
+<?php if(!empty($booking['late_checkout_requested'])): ?><div class="checkout-summary-detail"><span>Ek hizmet</span><strong>Geç çıkış · <?= e(number_format((float)$booking['late_checkout_fee'],2,',','.')) ?> <?= e($booking['currency']) ?></strong></div><?php endif; ?>
 <div class="checkout-summary-detail"><span>Misafir</span><strong><?= (int)$booking['guests'] ?> kişi</strong></div>
 <div class="checkout-summary-detail"><span>Durum</span><strong><?= e($booking['status']==='pending'?'Ödeme bekleniyor':$booking['status']) ?></strong></div>
 </div>
