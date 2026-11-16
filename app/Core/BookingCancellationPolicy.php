@@ -29,14 +29,22 @@ final class BookingCancellationPolicy
         }
 
         $percent = $days >= $freeCancellationDays ? $earlyRefundPercent : $lateRefundPercent;
-        $cents = self::toMinorUnits($paidAmount);
-        $refundCents = intdiv(($cents * $percent) + 50, 100);
+        $refundAmount = self::refundAmount($paidAmount, $percent);
 
         return [
             'days_before_checkin' => $days,
             'refund_percent' => $percent,
-            'refund_amount' => number_format($refundCents / 100, 2, '.', ''),
+            'refund_amount' => $refundAmount,
         ];
+    }
+
+    public static function refundAmount(string $paidAmount, int $percent): string
+    {
+        if ($percent < 0 || $percent > 100 || !preg_match('/^(?:0|[1-9][0-9]{0,9})(?:\\.([0-9]{1,2}))?$/', trim($paidAmount))) {
+            throw new InvalidArgumentException('İade oranı veya ödenen tutar geçersiz.');
+        }
+        $cents = self::toMinorUnits($paidAmount);
+        return number_format(intdiv(($cents * $percent) + 50, 100) / 100, 2, '.', '');
     }
 
     private static function toMinorUnits(string $amount): int
