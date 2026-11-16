@@ -13,6 +13,13 @@ $navAllowAuth = true;
 $headerUser = is_array($user ?? null) ? $user : \App\Core\Auth::user();
 $topPhone = trim((string) ($content['home_support_phone'] ?? ''));
 $topPhoneDigits = preg_replace('/\\D+/', '', $topPhone);
+$availableLanguages = [];
+try {
+  $availableLanguages = \App\Core\Database::connection()->query('SELECT code,name FROM languages WHERE is_active=1 ORDER BY is_default DESC,name')->fetchAll(\PDO::FETCH_ASSOC);
+} catch (\Throwable $e) {
+  error_log('Public language selector load failed: ' . $e->getMessage());
+}
+$currentLocale = \App\Core\Translator::locale();
 ?>
 <style>
 .site-header{position:relative;z-index:1003;height:76px;background:#fbfcf7;border-bottom:1px solid #e4e9dc}
@@ -22,6 +29,9 @@ $topPhoneDigits = preg_replace('/\\D+/', '', $topPhone);
 .site-header .mobile-menu-toggle .menu-open-mark,.site-header .mobile-menu-toggle .menu-close-mark{color:var(--villa-text,#23352d)!important}
 .site-header .mobile-menu-toggle [hidden]{display:none!important}
 .site-header-mobile-brand img{display:block;max-width:180px;max-height:54px;object-fit:contain}
+.site-language-switcher{display:inline-flex;align-items:center;gap:7px;margin:0 2px;font-size:12px;font-weight:650;color:var(--villa-text,#23352d)}
+.site-language-switcher select{min-height:34px;max-width:130px;padding:0 26px 0 9px;border:1px solid var(--line,#dfe6e0);border-radius:9px;background:#fff;color:var(--villa-text,#23352d);font:inherit;cursor:pointer}
+.site-language-switcher button{min-height:34px;padding:0 10px;border:1px solid var(--line,#dfe6e0);border-radius:9px;background:#fff;color:var(--villa-text,#23352d);font:inherit}
 .drawer-overlay{display:none}
 @media(max-width:760px){
  .site-header{height:68px}
@@ -30,6 +40,8 @@ $topPhoneDigits = preg_replace('/\\D+/', '', $topPhone);
  .site-header .nav{position:fixed;z-index:1002;top:0;right:0;bottom:0;width:min(86vw,360px);height:100dvh;overflow-y:auto;box-sizing:border-box;padding:85px 24px 30px;display:flex;flex-direction:column;align-items:stretch;justify-content:flex-start;gap:0;background:#fff;color:var(--villa-text,#23352d);transform:translateX(105%);visibility:hidden;transition:transform .25s ease,visibility .25s ease;box-shadow:-15px 0 40px #102d2520}
  .site-header .nav.is-open{transform:translateX(0);visibility:visible}
  .site-header .nav a{color:var(--villa-text,#23352d)}
+ .site-language-switcher{align-self:flex-start;margin:18px 0 0;font-size:14px}
+ .site-language-switcher select{min-height:42px;max-width:180px}
  .drawer-overlay{display:block;position:fixed;inset:0;z-index:1001;background:#10251f80;opacity:0;visibility:hidden;transition:opacity .25s ease,visibility .25s ease}
  .drawer-overlay.is-open{opacity:1;visibility:visible}
  body.menu-open{overflow:hidden}
@@ -45,6 +57,18 @@ $topPhoneDigits = preg_replace('/\\D+/', '', $topPhone);
     </a>
     <?php endif; ?>
     <nav class="nav" id="siteNavigation"><?php \App\Core\ThemeManager::renderPartial('partials/navigation-items.php', get_defined_vars()); ?>
+      <?php if (count($availableLanguages) > 1): ?>
+        <form class="site-language-switcher" method="post" action="<?= e(app_url('/language')) ?>">
+          <input type="hidden" name="_csrf" value="<?= e(csrf_token()) ?>">
+          <input type="hidden" name="return_to" value="<?= e((string)($_SERVER['REQUEST_URI'] ?? '/')) ?>">
+          <label for="siteLanguageSelect">Dil</label>
+          <select id="siteLanguageSelect" name="locale" onchange="this.form.submit()" aria-label="Site dili">
+            <?php foreach ($availableLanguages as $language): ?>
+              <option value="<?= e((string)$language['code']) ?>" <?= (string)$language['code'] === $currentLocale ? 'selected' : '' ?>><?= e((string)$language['name']) ?></option>
+            <?php endforeach; ?>
+          </select>
+          <noscript><button type="submit">Uygula</button></noscript>
+        </form>
       <?php $drawerSocialLinks = \App\Core\ThemeManager::desktopSocialLinks(); ?>
       <?php if ($drawerSocialLinks !== ''): ?>
         <div class="site-drawer-social" aria-label="Sosyal medya">
