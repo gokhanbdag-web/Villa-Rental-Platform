@@ -572,7 +572,7 @@ assertSmoke(str_contains($themeRoutesSource, "'sandbox-cpp.iyzipay.com'") && str
     foreach ($migrationFiles as $migrationFile) {
         $signatureParts[] = basename($migrationFile) . ':' . (string)filesize($migrationFile) . ':' . (string)filemtime($migrationFile);
     }
-    $migrationSignature = hash('sha256', implode("\\n", $signatureParts));
+    $migrationSignature = hash('sha256', implode("\n", $signatureParts));
     $migrationStateFile = $root . '/storage/migrations-state.json';
     file_put_contents($migrationStateFile, json_encode([
         'signature' => $migrationSignature,
