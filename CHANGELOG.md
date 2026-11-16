@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.9.0 - 2026-11-16
+- Add configurable global cancellation rules with a threshold in days and separate early/late refund percentages.
+- Let customers submit cancellation requests with a policy snapshot and estimated refund; administrators can approve or reject requests with audit and customer notifications.
+- Keep actual payment refunds as an explicit finance action; cancellation approval does not automatically trigger a live provider refund.
+
 ## 1.8.0 - 2026-11-16
 - Add per-property early check-in and late checkout options with independent enable switches and configurable fees for administrators and vendors.
 - Let guests request enabled extras during booking; refresh availability quotes as options change and calculate all charges server-side from saved property settings.
