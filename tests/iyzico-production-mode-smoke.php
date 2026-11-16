@@ -9,7 +9,7 @@ $client=(string)file_get_contents(dirname(__DIR__).'/app/Core/IyzicoApiClient.ph
 $settings=(string)file_get_contents(dirname(__DIR__).'/themes/default/templates/pages/admin/settings.php');
 iyzicoProductionAssert(str_contains($routes,"'api.iyzipay.com','cpp.iyzipay.com'"),'Production hosted payment hosts are not allow-listed.');
 iyzicoProductionAssert(str_contains($routes,"in_array((\$iyzicoConfig['environment']??''),['sandbox','production'],true)"),'Checkout availability is not environment-aware.');
-iyzicoProductionAssert(str_contains($routes,"'environment'=>\$config['environment']"),'New transactions do not persist their selected iyzico environment.');
+iyzicoProductionAssert(str_contains($routes,"'environment'=>\$paymentEnvironment")&&str_contains($routes,'PaymentCheckoutGuard::reserveIyzico'),'New transactions do not persist their selected iyzico environment through the atomic checkout reservation.');
 iyzicoProductionAssert(str_contains($routes,"\$config['environment']=\$storedEnvironment"),'Callbacks do not retrieve payments from their original environment.');
 iyzicoProductionAssert(!str_contains($routes,"\$config['environment']='sandbox'"),'A callback forcibly switches all transactions to Sandbox.');
 iyzicoProductionAssert(str_contains($client,"return self::post(\$config, '/payment/bin/check'")&&str_contains($client,"], \$environment);"),'Connection test does not use the selected environment.');
