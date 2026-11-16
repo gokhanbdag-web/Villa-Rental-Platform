@@ -124,6 +124,7 @@ $navigation = is_array($navigation ?? null) ? $navigation : [];
 <p class="checkout-payment-copy">PayTR'ın güvenli iFrame ödeme ekranı açılır. Kart bilgileriniz VillaCMS sunucusunda saklanmaz. Ödeme sonucu PayTR'ın imzalı sunucu bildirimiyle doğrulanır.</p>
 <form method="post" action="<?= e(app_url('/checkout/'.rawurlencode((string)$booking['booking_code']).'/paytr/start')) ?>">
 <?= csrf_field() ?>
+<label class="checkout-field full">Fatura adresi<input name="billing_address" autocomplete="street-address" maxlength="500" required placeholder="Mahalle, cadde, sokak ve kapı numarası"></label>
 <button class="checkout-pay-button" type="submit">PayTR güvenli ödeme ekranına geç</button>
 </form>
 </section>
