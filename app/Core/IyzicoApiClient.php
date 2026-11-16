@@ -114,7 +114,7 @@ final class IyzicoApiClient
         // BIN check validates API authentication without creating a payment or charging a card.
         $environment = (string)($config['environment'] ?? 'sandbox');
         if (!in_array($environment, ['sandbox', 'production'], true)) {
-            throw new \\InvalidArgumentException('iyzico ortamı geçersiz.');
+            throw new \InvalidArgumentException('iyzico ortamı geçersiz.');
         }
         return self::post($config, '/payment/bin/check', [
             'locale' => 'tr',
