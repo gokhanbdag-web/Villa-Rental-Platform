@@ -127,7 +127,7 @@ try {
     $seasonInsert->execute([(int)$property['id'],'Installer seasonal pricing smoke',$seasonFrom,$seasonTo,432.10]);
     $seasonLookup=$pdo->prepare('SELECT name,date_from,date_to,nightly_price FROM property_seasonal_prices WHERE property_id=? AND name=?');
     $seasonLookup->execute([(int)$property['id'],'Installer seasonal pricing smoke']);$seasonRow=$seasonLookup->fetch(PDO::FETCH_ASSOC);
-    $seasonTotal=\\App\\Core\\BookingRateCalculator::staySubtotal($property,new DateTimeImmutable($seasonFrom),new DateTimeImmutable($seasonTo),[$seasonRow]);
+    $seasonTotal=\App\Core\\BookingRateCalculator::staySubtotal($property,new DateTimeImmutable($seasonFrom),new DateTimeImmutable($seasonTo),[$seasonRow]);
     assertSmoke($seasonRow&&$seasonTotal===864.2,'MySQL seasonal price could not be loaded into the shared booking rate calculator.');
     $seasonDelete=$pdo->prepare('DELETE FROM property_seasonal_prices WHERE property_id=? AND name=?');$seasonDelete->execute([(int)$property['id'],'Installer seasonal pricing smoke']);
     assertSmoke(str_contains($webRoutesSource,'/admin/properties/{id}/seasonal-pricing')&&str_contains($webRoutesSource,'/vendor/properties/{id}/seasonal-pricing')&&substr_count($webRoutesSource,'BookingRateCalculator::staySubtotal')>=3,'Seasonal pricing management routes or booking quote integration are missing.');
