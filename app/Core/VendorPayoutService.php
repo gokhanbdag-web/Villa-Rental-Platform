@@ -16,12 +16,11 @@ final class VendorPayoutService
         if($userId<1||$bankName===''||strlen($bankName)>120||$accountHolder===''||strlen($accountHolder)>190||!self::validIban($iban)) {
             throw new \InvalidArgumentException('Banka adı, hesap sahibi ve geçerli IBAN bilgilerini kontrol edin.');
         }
-        $stmt=$pdo->prepare('UPDATE vendors SET payout_bank_name=?,payout_account_holder=?,payout_iban=? WHERE user_id=?');
-        $stmt->execute([$bankName,$accountHolder,PaymentSecretVault::encrypt($iban),$userId]);
-        if($stmt->rowCount()===0) {
-            $exists=$pdo->prepare('SELECT 1 FROM vendors WHERE user_id=? LIMIT 1');
-            $exists->execute([$userId]);
-            if(!$exists->fetchColumn()) throw new \RuntimeException('Ev sahibi hesabı bulunamadı.');
+        $vendor=$pdo->prepare('SELECT id FROM vendors WHERE user_id=? LIMIT 1');
+        $vendor->execute([$userId]);$vendorId=(int)($vendor->fetchColumn()?:0);
+        if($vendorId<1) throw new \RuntimeException('Ev sahibi hesabı bulunamadı.');
+        $stmt=$pdo->prepare('INSERT INTO vendor_payout_profiles(vendor_id,bank_name,account_holder,iban_encrypted,created_at,updated_at) VALUES(?,?,?,?,NOW(),NOW()) ON DUPLICATE KEY UPDATE bank_name=VALUES(bank_name),account_holder=VALUES(account_holder),iban_encrypted=VALUES(iban_encrypted),updated_at=NOW()');
+        $stmt->execute([$vendorId,$bankName,$accountHolder,PaymentSecretVault::encrypt($iban)]);
         }
     }
 
