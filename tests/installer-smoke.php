@@ -154,6 +154,50 @@ try {
     assertSmoke(($duplicatePayment['result']??'')==='duplicate'&&!($duplicatePayment['payment_updated']??true),'Duplicate payment callback changed the payment a second time.');
     $secondProviderEvent = $paymentProcessor->processVerified('paytr','VILLA-SECOND-EVENT-' . strtoupper(bin2hex(random_bytes(4))),'payment_callback',$paymentReference,['reference'=>$paymentReference,'status'=>'success','amount'=>number_format($total,2,'.','')],$paymentCallback);
     assertSmoke(($secondProviderEvent['result']??'')==='already_applied'&&!($secondProviderEvent['payment_updated']??true),'A second provider event for an already-paid transaction was not handled idempotently.');
+    
+    // Exercise the iyzico callback processor against MySQL without contacting
+    // iyzico or creating a real charge. This verifies provider-specific
+    // transaction lookup, booking confirmation and duplicate-event safety.
+    $iyzicoBookingCode = 'VRIZY' . strtoupper(bin2hex(random_bytes(4)));
+    $iyzicoCheckIn = (new DateTimeImmutable('+40 days'))->format('Y-m-d');
+    $iyzicoCheckOut = (new DateTimeImmutable('+42 days'))->format('Y-m-d');
+    $createIyzicoBooking = $pdo->prepare("INSERT INTO bookings(booking_code,property_id,guest_user_id,guest_name,guest_email,guest_phone,booking_source,check_in,check_out,guests,subtotal,fees,total,currency,status,created_at) VALUES(?,?,?,?,?,?,'website',?,?,?,?,?,?,?,'pending',NOW())");
+    $createIyzicoBooking->execute([$iyzicoBookingCode,(int)$property['id'],$customerId,'Iyzico Smoke Customer',$customerEmail,'+905551112233',$iyzicoCheckIn,$iyzicoCheckOut,1,$subtotal,$fees,$total,$property['currency']]);
+    $iyzicoBookingId = (int)$pdo->lastInsertId();
+    $iyzicoReference = 'VILLA-IYZICO-' . strtoupper(bin2hex(random_bytes(4)));
+    $createIyzicoPayment = $pdo->prepare("INSERT INTO payment_transactions(booking_id,provider,provider_reference,amount,currency,status,created_at) VALUES(?,'iyzico',?,?,?,'pending',NOW())");
+    $createIyzicoPayment->execute([$iyzicoBookingId,$iyzicoReference,number_format($total,2,'.',''),$property['currency']]);
+    $iyzicoCallback = [
+        'booking_id'=>$iyzicoBookingId,
+        'provider'=>'iyzico',
+        'provider_reference'=>$iyzicoReference,
+        'amount'=>number_format($total,2,'.',''),
+        'currency'=>$property['currency'],
+        'status'=>'success',
+    ];
+    $iyzicoEventId = 'IYZICO-SMOKE-EVENT-' . strtoupper(bin2hex(random_bytes(4)));
+    $iyzicoEventPayload = ['paymentId'=>'IYZICO-SMOKE-PAYMENT','status'=>'SUCCESS','amount'=>number_format($total,2,'.','')];
+    $iyzicoResult = $paymentProcessor->processVerified('iyzico',$iyzicoEventId,'checkout_form_callback',$iyzicoReference,$iyzicoEventPayload,$iyzicoCallback);
+    assertSmoke(($iyzicoResult['result']??'')==='processed'&&($iyzicoResult['payment_status']??'')==='paid','Verified iyzico callback was not applied to its transaction.');
+    $iyzicoPaymentState = $pdo->prepare('SELECT status FROM payment_transactions WHERE provider=? AND provider_reference=? LIMIT 1');
+    $iyzicoPaymentState->execute(['iyzico',$iyzicoReference]);
+    assertSmoke($iyzicoPaymentState->fetchColumn()==='paid','iyzico payment transaction was not marked paid.');
+    $iyzicoBookingState = $pdo->prepare('SELECT status FROM bookings WHERE id=?');
+    $iyzicoBookingState->execute([$iyzicoBookingId]);
+    assertSmoke($iyzicoBookingState->fetchColumn()==='confirmed','Successful iyzico callback did not confirm its booking.');
+    $iyzicoDuplicate = $paymentProcessor->processVerified('iyzico',$iyzicoEventId,'checkout_form_callback',$iyzicoReference,$iyzicoEventPayload,$iyzicoCallback);
+    assertSmoke(($iyzicoDuplicate['result']??'')==='duplicate'&&!($iyzicoDuplicate['payment_updated']??true),'Duplicate iyzico callback changed the payment a second time.');
+
+    $mismatchReference = 'VILLA-IYZICO-MISMATCH-' . strtoupper(bin2hex(random_bytes(4)));
+    $createIyzicoPayment->execute([$iyzicoBookingId,$mismatchReference,number_format($total,2,'.',''),$property['currency']]);
+    $mismatchCallback = $iyzicoCallback;
+    $mismatchCallback['provider_reference'] = $mismatchReference;
+    $mismatchCallback['amount'] = number_format($total + 0.01,2,'.','');
+    $mismatchResult = $paymentProcessor->processVerified('iyzico','IYZICO-MISMATCH-' . strtoupper(bin2hex(random_bytes(4))),'checkout_form_callback',$mismatchReference,['status'=>'SUCCESS','amount'=>$mismatchCallback['amount']],$mismatchCallback);
+    assertSmoke(($mismatchResult['result']??'')==='rejected'&&!($mismatchResult['payment_updated']??true),'iyzico callback with a mismatched amount was accepted.');
+    $iyzicoPaymentState->execute(['iyzico',$mismatchReference]);
+    assertSmoke($iyzicoPaymentState->fetchColumn()==='pending','Rejected iyzico callback changed the transaction status.');
+
 
 
     foreach (['vendors','properties','property_media','bookings','booking_financials','payment_transactions','vendor_payouts','reviews','notifications','cms_pages','navigation_items','contact_messages','newsletter_subscribers'] as $table) {
