@@ -882,8 +882,8 @@ $router->get('/villa/{slug}/availability', static function (array $params): void
     foreach($rules as $rule){if($rule['status']!=='available'&&$rule['date_from']<$outRaw&&$rule['date_to']>$inRaw){$fail(409,'Seçtiğiniz tarih aralığında kapalı veya müsait olmayan günler var.');return;}}
     $seasonStmt=$pdo->prepare('SELECT name,date_from,date_to,nightly_price,min_nights,checkin_weekdays,checkout_weekdays FROM property_seasonal_prices WHERE property_id=? AND date_from < ? AND date_to > ? ORDER BY date_from');
     $seasonStmt->execute([(int)$property['id'],$outRaw,$inRaw]);$seasons=$seasonStmt->fetchAll(PDO::FETCH_ASSOC);
-    try{\\App\\Core\\BookingStayRules::validate($checkIn,$checkOut,$seasons);}catch(InvalidArgumentException $e){$fail(422,$e->getMessage());return;}
-    $subtotal=\\App\\Core\\BookingRateCalculator::staySubtotal($property,$checkIn,$checkOut,$seasons,$rules);
+    try{\App\Core\\BookingStayRules::validate($checkIn,$checkOut,$seasons);}catch(InvalidArgumentException $e){$fail(422,$e->getMessage());return;}
+    $subtotal=\App\Core\\BookingRateCalculator::staySubtotal($property,$checkIn,$checkOut,$seasons,$rules);
     $fees = (float)($property['cleaning_fee'] ?? 0);
     echo json_encode([
         'ok'=>true,'nights'=>$nights,'subtotal'=>round($subtotal,2),'fees'=>round($fees,2),
@@ -952,8 +952,8 @@ $router->post('/villa/{slug}/reserve', static function (array $params): void {
         $seasonStmt=$pdo->prepare('SELECT name,date_from,date_to,nightly_price,min_nights,checkin_weekdays,checkout_weekdays FROM property_seasonal_prices WHERE property_id=? AND date_from < ? AND date_to > ? ORDER BY date_from');
         $seasonStmt->execute([(int)$property['id'],$outRaw,$inRaw]);$seasons=$seasonStmt->fetchAll(PDO::FETCH_ASSOC);
         if($conflict->fetchColumn()||$unavailable){$pdo->rollBack();http_response_code(409);exit('Seçtiğiniz tarihler artık müsait değil. Lütfen yeni tarih seçin.');}
-        try{\\App\\Core\\BookingStayRules::validate($checkIn,$checkOut,$seasons);}catch(InvalidArgumentException $e){$pdo->rollBack();http_response_code(422);exit($e->getMessage());}
-        $subtotal=\\App\\Core\\BookingRateCalculator::staySubtotal($current,$checkIn,$checkOut,$seasons,$rules);
+        try{\App\Core\\BookingStayRules::validate($checkIn,$checkOut,$seasons);}catch(InvalidArgumentException $e){$pdo->rollBack();http_response_code(422);exit($e->getMessage());}
+        $subtotal=\App\Core\\BookingRateCalculator::staySubtotal($current,$checkIn,$checkOut,$seasons,$rules);
         if($createNewAccount){
             $create=$pdo->prepare("INSERT INTO users(username,email,password_hash,role,status,created_at) VALUES(?,?,?,'customer','active',NOW())");
             $create->execute([$newUsername,$email,password_hash($password,PASSWORD_DEFAULT)]);$userId=(int)$pdo->lastInsertId();
@@ -1724,7 +1724,7 @@ $router->post('/vendor/bookings/status', static function (): void {
             if($blocked->fetchColumn()){$pdo->rollBack();http_response_code(409);exit('Bu rezervasyon tarihleri takvimde kapatılmış.');}
             $seasonStmt=$pdo->prepare('SELECT date_from,date_to,min_nights,checkin_weekdays,checkout_weekdays FROM property_seasonal_prices WHERE property_id=? AND date_from < ? AND date_to > ? ORDER BY date_from');
             $seasonStmt->execute([(int)$booking['property_id'],$booking['check_out'],$booking['check_in']]);$staySeasons=$seasonStmt->fetchAll(PDO::FETCH_ASSOC);
-            try{\\App\\Core\\BookingStayRules::validate(new DateTimeImmutable($booking['check_in']),new DateTimeImmutable($booking['check_out']),$staySeasons);}catch(InvalidArgumentException $e){$pdo->rollBack();http_response_code(409);exit($e->getMessage());}
+            try{\App\Core\\BookingStayRules::validate(new DateTimeImmutable($booking['check_in']),new DateTimeImmutable($booking['check_out']),$staySeasons);}catch(InvalidArgumentException $e){$pdo->rollBack();http_response_code(409);exit($e->getMessage());}
         }
         $u=$pdo->prepare('UPDATE bookings SET status=? WHERE id=?');$u->execute([$status,$id]);
         $titles=['confirmed'=>'Rezervasyonunuz onaylandı','cancelled'=>'Rezervasyonunuz iptal edildi','completed'=>'Konaklamanız tamamlandı'];
@@ -3049,8 +3049,8 @@ $router->post('/admin/bookings/manual', static function (): void {
         foreach($rules as $rule){if($rule['status']!=='available'){$pdo->rollBack();http_response_code(409);exit('Seçilen tarihlerden biri takvimde kapalı.');}}
         $seasonStmt=$pdo->prepare('SELECT name,date_from,date_to,nightly_price,min_nights,checkin_weekdays,checkout_weekdays FROM property_seasonal_prices WHERE property_id=? AND date_from < ? AND date_to > ? ORDER BY date_from');
         $seasonStmt->execute([$propertyId,$outRaw,$inRaw]);$seasons=$seasonStmt->fetchAll(PDO::FETCH_ASSOC);
-        try{\\App\\Core\\BookingStayRules::validate($checkIn,$checkOut,$seasons);}catch(InvalidArgumentException $e){$pdo->rollBack();http_response_code(422);exit($e->getMessage());}
-        $subtotal=\\App\\Core\\BookingRateCalculator::staySubtotal($property,$checkIn,$checkOut,$seasons,$rules);
+        try{\App\Core\\BookingStayRules::validate($checkIn,$checkOut,$seasons);}catch(InvalidArgumentException $e){$pdo->rollBack();http_response_code(422);exit($e->getMessage());}
+        $subtotal=\App\Core\\BookingRateCalculator::staySubtotal($property,$checkIn,$checkOut,$seasons,$rules);
         $fees=(float)$property['cleaning_fee'];$calculated=round($subtotal+$fees,2);
         $entered=$totalInput;$total=$entered===''?$calculated:(float)$entered;
         if($total<0||!is_finite($total)){$pdo->rollBack();http_response_code(422);exit('Toplam tutar geçersiz.');}
@@ -3100,7 +3100,7 @@ $router->post('/admin/bookings/status', static function (): void {
             if($blocked->fetchColumn()){$pdo->rollBack();http_response_code(409);exit('Bu rezervasyon tarihleri takvimde kapatılmış.');}
             $seasonStmt=$pdo->prepare('SELECT date_from,date_to,min_nights,checkin_weekdays,checkout_weekdays FROM property_seasonal_prices WHERE property_id=? AND date_from < ? AND date_to > ? ORDER BY date_from');
             $seasonStmt->execute([$propertyId,$booking['check_out'],$booking['check_in']]);$staySeasons=$seasonStmt->fetchAll(PDO::FETCH_ASSOC);
-            try{\\App\\Core\\BookingStayRules::validate(new DateTimeImmutable($booking['check_in']),new DateTimeImmutable($booking['check_out']),$staySeasons);}catch(InvalidArgumentException $e){$pdo->rollBack();http_response_code(409);exit($e->getMessage());}
+            try{\App\Core\\BookingStayRules::validate(new DateTimeImmutable($booking['check_in']),new DateTimeImmutable($booking['check_out']),$staySeasons);}catch(InvalidArgumentException $e){$pdo->rollBack();http_response_code(409);exit($e->getMessage());}
         }
 
         $update=$pdo->prepare('UPDATE bookings SET status=? WHERE id=?');$update->execute([$status,$id]);
