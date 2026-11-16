@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.7.0 - 2026-11-16
+- Add seasonal minimum-night requirements and configurable check-in/check-out weekdays to admin and vendor season management.
+- Enforce stay restrictions in live availability quotes, customer booking submissions, manual reservations, and admin/vendor confirmation workflows.
+- Add shared-hosting-safe migration 046, weekday bitmask validation, and unit/MySQL integration smoke coverage.
+
 ## 1.6.9 - 2026-11-16
 - Add property-specific seasonal nightly prices with admin/vendor management, overlap prevention, and shared-hosting-safe SQL migration.
 - Apply consistent rate precedence across live availability quotes, customer bookings, and administrator-entered bookings: base weekday, weekend, season, then explicit calendar price.
