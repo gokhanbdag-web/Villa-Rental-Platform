@@ -1473,7 +1473,7 @@ $router->get('/account/bookings', static function (): void {
         EXISTS(SELECT 1 FROM payment_transactions pt WHERE pt.booking_id=b.id AND pt.status='paid') AS has_paid_payment,
         (SELECT mr.status FROM manual_payment_reports mr WHERE mr.booking_id=b.id ORDER BY mr.id DESC LIMIT 1) AS manual_payment_status,
         EXISTS(SELECT 1 FROM booking_cancellation_requests cr WHERE cr.booking_id=b.id AND cr.status='pending') AS has_pending_cancellation,
-        GREATEST(0,COALESCE((SELECT SUM(pt.amount) FROM payment_transactions pt WHERE pt.booking_id=b.id AND pt.status IN ('paid','refunded')),0)-COALESCE((SELECT SUM(pr.amount) FROM payment_refunds pr WHERE pr.booking_id=b.id AND pr.status='succeeded'),0)) AS refundable_paid_amount
+        GREATEST(0,COALESCE((SELECT SUM(pt.amount) FROM payment_transactions pt WHERE pt.booking_id=b.id AND pt.status IN ('paid','refunded')),0)-COALESCE((SELECT SUM(pr.amount) FROM payment_refunds pr WHERE pr.booking_id=b.id AND pr.status IN ('succeeded','processing','unknown')),0)) AS refundable_paid_amount
         FROM bookings b JOIN properties p ON p.id=b.property_id WHERE b.guest_user_id=? ORDER BY b.created_at DESC");
     $stmt->execute([(int)$user['id']]);
     $bookings = $stmt->fetchAll(PDO::FETCH_ASSOC);
@@ -1503,7 +1503,7 @@ $router->post('/account/bookings/cancel-request', static function (): void {
         $lock->execute([$bookingId,(int)$user['id']]);$booking=$lock->fetch(PDO::FETCH_ASSOC);
         if(!$booking||!in_array((string)$booking['status'],['pending','confirmed'],true)){throw new RuntimeException('Bu rezervasyon için iptal talebi oluşturulamıyor.');}
         $policy=$pdo->query("SELECT setting_key,setting_value FROM settings WHERE setting_key IN ('booking.cancellation.free_days','booking.cancellation.early_refund_percent','booking.cancellation.late_refund_percent')")->fetchAll(PDO::FETCH_KEY_PAIR);
-        $paid=$pdo->prepare("SELECT GREATEST(0,COALESCE((SELECT SUM(amount) FROM payment_transactions WHERE booking_id=? AND status IN ('paid','refunded')),0)-COALESCE((SELECT SUM(amount) FROM payment_refunds WHERE booking_id=? AND status='succeeded'),0))");
+        $paid=$pdo->prepare("SELECT GREATEST(0,COALESCE((SELECT SUM(amount) FROM payment_transactions WHERE booking_id=? AND status IN ('paid','refunded')),0)-COALESCE((SELECT SUM(amount) FROM payment_refunds WHERE booking_id=? AND status IN ('succeeded','processing','unknown')),0))");
         $paid->execute([$bookingId,$bookingId]);$paidAmount=number_format((float)$paid->fetchColumn(),2,'.','');
         $estimate=\App\Core\BookingCancellationPolicy::evaluate(new DateTimeImmutable((string)$booking['check_in']),new DateTimeImmutable('today'),(int)($policy['booking.cancellation.free_days']??7),(int)($policy['booking.cancellation.early_refund_percent']??100),(int)($policy['booking.cancellation.late_refund_percent']??0),$paidAmount);
         $insert=$pdo->prepare("INSERT INTO booking_cancellation_requests(booking_id,requested_by,reason,status,days_before_checkin,policy_days_snapshot,refund_percent_snapshot,refund_amount,currency,created_at) VALUES(?,?,?,'pending',?,?,?,?,?,NOW())");
