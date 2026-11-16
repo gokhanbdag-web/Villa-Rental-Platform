@@ -1791,7 +1791,55 @@ $router->get('/vendor/properties/{id}/availability', static function (array $par
     $s=$pdo->prepare('SELECT * FROM availability WHERE property_id=? AND date_from < ? AND date_to > ? ORDER BY date_from');$s->execute([(int)$property['id'],$monthEnd,$monthStart]);$ranges=$s->fetchAll();
     $s=$pdo->prepare("SELECT id,check_in,check_out,status,booking_code,guest_user_id FROM bookings WHERE property_id=? AND status='confirmed' AND check_in < ? AND check_out > ? ORDER BY check_in");$s->execute([(int)$property['id'],$monthEnd,$monthStart]);$calendarBookings=$s->fetchAll();
     $calendarPrev=$monthDate->modify('-1 month')->format('Y-m');$calendarNext=$monthDate->modify('+1 month')->format('Y-m');
-    $saveUrl='/vendor/properties/availability/save';$deleteUrl='/vendor/properties/availability/delete';$backUrl='/vendor/properties';ThemeManager::renderTemplate('templates/pages/admin/availability.php', get_defined_vars());
+    $saveUrl='/vendor/properties/availability/save';$deleteUrl='/vendor/properties/availability/delete';$backUrl='/vendor/properties';$calendarSyncUrl='/vendor/properties/'.(int)$property['id'].'/calendar-sync';ThemeManager::renderTemplate('templates/pages/admin/availability.php', get_defined_vars());
+});
+$router->get('/vendor/properties/{id}/calendar-sync', static function (array $params): void {
+    Auth::requireRole(['vendor']);$pdo=Database::connection();
+    $vendorStmt=$pdo->prepare('SELECT id,status FROM vendors WHERE user_id=? LIMIT 1');$vendorStmt->execute([(int)Auth::user()['id']]);$vendor=$vendorStmt->fetch(PDO::FETCH_ASSOC);
+    if(!$vendor||!Auth::canManageVendorBookings((string)$vendor['status'])){http_response_code(403);return;}
+    $propertyStmt=$pdo->prepare('SELECT id,title FROM properties WHERE id=? AND vendor_id=? LIMIT 1');$propertyStmt->execute([(int)$params['id'],(int)$vendor['id']]);$property=$propertyStmt->fetch(PDO::FETCH_ASSOC);
+    if(!$property){http_response_code(404);return;}
+    $feedStmt=$pdo->prepare('SELECT id,label,direction,last_sync_status,last_sync_message,last_synced_at FROM property_calendar_feeds WHERE property_id=? ORDER BY direction,id DESC');$feedStmt->execute([(int)$property['id']]);$feeds=$feedStmt->fetchAll(PDO::FETCH_ASSOC);
+    $calendarMessage=(string)($_SESSION['villa_calendar_message']??'');$calendarMessageType=(string)($_SESSION['villa_calendar_message_type']??'success');$newExportUrl=(string)($_SESSION['villa_calendar_export_url']??'');
+    unset($_SESSION['villa_calendar_message'],$_SESSION['villa_calendar_message_type'],$_SESSION['villa_calendar_export_url']);
+    ThemeManager::renderTemplate('templates/pages/vendor/calendar-sync.php',get_defined_vars());
+});
+$router->post('/vendor/properties/calendar-feed/add', static function (): void {
+    Auth::requireRole(['vendor']);verify_csrf();$pdo=Database::connection();$userId=(int)Auth::user()['id'];
+    $vendorStmt=$pdo->prepare('SELECT id,status FROM vendors WHERE user_id=? LIMIT 1');$vendorStmt->execute([$userId]);$vendor=$vendorStmt->fetch(PDO::FETCH_ASSOC);$pid=(int)($_POST['property_id']??0);
+    if(!$vendor||!Auth::canManageVendorBookings((string)$vendor['status'])){http_response_code(403);return;}
+    $own=$pdo->prepare('SELECT id FROM properties WHERE id=? AND vendor_id=? LIMIT 1');$own->execute([$pid,(int)$vendor['id']]);if(!$own->fetchColumn()){http_response_code(404);return;}
+    try{\\App\\Core\\CalendarSyncService::createImportFeed($pdo,$pid,(string)($_POST['label']??''),(string)($_POST['url']??''));$_SESSION['villa_calendar_message']='Harici takvim kaynağı eklendi.';$_SESSION['villa_calendar_message_type']='success';}
+    catch(Throwable $e){$_SESSION['villa_calendar_message']=$e->getMessage();$_SESSION['villa_calendar_message_type']='error';}
+    redirect('/vendor/properties/'.$pid.'/calendar-sync');
+});
+$router->post('/vendor/properties/calendar-feed/export', static function (): void {
+    Auth::requireRole(['vendor']);verify_csrf();$pdo=Database::connection();$userId=(int)Auth::user()['id'];
+    $vendorStmt=$pdo->prepare('SELECT id,status FROM vendors WHERE user_id=? LIMIT 1');$vendorStmt->execute([$userId]);$vendor=$vendorStmt->fetch(PDO::FETCH_ASSOC);$pid=(int)($_POST['property_id']??0);
+    if(!$vendor||!Auth::canManageVendorBookings((string)$vendor['status'])){http_response_code(403);return;}
+    $own=$pdo->prepare('SELECT title FROM properties WHERE id=? AND vendor_id=? LIMIT 1');$own->execute([$pid,(int)$vendor['id']]);$title=(string)($own->fetchColumn()?:'');
+    if($title===''){http_response_code(404);return;}
+    try{$created=\\App\\Core\\CalendarSyncService::createExportFeed($pdo,$pid,$title.' takvimi');$_SESSION['villa_calendar_export_url']=app_url('/calendar/export/'.$created['token']);$_SESSION['villa_calendar_message']='Dışa aktarma bağlantısı oluşturuldu. Güvenli yerde saklayın.';$_SESSION['villa_calendar_message_type']='success';}
+    catch(Throwable $e){$_SESSION['villa_calendar_message']=$e->getMessage();$_SESSION['villa_calendar_message_type']='error';}
+    redirect('/vendor/properties/'.$pid.'/calendar-sync');
+});
+$router->post('/vendor/properties/calendar-feed/sync', static function (): void {
+    Auth::requireRole(['vendor']);verify_csrf();$pdo=Database::connection();$userId=(int)Auth::user()['id'];$pid=(int)($_POST['property_id']??0);$feedId=(int)($_POST['feed_id']??0);
+    $vendorStmt=$pdo->prepare('SELECT id,status FROM vendors WHERE user_id=? LIMIT 1');$vendorStmt->execute([$userId]);$vendor=$vendorStmt->fetch(PDO::FETCH_ASSOC);
+    if(!$vendor||!Auth::canManageVendorBookings((string)$vendor['status'])){http_response_code(403);return;}
+    $own=$pdo->prepare('SELECT id FROM properties WHERE id=? AND vendor_id=? LIMIT 1');$own->execute([$pid,(int)$vendor['id']]);if(!$own->fetchColumn()){http_response_code(404);return;}
+    try{$result=\\App\\Core\\CalendarSyncService::syncFeed($pdo,$feedId);$_SESSION['villa_calendar_message']=$result['blocked'].' tarih aralığı engellendi; '.$result['conflicts'].' rezervasyon çakışması atlandı.';$_SESSION['villa_calendar_message_type']='success';}
+    catch(Throwable $e){$_SESSION['villa_calendar_message']=$e->getMessage();$_SESSION['villa_calendar_message_type']='error';}
+    redirect('/vendor/properties/'.$pid.'/calendar-sync');
+});
+$router->post('/vendor/properties/calendar-feed/delete', static function (): void {
+    Auth::requireRole(['vendor']);verify_csrf();$pdo=Database::connection();$userId=(int)Auth::user()['id'];$pid=(int)($_POST['property_id']??0);$feedId=(int)($_POST['feed_id']??0);
+    $vendorStmt=$pdo->prepare('SELECT id,status FROM vendors WHERE user_id=? LIMIT 1');$vendorStmt->execute([$userId]);$vendor=$vendorStmt->fetch(PDO::FETCH_ASSOC);
+    if(!$vendor||!Auth::canManageVendorBookings((string)$vendor['status'])){http_response_code(403);return;}
+    $own=$pdo->prepare('SELECT id FROM properties WHERE id=? AND vendor_id=? LIMIT 1');$own->execute([$pid,(int)$vendor['id']]);if(!$own->fetchColumn()){http_response_code(404);return;}
+    try{\\App\\Core\\CalendarSyncService::deleteFeed($pdo,$feedId,$pid);$_SESSION['villa_calendar_message']='Takvim bağlantısı kaldırıldı ve içe aktarılan tarih blokları silindi.';$_SESSION['villa_calendar_message_type']='success';}
+    catch(Throwable $e){$_SESSION['villa_calendar_message']=$e->getMessage();$_SESSION['villa_calendar_message_type']='error';}
+    redirect('/vendor/properties/'.$pid.'/calendar-sync');
 });
 $router->post('/vendor/properties/availability/save', static function (): void {
     Auth::requireRole(['vendor']);verify_csrf();$pdo=Database::connection();$v=$pdo->prepare('SELECT id FROM vendors WHERE user_id=?');$v->execute([(int)Auth::user()['id']]);$vid=(int)$v->fetchColumn();$pid=(int)($_POST['property_id']??0);$own=$pdo->prepare('SELECT id FROM properties WHERE id=? AND vendor_id=?');$own->execute([$pid,$vid]);if(!$own->fetchColumn()){http_response_code(404);return;}
