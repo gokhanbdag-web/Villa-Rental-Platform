@@ -83,11 +83,12 @@ final class CalendarSyncService
             if(!$feed) throw new RuntimeException('İçe aktarma takvimi bulunamadı.');
             $propertyId=(int)$feed['property_id'];
             $syncStartedAt=date('Y-m-d H:i:s');
-            $blocked=0;$cancelled=0;$conflicts=0;
+            $blocked=0;$cancelled=0;$conflicts=0;$seenUids=[];
             foreach($events as $event) {
                 $uid=trim((string)($event['uid']??''));
                 $from=(string)($event['date_from']??'');$to=(string)($event['date_to']??'');
                 if($uid===''||strlen($uid)>255||!self::validDateRange($from,$to)) continue;
+                $seenUids[$uid]=true;
                 $existingStmt=$pdo->prepare('SELECT id,availability_id FROM calendar_feed_events WHERE feed_id=? AND external_uid=? LIMIT 1 FOR UPDATE');
                 $existingStmt->execute([$feedId,$uid]);$existing=$existingStmt->fetch(PDO::FETCH_ASSOC);
                 if(!empty($event['cancelled'])) {
@@ -138,13 +139,17 @@ final class CalendarSyncService
                 $blocked++;
             }
 
-            $stale=$pdo->prepare("UPDATE calendar_feed_events SET missed_syncs=LEAST(missed_syncs+1,255),updated_at=NOW() WHERE feed_id=? AND last_seen_at<? AND event_status NOT IN ('cancelled','stale')");
-            $stale->execute([$feedId,$syncStartedAt]);
-            $remove=$pdo->prepare("SELECT id,availability_id FROM calendar_feed_events WHERE feed_id=? AND missed_syncs>=2 AND event_status<>'stale'");
-            $remove->execute([$feedId]);
-            foreach($remove->fetchAll(PDO::FETCH_ASSOC) as $row) {
-                if($row['availability_id']) {$delete=$pdo->prepare('DELETE FROM availability WHERE id=? AND property_id=?');$delete->execute([(int)$row['availability_id'],$propertyId]);}
-                $mark=$pdo->prepare("UPDATE calendar_feed_events SET availability_id=NULL,event_status='stale',updated_at=NOW() WHERE id=?");$mark->execute([(int)$row['id']]);
+            $knownEvents=$pdo->prepare("SELECT id,external_uid,availability_id,missed_syncs,event_status FROM calendar_feed_events WHERE feed_id=? FOR UPDATE");
+            $knownEvents->execute([$feedId]);
+            foreach($knownEvents->fetchAll(PDO::FETCH_ASSOC) as $row) {
+                if(isset($seenUids[(string)$row['external_uid']])||in_array((string)$row['event_status'],['cancelled','stale'],true)) continue;
+                $missed=min(255,(int)$row['missed_syncs']+1);
+                if($missed>=2) {
+                    if($row['availability_id']) {$delete=$pdo->prepare('DELETE FROM availability WHERE id=? AND property_id=?');$delete->execute([(int)$row['availability_id'],$propertyId]);}
+                    $mark=$pdo->prepare("UPDATE calendar_feed_events SET availability_id=NULL,event_status='stale',missed_syncs=?,updated_at=NOW() WHERE id=?");$mark->execute([$missed,(int)$row['id']]);
+                } else {
+                    $mark=$pdo->prepare('UPDATE calendar_feed_events SET missed_syncs=?,updated_at=NOW() WHERE id=?');$mark->execute([$missed,(int)$row['id']]);
+                }
             }
             $pdo->commit();
             return ['blocked'=>$blocked,'cancelled'=>$cancelled,'conflicts'=>$conflicts,'events'=>count($events)];
