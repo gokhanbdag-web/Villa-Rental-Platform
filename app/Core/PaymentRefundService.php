@@ -20,7 +20,7 @@ final class PaymentRefundService
         $token=trim((string)$payment['provider_reference']);
         $conversationId=is_array($request)?trim((string)($request['conversationId']??'')):'';
         $basketId=is_array($request)?trim((string)($request['basketId']??'')):'';
-        $environment=is_array($request)?(string)($request['environment']??'sandbox'):'sandbox';
+        $environment=is_array($request)?trim((string)($request['environment']??'')):'';
         if($token===''||$conversationId===''||$basketId===''||!in_array($environment,['sandbox','production'],true)) {
             throw new \RuntimeException('Eski ödeme kaydında iyzico ödeme kimliğini doğrulamak için gereken yerel referanslar eksik.');
         }
@@ -272,7 +272,7 @@ final class PaymentRefundService
             if ($paymentId === '') throw new \RuntimeException('iyzico ödeme kimliği bulunamadı. Ödeme sonucu ayrıntısı kayıtlı değil.');
 
             $requestPayload = json_decode((string)$payment['request_payload'], true);
-            $environment = is_array($requestPayload) ? (string)($requestPayload['environment'] ?? 'sandbox') : 'sandbox';
+            $environment = is_array($requestPayload) ? trim((string)($requestPayload['environment'] ?? '')) : '';
             if (!in_array($environment, ['sandbox','production'], true)) throw new \RuntimeException('Ödeme ortamı kaydı geçersiz.');
 
             $sum = $pdo->prepare("SELECT COALESCE(SUM(amount),0) FROM payment_refunds WHERE payment_transaction_id=? AND status IN ('succeeded','processing','unknown')");
