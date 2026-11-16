@@ -51,6 +51,8 @@ jobs:
         run: php tests/payment-security-smoke.php
       - name: Run manual bank transfer report workflow smoke tests
         run: php tests/manual-payment-report-smoke.php
+      - name: Run PayTR iFrame checkout smoke tests
+        run: php tests/paytr-checkout-smoke.php
       - name: Run villa detail booking flow smoke test
         run: php tests/property-detail-booking-smoke.php
       - name: Run homepage statistic settings smoke test
