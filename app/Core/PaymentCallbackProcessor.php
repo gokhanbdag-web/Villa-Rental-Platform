@@ -92,6 +92,21 @@ final class PaymentCallbackProcessor
                 return ['result' => 'rejected_booking_status', 'payment_updated' => false];
             }
 
+            // The booking row is locked above, serializing all provider callbacks
+            // for this booking. Never accept a second paid transaction from a
+            // different provider (or a separately initialized checkout).
+            if ($targetStatus === 'paid') {
+                $otherPaid = $this->pdo->prepare(
+                    "SELECT id FROM payment_transactions WHERE booking_id=? AND status='paid' AND id<>? LIMIT 1 FOR UPDATE"
+                );
+                $otherPaid->execute([(int)$booking['id'], (int)$transaction['id']]);
+                if ($otherPaid->fetchColumn() !== false) {
+                    $inbox->markFailed($provider, $eventId, 'Bu rezervasyon için başka bir ödeme zaten tahsil edilmiş.');
+                    $this->pdo->commit();
+                    return ['result' => 'rejected_duplicate_booking_payment', 'payment_updated' => false];
+                }
+            }
+
             $currentStatus = (string)$transaction['status'];
             if ($currentStatus === $targetStatus) {
                 if (!$inbox->markProcessed($provider, $eventId)) {

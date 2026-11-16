@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.6.1 - 2026-11-16
+- Prevent a second provider or separately initialized checkout from marking another payment paid for a booking that already has a successful payment; enforce the check under the booking row lock.
+- Add MySQL integration coverage for a pending iyzico callback arriving after a manual transfer has already been approved.
+
+
 ## 1.6.0 - 2026-11-16
 - Add MySQL integration coverage for verified payment cancellation, expiry, paid-to-refunded transitions, paid timestamp preservation, and late success callbacks against cancelled bookings.
 - Verify checkout cancellation and expiry do not silently rewrite booking status, and that refunds leave booking cancellation as a separate business decision.
