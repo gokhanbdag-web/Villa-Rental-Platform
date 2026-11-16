@@ -963,6 +963,7 @@ $router->get('/checkout/{bookingCode}', static function(array $params):void {
     $iyzicoPaymentAvailable=!empty($iyzicoConfig['enabled'])&&!empty($iyzicoConfig['configured'])&&($iyzicoConfig['environment']??'')==='sandbox';
     $paytrConfig=\App\Core\PaymentGatewayConfig::forProvider('paytr');
     $paytrPaymentAvailable=!empty($paytrConfig['enabled'])&&!empty($paytrConfig['configured']);
+    $manualPaymentStep=2+(int)$iyzicoPaymentAvailable+(int)$paytrPaymentAvailable;
     $autoStartIyzicoPayment=false;$iyzicoAutoStartData=[];
     if(!empty($_GET['start_iyzico'])&&$iyzicoPaymentAvailable){
         $pendingAutoStart=$_SESSION['villa_iyzico_autostart'][(string)$booking['booking_code']]??null;
@@ -1023,7 +1024,7 @@ $router->post('/checkout/{bookingCode}/paytr/start', static function (array $par
     if(strlen($phone)<10||strlen($phone)>15){http_response_code(422);exit('PayTR için geçerli telefon numarası gereklidir. Hesap telefon bilginizi güncelleyin.');}
     $ip=(string)($_SERVER['REMOTE_ADDR']??'');if(filter_var($ip,FILTER_VALIDATE_IP)===false){http_response_code(422);exit('Müşteri IP adresi doğrulanamadı.');}
     $merchantOid='VILLA'.(int)$booking['id'].strtoupper(bin2hex(random_bytes(6)));
-    try{$okUrl=app_absolute_url('/payments/paytr/return/'.rawurlencode($merchantOid));$failUrl=$okUrl;}
+    try{$okUrl=app_absolute_url('/payments/paytr/return/'.rawurlencode($merchantOid));$failUrl=$okUrl;if(!str_starts_with($okUrl,'https://'))throw new RuntimeException('HTTPS required');}
     catch(Throwable $e){http_response_code(503);exit('PayTR için geçerli HTTPS site adresi gereklidir.');}
     $basket=base64_encode(json_encode([[mb_substr((string)$booking['property_title'],0,90),number_format((float)$booking['total'],2,'.',''),1]],JSON_UNESCAPED_UNICODE|JSON_THROW_ON_ERROR));
     $name=trim((string)($booking['guest_name']??$booking['username']??'Misafir'));
