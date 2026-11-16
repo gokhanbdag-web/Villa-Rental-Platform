@@ -91,7 +91,7 @@ final class PaymentRefundService
 
     public static function applyVerifiedRefund(PDO $pdo, int $refundId, int $actorUserId, array $response, string $secretKey): array
     {
-        if ($refundId < 1 || $actorUserId < 1 || !PaymentSignatureVerifier::verifyIyzicoRefund($response, $secretKey)) {
+        if ($refundId < 1 || $actorUserId < 1 || strtolower((string)($response['status']??''))!=='success' || !PaymentSignatureVerifier::verifyIyzicoRefund($response, $secretKey)) {
             throw new \InvalidArgumentException('Doğrulanmış iyzico iade yanıtı gereklidir.');
         }
 
@@ -108,7 +108,7 @@ final class PaymentRefundService
             $booking = $bookingLock->fetch(PDO::FETCH_ASSOC);
             if (!$booking) throw new \RuntimeException('İadeye bağlı rezervasyon bulunamadı.');
 
-            $paymentLock = $pdo->prepare('SELECT id,booking_id,amount,currency,status,response_payload FROM payment_transactions WHERE id=? AND booking_id=? LIMIT 1 FOR UPDATE');
+            $paymentLock = $pdo->prepare('SELECT id,booking_id,provider,amount,currency,status,response_payload FROM payment_transactions WHERE id=? AND booking_id=? LIMIT 1 FOR UPDATE');
             $paymentLock->execute([(int)$refundIdentity['payment_transaction_id'], (int)$booking['id']]);
             $payment = $paymentLock->fetch(PDO::FETCH_ASSOC);
             $paymentPayload=json_decode((string)$payment['response_payload'],true);
