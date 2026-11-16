@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.6.0 - 2026-11-16
+- Add MySQL integration coverage for verified payment cancellation, expiry, paid-to-refunded transitions, paid timestamp preservation, and late success callbacks against cancelled bookings.
+- Verify checkout cancellation and expiry do not silently rewrite booking status, and that refunds leave booking cancellation as a separate business decision.
+
+
 ## 1.5.9 - 2026-11-16
 - Add MySQL-backed manual bank transfer lifecycle tests for rejection and resubmission, amount/currency mismatch, overlapping confirmed bookings, single approval, and duplicate-review protection.
 - Strengthen route regression checks for report/booking locks, pending-only review transitions, paid-payment guards, and booking conflict checks.
