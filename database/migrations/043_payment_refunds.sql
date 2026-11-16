@@ -1,0 +1,23 @@
+CREATE TABLE IF NOT EXISTS payment_refunds (
+    id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    payment_transaction_id BIGINT UNSIGNED NOT NULL,
+    booking_id BIGINT UNSIGNED NOT NULL,
+    provider VARCHAR(40) NOT NULL,
+    amount DECIMAL(12,2) NOT NULL,
+    currency CHAR(3) NOT NULL,
+    status VARCHAR(24) NOT NULL DEFAULT 'processing',
+    conversation_id VARCHAR(100) NOT NULL UNIQUE,
+    provider_reference VARCHAR(190) NULL,
+    reason VARCHAR(500) NULL,
+    response_payload JSON NULL,
+    error_message VARCHAR(500) NULL,
+    actor_user_id BIGINT UNSIGNED NULL,
+    created_at DATETIME NOT NULL,
+    updated_at DATETIME NULL,
+    completed_at DATETIME NULL,
+    INDEX idx_payment_refund_transaction (payment_transaction_id,status),
+    INDEX idx_payment_refund_booking (booking_id,status),
+    CONSTRAINT fk_payment_refund_transaction FOREIGN KEY (payment_transaction_id) REFERENCES payment_transactions(id) ON DELETE CASCADE,
+    CONSTRAINT fk_payment_refund_booking FOREIGN KEY (booking_id) REFERENCES bookings(id) ON DELETE CASCADE,
+    CONSTRAINT fk_payment_refund_actor FOREIGN KEY (actor_user_id) REFERENCES users(id) ON DELETE SET NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
