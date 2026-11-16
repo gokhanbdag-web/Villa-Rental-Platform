@@ -54,11 +54,27 @@ final class SmtpMailer
             'verify_peer_name' => true,
             'allow_self_signed' => false,
         ]]);
+        if (!function_exists('stream_socket_client')) {
+            throw new \RuntimeException('Bu hosting hesabında PHP stream_socket_client işlevi devre dışı. Hosting sağlayıcınızdan etkinleştirilmesini isteyin.');
+        }
+
         $errno = 0;
         $error = '';
         $socket = @stream_socket_client($target, $errno, $error, 12, STREAM_CLIENT_CONNECT, $context);
         if (!is_resource($socket)) {
-            throw new \RuntimeException('SMTP sunucusuna bağlanılamadı (' . $errno . ').');
+            $detail = trim(preg_replace('/[\\r\\n\\t]+/', ' ', $error) ?? '');
+            $reason = match (true) {
+                $errno === 0 && $detail === '' => 'PHP bağlantı kuramadı; ağ veya DNS ayrıntısı alınamadı.',
+                stripos($detail, 'getaddrinfo') !== false || stripos($detail, 'name or service not known') !== false
+                    || stripos($detail, 'no such host') !== false => 'SMTP sunucu adı DNS üzerinden çözümlenemedi. Sunucu adresini kontrol edin.',
+                stripos($detail, 'timed out') !== false || stripos($detail, 'timeout') !== false => 'Bağlantı zaman aşımına uğradı. Hosting sağlayıcısı giden SMTP portunu engelliyor olabilir.',
+                stripos($detail, 'refused') !== false => 'Bağlantı SMTP sunucusu tarafından reddedildi. Port ve sunucu adresini kontrol edin.',
+                default => ($detail !== '' ? $detail : 'Ağ bağlantısı kurulamadı.'),
+            };
+            throw new \RuntimeException(
+                'SMTP bağlantısı kurulamadı: ' . $reason
+                . ' (sunucu: ' . $host . ', port: ' . $port . ', hata kodu: ' . $errno . ').'
+            );
         }
 
         stream_set_timeout($socket, 12);
