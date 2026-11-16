@@ -229,6 +229,11 @@ $router->get('/admin/updates/status', static function (): void {
     echo json_encode(['status' => $status, 'history' => $history], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
 });
 
+$router->get('/admin/performance', static function (): void {
+    Auth::requireRole(['super_admin']);
+    ThemeManager::renderTemplate('templates/pages/admin/performance.php', get_defined_vars());
+});
+
 $router->get('/admin/performance/diagnostics', static function (): void {
     Auth::requireRole(['super_admin']);
     header('Content-Type: application/json; charset=utf-8');
@@ -1349,7 +1354,7 @@ $router->post('/login/ajax', static function (): void {
                 ['label'=>'İçerik Yönetimi','url'=>'/admin/content','icon'=>'▤'],
                 ['label'=>'Ayarlar','url'=>'/admin/settings','icon'=>'⚙'],
             ];
-            if ($role === 'super_admin') $menus[] = ['label'=>'Sistem Tanılama','url'=>'/admin/performance/diagnostics','icon'=>'⌁'];
+            if ($role === 'super_admin') $menus[] = ['label'=>'Sistem Tanılama','url'=>'/admin/performance','icon'=>'⌁'];
             $roleLabel = $role === 'super_admin' ? 'Süper Yönetici' : 'Yönetici';
         } elseif ($role === 'vendor') {
             $menus = [
