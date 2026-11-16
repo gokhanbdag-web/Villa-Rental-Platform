@@ -1585,7 +1585,7 @@ $router->post('/account/password', static function (): void {
     if(strlen($password)<12||strlen($password)>4096||!hash_equals($password,$confirm)){$_SESSION['villa_profile_error']='Yeni şifre en az 12 karakter olmalı ve tekrarıyla eşleşmelidir.';redirect('/account/profile');}
     $save=$pdo->prepare('UPDATE users SET password_hash=?,session_version=session_version+1,updated_at=NOW() WHERE id=?');$save->execute([password_hash($password,PASSWORD_DEFAULT),(int)$user['id']]);
     $pdo->prepare("UPDATE account_security_tokens SET used_at=NOW() WHERE user_id=? AND used_at IS NULL")->execute([(int)$user['id']]);
-    session_regenerate_id(true);$_SESSION['user']['session_version']=(int)$_SESSION['user']['session_version']+1;$_SESSION['villa_profile_notice']='Şifreniz güncellendi. Diğer açık oturumlar ve şifre sıfırlama bağlantıları iptal edildi.';redirect('/account/profile');
+    $versionStmt=$pdo->prepare('SELECT session_version FROM users WHERE id=?');$versionStmt->execute([(int)$user['id']]);$_SESSION['user']['session_version']=(int)$versionStmt->fetchColumn();session_regenerate_id(true);$_SESSION['villa_profile_notice']='Şifreniz güncellendi. Diğer açık oturumlar ve şifre sıfırlama bağlantıları iptal edildi.';redirect('/account/profile');
 });
 $router->get('/forgot-password', static function (): void {
     header('Cache-Control: no-store');$message=(string)($_SESSION['villa_recovery_message']??'');unset($_SESSION['villa_recovery_message']);
@@ -1693,6 +1693,7 @@ $router->post('/login/ajax', static function (): void {
         if (in_array($role, ['super_admin', 'admin'], true)) {
             $menus = [
                 ['label'=>'Genel Bakış','url'=>'/admin','icon'=>'⌂'],
+                ['label'=>'Hesap Ayarları','url'=>'/account/profile','icon'=>'⚙'], 
                 ['label'=>'Rezervasyonlar','url'=>'/admin/bookings','icon'=>'▣'],
                 ['label'=>'Havale Bildirimleri','url'=>'/admin/payments/manual','icon'=>'₺'],
                 ['label'=>'Villalar','url'=>'/admin/properties','icon'=>'⌂'],
@@ -1707,6 +1708,7 @@ $router->post('/login/ajax', static function (): void {
         } elseif ($role === 'vendor') {
             $menus = [
                 ['label'=>'Ev Sahibi Paneli','url'=>'/vendor','icon'=>'⌂'],
+                ['label'=>'Hesap Ayarları','url'=>'/account/profile','icon'=>'⚙'], 
                 ['label'=>'Rezervasyonlarım','url'=>'/vendor/bookings','icon'=>'▣'],
                 ['label'=>'Villalarım','url'=>'/vendor/properties','icon'=>'⌂'],
                 ['label'=>'Yeni Villa Ekle','url'=>'/vendor/properties/new','icon'=>'+'],
@@ -1715,6 +1717,7 @@ $router->post('/login/ajax', static function (): void {
         } else {
             $menus = [
                 ['label'=>'Hesabım','url'=>'/account/bookings','icon'=>'♙'],
+                ['label'=>'Hesap Ayarları','url'=>'/account/profile','icon'=>'⚙'], 
                 ['label'=>'Rezervasyonlarım','url'=>'/account/bookings','icon'=>'▣'],
                 ['label'=>'Favorilerim','url'=>'/favorites','icon'=>'♡'],
                 ['label'=>'Bildirimler','url'=>'/account/notifications','icon'=>'♧'],
