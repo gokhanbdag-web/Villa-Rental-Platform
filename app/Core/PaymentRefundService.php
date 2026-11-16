@@ -8,6 +8,24 @@ use Throwable;
 
 final class PaymentRefundService
 {
+    public static function storeVerifiedPaymentDetails(PDO $pdo, int $paymentTransactionId, string $existingPayload, array $verified): void
+    {
+        $paymentId=trim((string)($verified['paymentId']??''));
+        if($paymentTransactionId<1||$paymentId==='') return;
+        $payload=json_decode($existingPayload,true);
+        if(!is_array($payload)) $payload=[];
+        $payload['verified_checkout_form']=[
+            'paymentId'=>$paymentId,
+            'price'=>$verified['price']??null,
+            'paidPrice'=>$verified['paidPrice']??null,
+            'currency'=>$verified['currency']??null,
+            'conversationId'=>$verified['conversationId']??null,
+            'itemTransactions'=>is_array($verified['itemTransactions']??null)?$verified['itemTransactions']:[],
+        ];
+        $stmt=$pdo->prepare("UPDATE payment_transactions SET response_payload=?,updated_at=NOW() WHERE id=? AND status='paid'");
+        $stmt->execute([json_encode($payload,JSON_UNESCAPED_UNICODE|JSON_UNESCAPED_SLASHES|JSON_THROW_ON_ERROR),$paymentTransactionId]);
+    }
+
     public static function refundIyzico(PDO $pdo, int $actorUserId, int $paymentTransactionId, string $amount, string $reason): array
     {
         if ($actorUserId < 1 || $paymentTransactionId < 1 || strlen($reason) > 500) {
@@ -217,7 +235,7 @@ final class PaymentRefundService
             if ($amountCents > $remainingCents) throw new \RuntimeException('İade tutarı kalan tahsilat tutarını aşıyor.');
 
             $conversationId = 'villa-refund-' . bin2hex(random_bytes(10));
-            $insert = $pdo->prepare("INSERT INTO payment_refunds(payment_transaction_id,booking_id,provider,amount,currency,status,conversation_id,reason,actor_user_id,created_at,updated_at) VALUES(?,?,'iyzico',?,?,'processing',?,?,?,?,NOW(),NOW())");
+            $insert = $pdo->prepare("INSERT INTO payment_refunds(payment_transaction_id,booking_id,provider,amount,currency,status,conversation_id,reason,actor_user_id,created_at,updated_at) VALUES(?,?,'iyzico',?,?,'processing',?,?,?,NOW(),NOW())");
             $insert->execute([$paymentTransactionId,$bookingId,self::formatCents($amountCents),(string)$payment['currency'],$conversationId,$reason !== '' ? $reason : null,$actorUserId]);
             $refundId = (int)$pdo->lastInsertId();
 
