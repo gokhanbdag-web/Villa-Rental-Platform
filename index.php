@@ -32,13 +32,36 @@ try {
 villa_perf_mark('front:locale_settings_begin');
 $locale = 'tr';
 try {
-    $tzStmt = Database::connection()->prepare('SELECT setting_value FROM settings WHERE setting_key = ? LIMIT 1');
+    $pdo = Database::connection();
+    $tzStmt = $pdo->prepare('SELECT setting_value FROM settings WHERE setting_key = ? LIMIT 1');
     $tzStmt->execute(['app.timezone']);
     $timezone = (string)($tzStmt->fetchColumn() ?: 'Europe/Istanbul');
     if (in_array($timezone, DateTimeZone::listIdentifiers(), true)) date_default_timezone_set($timezone);
-    $stmt = Database::connection()->prepare('SELECT setting_value FROM settings WHERE setting_key = ? LIMIT 1');
+
+    $languageRows = $pdo->query('SELECT code,is_default FROM languages WHERE is_active=1 ORDER BY is_default DESC,name')->fetchAll(PDO::FETCH_ASSOC);
+    $activeLocales = array_values(array_filter(array_map(static fn(array $row): string => (string)$row['code'], $languageRows)));
+    $defaultLocale = 'tr';
+    foreach ($languageRows as $languageRow) {
+        if ((int)($languageRow['is_default'] ?? 0) === 1) {
+            $defaultLocale = (string)$languageRow['code'];
+            break;
+        }
+    }
+    if (!in_array($defaultLocale, $activeLocales, true)) {
+        $defaultLocale = $activeLocales[0] ?? 'tr';
+    }
+
+    $stmt = $pdo->prepare('SELECT setting_value FROM settings WHERE setting_key = ? LIMIT 1');
     $stmt->execute(['app.locale']);
-    $locale = (string)($stmt->fetchColumn() ?: 'tr');
+    $configuredLocale = (string)($stmt->fetchColumn() ?: $defaultLocale);
+    $locale = in_array($configuredLocale, $activeLocales, true) ? $configuredLocale : $defaultLocale;
+
+    $sessionLocale = trim((string)($_SESSION['villa_locale'] ?? ''));
+    if ($sessionLocale !== '' && in_array($sessionLocale, $activeLocales, true)) {
+        $locale = $sessionLocale;
+    } elseif ($sessionLocale !== '') {
+        unset($_SESSION['villa_locale']);
+    }
     Translator::setLocale($locale);
 } catch (Throwable $e) {
     error_log('Locale initialization failed: ' . $e->getMessage());
