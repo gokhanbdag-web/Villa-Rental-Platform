@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.5.8 - 2026-11-16
+- Add MySQL-backed iyzico callback integration coverage for successful payment application, booking confirmation, duplicate webhook idempotency, and amount-mismatch rejection without contacting the provider or charging a card.
+
+
 ## 1.5.7 - 2026-11-16
 - Enable iyzico Checkout Form in the explicitly selected Sandbox or Production environment, with production hosted payment URL allow-listing.
 - Persist each transaction's originating environment and use it for callback and webhook result retrieval, preventing cross-environment lookups.
