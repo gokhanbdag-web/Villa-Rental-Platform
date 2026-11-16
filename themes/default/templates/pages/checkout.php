@@ -116,11 +116,11 @@ $navigation = is_array($navigation ?? null) ? $navigation : [];
 </form>
 </section>
 <?php else: ?>
-<div class="checkout-notice"><span class="checkout-notice-icon">i</span><div><strong>Ödeme bilgisi</strong>Online ödeme şu anda etkin değil veya rezervasyonunuzun ödeme durumu güncelleniyor.</div></div>
+<div class="checkout-notice"><span class="checkout-notice-icon">i</span><div><strong>Ödeme bilgisi</strong><?php if(!empty($manualPaymentAvailable)): ?>Kartla ödeme şu anda kullanılamıyor. Banka havalesi / EFT seçeneğini aşağıda kullanabilirsiniz.<?php else: ?>Ödeme yöntemi şu anda etkin değil veya rezervasyonunuzun ödeme durumu güncelleniyor.<?php endif; ?></div></div>
 <?php endif; ?>
 <?php if(!empty($manualPaymentAvailable)&&$booking['status']==='pending'&&($manualReportStatus??'')!=='approved'): ?>
 <section class="checkout-payment">
-<div class="checkout-section-title"><span class="checkout-step">2</span><div><h2>Banka havalesi / EFT</h2></div></div>
+<div class="checkout-section-title"><span class="checkout-step"><?= !empty($iyzicoPaymentAvailable)?3:2 ?></span><div><h2>Banka havalesi / EFT</h2></div></div>
 <p class="checkout-payment-copy">Aşağıdaki hesaba rezervasyon tutarını gönderin. Açıklama alanında rezervasyon kodunuzu kullanın. Ödeme, banka hareketi yönetici tarafından doğrulandıktan sonra onaylanır.</p>
 <div class="checkout-booking-grid">
 <div class="checkout-data"><span>Banka</span><strong><?= e($manualBankDetails['bank_name']??'') ?></strong></div>
