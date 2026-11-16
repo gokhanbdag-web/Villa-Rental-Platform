@@ -66,6 +66,7 @@ final class Auth
             $_SESSION['user']['username'] = $current['username'];
             $_SESSION['user']['email'] = $current['email'];
             $_SESSION['user']['role'] = $current['role'];
+            $_SESSION['user']['session_version'] = (int)$current['session_version'];
             $validated = true;
         }
         return $_SESSION['user'];
