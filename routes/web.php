@@ -2853,7 +2853,7 @@ $router->get('/admin/payments/manual', static function (): void {
     $pdo=Database::connection();$reportFilter=(string)($_GET['status']??'pending');
     if(!in_array($reportFilter,['pending','approved','rejected','all'],true))$reportFilter='pending';
     $pendingReportCount=(int)$pdo->query("SELECT COUNT(*) FROM manual_payment_reports WHERE status='pending'")->fetchColumn();
-    $sql="SELECT mr.*,b.booking_code,p.title AS property_title,u.username AS guest_name,u.email AS guest_email,ru.username AS reviewer_name FROM manual_payment_reports mr JOIN bookings b ON b.id=mr.booking_id JOIN properties p ON p.id=b.property_id JOIN users u ON u.id=mr.guest_user_id LEFT JOIN users ru ON ru.id=mr.reviewed_by";
+    $sql="SELECT mr.*,b.booking_code,p.title AS property_title,COALESCE(u.username,'Silinmiş kullanıcı') AS guest_name,COALESCE(u.email,'') AS guest_email,ru.username AS reviewer_name FROM manual_payment_reports mr JOIN bookings b ON b.id=mr.booking_id JOIN properties p ON p.id=b.property_id LEFT JOIN users u ON u.id=mr.guest_user_id LEFT JOIN users ru ON ru.id=mr.reviewed_by";
     if($reportFilter!=='all'){$s=$pdo->prepare($sql." WHERE mr.status=? ORDER BY CASE WHEN mr.status='pending' THEN 0 ELSE 1 END,mr.submitted_at DESC,mr.id DESC LIMIT 300");$s->execute([$reportFilter]);$manualPaymentReports=$s->fetchAll(PDO::FETCH_ASSOC);}
     else{$manualPaymentReports=$pdo->query($sql.' ORDER BY mr.submitted_at DESC,mr.id DESC LIMIT 300')->fetchAll(PDO::FETCH_ASSOC);}
     ThemeManager::renderTemplate('templates/pages/admin/manual-payment-reports.php',get_defined_vars());
