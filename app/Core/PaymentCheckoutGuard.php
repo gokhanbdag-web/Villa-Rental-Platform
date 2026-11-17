@@ -37,6 +37,16 @@ final class PaymentCheckoutGuard
                     $pdo->commit(); return ['result'=>'initializing'];
                 }
                 if ($unexpired) { $pdo->commit(); return ['result'=>'existing','payment'=>$row]; }
+                // A real provider token may have been paid just before expiry while
+                // its callback is delayed. Never expire it locally or create a
+                // second checkout until the provider outcome has been reconciled.
+                if (!str_starts_with((string)$row['provider_reference'], 'init:')) {
+                    $pdo->commit();
+                    return ['result'=>'verification_required','payment'=>$row];
+                }
+                // An init placeholder has no provider token and was never exposed
+                // as a usable checkout session, so an abandoned initialization can
+                // safely be retired and retried.
                 $expire = $pdo->prepare("UPDATE payment_transactions SET status='expired',updated_at=NOW() WHERE id=? AND status='pending'");
                 $expire->execute([(int)$row['id']]);
             }

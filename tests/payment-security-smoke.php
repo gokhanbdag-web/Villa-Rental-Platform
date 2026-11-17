@@ -135,6 +135,9 @@ paymentAssert(strpos($callbackSource, "status IN ('pending','confirmed') AND che
 paymentAssert(strpos($callbackSource, "'paid_booking_conflict'") !== false && strpos($callbackSource, "'manual_review_required' => true") !== false, 'Paid conflicting bookings are not routed to manual review.');
 paymentAssert(is_string($routesSource) && strpos($routesSource, "status IN ('pending','confirmed') AND check_in < ? AND check_out > ?") !== false, 'Admin confirmation does not block overlapping pending bookings.');
 paymentAssert(is_string($adminBookingsSource) && strpos($adminBookingsSource, 'has_paid_payment') !== false && strpos($adminBookingsSource, 'Ödeme alındı · inceleme gerekli') !== false, 'Admin booking list does not flag paid bookings requiring review.');
+$checkoutGuardSource = file_get_contents(dirname(__DIR__) . '/app/Core/PaymentCheckoutGuard.php');
+paymentAssert(is_string($checkoutGuardSource) && strpos($checkoutGuardSource, "'verification_required'") !== false && strpos($checkoutGuardSource, 'Never expire it locally or create a') !== false, 'Expired real checkout tokens are not held for provider reconciliation.');
+paymentAssert(strpos($routesSource, "if(\$reservationResult==='verification_required')") !== false, 'Checkout route does not stop a second payment while the old provider token is unresolved.');
 $paymentResultRoute = strpos($routesSource, "if(\$paymentResultType==='review'");
 $paymentResultView = file_get_contents(dirname(__DIR__) . '/themes/default/templates/pages/payment-result.php');
 paymentAssert($paymentResultRoute !== false && strpos($routesSource, "'paid_booking_conflict'?'review'") !== false, 'Paid booking conflicts are incorrectly sent to the success result screen.');

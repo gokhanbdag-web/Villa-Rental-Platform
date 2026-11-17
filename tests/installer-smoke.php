@@ -337,6 +337,30 @@ try {
     $activeCheckoutCount->execute([$checkoutBookingId]);
     assertSmoke((int)$activeCheckoutCount->fetchColumn()===1,'Retry left multiple active iyzico transactions.');
 
+    // An expired provider token may have been paid while its callback is delayed.
+    // Keep it pending for provider reconciliation instead of creating a second charge.
+    $staleTokenCode='VRSTL'.strtoupper(bin2hex(random_bytes(4)));
+    $staleTokenStart=(new DateTimeImmutable('+115 days'))->format('Y-m-d');
+    $staleTokenEnd=(new DateTimeImmutable('+117 days'))->format('Y-m-d');
+    $createBooking->execute([$staleTokenCode,(int)$property['id'],$customerId,'Stale Token Customer',$customerEmail,'+905551112233',$staleTokenStart,$staleTokenEnd,1,$subtotal,$fees,$total,$property['currency']]);
+    $staleTokenBookingId=(int)$pdo->lastInsertId();
+    $staleFinancial=$pdo->prepare("INSERT INTO booking_financials(booking_id,gross_amount,platform_fee,vendor_net_amount,currency,payout_status,created_at) VALUES(?,?,0,?,?,'unpaid',NOW())");
+    $staleFinancial->execute([$staleTokenBookingId,$total,$total,$property['currency']]);
+    $staleToken='iyzico-stale-token-'.strtoupper(bin2hex(random_bytes(4)));
+    $staleConversation='VR'.$staleTokenBookingId.'-STALE';
+    $staleRequest=json_encode(['conversationId'=>$staleConversation,'basketId'=>$staleTokenCode,'environment'=>'sandbox']);
+    $staleResponse=json_encode(['token'=>$staleToken,'conversationId'=>$staleConversation,'environment'=>'sandbox']);
+    $staleInsert=$pdo->prepare("INSERT INTO payment_transactions(booking_id,provider,provider_reference,amount,currency,status,request_payload,response_payload,expires_at,created_at,updated_at) VALUES(?,'iyzico',?,?,?,'pending',?,?,DATE_SUB(NOW(),INTERVAL 1 MINUTE),NOW(),NOW())");
+    $staleInsert->execute([$staleTokenBookingId,$staleToken,$checkoutAmount,$property['currency'],$staleRequest,$staleResponse]);
+    $staleRetry=PaymentCheckoutGuard::reserveIyzico($pdo,$staleTokenBookingId,'VR-STALE-RETRY-'.strtoupper(bin2hex(random_bytes(4))),$checkoutAmount,$property['currency'],$checkoutPayload);
+    assertSmoke(($staleRetry['result']??'')==='verification_required','Expired real provider token was retried without provider reconciliation.');
+    $staleState=$pdo->prepare('SELECT status FROM payment_transactions WHERE provider_reference=?');
+    $staleState->execute([$staleToken]);
+    assertSmoke($staleState->fetchColumn()==='pending','Expired provider token was marked expired without checking the provider.');
+    $staleCount=$pdo->prepare("SELECT COUNT(*) FROM payment_transactions WHERE booking_id=? AND provider='iyzico'");
+    $staleCount->execute([$staleTokenBookingId]);
+    assertSmoke((int)$staleCount->fetchColumn()===1,'A second checkout was created before reconciling the expired provider token.');
+
     
     // MySQL-backed manual transfer lifecycle: reject, resubmit, validate
     // amount and booking conflicts, then approve exactly once.
