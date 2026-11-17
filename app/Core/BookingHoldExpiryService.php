@@ -30,6 +30,7 @@ final class BookingHoldExpiryService
 
         $manual = $pdo->prepare("SELECT id FROM manual_payment_reports WHERE booking_id=? AND status='pending' LIMIT 1 FOR UPDATE");
         $payments = $pdo->prepare('SELECT id,provider,provider_reference,status,expires_at,(expires_at IS NOT NULL AND expires_at<=NOW()) AS expires_now FROM payment_transactions WHERE booking_id=? ORDER BY id FOR UPDATE');
+        $verifiedExpiry = $pdo->prepare("SELECT id FROM payment_webhook_events WHERE provider='iyzico' AND transaction_reference=? AND processing_status='processed' LIMIT 1 FOR UPDATE");
         $expirePlaceholder = $pdo->prepare(
             "UPDATE payment_transactions SET status='expired',updated_at=NOW()
              WHERE id=? AND provider='iyzico' AND status='pending' AND provider_reference LIKE 'init:%'
@@ -55,6 +56,18 @@ final class BookingHoldExpiryService
                     && (int)($payment['expires_now'] ?? 0) === 1) {
                     $expirePlaceholder->execute([(int)$payment['id']]);
                     $status = 'expired';
+                }
+                if ($status === 'expired'
+                    && (string)$payment['provider'] === 'iyzico'
+                    && !str_starts_with((string)$payment['provider_reference'], 'init:')) {
+                    // Older releases could set a real iyzico token to expired using
+                    // only the local clock. Require a processed, signature-verified
+                    // provider event before treating that state as terminal.
+                    $verifiedExpiry->execute([(string)$payment['provider_reference']]);
+                    if ($verifiedExpiry->fetchColumn() === false) {
+                        $safeToRelease = false;
+                        break;
+                    }
                 }
                 if (!in_array($status, ['failed','cancelled','expired','refunded'], true)) {
                     // Paid, processing, unresolved provider tokens and unknown states
