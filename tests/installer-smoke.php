@@ -449,6 +449,11 @@ try {
     $realTokenState->execute([$realTokenHold['reference']]);
     assertSmoke($realTokenState->fetchColumn()==='pending','An unresolved real provider token was expired without verification.');
 
+    $legacyExpiredRealHold=$makeHoldExpiryCase('legacy-expired-real','expired','iyzico','VRHOLD-LEGACY-'.strtoupper(bin2hex(random_bytes(4))));
+    $runHoldExpiry((int)$property['id']);
+    $holdState->execute([$legacyExpiredRealHold['id']]);
+    assertSmoke($holdState->fetchColumn()==='pending','A legacy locally expired real iyzico token was released without a verified provider event.');
+
     $placeholderHold=$makeHoldExpiryCase('placeholder','pending','iyzico','init:VRHOLD-INIT-'.strtoupper(bin2hex(random_bytes(4))));
     $runHoldExpiry((int)$property['id']);
     $holdState->execute([$placeholderHold['id']]);
