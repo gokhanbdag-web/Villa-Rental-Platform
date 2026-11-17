@@ -146,7 +146,7 @@ paymentAssert(is_string($checkoutGuardSource) && strpos($checkoutGuardSource, "'
 paymentAssert(strpos($routesSource, "if(\$reservationResult==='verification_required')") !== false, 'Checkout route does not stop a second payment while the old provider token is unresolved.');
 $paymentResultRoute = strpos($routesSource, "if(\$paymentResultType==='review'");
 $paymentResultView = file_get_contents(dirname(__DIR__) . '/themes/default/templates/pages/payment-result.php');
-paymentAssert($paymentResultRoute !== false && strpos($routesSource, "'paid_booking_conflict'?'review'") !== false, 'Paid booking conflicts are incorrectly sent to the success result screen.');
+paymentAssert($paymentResultRoute !== false && strpos($routesSource, '$needsPaymentReview=') !== false && strpos($routesSource, 'paid_booking_conflict') !== false, 'Paid booking conflicts are incorrectly sent to the success result screen.');
 paymentAssert(is_string($paymentResultView) && strpos($paymentResultView, 'Ödemeniz alındı, rezervasyon inceleniyor') !== false && strpos($paymentResultView, 'Ödeme alındı, rezervasyon incelemesi gerekli') !== false, 'Paid but unconfirmed/cancelled booking review is not explained to the guest.');
 
 $holdExpirySource = file_get_contents(dirname(__DIR__) . '/app/Core/BookingHoldExpiryService.php');
