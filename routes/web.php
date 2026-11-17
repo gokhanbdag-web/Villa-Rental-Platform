@@ -1174,8 +1174,39 @@ $router->post('/checkout/{bookingCode}/iyzico/start', static function (array $pa
         if($reservationResult==='booking_not_pending'){http_response_code(409);exit('Yalnızca ödeme bekleyen rezervasyonlar için ödeme başlatılabilir.');}
         if($reservationResult==='processing')redirect('/checkout/'.rawurlencode((string)$booking['booking_code']).'?payment=review');
         if($reservationResult==='verification_required'){
-            http_response_code(409);
-            exit('Önceki iyzico ödeme oturumunun sonucu henüz doğrulanamadı. Çift tahsilat riskini önlemek için yeni ödeme başlatılmadı. Lütfen destek ekibiyle iletişime geçin.');
+            try{
+                $reconciled=\App\Core\IyzicoPaymentReconciler::reconcile($pdo,(array)($reservation['payment']??[]));
+            }catch(Throwable $reconcileError){
+                error_log('iyzico expired checkout reconciliation failed; retry was blocked.');
+                http_response_code(409);
+                exit('Önceki ödeme oturumunun sonucu iyzico üzerinden doğrulanamadı. Çift tahsilat riskini önlemek için yeni ödeme başlatılmadı. Lütfen biraz sonra tekrar deneyin.');
+            }
+            $reconciledStatus=(string)($reconciled['payment_status']??'');
+            $reconciledResult=(string)($reconciled['result']??'');
+            $acceptedReconciliation=in_array($reconciledResult,['processed','already_applied','duplicate','paid_booking_conflict'],true);
+            if($reconciledStatus==='paid'&&$acceptedReconciliation){
+                $bookingState=$pdo->prepare('SELECT status FROM bookings WHERE id=? LIMIT 1');
+                $bookingState->execute([(int)$booking['id']]);
+                $currentBookingStatus=(string)$bookingState->fetchColumn();
+                redirect('/payment/'.($reconciledResult==='paid_booking_conflict'||$currentBookingStatus==='pending'?'review':'success').'/'.rawurlencode((string)($reservation['payment']['provider_reference']??'')));
+            }
+            if($reconciledStatus==='processing'&&$acceptedReconciliation){
+                redirect('/checkout/'.rawurlencode((string)$booking['booking_code']).'?payment=review');
+            }
+            if(in_array($reconciledStatus,['failed','cancelled','expired'],true)&&$acceptedReconciliation){
+                $reservation=\App\Core\PaymentCheckoutGuard::reserveIyzico(
+                    $pdo,
+                    (int)$booking['id'],
+                    $conversationId,
+                    $amount,
+                    $currency,
+                    ['conversationId'=>$conversationId,'basketId'=>$booking['booking_code'],'environment'=>$paymentEnvironment]
+                );
+                $reservationResult=(string)($reservation['result']??'');
+            }else{
+                http_response_code(409);
+                exit('Önceki ödeme oturumunun sonucu kesinleşmedi. Yeni ödeme başlatılmadı; ödeme durumu inceleniyor.');
+            }
         }
         if($reservationResult==='initializing'){http_response_code(409);exit('Ödeme oturumu hazırlanıyor. Lütfen birkaç saniye sonra tekrar deneyin.');}
         if($reservationResult==='existing'){
