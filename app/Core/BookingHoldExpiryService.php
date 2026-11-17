@@ -25,7 +25,7 @@ final class BookingHoldExpiryService
              ORDER BY hold_expires_at,id LIMIT {$limit} FOR UPDATE"
         );
         $bookings->execute([$propertyId]);
-        $ids = $bookings->fetchAll(PDO::FETCH_COLUMN);
+        $rows = $bookings->fetchAll(PDO::FETCH_ASSOC);
         $expired = 0;
 
         $manual = $pdo->prepare("SELECT id FROM manual_payment_reports WHERE booking_id=? AND status='pending' LIMIT 1 FOR UPDATE");
@@ -37,8 +37,8 @@ final class BookingHoldExpiryService
         );
         $cancel = $pdo->prepare("UPDATE bookings SET status='cancelled' WHERE id=? AND status='pending' AND hold_expires_at<=NOW()");
 
-        foreach ($ids as $bookingId) {
-            $bookingId = (int)$bookingId;
+        foreach ($rows as $booking) {
+            $bookingId = (int)$booking['id'];
             $manual->execute([$bookingId]);
             if ($manual->fetchColumn() !== false) {
                 continue;
