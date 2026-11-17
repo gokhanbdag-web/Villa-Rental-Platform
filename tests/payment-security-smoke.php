@@ -143,4 +143,8 @@ $paymentResultView = file_get_contents(dirname(__DIR__) . '/themes/default/templ
 paymentAssert($paymentResultRoute !== false && strpos($routesSource, "'paid_booking_conflict'?'review'") !== false, 'Paid booking conflicts are incorrectly sent to the success result screen.');
 paymentAssert(is_string($paymentResultView) && strpos($paymentResultView, 'Ödemeniz alındı, rezervasyon inceleniyor') !== false, 'Paid but unconfirmed booking review is not explained to the guest.');
 
+$holdExpirySource = file_get_contents(dirname(__DIR__) . '/app/Core/BookingHoldExpiryService.php');
+paymentAssert(is_string($holdExpirySource) && strpos($holdExpirySource, 'manual_payment_reports') !== false && strpos($holdExpirySource, "'processing'") !== false && strpos($holdExpirySource, "'paid'") !== false, 'Booking hold expiry does not protect unresolved or paid payments and pending manual reports.');
+paymentAssert(strpos($routesSource, 'hold_expires_at') !== false && strpos($routesSource, 'BookingHoldExpiryService::expireSafePendingForProperty') !== false, 'Booking creation does not assign and process pending hold deadlines.');
+paymentAssert(strpos($routesSource, "status IN ('pending','confirmed') AND check_in < ? AND check_out > ?") !== false, 'Manual payment approval does not block overlapping pending bookings.');
 echo "Payment security smoke tests passed. No gateway API requests were made.\n";
