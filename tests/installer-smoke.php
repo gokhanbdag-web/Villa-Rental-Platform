@@ -308,9 +308,11 @@ try {
 
     $latePaidCase=$createLifecycleCase('late-paid','cancelled');
     $latePaidResult=$runLifecycleCallback($latePaidCase,'success');
-    assertSmoke(($latePaidResult['result']??'')==='rejected_booking_status'&&!($latePaidResult['payment_updated']??true),'A late successful callback was accepted for a cancelled booking.');
+    assertSmoke(($latePaidResult['result']??'')==='paid_booking_conflict'&&($latePaidResult['payment_updated']??false)&&($latePaidResult['manual_review_required']??false),'A late successful callback for a cancelled booking was not recorded for manual refund review.');
     $lifecyclePaymentState->execute([$latePaidCase['reference']]);
-    assertSmoke(($lifecyclePaymentState->fetch(PDO::FETCH_ASSOC)['status']??'')==='pending','Rejected late payment callback changed the payment transaction.');
+    assertSmoke(($lifecyclePaymentState->fetch(PDO::FETCH_ASSOC)['status']??'')==='paid','A verified late payment was not persisted for a cancelled booking.');
+    $lifecycleBookingState->execute([$latePaidCase['booking_id']]);
+    assertSmoke($lifecycleBookingState->fetchColumn()==='cancelled','A late payment incorrectly reactivated a cancelled booking.');
 
     // A provider-verified success may reconcile a legacy local expiry; the
     // local clock alone must not make a real provider payment permanently terminal.
