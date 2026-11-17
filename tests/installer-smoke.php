@@ -312,6 +312,18 @@ try {
     $lifecyclePaymentState->execute([$latePaidCase['reference']]);
     assertSmoke(($lifecyclePaymentState->fetch(PDO::FETCH_ASSOC)['status']??'')==='pending','Rejected late payment callback changed the payment transaction.');
 
+    // A provider-verified success may reconcile a legacy local expiry; the
+    // local clock alone must not make a real provider payment permanently terminal.
+    $legacyExpiredCase=$createLifecycleCase('legacy-expired');
+    $markLegacyExpired=$pdo->prepare("UPDATE payment_transactions SET status='expired' WHERE provider_reference=? AND status='pending'");
+    $markLegacyExpired->execute([$legacyExpiredCase['reference']]);
+    $legacyExpiredPaid=$runLifecycleCallback($legacyExpiredCase,'success');
+    assertSmoke(($legacyExpiredPaid['result']??'')==='processed'&&($legacyExpiredPaid['payment_status']??'')==='paid','Verified success could not reconcile a legacy expired payment transaction.');
+    $lifecyclePaymentState->execute([$legacyExpiredCase['reference']]);
+    assertSmoke(($lifecyclePaymentState->fetch(PDO::FETCH_ASSOC)['status']??'')==='paid','Legacy expired payment did not return to paid after provider verification.');
+    $lifecycleBookingState->execute([$legacyExpiredCase['booking_id']]);
+    assertSmoke($lifecycleBookingState->fetchColumn()==='confirmed','Legacy expired but provider-paid booking was not confirmed.');
+
     // The booking row lock serializes repeat checkout starts and stale init retries.
     $checkoutCode='VRCHK'.strtoupper(bin2hex(random_bytes(4)));
     $checkoutStart=(new DateTimeImmutable('+105 days'))->format('Y-m-d');
