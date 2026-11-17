@@ -29,7 +29,7 @@ final class BookingHoldExpiryService
         $expired = 0;
 
         $manual = $pdo->prepare("SELECT id FROM manual_payment_reports WHERE booking_id=? AND status='pending' LIMIT 1 FOR UPDATE");
-        $payments = $pdo->prepare('SELECT id,provider,provider_reference,status,expires_at FROM payment_transactions WHERE booking_id=? ORDER BY id FOR UPDATE');
+        $payments = $pdo->prepare('SELECT id,provider,provider_reference,status,expires_at,(expires_at IS NOT NULL AND expires_at<=NOW()) AS expires_now FROM payment_transactions WHERE booking_id=? ORDER BY id FOR UPDATE');
         $expirePlaceholder = $pdo->prepare(
             "UPDATE payment_transactions SET status='expired',updated_at=NOW()
              WHERE id=? AND provider='iyzico' AND status='pending' AND provider_reference LIKE 'init:%'
@@ -52,8 +52,7 @@ final class BookingHoldExpiryService
                 if ($status === 'pending'
                     && (string)$payment['provider'] === 'iyzico'
                     && str_starts_with((string)$payment['provider_reference'], 'init:')
-                    && !empty($payment['expires_at'])
-                    && strtotime((string)$payment['expires_at']) <= time()) {
+                    && (int)($payment['expires_now'] ?? 0) === 1) {
                     $expirePlaceholder->execute([(int)$payment['id']]);
                     $status = 'expired';
                 }
