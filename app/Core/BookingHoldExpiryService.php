@@ -45,9 +45,9 @@ final class BookingHoldExpiryService
             }
 
             $payments->execute([$bookingId]);
-            $rows = $payments->fetchAll(PDO::FETCH_ASSOC);
+            $paymentRows = $payments->fetchAll(PDO::FETCH_ASSOC);
             $safeToRelease = true;
-            foreach ($rows as $payment) {
+            foreach ($paymentRows as $payment) {
                 $status = (string)$payment['status'];
                 if ($status === 'pending'
                     && (string)$payment['provider'] === 'iyzico'
