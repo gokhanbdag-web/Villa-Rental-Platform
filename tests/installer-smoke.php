@@ -522,9 +522,10 @@ try {
     $bookingCreateRoute = $bookingCreateRouteStart !== false ? substr($webRoutesSource, $bookingCreateRouteStart) : '';
     assertSmoke(
         substr_count($webRoutesSource, "status='confirmed'") >= 7
-        && substr_count($webRoutesSource, "status IN ('pending','confirmed')") === 1
+        && substr_count($webRoutesSource, "status IN ('pending','confirmed')") === 2
         && str_contains($bookingCreateRoute, "status IN ('pending','confirmed')")
-        && str_contains($bookingCreateRoute, 'FOR UPDATE'),
+        && str_contains($bookingCreateRoute, 'FOR UPDATE')
+        && str_contains($webRoutesSource, "SELECT id FROM bookings WHERE property_id=? AND id<>? AND status IN ('pending','confirmed')"),
         'Only the locked booking-creation flow may hold dates for pending requests; public availability and occupied calendars must continue to use confirmed bookings only.'
     );
     $heroLandingSource = (string)file_get_contents($root . '/themes/default/templates/pages/landing.php');
