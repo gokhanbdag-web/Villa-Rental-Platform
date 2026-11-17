@@ -58,8 +58,9 @@ final class IyzicoPaymentReconciler
                     pt.request_payload,pt.response_payload,pt.status,pt.expires_at
              FROM payment_transactions pt
              JOIN bookings b ON b.id=pt.booking_id
-             WHERE b.property_id=? AND b.status='pending'
-               AND b.hold_expires_at IS NOT NULL AND b.hold_expires_at<=NOW()
+             WHERE b.property_id=?
+               AND ((b.status='pending' AND b.hold_expires_at IS NOT NULL AND b.hold_expires_at<=NOW())
+                    OR b.status IN ('cancelled','completed'))
                AND pt.provider='iyzico' AND pt.status IN ('pending','expired')
                AND pt.provider_reference NOT LIKE 'init:%'
                AND pt.expires_at IS NOT NULL AND pt.expires_at<=NOW()
