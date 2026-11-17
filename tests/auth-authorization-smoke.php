@@ -2,6 +2,7 @@
 declare(strict_types=1);
 
 require dirname(__DIR__) . '/app/Core/Auth.php';
+require dirname(__DIR__) . '/app/Core/BookingStatusPolicy.php';
 
 
 $cases = [
@@ -28,6 +29,35 @@ foreach ($vendorBookingCases as [$vendorStatus, $expected]) {
     if ($actual !== $expected) {
         throw new RuntimeException('Unexpected vendor booking access for status ' . $vendorStatus);
     }
+}
+
+$vendorTransitionCases = [
+    ['pending','confirmed',true],
+    ['pending','cancelled',true],
+    ['pending','completed',false],
+    ['confirmed','cancelled',true],
+    ['confirmed','completed',true],
+    ['confirmed','pending',false],
+    ['cancelled','confirmed',false],
+    ['completed','confirmed',false],
+    ['cancelled','cancelled',true],
+];
+foreach ($vendorTransitionCases as [$current,$target,$expected]) {
+    $actual = \\App\\Core\\BookingStatusPolicy::canVendorTransition($current,$target);
+    if ($actual !== $expected) {
+        throw new RuntimeException('Unexpected vendor booking transition '.$current.' -> '.$target);
+    }
+}
+
+$routesSource = file_get_contents(dirname(__DIR__) . '/routes/web.php');
+$vendorRouteStart = strpos($routesSource, "$router->post('/vendor/bookings/status'");
+$vendorRouteEnd = $vendorRouteStart !== false ? strpos($routesSource, "$router->get('/vendor/properties'", $vendorRouteStart) : false;
+$vendorRoute = $vendorRouteStart !== false && $vendorRouteEnd !== false ? substr($routesSource,$vendorRouteStart,$vendorRouteEnd-$vendorRouteStart) : '';
+if ($vendorRoute === '' || strpos($vendorRoute, 'BookingStatusPolicy::canVendorTransition') === false
+    || strpos($vendorRoute, "status IN ('pending','confirmed')") === false
+    || strpos($vendorRoute, 'BookingHoldExpiryService::expireSafePendingForProperty') === false
+    || strpos($vendorRoute, 'SELECT id FROM properties WHERE id=? AND vendor_id=? LIMIT 1 FOR UPDATE') === false) {
+    throw new RuntimeException('Vendor booking route does not enforce ownership, safe lock order, pending overlap and transition rules.');
 }
 
 foreach ($cases as [$actorRole, $targetRole, $expected]) {
