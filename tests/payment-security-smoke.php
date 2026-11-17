@@ -157,4 +157,6 @@ $reconcilerSource = file_get_contents(dirname(__DIR__) . '/app/Core/IyzicoPaymen
 paymentAssert(is_string($reconcilerSource) && strpos($reconcilerSource, 'verifyIyzicoCheckoutFormRetrieve') !== false && strpos($reconcilerSource, 'PaymentCallbackProcessor') !== false, 'Expired iyzico sessions are not verified and applied through the shared callback processor.');
 paymentAssert(strpos($routesSource, 'IyzicoPaymentReconciler::reconcile') !== false, 'Checkout retry does not reconcile an expired provider token before creating another payment.');
 paymentAssert(strpos($reconcilerSource, "['pending','expired']") !== false && strpos($reconcilerSource, 'verifyIyzicoCheckoutFormRetrieve') !== false, 'Legacy expired provider tokens are not reconciled against a signed provider response.');
+paymentAssert(strpos($reconcilerSource, 'reconcileExpiredForProperty') !== false && strpos($reconcilerSource, 'reconciliation_checked_at') !== false && strpos($reconcilerSource, 'INTERVAL 1 MINUTE') !== false, 'Automatic provider reconciliation is not throttled for shared-hosting requests.');
+paymentAssert(substr_count($routesSource, 'IyzicoPaymentReconciler::reconcileExpiredForProperty') >= 2, 'Availability and booking flows do not trigger safe provider reconciliation.');
 echo "Payment security smoke tests passed. No gateway API requests were made.\n";

@@ -10,6 +10,7 @@ use App\Core\PaymentWebhookInbox;
 use App\Core\PaymentCallbackProcessor;
 use App\Core\PaymentCheckoutGuard;
 use App\Core\BookingHoldExpiryService;
+use App\Core\IyzicoPaymentReconciler;
 use App\Core\ThemeManager;
 use App\Core\Router;
 
@@ -452,6 +453,13 @@ try {
     assertSmoke($realTokenState->fetchColumn()==='pending','An unresolved real provider token was expired without verification.');
 
     $legacyExpiredRealHold=$makeHoldExpiryCase('legacy-expired-real','expired','iyzico','VRHOLD-LEGACY-'.strtoupper(bin2hex(random_bytes(4))));
+    $reconciliationColumn=$pdo->query("SHOW COLUMNS FROM payment_transactions LIKE 'reconciliation_checked_at'")->fetch(PDO::FETCH_ASSOC);
+    assertSmoke((bool)$reconciliationColumn,'Payment reconciliation cooldown migration did not create its timestamp column.');
+    $legacyTokenIdStmt=$pdo->prepare('SELECT id FROM payment_transactions WHERE provider_reference=?');
+    $legacyTokenIdStmt->execute([$legacyExpiredRealHold['reference']]);
+    $legacyTokenId=(int)$legacyTokenIdStmt->fetchColumn();
+    assertSmoke(IyzicoPaymentReconciler::claimReconciliationAttempt($pdo,$legacyTokenId),'First provider reconciliation claim was not acquired.');
+    assertSmoke(!IyzicoPaymentReconciler::claimReconciliationAttempt($pdo,$legacyTokenId),'Provider reconciliation cooldown allowed duplicate lookups.');
     $runHoldExpiry((int)$property['id']);
     $holdState->execute([$legacyExpiredRealHold['id']]);
     assertSmoke($holdState->fetchColumn()==='pending','A legacy locally expired real iyzico token was released without a verified provider event.');
