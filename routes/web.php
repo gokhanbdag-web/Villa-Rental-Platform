@@ -1203,6 +1203,9 @@ $router->post('/checkout/{bookingCode}/iyzico/start', static function (array $pa
                     ['conversationId'=>$conversationId,'basketId'=>$booking['booking_code'],'environment'=>$paymentEnvironment]
                 );
                 $reservationResult=(string)($reservation['result']??'');
+                if($reservationResult==='processing') redirect('/checkout/'.rawurlencode((string)$booking['booking_code']).'?payment=review');
+                if($reservationResult==='booking_not_pending') { http_response_code(409); exit('Rezervasyon süresi doldu veya artık ödeme beklemiyor. Lütfen yeni bir rezervasyon oluşturun.'); }
+                if($reservationResult==='verification_required') { http_response_code(409); exit('Başka bir ödeme oturumunun sonucu doğrulanmadan yeni ödeme başlatılamaz.'); }
             }else{
                 http_response_code(409);
                 exit('Önceki ödeme oturumunun sonucu kesinleşmedi. Yeni ödeme başlatılmadı; ödeme durumu inceleniyor.');
