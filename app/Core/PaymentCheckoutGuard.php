@@ -26,13 +26,16 @@ final class PaymentCheckoutGuard
             $paid->execute([$bookingId]);
             if ($paid->fetchColumn() !== false) { $pdo->commit(); return ['result'=>'already_paid']; }
 
-            $active = $pdo->prepare("SELECT id,booking_id,provider,provider_reference,amount,currency,request_payload,response_payload,status,expires_at FROM payment_transactions WHERE booking_id=? AND provider='iyzico' AND status IN ('pending','processing') ORDER BY id DESC LIMIT 1 FOR UPDATE");
+            $active = $pdo->prepare("SELECT id,booking_id,provider,provider_reference,amount,currency,request_payload,response_payload,status,expires_at,(expires_at IS NOT NULL AND expires_at<=NOW()) AS expires_now FROM payment_transactions WHERE booking_id=? AND provider='iyzico' AND status IN ('pending','processing','expired') ORDER BY CASE WHEN provider_reference NOT LIKE 'init:%' THEN 0 ELSE 1 END,id ASC LIMIT 1 FOR UPDATE");
             $active->execute([$bookingId]);
             $row = $active->fetch(PDO::FETCH_ASSOC);
             if ($row && (string)$row['status'] === 'processing') { $pdo->commit(); return ['result'=>'processing']; }
+            if ($row && (string)$row['status'] === 'expired' && !str_starts_with((string)$row['provider_reference'], 'init:')) {
+                $pdo->commit();
+                return ['result'=>'verification_required','payment'=>$row];
+            }
             if ($row && (string)$row['status'] === 'pending') {
-                $expiresAt = trim((string)($row['expires_at'] ?? ''));
-                $unexpired = $expiresAt !== '' && strtotime($expiresAt) > time();
+                $unexpired = (int)($row['expires_now'] ?? 0) === 0 && !empty($row['expires_at']);
                 if ($unexpired && str_starts_with((string)$row['provider_reference'], 'init:')) {
                     $pdo->commit(); return ['result'=>'initializing'];
                 }
