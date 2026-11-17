@@ -30,7 +30,7 @@ final class IyzicoPaymentReconciler
     public static function reconcile(PDO $pdo, array $transaction): array
     {
         if ((string)($transaction['provider'] ?? 'iyzico') !== 'iyzico'
-            || (string)($transaction['status'] ?? '') !== 'pending') {
+            || !in_array((string)($transaction['status'] ?? ''), ['pending','expired'], true)) {
             return ['result' => 'not_reconcilable'];
         }
 
