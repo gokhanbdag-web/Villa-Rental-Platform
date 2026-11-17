@@ -1946,29 +1946,44 @@ $router->get('/vendor/bookings', static function (): void {
 
 $router->post('/vendor/bookings/status', static function (): void {
     Auth::requireRole(['vendor']);verify_csrf();$pdo=Database::connection();
-    $vendor=$pdo->prepare('SELECT id,status FROM vendors WHERE user_id=?');$vendor->execute([(int)Auth::user()['id']]);$vendorRow=$vendor->fetch();
+    if((string)$pdo->query("SELECT setting_value FROM settings WHERE setting_key='app.mode'")->fetchColumn()!=='multi_vendor'){http_response_code(404);return;}
+    $vendor=$pdo->prepare('SELECT id,status FROM vendors WHERE user_id=? LIMIT 1');$vendor->execute([(int)Auth::user()['id']]);$vendorRow=$vendor->fetch(PDO::FETCH_ASSOC);
     if(!$vendorRow){http_response_code(403);return;}
     if(!Auth::canManageVendorBookings((string)$vendorRow['status'])){http_response_code(403);exit('Rezervasyonları yönetmek için işletme hesabınızın onaylanması gerekiyor.');}
     $vendorId=(int)$vendorRow['id'];
     $id=(int)($_POST['id']??0);$status=(string)($_POST['status']??'');
-    if(!in_array($status,['confirmed','cancelled','completed'],true)){http_response_code(422);exit('Rezervasyon durumu geçersiz.');}
+    if($id<1||!in_array($status,['confirmed','cancelled','completed'],true)){http_response_code(422);exit('Rezervasyon durumu geçersiz.');}
     try{
         $pdo->beginTransaction();
-        $s=$pdo->prepare('SELECT b.property_id,b.guest_user_id,b.check_in,b.check_out,b.status FROM bookings b JOIN properties p ON p.id=b.property_id WHERE b.id=? AND p.vendor_id=? FOR UPDATE');
-        $s->execute([$id,$vendorId]);$booking=$s->fetch();
+        // Match the global lock order: property first, then all related bookings.
+        $lookup=$pdo->prepare('SELECT b.property_id FROM bookings b JOIN properties p ON p.id=b.property_id WHERE b.id=? AND p.vendor_id=? LIMIT 1');
+        $lookup->execute([$id,$vendorId]);$propertyId=(int)($lookup->fetchColumn()?:0);
+        if($propertyId<1){$pdo->rollBack();http_response_code(404);exit('Rezervasyon bulunamadı.');}
+        $propertyLock=$pdo->prepare('SELECT id FROM properties WHERE id=? AND vendor_id=? LIMIT 1 FOR UPDATE');
+        $propertyLock->execute([$propertyId,$vendorId]);
+        if(!$propertyLock->fetchColumn()){$pdo->rollBack();http_response_code(404);exit('Rezervasyon bulunamadı.');}
+        \App\Core\BookingHoldExpiryService::expireSafePendingForProperty($pdo,$propertyId);
+        $s=$pdo->prepare('SELECT b.property_id,b.guest_user_id,b.check_in,b.check_out,b.status FROM bookings b JOIN properties p ON p.id=b.property_id WHERE b.id=? AND b.property_id=? AND p.vendor_id=? LIMIT 1 FOR UPDATE');
+        $s->execute([$id,$propertyId,$vendorId]);$booking=$s->fetch(PDO::FETCH_ASSOC);
         if(!$booking){$pdo->rollBack();http_response_code(404);exit('Rezervasyon bulunamadı.');}
+        if(!\App\Core\BookingStatusPolicy::canVendorTransition((string)$booking['status'],$status)){
+            $pdo->rollBack();http_response_code(409);exit('Bu rezervasyon durumundan seçilen işleme geçişe izin verilmiyor.');
+        }
+        if((string)$booking['status']===$status){$pdo->commit();redirect('/vendor/bookings');}
         if($status==='confirmed'){
-            $conflict=$pdo->prepare("SELECT id FROM bookings WHERE property_id=? AND id<>? AND status='confirmed' AND check_in < ? AND check_out > ? LIMIT 1");
-            $conflict->execute([(int)$booking['property_id'],$id,$booking['check_out'],$booking['check_in']]);
-            if($conflict->fetchColumn()){$pdo->rollBack();http_response_code(409);exit('Bu tarihlerde başka bir rezervasyon talebi veya onaylı rezervasyon var.');}
-            $blocked=$pdo->prepare("SELECT id FROM availability WHERE property_id=? AND status<>'available' AND date_from < ? AND date_to > ? LIMIT 1");
-            $blocked->execute([(int)$booking['property_id'],$booking['check_out'],$booking['check_in']]);
+            $conflict=$pdo->prepare("SELECT id FROM bookings WHERE property_id=? AND id<>? AND status IN ('pending','confirmed') AND check_in < ? AND check_out > ? LIMIT 1 FOR UPDATE");
+            $conflict->execute([$propertyId,$id,$booking['check_out'],$booking['check_in']]);
+            if($conflict->fetchColumn()){$pdo->rollBack();http_response_code(409);exit('Bu tarihlerde bekleyen veya onaylanmış başka bir rezervasyon var.');}
+            $blocked=$pdo->prepare("SELECT id FROM availability WHERE property_id=? AND status<>'available' AND date_from < ? AND date_to > ? LIMIT 1 FOR UPDATE");
+            $blocked->execute([$propertyId,$booking['check_out'],$booking['check_in']]);
             if($blocked->fetchColumn()){$pdo->rollBack();http_response_code(409);exit('Bu rezervasyon tarihleri takvimde kapatılmış.');}
             $seasonStmt=$pdo->prepare('SELECT date_from,date_to,min_nights,checkin_weekdays,checkout_weekdays FROM property_seasonal_prices WHERE property_id=? AND date_from < ? AND date_to > ? ORDER BY date_from');
-            $seasonStmt->execute([(int)$booking['property_id'],$booking['check_out'],$booking['check_in']]);$staySeasons=$seasonStmt->fetchAll(PDO::FETCH_ASSOC);
+            $seasonStmt->execute([$propertyId,$booking['check_out'],$booking['check_in']]);$staySeasons=$seasonStmt->fetchAll(PDO::FETCH_ASSOC);
             try{\App\Core\BookingStayRules::validate(new DateTimeImmutable($booking['check_in']),new DateTimeImmutable($booking['check_out']),$staySeasons);}catch(InvalidArgumentException $e){$pdo->rollBack();http_response_code(409);exit($e->getMessage());}
         }
-        $u=$pdo->prepare('UPDATE bookings SET status=? WHERE id=?');$u->execute([$status,$id]);
+        $u=$pdo->prepare('UPDATE bookings SET status=? WHERE id=? AND status=?');
+        $u->execute([$status,$id,(string)$booking['status']]);
+        if($u->rowCount()!==1){$pdo->rollBack();http_response_code(409);exit('Rezervasyon durumu eşzamanlı olarak değişti. Lütfen tekrar deneyin.');}
         $titles=['confirmed'=>'Rezervasyonunuz onaylandı','cancelled'=>'Rezervasyonunuz iptal edildi','completed'=>'Konaklamanız tamamlandı'];
         if(!empty($booking['guest_user_id'])){
             $n=$pdo->prepare('INSERT INTO notifications(user_id,notification_type,title,body,created_at) VALUES(?,?,?,?,NOW())');
