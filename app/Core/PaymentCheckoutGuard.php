@@ -26,7 +26,7 @@ final class PaymentCheckoutGuard
             $paid->execute([$bookingId]);
             if ($paid->fetchColumn() !== false) { $pdo->commit(); return ['result'=>'already_paid']; }
 
-            $active = $pdo->prepare("SELECT id,provider_reference,response_payload,status,expires_at FROM payment_transactions WHERE booking_id=? AND provider='iyzico' AND status IN ('pending','processing') ORDER BY id DESC LIMIT 1 FOR UPDATE");
+            $active = $pdo->prepare("SELECT id,booking_id,provider,provider_reference,amount,currency,request_payload,response_payload,status,expires_at FROM payment_transactions WHERE booking_id=? AND provider='iyzico' AND status IN ('pending','processing') ORDER BY id DESC LIMIT 1 FOR UPDATE");
             $active->execute([$bookingId]);
             $row = $active->fetch(PDO::FETCH_ASSOC);
             if ($row && (string)$row['status'] === 'processing') { $pdo->commit(); return ['result'=>'processing']; }
