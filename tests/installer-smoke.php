@@ -362,6 +362,25 @@ try {
     $staleCount->execute([$staleTokenBookingId]);
     assertSmoke((int)$staleCount->fetchColumn()===1,'A second checkout was created before reconciling the expired provider token.');
 
+    // Legacy rows already marked expired by an older build must also be
+    // reconciled before a new provider session can be created.
+    $legacyCode='VRLEG'.strtoupper(bin2hex(random_bytes(4)));
+    $legacyStart=(new DateTimeImmutable('+120 days'))->format('Y-m-d');
+    $legacyEnd=(new DateTimeImmutable('+122 days'))->format('Y-m-d');
+    $createBooking->execute([$legacyCode,(int)$property['id'],$customerId,'Legacy Expired Customer',$customerEmail,'+905551112233',$legacyStart,$legacyEnd,1,$subtotal,$fees,$total,$property['currency']]);
+    $legacyBookingId=(int)$pdo->lastInsertId();
+    $legacyFinancial=$pdo->prepare("INSERT INTO booking_financials(booking_id,gross_amount,platform_fee,vendor_net_amount,currency,payout_status,created_at) VALUES(?,?,0,?,?,'unpaid',NOW())");
+    $legacyFinancial->execute([$legacyBookingId,$total,$total,$property['currency']]);
+    $legacyToken='VRLEGACY-TOKEN-'.strtoupper(bin2hex(random_bytes(4)));
+    $legacyRequest=json_encode(['conversationId'=>'VR'.$legacyBookingId.'-LEGACY','basketId'=>$legacyCode,'environment'=>'sandbox']);
+    $legacyInsert=$pdo->prepare("INSERT INTO payment_transactions(booking_id,provider,provider_reference,amount,currency,status,request_payload,expires_at,created_at,updated_at) VALUES(?,'iyzico',?,?,?,'expired',?,DATE_SUB(NOW(),INTERVAL 1 MINUTE),NOW(),NOW())");
+    $legacyInsert->execute([$legacyBookingId,$legacyToken,$checkoutAmount,$property['currency'],$legacyRequest]);
+    $legacyRetry=PaymentCheckoutGuard::reserveIyzico($pdo,$legacyBookingId,'VR-LEGACY-RETRY-'.strtoupper(bin2hex(random_bytes(4))),$checkoutAmount,$property['currency'],$checkoutPayload);
+    assertSmoke(($legacyRetry['result']??'')==='verification_required','A legacy expired real provider token was bypassed by a new checkout.');
+    $legacyCount=$pdo->prepare("SELECT COUNT(*) FROM payment_transactions WHERE booking_id=? AND provider='iyzico'");
+    $legacyCount->execute([$legacyBookingId]);
+    assertSmoke((int)$legacyCount->fetchColumn()===1,'A second checkout was created for a legacy expired provider token.');
+
     // Expired booking holds are released only when no unresolved payment or
     // pending bank-transfer report can still represent money in flight.
     $makeHoldExpiryCase = static function (string $label, ?string $paymentStatus=null, string $provider='iyzico', ?string $providerReference=null) use ($pdo,$createBooking,$property,$customerId,$customerEmail,$subtotal,$fees,$total): array {
