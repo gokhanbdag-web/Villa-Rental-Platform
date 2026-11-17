@@ -1188,7 +1188,7 @@ $router->post('/checkout/{bookingCode}/iyzico/start', static function (array $pa
                 $bookingState=$pdo->prepare('SELECT status FROM bookings WHERE id=? LIMIT 1');
                 $bookingState->execute([(int)$booking['id']]);
                 $currentBookingStatus=(string)$bookingState->fetchColumn();
-                redirect('/payment/'.($reconciledResult==='paid_booking_conflict'||in_array($currentBookingStatus,['pending','cancelled'],true)?'review':'success').'/'.rawurlencode((string)($reservation['payment']['provider_reference']??'')));
+                redirect('/payment/'.($reconciledResult==='paid_booking_conflict'||in_array($currentBookingStatus,['pending','cancelled','completed'],true)?'review':'success').'/'.rawurlencode((string)($reservation['payment']['provider_reference']??'')));
             }
             if($reconciledStatus==='processing'&&$acceptedReconciliation){
                 redirect('/checkout/'.rawurlencode((string)$booking['booking_code']).'?payment=review');
