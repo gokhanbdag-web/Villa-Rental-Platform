@@ -513,7 +513,7 @@ try {
     $listingPageSource = (string)file_get_contents($root . '/themes/default/templates/pages/listing.php');
     assertSmoke(str_contains($landingThemeSource, "renderPartial('components/cards/villa-card.php'") && str_contains($listingPageSource, "renderPartial('components/cards/villa-card.php'"), 'Homepage and search results must use the same shared villa card component.');
     $webRoutesSource = (string)file_get_contents($root . '/routes/web.php');
-    $bookingCreateRouteStart = strpos($webRoutesSource, '$router->post(\\'/villa/{slug}/reserve\\'');
+    $bookingCreateRouteStart = strpos($webRoutesSource, '$router->post(\'/villa/{slug}/reserve\'');
     $bookingCreateRoute = $bookingCreateRouteStart !== false ? substr($webRoutesSource, $bookingCreateRouteStart) : '';
     assertSmoke(
         substr_count($webRoutesSource, "status='confirmed'") >= 7
