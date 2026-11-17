@@ -1979,7 +1979,7 @@ $router->post('/vendor/bookings/status', static function (): void {
             if($blocked->fetchColumn()){$pdo->rollBack();http_response_code(409);exit('Bu rezervasyon tarihleri takvimde kapatılmış.');}
             $seasonStmt=$pdo->prepare('SELECT date_from,date_to,min_nights,checkin_weekdays,checkout_weekdays FROM property_seasonal_prices WHERE property_id=? AND date_from < ? AND date_to > ? ORDER BY date_from');
             $seasonStmt->execute([$propertyId,$booking['check_out'],$booking['check_in']]);$staySeasons=$seasonStmt->fetchAll(PDO::FETCH_ASSOC);
-            try{\App\Core\BookingStayRules::validate(new DateTimeImmutable($booking['check_in']),new DateTimeImmutable($booking['check_out']),$seasonStmt->fetchAll(PDO::FETCH_ASSOC));}catch(InvalidArgumentException $e){$pdo->rollBack();http_response_code(409);exit($e->getMessage());}
+            try{\App\Core\BookingStayRules::validate(new DateTimeImmutable($booking['check_in']),new DateTimeImmutable($booking['check_out']),$staySeasons);}catch(InvalidArgumentException $e){$pdo->rollBack();http_response_code(409);exit($e->getMessage());}
         }
         $u=$pdo->prepare('UPDATE bookings SET status=? WHERE id=? AND status=?');
         $u->execute([$status,$id,(string)$booking['status']]);
