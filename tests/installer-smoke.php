@@ -308,9 +308,23 @@ try {
 
     $latePaidCase=$createLifecycleCase('late-paid','cancelled');
     $latePaidResult=$runLifecycleCallback($latePaidCase,'success');
-    assertSmoke(($latePaidResult['result']??'')==='rejected_booking_status'&&!($latePaidResult['payment_updated']??true),'A late successful callback was accepted for a cancelled booking.');
+    assertSmoke(($latePaidResult['result']??'')==='paid_booking_conflict'&&($latePaidResult['payment_updated']??false)&&($latePaidResult['manual_review_required']??false),'A late successful callback for a cancelled booking was not recorded for manual refund review.');
     $lifecyclePaymentState->execute([$latePaidCase['reference']]);
-    assertSmoke(($lifecyclePaymentState->fetch(PDO::FETCH_ASSOC)['status']??'')==='pending','Rejected late payment callback changed the payment transaction.');
+    assertSmoke(($lifecyclePaymentState->fetch(PDO::FETCH_ASSOC)['status']??'')==='paid','A verified late payment was not persisted for a cancelled booking.');
+    $lifecycleBookingState->execute([$latePaidCase['booking_id']]);
+    assertSmoke($lifecycleBookingState->fetchColumn()==='cancelled','A late payment incorrectly reactivated a cancelled booking.');
+
+    // A provider-verified success may reconcile a legacy local expiry; the
+    // local clock alone must not make a real provider payment permanently terminal.
+    $legacyExpiredCase=$createLifecycleCase('legacy-expired');
+    $markLegacyExpired=$pdo->prepare("UPDATE payment_transactions SET status='expired' WHERE provider_reference=? AND status='pending'");
+    $markLegacyExpired->execute([$legacyExpiredCase['reference']]);
+    $legacyExpiredPaid=$runLifecycleCallback($legacyExpiredCase,'success');
+    assertSmoke(($legacyExpiredPaid['result']??'')==='processed'&&($legacyExpiredPaid['payment_status']??'')==='paid','Verified success could not reconcile a legacy expired payment transaction.');
+    $lifecyclePaymentState->execute([$legacyExpiredCase['reference']]);
+    assertSmoke(($lifecyclePaymentState->fetch(PDO::FETCH_ASSOC)['status']??'')==='paid','Legacy expired payment did not return to paid after provider verification.');
+    $lifecycleBookingState->execute([$legacyExpiredCase['booking_id']]);
+    assertSmoke($lifecycleBookingState->fetchColumn()==='confirmed','Legacy expired but provider-paid booking was not confirmed.');
 
     // The booking row lock serializes repeat checkout starts and stale init retries.
     $checkoutCode='VRCHK'.strtoupper(bin2hex(random_bytes(4)));
@@ -361,6 +375,25 @@ try {
     $staleCount=$pdo->prepare("SELECT COUNT(*) FROM payment_transactions WHERE booking_id=? AND provider='iyzico'");
     $staleCount->execute([$staleTokenBookingId]);
     assertSmoke((int)$staleCount->fetchColumn()===1,'A second checkout was created before reconciling the expired provider token.');
+
+    // Legacy rows already marked expired by an older build must also be
+    // reconciled before a new provider session can be created.
+    $legacyCode='VRLEG'.strtoupper(bin2hex(random_bytes(4)));
+    $legacyStart=(new DateTimeImmutable('+120 days'))->format('Y-m-d');
+    $legacyEnd=(new DateTimeImmutable('+122 days'))->format('Y-m-d');
+    $createBooking->execute([$legacyCode,(int)$property['id'],$customerId,'Legacy Expired Customer',$customerEmail,'+905551112233',$legacyStart,$legacyEnd,1,$subtotal,$fees,$total,$property['currency']]);
+    $legacyBookingId=(int)$pdo->lastInsertId();
+    $legacyFinancial=$pdo->prepare("INSERT INTO booking_financials(booking_id,gross_amount,platform_fee,vendor_net_amount,currency,payout_status,created_at) VALUES(?,?,0,?,?,'unpaid',NOW())");
+    $legacyFinancial->execute([$legacyBookingId,$total,$total,$property['currency']]);
+    $legacyToken='VRLEGACY-TOKEN-'.strtoupper(bin2hex(random_bytes(4)));
+    $legacyRequest=json_encode(['conversationId'=>'VR'.$legacyBookingId.'-LEGACY','basketId'=>$legacyCode,'environment'=>'sandbox']);
+    $legacyInsert=$pdo->prepare("INSERT INTO payment_transactions(booking_id,provider,provider_reference,amount,currency,status,request_payload,expires_at,created_at,updated_at) VALUES(?,'iyzico',?,?,?,'expired',?,DATE_SUB(NOW(),INTERVAL 1 MINUTE),NOW(),NOW())");
+    $legacyInsert->execute([$legacyBookingId,$legacyToken,$checkoutAmount,$property['currency'],$legacyRequest]);
+    $legacyRetry=PaymentCheckoutGuard::reserveIyzico($pdo,$legacyBookingId,'VR-LEGACY-RETRY-'.strtoupper(bin2hex(random_bytes(4))),$checkoutAmount,$property['currency'],$checkoutPayload);
+    assertSmoke(($legacyRetry['result']??'')==='verification_required','A legacy expired real provider token was bypassed by a new checkout.');
+    $legacyCount=$pdo->prepare("SELECT COUNT(*) FROM payment_transactions WHERE booking_id=? AND provider='iyzico'");
+    $legacyCount->execute([$legacyBookingId]);
+    assertSmoke((int)$legacyCount->fetchColumn()===1,'A second checkout was created for a legacy expired provider token.');
 
     // Expired booking holds are released only when no unresolved payment or
     // pending bank-transfer report can still represent money in flight.
@@ -417,6 +450,30 @@ try {
     $realTokenState=$pdo->prepare('SELECT status FROM payment_transactions WHERE provider_reference=?');
     $realTokenState->execute([$realTokenHold['reference']]);
     assertSmoke($realTokenState->fetchColumn()==='pending','An unresolved real provider token was expired without verification.');
+
+    $legacyExpiredRealHold=$makeHoldExpiryCase('legacy-expired-real','expired','iyzico','VRHOLD-LEGACY-'.strtoupper(bin2hex(random_bytes(4))));
+    $runHoldExpiry((int)$property['id']);
+    $holdState->execute([$legacyExpiredRealHold['id']]);
+    assertSmoke($holdState->fetchColumn()==='pending','A legacy locally expired real iyzico token was released without a verified provider event.');
+
+    $verifiedExpiredHold=$makeHoldExpiryCase('verified-expired','pending','iyzico','VRHOLD-VERIFIED-'.strtoupper(bin2hex(random_bytes(4))));
+    $setVerifiedHoldDue=$pdo->prepare('UPDATE bookings SET hold_expires_at=DATE_SUB(NOW(),INTERVAL 1 MINUTE) WHERE id=?');
+    $setVerifiedHoldDue->execute([$verifiedExpiredHold['id']]);
+    $verifiedExpiredCallback=[
+        'booking_id'=>$verifiedExpiredHold['id'],'provider'=>'iyzico',
+        'provider_reference'=>$verifiedExpiredHold['reference'],
+        'amount'=>$checkoutAmount,'currency'=>$property['currency'],'status'=>'expired',
+    ];
+    $verifiedExpiredResult=$paymentProcessor->processVerified(
+        'iyzico','VILLA-VERIFIED-EXPIRY-'.strtoupper(bin2hex(random_bytes(4))),
+        'CHECKOUT_FORM_RECONCILIATION',$verifiedExpiredHold['reference'],
+        ['paymentStatus'=>'EXPIRED','token'=>$verifiedExpiredHold['reference']],
+        $verifiedExpiredCallback
+    );
+    assertSmoke(($verifiedExpiredResult['result']??'')==='processed','Verified provider expiry callback was not applied.');
+    $runHoldExpiry((int)$property['id']);
+    $holdState->execute([$verifiedExpiredHold['id']]);
+    assertSmoke($holdState->fetchColumn()==='cancelled','A provider-verified expired token did not release its due booking hold.');
 
     $placeholderHold=$makeHoldExpiryCase('placeholder','pending','iyzico','init:VRHOLD-INIT-'.strtoupper(bin2hex(random_bytes(4))));
     $runHoldExpiry((int)$property['id']);

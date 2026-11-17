@@ -1174,8 +1174,42 @@ $router->post('/checkout/{bookingCode}/iyzico/start', static function (array $pa
         if($reservationResult==='booking_not_pending'){http_response_code(409);exit('Yalnızca ödeme bekleyen rezervasyonlar için ödeme başlatılabilir.');}
         if($reservationResult==='processing')redirect('/checkout/'.rawurlencode((string)$booking['booking_code']).'?payment=review');
         if($reservationResult==='verification_required'){
-            http_response_code(409);
-            exit('Önceki iyzico ödeme oturumunun sonucu henüz doğrulanamadı. Çift tahsilat riskini önlemek için yeni ödeme başlatılmadı. Lütfen destek ekibiyle iletişime geçin.');
+            try{
+                $reconciled=\App\Core\IyzicoPaymentReconciler::reconcile($pdo,(array)($reservation['payment']??[]));
+            }catch(Throwable $reconcileError){
+                error_log('iyzico expired checkout reconciliation failed; retry was blocked.');
+                http_response_code(409);
+                exit('Önceki ödeme oturumunun sonucu iyzico üzerinden doğrulanamadı. Çift tahsilat riskini önlemek için yeni ödeme başlatılmadı. Lütfen biraz sonra tekrar deneyin.');
+            }
+            $reconciledStatus=(string)($reconciled['payment_status']??'');
+            $reconciledResult=(string)($reconciled['result']??'');
+            $acceptedReconciliation=in_array($reconciledResult,['processed','already_applied','duplicate','paid_booking_conflict'],true);
+            if($reconciledStatus==='paid'&&$acceptedReconciliation){
+                $bookingState=$pdo->prepare('SELECT status FROM bookings WHERE id=? LIMIT 1');
+                $bookingState->execute([(int)$booking['id']]);
+                $currentBookingStatus=(string)$bookingState->fetchColumn();
+                redirect('/payment/'.($reconciledResult==='paid_booking_conflict'||in_array($currentBookingStatus,['pending','cancelled','completed'],true)?'review':'success').'/'.rawurlencode((string)($reservation['payment']['provider_reference']??'')));
+            }
+            if($reconciledStatus==='processing'&&$acceptedReconciliation){
+                redirect('/checkout/'.rawurlencode((string)$booking['booking_code']).'?payment=review');
+            }
+            if(in_array($reconciledStatus,['failed','cancelled','expired'],true)&&$acceptedReconciliation){
+                $reservation=\App\Core\PaymentCheckoutGuard::reserveIyzico(
+                    $pdo,
+                    (int)$booking['id'],
+                    $conversationId,
+                    $amount,
+                    $currency,
+                    ['conversationId'=>$conversationId,'basketId'=>$booking['booking_code'],'environment'=>$paymentEnvironment]
+                );
+                $reservationResult=(string)($reservation['result']??'');
+                if($reservationResult==='processing') redirect('/checkout/'.rawurlencode((string)$booking['booking_code']).'?payment=review');
+                if($reservationResult==='booking_not_pending') { http_response_code(409); exit('Rezervasyon süresi doldu veya artık ödeme beklemiyor. Lütfen yeni bir rezervasyon oluşturun.'); }
+                if($reservationResult==='verification_required') { http_response_code(409); exit('Başka bir ödeme oturumunun sonucu doğrulanmadan yeni ödeme başlatılamaz.'); }
+            }else{
+                http_response_code(409);
+                exit('Önceki ödeme oturumunun sonucu kesinleşmedi. Yeni ödeme başlatılmadı; ödeme durumu inceleniyor.');
+            }
         }
         if($reservationResult==='initializing'){http_response_code(409);exit('Ödeme oturumu hazırlanıyor. Lütfen birkaç saniye sonra tekrar deneyin.');}
         if($reservationResult==='existing'){
@@ -1267,12 +1301,13 @@ $router->post('/payments/iyzico/callback', static function (): void {
         $processed=(new \App\Core\PaymentCallbackProcessor($pdo))->processVerified(
             'iyzico',$eventId,'CHECKOUT_FORM_AUTH',$token,$eventPayload,$callback
         );
-$currentPayment=$pdo->prepare('SELECT status,response_payload FROM payment_transactions WHERE id=? LIMIT 1');
+$currentPayment=$pdo->prepare('SELECT pt.status,pt.response_payload,b.status AS booking_status FROM payment_transactions pt JOIN bookings b ON b.id=pt.booking_id WHERE pt.id=? LIMIT 1');
         $currentPayment->execute([(int)$transaction['id']]);
         $currentPaymentRow=$currentPayment->fetch(PDO::FETCH_ASSOC)?:[];
         $storedStatus=(string)($currentPaymentRow['status']??'');
-        if($storedStatus==='paid'&&in_array($processed['result']??'', ['processed','duplicate','already_applied','in_progress'],true)) \App\Core\PaymentRefundService::storeVerifiedPaymentDetails($pdo,(int)$transaction['id'],(string)($currentPaymentRow['response_payload']??''),$result);
-        $suffix=($processed['result']??'')==='paid_booking_conflict'?'review':match($storedStatus){'paid'=>'success','processing'=>'review','failed'=>'failed',default=>'review'};
+        if($storedStatus==='paid'&&in_array($processed['result']??'', ['processed','duplicate','already_applied','in_progress','paid_booking_conflict'],true)) \App\Core\PaymentRefundService::storeVerifiedPaymentDetails($pdo,(int)$transaction['id'],(string)($currentPaymentRow['response_payload']??''),$result);
+        $needsPaymentReview=($processed['result']??'')==='paid_booking_conflict'||($storedStatus==='paid'&&in_array((string)($currentPaymentRow['booking_status']??''),['pending','cancelled','completed'],true));
+        $suffix=$needsPaymentReview?'review':match($storedStatus){'paid'=>'success','processing'=>'review','failed'=>'failed',default=>'review'};
         redirect('/payment/'.$suffix.'/'.rawurlencode($token));
     }catch(Throwable $e){
         error_log('iyzico callback verification failed: '.$e->getMessage());
@@ -1292,7 +1327,7 @@ foreach(['success','failed','review'] as $paymentResultType){
         $booking=$row;$actualStatus=(string)$payment['status'];
         if($paymentResultType==='success'&&$actualStatus!=='paid')redirect('/payment/review/'.rawurlencode($token));
         if($paymentResultType==='failed'&&$actualStatus!=='failed')redirect('/payment/review/'.rawurlencode($token));
-        if($paymentResultType==='review'&&in_array($actualStatus,['paid','failed'],true)&&!($actualStatus==='paid'&&(string)$row['status']==='pending'))redirect('/payment/'.($actualStatus==='paid'?'success':'failed').'/'.rawurlencode($token));
+        if($paymentResultType==='review'&&in_array($actualStatus,['paid','failed'],true)&&!($actualStatus==='paid'&&in_array((string)$row['status'],['pending','cancelled','completed'],true)))redirect('/payment/'.($actualStatus==='paid'?'success':'failed').'/'.rawurlencode($token));
         $locale = Translator::locale();
         $navigation=villa_navigation_tree($pdo,'header',$locale);
         $footerNavigation=villa_navigation_tree($pdo,'footer',$locale);

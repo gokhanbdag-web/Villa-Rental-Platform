@@ -11,7 +11,7 @@ final class PaymentTransactionGuard
         'paid' => ['refunded'],
         'failed' => [],
         'cancelled' => [],
-        'expired' => [],
+        'expired' => ['processing', 'paid', 'failed', 'cancelled'],
         'refunded' => [],
     ];
 

@@ -114,8 +114,8 @@ final class PaymentCallbackProcessor
                 $this->pdo->commit();
                 return ['result' => 'rejected_booking', 'payment_updated' => false];
             }
-            if ($targetStatus === 'paid' && !in_array((string)$booking['status'], ['pending','confirmed'], true)) {
-                $inbox->markFailed($provider, $eventId, 'İptal edilmiş veya tamamlanmış rezervasyon için ödeme kabul edilmedi.');
+            if ($targetStatus === 'paid' && !in_array((string)$booking['status'], ['pending','confirmed','cancelled','completed'], true)) {
+                $inbox->markFailed($provider, $eventId, 'Tamamlanmış rezervasyon için yeni ödeme kabul edilmedi.');
                 $this->pdo->commit();
                 return ['result' => 'rejected_booking_status', 'payment_updated' => false];
             }
@@ -140,8 +140,15 @@ final class PaymentCallbackProcessor
                 if (!$inbox->markProcessed($provider, $eventId)) {
                     throw new \RuntimeException('Tekrarlanan ödeme bildirimi tamamlandı olarak işaretlenemedi.');
                 }
+                $needsReview = $targetStatus === 'paid' && in_array((string)$booking['status'], ['pending','cancelled','completed'], true);
                 $this->pdo->commit();
-                return ['result' => 'already_applied', 'payment_updated' => false, 'payment_status' => $currentStatus];
+                return [
+                    'result' => $needsReview ? 'paid_booking_conflict' : 'already_applied',
+                    'payment_updated' => false,
+                    'payment_status' => $currentStatus,
+                    'booking_confirmed' => (string)$booking['status'] === 'confirmed',
+                    'manual_review_required' => $needsReview,
+                ];
             }
             if (!PaymentTransactionGuard::canTransition($currentStatus, $targetStatus)) {
                 $inbox->markFailed($provider, $eventId, 'İzin verilmeyen ödeme durum geçişi.');
@@ -157,6 +164,7 @@ final class PaymentCallbackProcessor
                 throw new \RuntimeException('Ödeme kaydı eşzamanlı olarak değişti; bildirim tekrar denenmeli.');
             }
             $bookingConflict = false;
+            $bookingNeedsReview = $targetStatus === 'paid' && in_array((string)$booking['status'], ['cancelled','completed'], true);
             if ($targetStatus === 'paid' && (string)$booking['status'] === 'pending') {
                 // Pending reservations also hold dates. A paid callback must not
                 // confirm this booking if another active request now overlaps it.
@@ -179,7 +187,7 @@ final class PaymentCallbackProcessor
             }
 
             $this->pdo->commit();
-            if ($bookingConflict) {
+            if ($bookingConflict || $bookingNeedsReview) {
                 return [
                     'result' => 'paid_booking_conflict',
                     'payment_updated' => true,

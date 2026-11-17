@@ -22,6 +22,10 @@ paymentAssert(PaymentCallbackProcessor::targetStatus('failure') === 'failed', 'F
 paymentAssert(PaymentCallbackProcessor::targetStatus('cancelled') === 'cancelled', 'Cancelled callback status mapping failed.');
 paymentAssert(PaymentCallbackProcessor::targetStatus('refunded') === 'refunded', 'Refund callback status mapping failed.');
 paymentAssert(PaymentCallbackProcessor::targetStatus('unknown') === null, 'Unknown callback status was accepted.');
+paymentAssert(\App\Core\IyzicoPaymentReconciler::normalizeStatus(['paymentStatus'=>'SUCCESS','fraudStatus'=>1]) === 'paid', 'Verified iyzico success was not normalized as paid.');
+paymentAssert(\App\Core\IyzicoPaymentReconciler::normalizeStatus(['paymentStatus'=>'SUCCESS','fraudStatus'=>0]) === 'processing', 'iyzico fraud review was not normalized as processing.');
+paymentAssert(\App\Core\IyzicoPaymentReconciler::normalizeStatus(['paymentStatus'=>'FAILURE']) === 'failed', 'iyzico failure was not normalized as failed.');
+paymentAssert(\App\Core\IyzicoPaymentReconciler::normalizeStatus(['paymentStatus'=>'WAITING']) === null, 'Unknown iyzico status was treated as terminal.');
 paymentAssert(PaymentCallbackProcessor::targetStatus('processing') === 'processing', 'iyzico fraud-review status mapping failed.');
 paymentAssert(method_exists(\App\Core\IyzicoApiClient::class, 'initializeCheckoutForm'), 'iyzico Checkout Form initialize method is missing.');
 paymentAssert(method_exists(\App\Core\IyzicoApiClient::class, 'retrieveCheckoutForm'), 'iyzico Checkout Form retrieve method is missing.');
@@ -29,6 +33,8 @@ paymentAssert(method_exists(\App\Core\IyzicoApiClient::class, 'retrieveCheckoutF
 
 paymentAssert(PaymentTransactionGuard::canTransition('pending','processing'), 'Pending to processing transition was rejected.');
 paymentAssert(PaymentTransactionGuard::canTransition('processing','paid'), 'Processing to paid transition was rejected.');
+paymentAssert(PaymentTransactionGuard::canTransition('expired','paid'), 'A verified provider success could not reconcile a legacy locally expired payment.');
+paymentAssert(PaymentTransactionGuard::canTransition('expired','processing'), 'A verified provider processing state could not reconcile a legacy locally expired payment.');
 paymentAssert(PaymentTransactionGuard::canTransition('paid','refunded'), 'Paid to refunded transition was rejected.');
 paymentAssert(!PaymentTransactionGuard::canTransition('paid','failed'), 'Paid payment was allowed to regress to failed.');
 paymentAssert(!PaymentTransactionGuard::canTransition('failed','paid'), 'Failed payment was allowed to become paid without a new transaction.');
@@ -134,17 +140,21 @@ paymentAssert(is_string($callbackSource) && strpos($callbackSource, "SELECT id F
 paymentAssert(strpos($callbackSource, "status IN ('pending','confirmed') AND check_in < ? AND check_out > ?") !== false, 'Paid callback overlap guard is missing.');
 paymentAssert(strpos($callbackSource, "'paid_booking_conflict'") !== false && strpos($callbackSource, "'manual_review_required' => true") !== false, 'Paid conflicting bookings are not routed to manual review.');
 paymentAssert(is_string($routesSource) && strpos($routesSource, "status IN ('pending','confirmed') AND check_in < ? AND check_out > ?") !== false, 'Admin confirmation does not block overlapping pending bookings.');
-paymentAssert(is_string($adminBookingsSource) && strpos($adminBookingsSource, 'has_paid_payment') !== false && strpos($adminBookingsSource, 'Ödeme alındı · inceleme gerekli') !== false, 'Admin booking list does not flag paid bookings requiring review.');
+paymentAssert(is_string($adminBookingsSource) && strpos($adminBookingsSource, 'has_paid_payment') !== false && strpos($adminBookingsSource, 'Ödeme alındı · inceleme gerekli') !== false && strpos($adminBookingsSource, 'Ödeme alındı · iade incelemesi') !== false, 'Admin booking list does not flag paid pending/cancelled bookings requiring review.');
 $checkoutGuardSource = file_get_contents(dirname(__DIR__) . '/app/Core/PaymentCheckoutGuard.php');
 paymentAssert(is_string($checkoutGuardSource) && strpos($checkoutGuardSource, "'verification_required'") !== false && strpos($checkoutGuardSource, 'Never expire it locally or create a') !== false, 'Expired real checkout tokens are not held for provider reconciliation.');
 paymentAssert(strpos($routesSource, "if(\$reservationResult==='verification_required')") !== false, 'Checkout route does not stop a second payment while the old provider token is unresolved.');
 $paymentResultRoute = strpos($routesSource, "if(\$paymentResultType==='review'");
 $paymentResultView = file_get_contents(dirname(__DIR__) . '/themes/default/templates/pages/payment-result.php');
-paymentAssert($paymentResultRoute !== false && strpos($routesSource, "'paid_booking_conflict'?'review'") !== false, 'Paid booking conflicts are incorrectly sent to the success result screen.');
-paymentAssert(is_string($paymentResultView) && strpos($paymentResultView, 'Ödemeniz alındı, rezervasyon inceleniyor') !== false, 'Paid but unconfirmed booking review is not explained to the guest.');
+paymentAssert($paymentResultRoute !== false && strpos($routesSource, '$needsPaymentReview=') !== false && strpos($routesSource, 'paid_booking_conflict') !== false, 'Paid booking conflicts are incorrectly sent to the success result screen.');
+paymentAssert(is_string($paymentResultView) && strpos($paymentResultView, 'Ödemeniz alındı, rezervasyon inceleniyor') !== false && strpos($paymentResultView, 'Ödeme alındı, rezervasyon incelemesi gerekli') !== false, 'Paid but unconfirmed/cancelled booking review is not explained to the guest.');
 
 $holdExpirySource = file_get_contents(dirname(__DIR__) . '/app/Core/BookingHoldExpiryService.php');
-paymentAssert(is_string($holdExpirySource) && strpos($holdExpirySource, 'manual_payment_reports') !== false && strpos($holdExpirySource, "in_array(\$status, ['failed','cancelled','expired','refunded'], true)") !== false, 'Booking hold expiry does not protect unresolved or paid payments and pending manual reports.');
+paymentAssert(is_string($holdExpirySource) && strpos($holdExpirySource, 'manual_payment_reports') !== false && strpos($holdExpirySource, 'payment_webhook_events') !== false && strpos($holdExpirySource, "in_array(\$status, ['failed','cancelled','expired','refunded'], true)") !== false, 'Booking hold expiry does not protect unresolved or paid payments and pending manual reports.');
 paymentAssert(strpos($routesSource, 'hold_expires_at') !== false && strpos($routesSource, 'BookingHoldExpiryService::expireSafePendingForProperty') !== false, 'Booking creation does not assign and process pending hold deadlines.');
 paymentAssert(strpos($routesSource, "status IN ('pending','confirmed') AND check_in < ? AND check_out > ?") !== false, 'Manual payment approval does not block overlapping pending bookings.');
+$reconcilerSource = file_get_contents(dirname(__DIR__) . '/app/Core/IyzicoPaymentReconciler.php');
+paymentAssert(is_string($reconcilerSource) && strpos($reconcilerSource, 'verifyIyzicoCheckoutFormRetrieve') !== false && strpos($reconcilerSource, 'PaymentCallbackProcessor') !== false, 'Expired iyzico sessions are not verified and applied through the shared callback processor.');
+paymentAssert(strpos($routesSource, 'IyzicoPaymentReconciler::reconcile') !== false, 'Checkout retry does not reconcile an expired provider token before creating another payment.');
+paymentAssert(strpos($reconcilerSource, "['pending','expired']") !== false && strpos($reconcilerSource, 'verifyIyzicoCheckoutFormRetrieve') !== false, 'Legacy expired provider tokens are not reconciled against a signed provider response.');
 echo "Payment security smoke tests passed. No gateway API requests were made.\n";
