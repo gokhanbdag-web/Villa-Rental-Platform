@@ -3418,7 +3418,7 @@ $router->get('/admin/bookings', static function (): void {
     Auth::requireRole(['super_admin','admin']);
     $pdo=Database::connection();$status=(string)($_GET['status']??'');
     $allowed=['pending','confirmed','cancelled','completed'];
-    $sql="SELECT b.*,p.title,COALESCE(NULLIF(b.guest_name,''),u.username,'Misafir') AS guest_name,COALESCE(NULLIF(b.guest_email,''),u.email,'') AS guest_email,COALESCE(b.guest_phone,'') AS guest_phone FROM bookings b JOIN properties p ON p.id=b.property_id LEFT JOIN users u ON u.id=b.guest_user_id";
+    $sql="SELECT b.*,p.title,COALESCE(NULLIF(b.guest_name,''),u.username,'Misafir') AS guest_name,COALESCE(NULLIF(b.guest_email,''),u.email,'') AS guest_email,COALESCE(b.guest_phone,'') AS guest_phone,EXISTS(SELECT 1 FROM payment_transactions pt WHERE pt.booking_id=b.id AND pt.status='paid') AS has_paid_payment FROM bookings b JOIN properties p ON p.id=b.property_id LEFT JOIN users u ON u.id=b.guest_user_id";
     if(in_array($status,$allowed,true)){$sql.=' WHERE b.status=?';$s=$pdo->prepare($sql.' ORDER BY b.created_at DESC LIMIT 250');$s->execute([$status]);$bookings=$s->fetchAll();}
     else{$bookings=$pdo->query($sql.' ORDER BY b.created_at DESC LIMIT 250')->fetchAll();}
     $bookingProperties=$pdo->query("SELECT id,title,max_guests,early_checkin_enabled,early_checkin_fee,late_checkout_enabled,late_checkout_fee FROM properties WHERE status<>'archived' ORDER BY title")->fetchAll();
@@ -3489,7 +3489,7 @@ $router->post('/admin/bookings/status', static function (): void {
         if($status==='confirmed'){
             // Locking reads see the latest committed rows after waiting for the
             // property lock; a snapshot read could otherwise miss a concurrent change.
-            $conflict=$pdo->prepare("SELECT id FROM bookings WHERE property_id=? AND id<>? AND status='confirmed' AND check_in < ? AND check_out > ? LIMIT 1 FOR UPDATE");
+            $conflict=$pdo->prepare("SELECT id FROM bookings WHERE property_id=? AND id<>? AND status IN ('pending','confirmed') AND check_in < ? AND check_out > ? LIMIT 1 FOR UPDATE");
             $conflict->execute([$propertyId,$id,$booking['check_out'],$booking['check_in']]);
             if($conflict->fetchColumn()){$pdo->rollBack();http_response_code(409);exit('Bu tarihlerde bekleyen veya onaylanmış başka bir rezervasyon var.');}
 
