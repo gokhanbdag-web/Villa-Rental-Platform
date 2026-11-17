@@ -1306,7 +1306,7 @@ $currentPayment=$pdo->prepare('SELECT pt.status,pt.response_payload,b.status AS 
         $currentPaymentRow=$currentPayment->fetch(PDO::FETCH_ASSOC)?:[];
         $storedStatus=(string)($currentPaymentRow['status']??'');
         if($storedStatus==='paid'&&in_array($processed['result']??'', ['processed','duplicate','already_applied','in_progress','paid_booking_conflict'],true)) \App\Core\PaymentRefundService::storeVerifiedPaymentDetails($pdo,(int)$transaction['id'],(string)($currentPaymentRow['response_payload']??''),$result);
-        $needsPaymentReview=($processed['result']??'')==='paid_booking_conflict'||($storedStatus==='paid'&&in_array((string)($currentPaymentRow['booking_status']??''),['pending','cancelled'],true));
+        $needsPaymentReview=($processed['result']??'')==='paid_booking_conflict'||($storedStatus==='paid'&&in_array((string)($currentPaymentRow['booking_status']??''),['pending','cancelled','completed'],true));
         $suffix=$needsPaymentReview?'review':match($storedStatus){'paid'=>'success','processing'=>'review','failed'=>'failed',default=>'review'};
         redirect('/payment/'.$suffix.'/'.rawurlencode($token));
     }catch(Throwable $e){
@@ -1327,7 +1327,7 @@ foreach(['success','failed','review'] as $paymentResultType){
         $booking=$row;$actualStatus=(string)$payment['status'];
         if($paymentResultType==='success'&&$actualStatus!=='paid')redirect('/payment/review/'.rawurlencode($token));
         if($paymentResultType==='failed'&&$actualStatus!=='failed')redirect('/payment/review/'.rawurlencode($token));
-        if($paymentResultType==='review'&&in_array($actualStatus,['paid','failed'],true)&&!($actualStatus==='paid'&&in_array((string)$row['status'],['pending','cancelled'],true)))redirect('/payment/'.($actualStatus==='paid'?'success':'failed').'/'.rawurlencode($token));
+        if($paymentResultType==='review'&&in_array($actualStatus,['paid','failed'],true)&&!($actualStatus==='paid'&&in_array((string)$row['status'],['pending','cancelled','completed'],true)))redirect('/payment/'.($actualStatus==='paid'?'success':'failed').'/'.rawurlencode($token));
         $locale = Translator::locale();
         $navigation=villa_navigation_tree($pdo,'header',$locale);
         $footerNavigation=villa_navigation_tree($pdo,'footer',$locale);
