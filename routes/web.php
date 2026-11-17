@@ -3617,6 +3617,7 @@ $router->post('/admin/payments/manual/review', static function (): void {
         $update=$pdo->prepare("UPDATE manual_payment_reports SET status=?,reviewed_by=?,review_note=?,reviewed_at=NOW(),updated_at=NOW() WHERE id=? AND status='pending'");
         $update->execute([$decision,(int)Auth::user()['id'],$reviewNote?:null,$reportId]);
         if($update->rowCount()!==1)throw new RuntimeException('Havale bildirimi durumu güncellenemedi.');
+        if($decision==='rejected') \App\Core\BookingHoldExpiryService::expireSafePendingForProperty($pdo,$propertyId);
         if(!empty($booking['guest_user_id'])){
             $notice=$pdo->prepare('INSERT INTO notifications(user_id,notification_type,title,body,created_at) VALUES(?,?,?,?,NOW())');
             $notice->execute([(int)$booking['guest_user_id'],'manual_payment.'.$decision,$decision==='approved'?'Havale ödemeniz onaylandı':'Havale bildiriminiz reddedildi',$decision==='approved'?'Ödemeniz doğrulandı ve rezervasyonunuz onaylandı.':'Havale bildiriminiz doğrulanamadı. Hesabınızdan yeni bir bildirim gönderebilirsiniz.'.($reviewNote!==''?' Yönetici notu: '.$reviewNote:'')]);
