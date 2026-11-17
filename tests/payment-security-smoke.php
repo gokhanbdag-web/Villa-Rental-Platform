@@ -127,4 +127,17 @@ foreach (['amount_mismatch','wrong_order'] as $badScenario) {
     paymentAssert($rejected['signature_valid']===true && $rejected['callback_accepted']===false && $rejected['payment_success']===false, 'PayTR '.$badScenario.' callback was not rejected after matching checks.');
     paymentAssert($rejected['network_requests']===0 && $rejected['real_charge']===false && $rejected['booking_changed']===false, 'PayTR local simulator performed an external or persistent action.');
 }
+$callbackSource = file_get_contents(dirname(__DIR__) . '/app/Core/PaymentCallbackProcessor.php');
+$routesSource = file_get_contents(dirname(__DIR__) . '/routes/web.php');
+$adminBookingsSource = file_get_contents(dirname(__DIR__) . '/views/admin/bookings.php');
+paymentAssert(is_string($callbackSource) && strpos($callbackSource, "SELECT id FROM properties WHERE id=? LIMIT 1 FOR UPDATE") !== false, 'Payment callbacks do not lock the property before the booking.');
+paymentAssert(strpos($callbackSource, "status IN ('pending','confirmed') AND check_in < ? AND check_out > ?") !== false, 'Paid callback overlap guard is missing.');
+paymentAssert(strpos($callbackSource, "'paid_booking_conflict'") !== false && strpos($callbackSource, "'manual_review_required' => true") !== false, 'Paid conflicting bookings are not routed to manual review.');
+paymentAssert(is_string($routesSource) && strpos($routesSource, "status IN ('pending','confirmed') AND check_in < ? AND check_out > ?") !== false, 'Admin confirmation does not block overlapping pending bookings.');
+paymentAssert(is_string($adminBookingsSource) && strpos($adminBookingsSource, 'has_paid_payment') !== false && strpos($adminBookingsSource, 'Ödeme alındı · inceleme gerekli') !== false, 'Admin booking list does not flag paid bookings requiring review.');
+$paymentResultRoute = strpos($routesSource, "if(\$paymentResultType==='review'");
+$paymentResultView = file_get_contents(dirname(__DIR__) . '/themes/default/templates/pages/payment-result.php');
+paymentAssert($paymentResultRoute !== false && strpos($routesSource, "'paid_booking_conflict'?'review'") !== false, 'Paid booking conflicts are incorrectly sent to the success result screen.');
+paymentAssert(is_string($paymentResultView) && strpos($paymentResultView, 'Ödemeniz alındı, rezervasyon inceleniyor') !== false, 'Paid but unconfirmed booking review is not explained to the guest.');
+
 echo "Payment security smoke tests passed. No gateway API requests were made.\n";

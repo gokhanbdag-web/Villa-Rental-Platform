@@ -66,13 +66,11 @@ final class PaymentCallbackProcessor
                 return ['result' => 'in_progress', 'payment_updated' => false];
             }
 
-            // Read the immutable booking association without locking first. All
-            // callbacks for a booking then acquire locks in the same order:
-            // booking row -> payment transaction row(s). Locking the payment row
-            // before the booking can deadlock when two providers notify different
-            // transactions for the same booking at the same time.
+            // Resolve immutable ownership without locking, then follow the same
+            // global lock order as booking creation and admin actions:
+            // property -> booking -> payment transaction(s).
             $lookup = $this->pdo->prepare(
-                'SELECT id,booking_id FROM payment_transactions WHERE provider=? AND provider_reference=? LIMIT 1'
+                'SELECT pt.id,pt.booking_id,b.property_id FROM payment_transactions pt JOIN bookings b ON b.id=pt.booking_id WHERE pt.provider=? AND pt.provider_reference=? LIMIT 1'
             );
             $lookup->execute([$provider, $transactionReference]);
             $paymentIdentity = $lookup->fetch(PDO::FETCH_ASSOC);
@@ -82,7 +80,15 @@ final class PaymentCallbackProcessor
                 return ['result' => 'rejected', 'payment_updated' => false];
             }
 
-            $bookingLock = $this->pdo->prepare('SELECT id,status FROM bookings WHERE id=? LIMIT 1 FOR UPDATE');
+            $propertyLock = $this->pdo->prepare('SELECT id FROM properties WHERE id=? LIMIT 1 FOR UPDATE');
+            $propertyLock->execute([(int)$paymentIdentity['property_id']]);
+            if (!$propertyLock->fetchColumn()) {
+                $inbox->markFailed($provider, $eventId, 'Ödemeye bağlı konaklama bulunamadı.');
+                $this->pdo->commit();
+                return ['result' => 'rejected_property', 'payment_updated' => false];
+            }
+
+            $bookingLock = $this->pdo->prepare('SELECT id,property_id,status,check_in,check_out FROM bookings WHERE id=? LIMIT 1 FOR UPDATE');
             $bookingLock->execute([(int)$paymentIdentity['booking_id']]);
             $booking = $bookingLock->fetch(PDO::FETCH_ASSOC);
             if (!$booking) {
@@ -150,11 +156,22 @@ final class PaymentCallbackProcessor
             if ($update->rowCount() !== 1) {
                 throw new \RuntimeException('Ödeme kaydı eşzamanlı olarak değişti; bildirim tekrar denenmeli.');
             }
+            $bookingConflict = false;
             if ($targetStatus === 'paid' && (string)$booking['status'] === 'pending') {
-                $confirm = $this->pdo->prepare("UPDATE bookings SET status='confirmed' WHERE id=? AND status='pending'");
-                $confirm->execute([(int)$booking['id']]);
-                if ($confirm->rowCount() !== 1) {
-                    throw new \RuntimeException('Ödeme sonrası rezervasyon onaylanamadı; bildirim tekrar denenmeli.');
+                // Pending reservations also hold dates. A paid callback must not
+                // confirm this booking if another active request now overlaps it.
+                $overlap = $this->pdo->prepare(
+                    "SELECT id FROM bookings WHERE property_id=? AND id<>? AND status IN ('pending','confirmed') AND check_in < ? AND check_out > ? LIMIT 1 FOR UPDATE"
+                );
+                $overlap->execute([(int)$booking['property_id'], (int)$booking['id'], (string)$booking['check_out'], (string)$booking['check_in']]);
+                $bookingConflict = $overlap->fetchColumn() !== false;
+
+                if (!$bookingConflict) {
+                    $confirm = $this->pdo->prepare("UPDATE bookings SET status='confirmed' WHERE id=? AND status='pending'");
+                    $confirm->execute([(int)$booking['id']]);
+                    if ($confirm->rowCount() !== 1) {
+                        throw new \RuntimeException('Ödeme sonrası rezervasyon onaylanamadı; bildirim tekrar denenmeli.');
+                    }
                 }
             }
             if (!$inbox->markProcessed($provider, $eventId)) {
@@ -162,6 +179,15 @@ final class PaymentCallbackProcessor
             }
 
             $this->pdo->commit();
+            if ($bookingConflict) {
+                return [
+                    'result' => 'paid_booking_conflict',
+                    'payment_updated' => true,
+                    'payment_status' => $targetStatus,
+                    'booking_confirmed' => false,
+                    'manual_review_required' => true,
+                ];
+            }
             return ['result' => 'processed', 'payment_updated' => true, 'payment_status' => $targetStatus];
         } catch (Throwable $error) {
             if ($this->pdo->inTransaction()) $this->pdo->rollBack();

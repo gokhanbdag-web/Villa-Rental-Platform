@@ -251,8 +251,13 @@ try {
     // Exercise terminal payment lifecycle transitions in MySQL through the
     // same verified callback processor used by gateway callbacks.
     $createLifecycleCase = static function (string $label, string $bookingStatus='pending') use ($pdo, $createBooking, $createFinancial, $property, $customerId, $customerEmail, $subtotal, $fees, $total): array {
-        $start=(new DateTimeImmutable('+95 days'))->format('Y-m-d');
-        $end=(new DateTimeImmutable('+97 days'))->format('Y-m-d');
+        // Give independent lifecycle fixtures disjoint dates. The callback now
+        // correctly treats every pending booking as a date hold, so sharing one
+        // date range would make unrelated test cases conflict with one another.
+        static $caseIndex = 0;
+        $offset = 95 + ($caseIndex++ * 3);
+        $start=(new DateTimeImmutable('+'.$offset.' days'))->format('Y-m-d');
+        $end=(new DateTimeImmutable('+'.($offset + 2).' days'))->format('Y-m-d');
         $code='VRLIFE'.strtoupper(bin2hex(random_bytes(4)));
         $createBooking->execute([$code,(int)$property['id'],$customerId,'Lifecycle Smoke Customer',$customerEmail,'+905551112233',$start,$end,1,$subtotal,$fees,$total,$property['currency']]);
         $bookingId=(int)$pdo->lastInsertId();
@@ -517,9 +522,10 @@ try {
     $bookingCreateRoute = $bookingCreateRouteStart !== false ? substr($webRoutesSource, $bookingCreateRouteStart) : '';
     assertSmoke(
         substr_count($webRoutesSource, "status='confirmed'") >= 7
-        && substr_count($webRoutesSource, "status IN ('pending','confirmed')") === 1
+        && substr_count($webRoutesSource, "status IN ('pending','confirmed')") === 2
         && str_contains($bookingCreateRoute, "status IN ('pending','confirmed')")
-        && str_contains($bookingCreateRoute, 'FOR UPDATE'),
+        && str_contains($bookingCreateRoute, 'FOR UPDATE')
+        && str_contains($webRoutesSource, "SELECT id FROM bookings WHERE property_id=? AND id<>? AND status IN ('pending','confirmed')"),
         'Only the locked booking-creation flow may hold dates for pending requests; public availability and occupied calendars must continue to use confirmed bookings only.'
     );
     $heroLandingSource = (string)file_get_contents($root . '/themes/default/templates/pages/landing.php');
