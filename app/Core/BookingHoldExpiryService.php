@@ -19,7 +19,7 @@ final class BookingHoldExpiryService
         }
         $limit = max(1, min(200, $limit));
         $bookings = $pdo->prepare(
-            "SELECT id FROM bookings
+            "SELECT id,guest_user_id,guest_name,guest_email,booking_code FROM bookings
              WHERE property_id=? AND status='pending'
                AND hold_expires_at IS NOT NULL AND hold_expires_at<=NOW()
              ORDER BY hold_expires_at,id LIMIT {$limit} FOR UPDATE"
@@ -70,6 +70,24 @@ final class BookingHoldExpiryService
             $cancel->execute([$bookingId]);
             if ($cancel->rowCount() === 1) {
                 $expired++;
+                $guestId = (int)($booking['guest_user_id'] ?? 0);
+                if ($guestId > 0) {
+                    $notice = $pdo->prepare("INSERT INTO notifications(user_id,notification_type,title,body,created_at) VALUES(?,'booking.expired','Rezervasyon talebinin süresi doldu',?,NOW())");
+                    $notice->execute([$guestId, 'Ödeme süresi içinde tamamlanmadığı için '.$booking['booking_code'].' kodlu rezervasyon talebiniz iptal edildi. Yeni bir rezervasyon oluşturabilirsiniz.']);
+                }
+                $email = trim((string)($booking['guest_email'] ?? ''));
+                if ($email !== '' && filter_var($email, FILTER_VALIDATE_EMAIL)) {
+                    $name = htmlspecialchars((string)($booking['guest_name'] ?? 'Misafir'), ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
+                    $code = htmlspecialchars((string)$booking['booking_code'], ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
+                    EmailService::enqueue(
+                        $pdo,
+                        $email,
+                        'Rezervasyon talebinizin süresi doldu',
+                        '<p>Merhaba '.$name.',</p><p>Ödeme süresi içinde tamamlanmadığı için <strong>'.$code.'</strong> kodlu rezervasyon talebiniz iptal edildi.</p><p>Yeni bir rezervasyon oluşturabilirsiniz.</p>',
+                        'Ödeme süresi içinde tamamlanmadığı için '.$booking['booking_code'].' kodlu rezervasyon talebiniz iptal edildi.',
+                        'booking.expired.'.$bookingId
+                    );
+                }
             }
         }
         return $expired;
