@@ -6,7 +6,7 @@ $property = file_get_contents($root.'/themes/default/templates/pages/property.ph
 $routes = file_get_contents($root.'/routes/web.php');
 $checkout = file_get_contents($root.'/themes/default/templates/pages/checkout.php');
 
-$bookingRouteStart = strpos($routes, '$router->post(\'/property/{slug}/book\'');
+$bookingRouteStart = strpos($routes, '$router->post(\'/villa/{slug}/reserve\'');
 $bookingRoute = $bookingRouteStart !== false
     ? substr($routes, $bookingRouteStart)
     : '';
