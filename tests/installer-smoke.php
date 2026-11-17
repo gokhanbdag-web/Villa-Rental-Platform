@@ -456,6 +456,25 @@ try {
     $holdState->execute([$legacyExpiredRealHold['id']]);
     assertSmoke($holdState->fetchColumn()==='pending','A legacy locally expired real iyzico token was released without a verified provider event.');
 
+    $verifiedExpiredHold=$makeHoldExpiryCase('verified-expired','pending','iyzico','VRHOLD-VERIFIED-'.strtoupper(bin2hex(random_bytes(4))));
+    $setVerifiedHoldDue=$pdo->prepare('UPDATE bookings SET hold_expires_at=DATE_SUB(NOW(),INTERVAL 1 MINUTE) WHERE id=?');
+    $setVerifiedHoldDue->execute([$verifiedExpiredHold['id']]);
+    $verifiedExpiredCallback=[
+        'booking_id'=>$verifiedExpiredHold['id'],'provider'=>'iyzico',
+        'provider_reference'=>$verifiedExpiredHold['reference'],
+        'amount'=>$checkoutAmount,'currency'=>$property['currency'],'status'=>'expired',
+    ];
+    $verifiedExpiredResult=$paymentProcessor->processVerified(
+        'iyzico','VILLA-VERIFIED-EXPIRY-'.strtoupper(bin2hex(random_bytes(4))),
+        'CHECKOUT_FORM_RECONCILIATION',$verifiedExpiredHold['reference'],
+        ['paymentStatus'=>'EXPIRED','token'=>$verifiedExpiredHold['reference']],
+        $verifiedExpiredCallback
+    );
+    assertSmoke(($verifiedExpiredResult['result']??'')==='processed','Verified provider expiry callback was not applied.');
+    $runHoldExpiry((int)$property['id']);
+    $holdState->execute([$verifiedExpiredHold['id']]);
+    assertSmoke($holdState->fetchColumn()==='cancelled','A provider-verified expired token did not release its due booking hold.');
+
     $placeholderHold=$makeHoldExpiryCase('placeholder','pending','iyzico','init:VRHOLD-INIT-'.strtoupper(bin2hex(random_bytes(4))));
     $runHoldExpiry((int)$property['id']);
     $holdState->execute([$placeholderHold['id']]);
