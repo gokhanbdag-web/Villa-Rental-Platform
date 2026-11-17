@@ -1160,6 +1160,10 @@ $router->post('/checkout/{bookingCode}/iyzico/start', static function (array $pa
         if($reservationResult==='booking_not_found'){http_response_code(404);exit('Rezervasyon bulunamadı.');}
         if($reservationResult==='booking_not_pending'){http_response_code(409);exit('Yalnızca ödeme bekleyen rezervasyonlar için ödeme başlatılabilir.');}
         if($reservationResult==='processing')redirect('/checkout/'.rawurlencode((string)$booking['booking_code']).'?payment=review');
+        if($reservationResult==='verification_required'){
+            http_response_code(409);
+            exit('Önceki iyzico ödeme oturumunun sonucu henüz doğrulanamadı. Çift tahsilat riskini önlemek için yeni ödeme başlatılmadı. Lütfen destek ekibiyle iletişime geçin.');
+        }
         if($reservationResult==='initializing'){http_response_code(409);exit('Ödeme oturumu hazırlanıyor. Lütfen birkaç saniye sonra tekrar deneyin.');}
         if($reservationResult==='existing'){
             $existingPayload=json_decode((string)($reservation['payment']['response_payload']??''),true);
