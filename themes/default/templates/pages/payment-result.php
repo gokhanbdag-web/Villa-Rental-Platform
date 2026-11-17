@@ -14,7 +14,7 @@ $description = $isPaidCancelledReview
         ? 'Ödemeniz iyzico tarafından doğrulandı. Rezervasyonunuz güvenle oluşturuldu.'
         : ($isFailed
             ? 'iyzico ödeme işlemini başarısız olarak bildirdi. Rezervasyonunuz için henüz tahsilat yapılmadı.'
-            : 'Ödeme bildiriminiz alındı ancak sonuç henüz kesinleşmedi. Güvenlik kontrolü veya doğrulama tamamlandığında rezervasyon durumunuz güncellenecek.'));
+            : 'Ödeme bildiriminiz alındı ancak sonuç henüz kesinleşmedi. Güvenlik kontrolü veya doğrulama tamamlandığında rezervasyon durumunuz güncellenecek.'))));
 ?>
 <!doctype html>
 <html lang="<?= e($locale ?? 'tr') ?>">
