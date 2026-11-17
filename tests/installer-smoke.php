@@ -9,6 +9,7 @@ use App\Core\Migrator;
 use App\Core\PaymentWebhookInbox;
 use App\Core\PaymentCallbackProcessor;
 use App\Core\PaymentCheckoutGuard;
+use App\Core\BookingHoldExpiryService;
 use App\Core\ThemeManager;
 use App\Core\Router;
 
