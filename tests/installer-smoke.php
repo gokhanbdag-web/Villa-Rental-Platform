@@ -485,6 +485,17 @@ try {
     $manualPaymentCount->execute([$conflictBookingId]);
     assertSmoke((int)$manualPaymentCount->fetchColumn()===0,'Conflicting booking received a manual paid transaction.');
 
+    $pendingOverlapStart=(new DateTimeImmutable('+200 days'))->format('Y-m-d');
+    $pendingOverlapEnd=(new DateTimeImmutable('+202 days'))->format('Y-m-d');
+    $pendingOverlapId=$makeManualBooking('VRMANPEND'.strtoupper(bin2hex(random_bytes(3))),$pendingOverlapStart,$pendingOverlapEnd);
+    $pendingTargetId=$makeManualBooking('VRMANTARG'.strtoupper(bin2hex(random_bytes(3))),$pendingOverlapStart,$pendingOverlapEnd);
+    $createManualReport->execute([$pendingTargetId,$customerId,$total,$property['currency'],'Smoke Sender','Smoke Bank','MANUAL-PENDING-CONFLICT-'.bin2hex(random_bytes(3)),null]);
+    $pendingConflictCheck=$pdo->prepare("SELECT id FROM bookings WHERE property_id=? AND id<>? AND status IN ('pending','confirmed') AND check_in < ? AND check_out > ? LIMIT 1 FOR UPDATE");
+    $pendingConflictCheck->execute([(int)$property['id'],$pendingTargetId,$pendingOverlapEnd,$pendingOverlapStart]);
+    assertSmoke((bool)$pendingConflictCheck->fetchColumn(),'Overlapping pending booking was not detected before manual payment approval.');
+    $manualPaymentCount->execute([$pendingTargetId]);
+    assertSmoke((int)$manualPaymentCount->fetchColumn()===0,'A pending-overlap booking received a manual paid transaction.');
+
     $approvedBookingId = $makeManualBooking('VRMANOK' . strtoupper(bin2hex(random_bytes(3))),(new DateTimeImmutable('+80 days'))->format('Y-m-d'),(new DateTimeImmutable('+82 days'))->format('Y-m-d'));
     $createManualReport->execute([$approvedBookingId,$customerId,$total,$property['currency'],'Smoke Sender','Smoke Bank','MANUAL-APPROVE-'.bin2hex(random_bytes(3)),null]);
     $approvedReportId = (int)$pdo->lastInsertId();
