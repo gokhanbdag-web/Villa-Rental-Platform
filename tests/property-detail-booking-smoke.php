@@ -6,7 +6,13 @@ $property = file_get_contents($root.'/themes/default/templates/pages/property.ph
 $routes = file_get_contents($root.'/routes/web.php');
 $checkout = file_get_contents($root.'/themes/default/templates/pages/checkout.php');
 
+$bookingRouteStart = strpos($routes, '$router->post(\'/villa/{slug}/reserve\'');
+$bookingRoute = $bookingRouteStart !== false
+    ? substr($routes, $bookingRouteStart)
+    : '';
 $checks = [
+    'booking creation rejects overlapping pending and confirmed reservations under the property lock' => str_contains($bookingRoute, "status IN ('pending','confirmed')") && str_contains($bookingRoute, 'FOR UPDATE') && str_contains($bookingRoute, 'SELECT id,base_nightly_price') ,
+
     'villa detail uses a dedicated 1/3 + 2/3 hero layout' => str_contains($property, 'property-hero-layout') && str_contains($property, 'property-hero-gallery'),
     'feature list renders every amenity in a single responsive grid' => str_contains($property, '<ul class="property-feature-groups">') && str_contains($property, 'foreach($featureItems as $feature)') && str_contains($property, '$featureIconSvg'),
     'mobile villa gallery uses a desktop-style two-column collage instead of a swipe rail' => str_contains($property, 'grid-template-columns:minmax(0,1.55fr) minmax(0,1fr)!important') && str_contains($property, '.gallery.gallery-has-photos .gallery-tile:first-child{grid-row:1 / span 2!important}') && str_contains($property, '.gallery.gallery-has-photos .gallery-tile:nth-child(n+4){display:none!important}') && str_contains($property, '.gallery.gallery-has-photos .gallery-mobile-counter{display:none!important}') && !str_contains($property, 'scroll-snap-type:x mandatory!important'),

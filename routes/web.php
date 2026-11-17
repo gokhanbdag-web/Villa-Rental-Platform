@@ -970,7 +970,10 @@ $router->post('/villa/{slug}/reserve', static function (array $params): void {
         $lock->execute([(int)$property['id']]);$current=$lock->fetch();
         if(!$current){$pdo->rollBack();http_response_code(404);exit('Konaklama artık yayında değil.');}
         if($guests<1||$guests>(int)$current['max_guests']){$pdo->rollBack();http_response_code(422);exit('Misafir sayısı konaklamanın güncel kapasitesini aşıyor.');}
-        $conflict=$pdo->prepare("SELECT id FROM bookings WHERE property_id=? AND status='confirmed' AND check_in < ? AND check_out > ? LIMIT 1");
+        // The property row is already locked above, so concurrent booking attempts
+        // for this villa are serialized. Pending requests reserve the dates too;
+        // otherwise multiple guests can reach checkout for the same stay.
+        $conflict=$pdo->prepare("SELECT id FROM bookings WHERE property_id=? AND status IN ('pending','confirmed') AND check_in < ? AND check_out > ? LIMIT 1 FOR UPDATE");
         $conflict->execute([(int)$property['id'],$outRaw,$inRaw]);
         $calendar=$pdo->prepare('SELECT date_from,date_to,status,nightly_price FROM availability WHERE property_id=? AND date_from < ? AND date_to > ?');
         $calendar->execute([(int)$property['id'],$outRaw,$inRaw]);$rules=$calendar->fetchAll();$unavailable=false;
