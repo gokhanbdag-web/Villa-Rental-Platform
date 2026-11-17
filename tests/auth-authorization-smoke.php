@@ -43,15 +43,15 @@ $vendorTransitionCases = [
     ['cancelled','cancelled',true],
 ];
 foreach ($vendorTransitionCases as [$current,$target,$expected]) {
-    $actual = \\App\\Core\\BookingStatusPolicy::canVendorTransition($current,$target);
+    $actual = \App\Core\BookingStatusPolicy::canVendorTransition($current,$target);
     if ($actual !== $expected) {
         throw new RuntimeException('Unexpected vendor booking transition '.$current.' -> '.$target);
     }
 }
 
 $routesSource = file_get_contents(dirname(__DIR__) . '/routes/web.php');
-$vendorRouteStart = strpos($routesSource, "$router->post('/vendor/bookings/status'");
-$vendorRouteEnd = $vendorRouteStart !== false ? strpos($routesSource, "$router->get('/vendor/properties'", $vendorRouteStart) : false;
+$vendorRouteStart = strpos($routesSource, "\$router->post('/vendor/bookings/status'");
+$vendorRouteEnd = $vendorRouteStart !== false ? strpos($routesSource, "\$router->get('/vendor/properties'", $vendorRouteStart) : false;
 $vendorRoute = $vendorRouteStart !== false && $vendorRouteEnd !== false ? substr($routesSource,$vendorRouteStart,$vendorRouteEnd-$vendorRouteStart) : '';
 if ($vendorRoute === '' || strpos($vendorRoute, 'BookingStatusPolicy::canVendorTransition') === false
     || strpos($vendorRoute, "status IN ('pending','confirmed')") === false
