@@ -3,11 +3,14 @@ $navigation = is_array($navigation ?? null) ? $navigation : [];
 $resultType = (string)($paymentResultType ?? 'review');
 $isSuccess = $resultType === 'success';
 $isFailed = $resultType === 'failed';
-$isPaidReview = $resultType === 'review' && (string)($payment['status'] ?? '') === 'paid' && (string)($booking['status'] ?? '') === 'pending';
-$title = $isPaidReview ? 'Ödemeniz alındı, rezervasyon inceleniyor' : ($isSuccess ? 'Ödemeniz başarılı' : ($isFailed ? 'Ödeme tamamlanamadı' : 'Ödeme sonucu kontrol ediliyor'));
-$description = $isPaidReview
-    ? 'Ödemeniz iyzico tarafından doğrulandı. Seçtiğiniz tarihlerde başka bir rezervasyon talebi oluştuğu için rezervasyonunuz henüz onaylanmadı. Yönetim ekibi kaydınızı inceleyerek sizinle iletişime geçecek.'
-    : ($isSuccess
+$isPaidReview = $resultType === 'review' && (string)($payment['status'] ?? '') === 'paid' && in_array((string)($booking['status'] ?? ''), ['pending','cancelled'], true);
+$isPaidCancelledReview = $isPaidReview && (string)($booking['status'] ?? '') === 'cancelled';
+$title = $isPaidCancelledReview ? 'Ödeme alındı, iade incelemesi gerekli' : ($isPaidReview ? 'Ödemeniz alındı, rezervasyon inceleniyor' : ($isSuccess ? 'Ödemeniz başarılı' : ($isFailed ? 'Ödeme tamamlanamadı' : 'Ödeme sonucu kontrol ediliyor')));
+$description = $isPaidCancelledReview
+    ? 'Ödemeniz iyzico tarafından doğrulandı ancak rezervasyonunuz ödeme bildirimi ulaşmadan önce iptal edilmişti. Yönetim ekibi ödemenizi inceleyerek iade veya çözüm için sizinle iletişime geçecek.'
+    : ($isPaidReview
+        ? 'Ödemeniz iyzico tarafından doğrulandı. Seçtiğiniz tarihlerde başka bir rezervasyon talebi oluştuğu için rezervasyonunuz henüz onaylanmadı. Yönetim ekibi kaydınızı inceleyerek sizinle iletişime geçecek.'
+        : ($isSuccess
         ? 'Ödemeniz iyzico tarafından doğrulandı. Rezervasyonunuz güvenle oluşturuldu.'
         : ($isFailed
             ? 'iyzico ödeme işlemini başarısız olarak bildirdi. Rezervasyonunuz için henüz tahsilat yapılmadı.'
