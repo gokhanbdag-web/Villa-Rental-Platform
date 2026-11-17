@@ -5,16 +5,22 @@ $isSuccess = $resultType === 'success';
 $isFailed = $resultType === 'failed';
 $isPaidReview = $resultType === 'review' && (string)($payment['status'] ?? '') === 'paid' && in_array((string)($booking['status'] ?? ''), ['pending','cancelled','completed'], true);
 $isPaidClosedReview = $isPaidReview && in_array((string)($booking['status'] ?? ''), ['cancelled','completed'], true);
-$title = $isPaidClosedReview ? 'Ödeme alındı, rezervasyon incelemesi gerekli' : ($isPaidReview ? 'Ödemeniz alındı, rezervasyon inceleniyor' : ($isSuccess ? 'Ödemeniz başarılı' : ($isFailed ? 'Ödeme tamamlanamadı' : 'Ödeme sonucu kontrol ediliyor')));
-$description = $isPaidClosedReview
-    ? 'Ödemeniz iyzico tarafından doğrulandı ancak rezervasyon kaydınız ödeme bildirimi ulaşmadan önce kapanmıştı. Yönetim ekibi ödeme ve rezervasyon durumunu inceleyerek sizinle iletişime geçecek.'
-    : ($isPaidReview
-        ? 'Ödemeniz iyzico tarafından doğrulandı. Seçtiğiniz tarihlerde başka bir rezervasyon talebi oluştuğu için rezervasyonunuz henüz onaylanmadı. Yönetim ekibi kaydınızı inceleyerek sizinle iletişime geçecek.'
-        : ($isSuccess
-        ? 'Ödemeniz iyzico tarafından doğrulandı. Rezervasyonunuz güvenle oluşturuldu.'
-        : ($isFailed
-            ? 'iyzico ödeme işlemini başarısız olarak bildirdi. Rezervasyonunuz için henüz tahsilat yapılmadı.'
-            : 'Ödeme bildiriminiz alındı ancak sonuç henüz kesinleşmedi. Güvenlik kontrolü veya doğrulama tamamlandığında rezervasyon durumunuz güncellenecek.'))));
+if ($isPaidClosedReview) {
+    $title = 'Ödeme alındı, rezervasyon incelemesi gerekli';
+    $description = 'Ödemeniz iyzico tarafından doğrulandı ancak rezervasyon kaydınız ödeme bildirimi ulaşmadan önce kapanmıştı. Yönetim ekibi ödeme ve rezervasyon durumunu inceleyerek sizinle iletişime geçecek.';
+} elseif ($isPaidReview) {
+    $title = 'Ödemeniz alındı, rezervasyon inceleniyor';
+    $description = 'Ödemeniz iyzico tarafından doğrulandı. Seçtiğiniz tarihlerde başka bir rezervasyon talebi oluştuğu için rezervasyonunuz henüz onaylanmadı. Yönetim ekibi kaydınızı inceleyerek sizinle iletişime geçecek.';
+} elseif ($isSuccess) {
+    $title = 'Ödemeniz başarılı';
+    $description = 'Ödemeniz iyzico tarafından doğrulandı. Rezervasyonunuz güvenle oluşturuldu.';
+} elseif ($isFailed) {
+    $title = 'Ödeme tamamlanamadı';
+    $description = 'iyzico ödeme işlemini başarısız olarak bildirdi. Rezervasyonunuz için henüz tahsilat yapılmadı.';
+} else {
+    $title = 'Ödeme sonucu kontrol ediliyor';
+    $description = 'Ödeme bildiriminiz alındı ancak sonuç henüz kesinleşmedi. Güvenlik kontrolü veya doğrulama tamamlandığında rezervasyon durumunuz güncellenecek.';
+}
 ?>
 <!doctype html>
 <html lang="<?= e($locale ?? 'tr') ?>">
