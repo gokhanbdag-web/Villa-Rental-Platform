@@ -3114,9 +3114,76 @@ $router->get('/admin/settings', static function (): void {
 });
 $router->post('/admin/settings', static function (): void {
     Auth::requireRole(['super_admin','admin']);verify_csrf();
+    // Test actions submit the same form, so persist the submitted SMTP fields first.
+    // Otherwise a test would silently use the previous database credentials.
+    $saveSubmittedSmtpSettings = static function (PDO $pdo): void {
+        $enabled = !empty($_POST['mail_enabled']) && $_POST['mail_enabled'] === '1';
+        $host = trim((string)($_POST['mail_smtp_host'] ?? ''));
+        $port = (int)($_POST['mail_smtp_port'] ?? 587);
+        $encryption = (string)($_POST['mail_smtp_encryption'] ?? 'tls');
+        $username = trim((string)($_POST['mail_smtp_username'] ?? ''));
+        $from = trim((string)($_POST['mail_from_email'] ?? ''));
+        $fromName = trim((string)($_POST['mail_from_name'] ?? ''));
+        $password = trim((string)($_POST['mail_smtp_password'] ?? ''));
+        $clearPassword = !empty($_POST['mail_clear_password']);
+
+        $storedPasswordStmt = $pdo->prepare("SELECT setting_value FROM settings WHERE setting_key='mail.smtp.password' LIMIT 1");
+        $storedPasswordStmt->execute();
+        $storedPassword = (string)($storedPasswordStmt->fetchColumn() ?: '');
+
+        if (
+            $port < 1 || $port > 65535
+            || !in_array($encryption, ['tls', 'ssl', 'none'], true)
+            || strlen($host) > 253
+            || preg_match('/[\s\r\n]/', $host) === 1
+            || str_contains($host, '/') || str_contains($host, '\\')
+            || strlen($username) > 190
+            || ($from !== '' && filter_var($from, FILTER_VALIDATE_EMAIL) === false)
+            || strlen($fromName) > 120 || preg_match('/[\r\n]/', $fromName) === 1
+            || strlen($password) > 512
+            || ($enabled && ($host === '' || filter_var($from, FILTER_VALIDATE_EMAIL) === false))
+            || ($username === '' && ($password !== '' || ($storedPassword !== '' && !$clearPassword)))
+            || ($enabled && $username !== '' && $password === '' && ($storedPassword === '' || $clearPassword))
+        ) {
+            throw new RuntimeException('SMTP sunucu, port, şifreleme, kullanıcı adı/parola ve gönderen bilgilerini kontrol edin.');
+        }
+
+        $save = $pdo->prepare('INSERT INTO settings(setting_key,setting_value,autoload) VALUES(?,?,1) ON DUPLICATE KEY UPDATE setting_value=VALUES(setting_value),autoload=1');
+        $pdo->beginTransaction();
+        try {
+            foreach ([
+                'mail.enabled' => $enabled ? '1' : '0',
+                'mail.smtp.host' => $host,
+                'mail.smtp.port' => (string)$port,
+                'mail.smtp.encryption' => $encryption,
+                'mail.smtp.username' => $username,
+                'mail.from_email' => $from,
+                'mail.from_name' => $fromName,
+            ] as $key => $value) {
+                $save->execute([$key, $value]);
+            }
+            if ($password !== '') {
+                $save->execute(['mail.smtp.password', \App\Core\PaymentSecretVault::encrypt($password)]);
+            } elseif ($clearPassword) {
+                $pdo->prepare("DELETE FROM settings WHERE setting_key='mail.smtp.password'")->execute();
+            }
+
+            $tokenStmt = $pdo->prepare("SELECT setting_value FROM settings WHERE setting_key='mail.cron_token' LIMIT 1");
+            $tokenStmt->execute();
+            if (!(string)($tokenStmt->fetchColumn() ?: '')) {
+                $save->execute(['mail.cron_token', \App\Core\PaymentSecretVault::encrypt(bin2hex(random_bytes(32)))]);
+            }
+            $pdo->commit();
+        } catch (Throwable $e) {
+            if ($pdo->inTransaction()) $pdo->rollBack();
+            throw $e;
+        }
+    };
     if (!empty($_POST['test_mail_connection'])) {
         try {
-            $config = \App\Core\EmailService::smtpConfig(Database::connection());
+            $pdo = Database::connection();
+            $saveSubmittedSmtpSettings($pdo);
+            $config = \App\Core\EmailService::smtpConfig($pdo);
             $diagnostics = \App\Core\SmtpMailer::diagnose($config);
             $_SESSION['villa_mail_test_message'] = "Sunucu tanılama sonucu (e-posta gönderilmedi):\n" . implode("\n", array_map(static fn($key, $value) => $key . ': ' . $value, array_keys($diagnostics), array_values($diagnostics)));
             $_SESSION['villa_mail_test_message_type'] = 'success';
@@ -3131,7 +3198,9 @@ $router->post('/admin/settings', static function (): void {
         try {
             $recipient=trim((string)($_POST['mail_test_email']??''));
             if (!filter_var($recipient,FILTER_VALIDATE_EMAIL)) throw new RuntimeException('Test e-postası için geçerli bir alıcı adresi girin.');
-            \App\Core\EmailService::sendTest(Database::connection(),$recipient);
+            $pdo = Database::connection();
+            $saveSubmittedSmtpSettings($pdo);
+            \App\Core\EmailService::sendTest($pdo,$recipient);
             $_SESSION['villa_mail_test_message']='SMTP test e-postası başarıyla gönderildi: '.$recipient;
             $_SESSION['villa_mail_test_message_type']='success';
         } catch (Throwable $e) {
