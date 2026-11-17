@@ -883,6 +883,18 @@ $router->get('/villa/{slug}/availability', static function (array $params): void
     $propertyStmt->execute([$params['slug'] ?? '']);
     $property = $propertyStmt->fetch();
     if (!$property) { $fail(404, 'Konaklama bulunamadı.'); return; }
+    // Availability requests are a natural shared-hosting trigger for safe hold cleanup;
+    // no SSH cron is required to release abandoned, payment-safe pending holds.
+    $pdo->beginTransaction();
+    try {
+        $holdLock=$pdo->prepare("SELECT id FROM properties WHERE id=? AND status='published' FOR UPDATE");
+        $holdLock->execute([(int)$property['id']]);
+        if($holdLock->fetchColumn()) \App\Core\BookingHoldExpiryService::expireSafePendingForProperty($pdo,(int)$property['id']);
+        $pdo->commit();
+    } catch(Throwable $holdError) {
+        if($pdo->inTransaction())$pdo->rollBack();
+        throw $holdError;
+    }
     $inRaw = trim((string)($_GET['check_in'] ?? ''));
     $outRaw = trim((string)($_GET['check_out'] ?? ''));
     $guests = (int)($_GET['guests'] ?? 1);
