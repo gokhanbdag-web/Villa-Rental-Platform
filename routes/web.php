@@ -970,9 +970,10 @@ $router->post('/villa/{slug}/reserve', static function (array $params): void {
         $lock->execute([(int)$property['id']]);$current=$lock->fetch();
         if(!$current){$pdo->rollBack();http_response_code(404);exit('Konaklama artık yayında değil.');}
         if($guests<1||$guests>(int)$current['max_guests']){$pdo->rollBack();http_response_code(422);exit('Misafir sayısı konaklamanın güncel kapasitesini aşıyor.');}
-        // The property row is already locked above, so concurrent booking attempts
-        // for this villa are serialized. Pending requests reserve the dates too;
-        // otherwise multiple guests can reach checkout for the same stay.
+        // Release only due holds with no unresolved payment or bank-transfer report.
+        // The property lock is already held, preserving the global lock order.
+        \\App\\Core\\BookingHoldExpiryService::expireSafePendingForProperty($pdo,(int)$property['id']);
+        // Pending requests that are not safely expired continue to reserve dates.
         $conflict=$pdo->prepare("SELECT id FROM bookings WHERE property_id=? AND status IN ('pending','confirmed') AND check_in < ? AND check_out > ? LIMIT 1 FOR UPDATE");
         $conflict->execute([(int)$property['id'],$outRaw,$inRaw]);
         $calendar=$pdo->prepare('SELECT date_from,date_to,status,nightly_price FROM availability WHERE property_id=? AND date_from < ? AND date_to > ?');
@@ -989,7 +990,7 @@ $router->post('/villa/{slug}/reserve', static function (array $params): void {
             $create->execute([$newUsername,$email,password_hash($password,PASSWORD_DEFAULT)]);$userId=(int)$pdo->lastInsertId();
         }
         $fees=round((float)($current['cleaning_fee']??0)+(float)$extras['fees'],2);$total=round($subtotal+$fees,2);$code='VR'.date('Ymd').strtoupper(bin2hex(random_bytes(3)));
-        $save=$pdo->prepare("INSERT INTO bookings(booking_code,property_id,guest_user_id,guest_name,guest_email,guest_phone,booking_source,check_in,check_out,guests,subtotal,fees,early_checkin_requested,early_checkin_fee,late_checkout_requested,late_checkout_fee,total,currency,status,created_at) VALUES(?,?,?,?,?,?,'website',?,?,?,?,?,?,?,?,?,?,?,'pending',NOW())");
+        $save=$pdo->prepare("INSERT INTO bookings(booking_code,property_id,guest_user_id,guest_name,guest_email,guest_phone,booking_source,check_in,check_out,guests,subtotal,fees,early_checkin_requested,early_checkin_fee,late_checkout_requested,late_checkout_fee,total,currency,status,created_at,hold_expires_at) VALUES(?,?,?,?,?,?,'website',?,?,?,?,?,?,?,?,?,?,?,'pending',NOW(),DATE_ADD(NOW(),INTERVAL 30 MINUTE))");
         $save->execute([$code,(int)$property['id'],$userId,$fullName,$email,$phone,$inRaw,$outRaw,$guests,$subtotal,$fees,$extras['early_checkin_requested'],$extras['early_checkin_fee'],$extras['late_checkout_requested'],$extras['late_checkout_fee'],$total,$current['currency']]);
         $bookingId=(int)$pdo->lastInsertId();
         $vendorNet=$total;$platformFee=0.0;
@@ -3587,6 +3588,7 @@ $router->post('/admin/payments/manual/review', static function (): void {
         if($propertyId<1){$pdo->rollBack();http_response_code(404);exit('Rezervasyon bulunamadı.');}
         $propertyLock=$pdo->prepare('SELECT id FROM properties WHERE id=? FOR UPDATE');$propertyLock->execute([$propertyId]);
         if(!$propertyLock->fetchColumn()){$pdo->rollBack();http_response_code(404);exit('Villa bulunamadı.');}
+        \\App\\Core\\BookingHoldExpiryService::expireSafePendingForProperty($pdo,$propertyId);
         $reportStmt=$pdo->prepare('SELECT * FROM manual_payment_reports WHERE id=? FOR UPDATE');$reportStmt->execute([$reportId]);$report=$reportStmt->fetch(PDO::FETCH_ASSOC);
         if(!$report){$pdo->rollBack();http_response_code(404);exit('Havale bildirimi bulunamadı.');}
         if((string)$report['status']!=='pending'){$pdo->rollBack();http_response_code(409);exit('Bu bildirim daha önce incelenmiş.');}
@@ -3598,7 +3600,7 @@ $router->post('/admin/payments/manual/review', static function (): void {
             $alreadyPaid=$pdo->prepare("SELECT id FROM payment_transactions WHERE booking_id=? AND status='paid' LIMIT 1 FOR UPDATE");$alreadyPaid->execute([$bookingId]);
             if($alreadyPaid->fetchColumn()){$pdo->rollBack();http_response_code(409);exit('Bu rezervasyon için başka bir ödeme zaten doğrulanmış.');}
             if((string)$booking['status']==='pending'){
-                $conflict=$pdo->prepare("SELECT id FROM bookings WHERE property_id=? AND id<>? AND status='confirmed' AND check_in < ? AND check_out > ? LIMIT 1 FOR UPDATE");
+                $conflict=$pdo->prepare("SELECT id FROM bookings WHERE property_id=? AND id<>? AND status IN ('pending','confirmed') AND check_in < ? AND check_out > ? LIMIT 1 FOR UPDATE");
                 $conflict->execute([$propertyId,$bookingId,$booking['check_out'],$booking['check_in']]);
                 if($conflict->fetchColumn()){$pdo->rollBack();http_response_code(409);exit('Bu tarihlerde başka bir onaylı rezervasyon bulunuyor. Ödeme onaylanmadı.');}
                 $blocked=$pdo->prepare("SELECT id FROM availability WHERE property_id=? AND status<>'available' AND date_from < ? AND date_to > ? LIMIT 1 FOR UPDATE");
