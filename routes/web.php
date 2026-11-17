@@ -972,7 +972,7 @@ $router->post('/villa/{slug}/reserve', static function (array $params): void {
         if($guests<1||$guests>(int)$current['max_guests']){$pdo->rollBack();http_response_code(422);exit('Misafir sayısı konaklamanın güncel kapasitesini aşıyor.');}
         // Release only due holds with no unresolved payment or bank-transfer report.
         // The property lock is already held, preserving the global lock order.
-        \\App\\Core\\BookingHoldExpiryService::expireSafePendingForProperty($pdo,(int)$property['id']);
+        \App\Core\BookingHoldExpiryService::expireSafePendingForProperty($pdo,(int)$property['id']);
         // Pending requests that are not safely expired continue to reserve dates.
         $conflict=$pdo->prepare("SELECT id FROM bookings WHERE property_id=? AND status IN ('pending','confirmed') AND check_in < ? AND check_out > ? LIMIT 1 FOR UPDATE");
         $conflict->execute([(int)$property['id'],$outRaw,$inRaw]);
@@ -3588,7 +3588,7 @@ $router->post('/admin/payments/manual/review', static function (): void {
         if($propertyId<1){$pdo->rollBack();http_response_code(404);exit('Rezervasyon bulunamadı.');}
         $propertyLock=$pdo->prepare('SELECT id FROM properties WHERE id=? FOR UPDATE');$propertyLock->execute([$propertyId]);
         if(!$propertyLock->fetchColumn()){$pdo->rollBack();http_response_code(404);exit('Villa bulunamadı.');}
-        \\App\\Core\\BookingHoldExpiryService::expireSafePendingForProperty($pdo,$propertyId);
+        \App\Core\BookingHoldExpiryService::expireSafePendingForProperty($pdo,$propertyId);
         $reportStmt=$pdo->prepare('SELECT * FROM manual_payment_reports WHERE id=? FOR UPDATE');$reportStmt->execute([$reportId]);$report=$reportStmt->fetch(PDO::FETCH_ASSOC);
         if(!$report){$pdo->rollBack();http_response_code(404);exit('Havale bildirimi bulunamadı.');}
         if((string)$report['status']!=='pending'){$pdo->rollBack();http_response_code(409);exit('Bu bildirim daha önce incelenmiş.');}
