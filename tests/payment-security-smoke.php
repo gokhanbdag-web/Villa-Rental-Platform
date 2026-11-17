@@ -22,10 +22,10 @@ paymentAssert(PaymentCallbackProcessor::targetStatus('failure') === 'failed', 'F
 paymentAssert(PaymentCallbackProcessor::targetStatus('cancelled') === 'cancelled', 'Cancelled callback status mapping failed.');
 paymentAssert(PaymentCallbackProcessor::targetStatus('refunded') === 'refunded', 'Refund callback status mapping failed.');
 paymentAssert(PaymentCallbackProcessor::targetStatus('unknown') === null, 'Unknown callback status was accepted.');
-paymentAssert(\\App\\Core\\IyzicoPaymentReconciler::normalizeStatus(['paymentStatus'=>'SUCCESS','fraudStatus'=>1]) === 'paid', 'Verified iyzico success was not normalized as paid.');
-paymentAssert(\\App\\Core\\IyzicoPaymentReconciler::normalizeStatus(['paymentStatus'=>'SUCCESS','fraudStatus'=>0]) === 'processing', 'iyzico fraud review was not normalized as processing.');
-paymentAssert(\\App\\Core\\IyzicoPaymentReconciler::normalizeStatus(['paymentStatus'=>'FAILURE']) === 'failed', 'iyzico failure was not normalized as failed.');
-paymentAssert(\\App\\Core\\IyzicoPaymentReconciler::normalizeStatus(['paymentStatus'=>'WAITING']) === null, 'Unknown iyzico status was treated as terminal.');
+paymentAssert(\App\Core\IyzicoPaymentReconciler::normalizeStatus(['paymentStatus'=>'SUCCESS','fraudStatus'=>1]) === 'paid', 'Verified iyzico success was not normalized as paid.');
+paymentAssert(\App\Core\IyzicoPaymentReconciler::normalizeStatus(['paymentStatus'=>'SUCCESS','fraudStatus'=>0]) === 'processing', 'iyzico fraud review was not normalized as processing.');
+paymentAssert(\App\Core\IyzicoPaymentReconciler::normalizeStatus(['paymentStatus'=>'FAILURE']) === 'failed', 'iyzico failure was not normalized as failed.');
+paymentAssert(\App\Core\IyzicoPaymentReconciler::normalizeStatus(['paymentStatus'=>'WAITING']) === null, 'Unknown iyzico status was treated as terminal.');
 paymentAssert(PaymentCallbackProcessor::targetStatus('processing') === 'processing', 'iyzico fraud-review status mapping failed.');
 paymentAssert(method_exists(\App\Core\IyzicoApiClient::class, 'initializeCheckoutForm'), 'iyzico Checkout Form initialize method is missing.');
 paymentAssert(method_exists(\App\Core\IyzicoApiClient::class, 'retrieveCheckoutForm'), 'iyzico Checkout Form retrieve method is missing.');
