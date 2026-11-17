@@ -150,10 +150,11 @@ paymentAssert($paymentResultRoute !== false && strpos($routesSource, "'paid_book
 paymentAssert(is_string($paymentResultView) && strpos($paymentResultView, 'Ödemeniz alındı, rezervasyon inceleniyor') !== false && strpos($paymentResultView, 'Ödeme alındı, rezervasyon incelemesi gerekli') !== false, 'Paid but unconfirmed/cancelled booking review is not explained to the guest.');
 
 $holdExpirySource = file_get_contents(dirname(__DIR__) . '/app/Core/BookingHoldExpiryService.php');
-paymentAssert(is_string($holdExpirySource) && strpos($holdExpirySource, 'manual_payment_reports') !== false && strpos($holdExpirySource, "in_array(\$status, ['failed','cancelled','expired','refunded'], true)") !== false, 'Booking hold expiry does not protect unresolved or paid payments and pending manual reports.');
+paymentAssert(is_string($holdExpirySource) && strpos($holdExpirySource, 'manual_payment_reports') !== false && strpos($holdExpirySource, 'payment_webhook_events') !== false && strpos($holdExpirySource, "in_array(\$status, ['failed','cancelled','expired','refunded'], true)") !== false, 'Booking hold expiry does not protect unresolved or paid payments and pending manual reports.');
 paymentAssert(strpos($routesSource, 'hold_expires_at') !== false && strpos($routesSource, 'BookingHoldExpiryService::expireSafePendingForProperty') !== false, 'Booking creation does not assign and process pending hold deadlines.');
 paymentAssert(strpos($routesSource, "status IN ('pending','confirmed') AND check_in < ? AND check_out > ?") !== false, 'Manual payment approval does not block overlapping pending bookings.');
 $reconcilerSource = file_get_contents(dirname(__DIR__) . '/app/Core/IyzicoPaymentReconciler.php');
 paymentAssert(is_string($reconcilerSource) && strpos($reconcilerSource, 'verifyIyzicoCheckoutFormRetrieve') !== false && strpos($reconcilerSource, 'PaymentCallbackProcessor') !== false, 'Expired iyzico sessions are not verified and applied through the shared callback processor.');
 paymentAssert(strpos($routesSource, 'IyzicoPaymentReconciler::reconcile') !== false, 'Checkout retry does not reconcile an expired provider token before creating another payment.');
+paymentAssert(strpos($reconcilerSource, "['pending','expired']") !== false && strpos($reconcilerSource, 'verifyIyzicoCheckoutFormRetrieve') !== false, 'Legacy expired provider tokens are not reconciled against a signed provider response.');
 echo "Payment security smoke tests passed. No gateway API requests were made.\n";
