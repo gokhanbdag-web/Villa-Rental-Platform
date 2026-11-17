@@ -105,11 +105,21 @@ final class Auth
         return $vendorStatus === 'approved';
     }
 
+    public static function canAccessRole(string $actorRole, array $allowedRoles): bool
+    {
+        return in_array($actorRole, $allowedRoles, true);
+    }
+
     public static function requireRole(array $roles): void
     {
         $user = self::user();
-        if (!$user || !in_array($user['role'], $roles, true)) {
+        if (!$user) {
             redirect('/login');
+        }
+        if (!self::canAccessRole((string)($user['role'] ?? ''), $roles)) {
+            http_response_code(403);
+            header('Content-Type: text/plain; charset=utf-8');
+            exit('Bu sayfaya erişim yetkiniz yok.');
         }
     }
 
