@@ -27,6 +27,62 @@ final class IyzicoPaymentReconciler
         };
     }
 
+    public static function claimReconciliationAttempt(PDO $pdo, int $transactionId): bool
+    {
+        if ($transactionId < 1) {
+            return false;
+        }
+        $claim = $pdo->prepare(
+            "UPDATE payment_transactions
+             SET reconciliation_checked_at=NOW()
+             WHERE id=? AND status IN ('pending','expired')
+               AND (reconciliation_checked_at IS NULL OR reconciliation_checked_at<=DATE_SUB(NOW(),INTERVAL 1 MINUTE))"
+        );
+        $claim->execute([$transactionId]);
+        return $claim->rowCount() === 1;
+    }
+
+    /**
+     * Reconcile a small batch of due real iyzico tokens before releasing holds.
+     * This is called opportunistically from public availability/booking requests,
+     * so shared hosting does not require SSH or a separate worker.
+     */
+    public static function reconcileExpiredForProperty(PDO $pdo, int $propertyId, int $limit = 3): int
+    {
+        if ($propertyId < 1) {
+            return 0;
+        }
+        $limit = max(1, min(10, $limit));
+        $stmt = $pdo->prepare(
+            "SELECT pt.id,pt.booking_id,pt.provider,pt.provider_reference,pt.amount,pt.currency,
+                    pt.request_payload,pt.response_payload,pt.status,pt.expires_at
+             FROM payment_transactions pt
+             JOIN bookings b ON b.id=pt.booking_id
+             WHERE b.property_id=? AND b.status='pending'
+               AND b.hold_expires_at IS NOT NULL AND b.hold_expires_at<=NOW()
+               AND pt.provider='iyzico' AND pt.status IN ('pending','expired')
+               AND pt.provider_reference NOT LIKE 'init:%'
+               AND pt.expires_at IS NOT NULL AND pt.expires_at<=NOW()
+               AND (pt.reconciliation_checked_at IS NULL OR pt.reconciliation_checked_at<=DATE_SUB(NOW(),INTERVAL 1 MINUTE))
+             ORDER BY pt.expires_at,pt.id LIMIT {$limit}"
+        );
+        $stmt->execute([$propertyId]);
+        $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
+        $attempted = 0;
+        foreach ($rows as $row) {
+            try {
+                $result = self::reconcile($pdo, $row);
+                if (($result['result'] ?? '') !== 'throttled') {
+                    $attempted++;
+                }
+            } catch (\\Throwable $error) {
+                error_log('iyzico expired session reconciliation deferred.');
+                $attempted++;
+            }
+        }
+        return $attempted;
+    }
+
     public static function reconcile(PDO $pdo, array $transaction): array
     {
         if ((string)($transaction['provider'] ?? 'iyzico') !== 'iyzico'
@@ -37,6 +93,16 @@ final class IyzicoPaymentReconciler
         $token = trim((string)($transaction['provider_reference'] ?? ''));
         if ($token === '' || str_starts_with($token, 'init:')) {
             return ['result' => 'not_reconcilable'];
+        }
+        $transactionId = (int)($transaction['id'] ?? 0);
+        if (!self::claimReconciliationAttempt($pdo, $transactionId)) {
+            $state = $pdo->prepare('SELECT status FROM payment_transactions WHERE id=? LIMIT 1');
+            $state->execute([$transactionId]);
+            $currentStatus = (string)($state->fetchColumn() ?: '');
+            if (in_array($currentStatus, ['paid','processing','failed','cancelled','refunded'], true)) {
+                return ['result'=>'already_applied','payment_status'=>$currentStatus];
+            }
+            return ['result'=>'throttled','payment_status'=>$currentStatus];
         }
         $request = json_decode((string)($transaction['request_payload'] ?? ''), true);
         if (!is_array($request)) {
