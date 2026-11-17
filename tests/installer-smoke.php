@@ -631,11 +631,11 @@ try {
     $bookingCreateRoute = $bookingCreateRouteStart !== false ? substr($webRoutesSource, $bookingCreateRouteStart) : '';
     assertSmoke(
         substr_count($webRoutesSource, "status='confirmed'") >= 7
-        && substr_count($webRoutesSource, "status IN ('pending','confirmed')") === 2
+        && substr_count($webRoutesSource, "status IN ('pending','confirmed')") === 3
         && str_contains($bookingCreateRoute, "status IN ('pending','confirmed')")
         && str_contains($bookingCreateRoute, 'FOR UPDATE')
         && str_contains($webRoutesSource, "SELECT id FROM bookings WHERE property_id=? AND id<>? AND status IN ('pending','confirmed')"),
-        'Only the locked booking-creation flow may hold dates for pending requests; public availability and occupied calendars must continue to use confirmed bookings only.'
+        'Booking creation and payment/administration confirmation paths must protect pending date holds; public availability and occupied calendars must continue to use confirmed bookings only.'
     );
     $heroLandingSource = (string)file_get_contents($root . '/themes/default/templates/pages/landing.php');
     assertSmoke(str_contains($heroLandingSource, 'id="homeCalendar"') && str_contains($heroLandingSource, 'id="calendarMonths"') && str_contains($heroLandingSource, 'date-picker-trigger') && str_contains($heroLandingSource, 'is-in-range') && str_contains($heroLandingSource, "co.value<=ci.value") && !str_contains($heroLandingSource, 'showPicker'), 'Homepage hero must use the accessible custom date-range calendar with past-date blocking, range highlighting and checkout validation.');
