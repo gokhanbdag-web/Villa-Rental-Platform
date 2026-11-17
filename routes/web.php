@@ -1305,7 +1305,7 @@ $currentPayment=$pdo->prepare('SELECT pt.status,pt.response_payload,b.status AS 
         $currentPayment->execute([(int)$transaction['id']]);
         $currentPaymentRow=$currentPayment->fetch(PDO::FETCH_ASSOC)?:[];
         $storedStatus=(string)($currentPaymentRow['status']??'');
-        if($storedStatus==='paid'&&in_array($processed['result']??'', ['processed','duplicate','already_applied','in_progress'],true)) \App\Core\PaymentRefundService::storeVerifiedPaymentDetails($pdo,(int)$transaction['id'],(string)($currentPaymentRow['response_payload']??''),$result);
+        if($storedStatus==='paid'&&in_array($processed['result']??'', ['processed','duplicate','already_applied','in_progress','paid_booking_conflict'],true)) \App\Core\PaymentRefundService::storeVerifiedPaymentDetails($pdo,(int)$transaction['id'],(string)($currentPaymentRow['response_payload']??''),$result);
         $needsPaymentReview=($processed['result']??'')==='paid_booking_conflict'||($storedStatus==='paid'&&in_array((string)($currentPaymentRow['booking_status']??''),['pending','cancelled'],true));
         $suffix=$needsPaymentReview?'review':match($storedStatus){'paid'=>'success','processing'=>'review','failed'=>'failed',default=>'review'};
         redirect('/payment/'.$suffix.'/'.rawurlencode($token));
