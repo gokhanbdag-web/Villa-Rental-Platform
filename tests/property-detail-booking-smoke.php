@@ -7,9 +7,8 @@ $routes = file_get_contents($root.'/routes/web.php');
 $checkout = file_get_contents($root.'/themes/default/templates/pages/checkout.php');
 
 $bookingRouteStart = strpos($routes, '$router->post(\'/property/{slug}/book\'');
-$bookingRouteEnd = strpos($routes, '$router->get(\'/checkout/{bookingCode}\'', $bookingRouteStart === false ? 0 : $bookingRouteStart);
-$bookingRoute = $bookingRouteStart !== false && $bookingRouteEnd !== false
-    ? substr($routes, $bookingRouteStart, $bookingRouteEnd - $bookingRouteStart)
+$bookingRoute = $bookingRouteStart !== false
+    ? substr($routes, $bookingRouteStart)
     : '';
 $checks = [
     'booking creation rejects overlapping pending and confirmed reservations under the property lock' => str_contains($bookingRoute, "status IN ('pending','confirmed')") && str_contains($bookingRoute, 'FOR UPDATE') && str_contains($bookingRoute, 'SELECT id,base_nightly_price') ,
