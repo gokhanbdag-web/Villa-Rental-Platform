@@ -72,7 +72,10 @@ final class IyzicoPaymentReconciler
         $currency = strtoupper((string)($transaction['currency'] ?? ''));
         if (in_array($targetStatus, ['paid','processing'], true)) {
             $paidPrice = $result['paidPrice'] ?? null;
-            if (!is_numeric($paidPrice) || !is_finite((float)$paidPrice)) {
+            $providerPrice = $result['price'] ?? null;
+            if (!is_numeric($paidPrice) || !is_finite((float)$paidPrice)
+                || !is_numeric($providerPrice) || !is_finite((float)$providerPrice)
+                || number_format((float)$providerPrice, 2, '.', '') !== number_format((float)($transaction['amount'] ?? 0), 2, '.', '')) {
                 throw new RuntimeException('iyzico ödeme tutarı doğrulanamadı; yeni ödeme başlatılmadı.');
             }
             $amount = number_format((float)$paidPrice, 2, '.', '');
