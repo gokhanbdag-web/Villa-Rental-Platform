@@ -75,7 +75,7 @@ final class IyzicoPaymentReconciler
                 if (($result['result'] ?? '') !== 'throttled') {
                     $attempted++;
                 }
-            } catch (\\Throwable $error) {
+            } catch (\Throwable $error) {
                 error_log('iyzico expired session reconciliation deferred.');
                 $attempted++;
             }
