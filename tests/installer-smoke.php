@@ -9,6 +9,7 @@ use App\Core\Migrator;
 use App\Core\PaymentWebhookInbox;
 use App\Core\PaymentCallbackProcessor;
 use App\Core\PaymentCheckoutGuard;
+use App\Core\BookingHoldExpiryService;
 use App\Core\ThemeManager;
 use App\Core\Router;
 
@@ -361,6 +362,79 @@ try {
     $staleCount->execute([$staleTokenBookingId]);
     assertSmoke((int)$staleCount->fetchColumn()===1,'A second checkout was created before reconciling the expired provider token.');
 
+    // Expired booking holds are released only when no unresolved payment or
+    // pending bank-transfer report can still represent money in flight.
+    $makeHoldExpiryCase = static function (string $label, ?string $paymentStatus=null, string $provider='iyzico', ?string $providerReference=null) use ($pdo,$createBooking,$property,$customerId,$customerEmail,$subtotal,$fees,$total): array {
+        static $holdIndex=0;
+        $offset=140+($holdIndex++*3);
+        $start=(new DateTimeImmutable('+'.$offset.' days'))->format('Y-m-d');
+        $end=(new DateTimeImmutable('+'.($offset+2).' days'))->format('Y-m-d');
+        $code='VRHOLD'.strtoupper(bin2hex(random_bytes(4)));
+        $createBooking->execute([$code,(int)$property['id'],$customerId,'Hold Expiry Customer',$customerEmail,'+905551112233',$start,$end,1,$subtotal,$fees,$total,$property['currency']]);
+        $id=(int)$pdo->lastInsertId();
+        $financial=$pdo->prepare("INSERT INTO booking_financials(booking_id,gross_amount,platform_fee,vendor_net_amount,currency,payout_status,created_at) VALUES(?,?,0,?,?,'unpaid',NOW())");
+        $financial->execute([$id,$total,$total,$property['currency']]);
+        $hold=$pdo->prepare('UPDATE bookings SET hold_expires_at=DATE_SUB(NOW(),INTERVAL 1 MINUTE) WHERE id=?');
+        $hold->execute([$id]);
+        $reference=$providerReference??('VRHOLD-PAY-'.strtoupper(bin2hex(random_bytes(5))));
+        if($paymentStatus!==null){
+            $expires=$provider==='iyzico'?"DATE_SUB(NOW(),INTERVAL 1 MINUTE)":"NULL";
+            $payment=$pdo->prepare("INSERT INTO payment_transactions(booking_id,provider,provider_reference,amount,currency,status,expires_at,created_at,updated_at) VALUES(?,?,?,?,?,?,{$expires},NOW(),NOW())");
+            $payment->execute([$id,$provider,$reference,number_format($total,2,'.',''),$property['currency'],$paymentStatus]);
+        }
+        return ['id'=>$id,'reference'=>$reference];
+    };
+    $runHoldExpiry = static function (int $propertyId) use ($pdo): int {
+        $pdo->beginTransaction();
+        try {
+            $lock=$pdo->prepare('SELECT id FROM properties WHERE id=? FOR UPDATE');
+            $lock->execute([$propertyId]);
+            $count=BookingHoldExpiryService::expireSafePendingForProperty($pdo,$propertyId);
+            $pdo->commit();
+            return $count;
+        } catch (Throwable $e) {
+            if($pdo->inTransaction())$pdo->rollBack();
+            throw $e;
+        }
+    };
+    $plainExpiredHold=$makeHoldExpiryCase('plain');
+    assertSmoke($runHoldExpiry((int)$property['id'])>=1,'A due booking hold with no payment was not released.');
+    $holdState=$pdo->prepare('SELECT status FROM bookings WHERE id=?');
+    $holdState->execute([$plainExpiredHold['id']]);
+    assertSmoke($holdState->fetchColumn()==='cancelled','A due unpaid booking was not cancelled.');
+
+    $manualPendingHold=$makeHoldExpiryCase('manual-report');
+    $manualReport=$pdo->prepare("INSERT INTO manual_payment_reports(booking_id,guest_user_id,amount,currency,sender_name,transfer_reference,status,submitted_at,created_at) VALUES(?,?,?,?,?,?,'pending',NOW(),NOW())");
+    $manualReport->execute([$manualPendingHold['id'],$customerId,$total,$property['currency'],'Hold Customer','HOLD-MANUAL-'.bin2hex(random_bytes(3))]);
+    $runHoldExpiry((int)$property['id']);
+    $holdState->execute([$manualPendingHold['id']]);
+    assertSmoke($holdState->fetchColumn()==='pending','A booking with a pending bank-transfer report was released.');
+
+    $realTokenHold=$makeHoldExpiryCase('real-token','pending','iyzico','VRHOLD-REAL-'.strtoupper(bin2hex(random_bytes(4))));
+    $runHoldExpiry((int)$property['id']);
+    $holdState->execute([$realTokenHold['id']]);
+    assertSmoke($holdState->fetchColumn()==='pending','A booking with an unresolved real provider token was released.');
+    $realTokenState=$pdo->prepare('SELECT status FROM payment_transactions WHERE provider_reference=?');
+    $realTokenState->execute([$realTokenHold['reference']]);
+    assertSmoke($realTokenState->fetchColumn()==='pending','An unresolved real provider token was expired without verification.');
+
+    $placeholderHold=$makeHoldExpiryCase('placeholder','pending','iyzico','init:VRHOLD-INIT-'.strtoupper(bin2hex(random_bytes(4))));
+    $runHoldExpiry((int)$property['id']);
+    $holdState->execute([$placeholderHold['id']]);
+    assertSmoke($holdState->fetchColumn()==='cancelled','A due abandoned initialization did not release its booking hold.');
+    $realTokenState->execute([$placeholderHold['reference']]);
+    assertSmoke($realTokenState->fetchColumn()==='expired','An expired initialization placeholder was not safely retired.');
+
+    $paidHold=$makeHoldExpiryCase('paid','paid','manual');
+    $runHoldExpiry((int)$property['id']);
+    $holdState->execute([$paidHold['id']]);
+    assertSmoke($holdState->fetchColumn()==='pending','A paid booking awaiting confirmation was incorrectly released.');
+
+    $failedHold=$makeHoldExpiryCase('failed','failed','paytr');
+    $runHoldExpiry((int)$property['id']);
+    $holdState->execute([$failedHold['id']]);
+    assertSmoke($holdState->fetchColumn()==='cancelled','A due booking with a terminal failed payment was not released.');
+
     
     // MySQL-backed manual transfer lifecycle: reject, resubmit, validate
     // amount and booking conflicts, then approve exactly once.
@@ -410,6 +484,17 @@ try {
     assertSmoke((bool)$conflictCheck->fetchColumn(),'Overlapping confirmed booking was not detected before manual payment approval.');
     $manualPaymentCount->execute([$conflictBookingId]);
     assertSmoke((int)$manualPaymentCount->fetchColumn()===0,'Conflicting booking received a manual paid transaction.');
+
+    $pendingOverlapStart=(new DateTimeImmutable('+200 days'))->format('Y-m-d');
+    $pendingOverlapEnd=(new DateTimeImmutable('+202 days'))->format('Y-m-d');
+    $pendingOverlapId=$makeManualBooking('VRMANPEND'.strtoupper(bin2hex(random_bytes(3))),$pendingOverlapStart,$pendingOverlapEnd);
+    $pendingTargetId=$makeManualBooking('VRMANTARG'.strtoupper(bin2hex(random_bytes(3))),$pendingOverlapStart,$pendingOverlapEnd);
+    $createManualReport->execute([$pendingTargetId,$customerId,$total,$property['currency'],'Smoke Sender','Smoke Bank','MANUAL-PENDING-CONFLICT-'.bin2hex(random_bytes(3)),null]);
+    $pendingConflictCheck=$pdo->prepare("SELECT id FROM bookings WHERE property_id=? AND id<>? AND status IN ('pending','confirmed') AND check_in < ? AND check_out > ? LIMIT 1 FOR UPDATE");
+    $pendingConflictCheck->execute([(int)$property['id'],$pendingTargetId,$pendingOverlapEnd,$pendingOverlapStart]);
+    assertSmoke((bool)$pendingConflictCheck->fetchColumn(),'Overlapping pending booking was not detected before manual payment approval.');
+    $manualPaymentCount->execute([$pendingTargetId]);
+    assertSmoke((int)$manualPaymentCount->fetchColumn()===0,'A pending-overlap booking received a manual paid transaction.');
 
     $approvedBookingId = $makeManualBooking('VRMANOK' . strtoupper(bin2hex(random_bytes(3))),(new DateTimeImmutable('+80 days'))->format('Y-m-d'),(new DateTimeImmutable('+82 days'))->format('Y-m-d'));
     $createManualReport->execute([$approvedBookingId,$customerId,$total,$property['currency'],'Smoke Sender','Smoke Bank','MANUAL-APPROVE-'.bin2hex(random_bytes(3)),null]);
@@ -546,11 +631,11 @@ try {
     $bookingCreateRoute = $bookingCreateRouteStart !== false ? substr($webRoutesSource, $bookingCreateRouteStart) : '';
     assertSmoke(
         substr_count($webRoutesSource, "status='confirmed'") >= 7
-        && substr_count($webRoutesSource, "status IN ('pending','confirmed')") === 2
+        && substr_count($webRoutesSource, "status IN ('pending','confirmed')") === 3
         && str_contains($bookingCreateRoute, "status IN ('pending','confirmed')")
         && str_contains($bookingCreateRoute, 'FOR UPDATE')
         && str_contains($webRoutesSource, "SELECT id FROM bookings WHERE property_id=? AND id<>? AND status IN ('pending','confirmed')"),
-        'Only the locked booking-creation flow may hold dates for pending requests; public availability and occupied calendars must continue to use confirmed bookings only.'
+        'Booking creation and payment/administration confirmation paths must protect pending date holds; public availability and occupied calendars must continue to use confirmed bookings only.'
     );
     $heroLandingSource = (string)file_get_contents($root . '/themes/default/templates/pages/landing.php');
     assertSmoke(str_contains($heroLandingSource, 'id="homeCalendar"') && str_contains($heroLandingSource, 'id="calendarMonths"') && str_contains($heroLandingSource, 'date-picker-trigger') && str_contains($heroLandingSource, 'is-in-range') && str_contains($heroLandingSource, "co.value<=ci.value") && !str_contains($heroLandingSource, 'showPicker'), 'Homepage hero must use the accessible custom date-range calendar with past-date blocking, range highlighting and checkout validation.');

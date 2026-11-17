@@ -56,6 +56,8 @@ final class PaymentCheckoutGuard
             $insert = $pdo->prepare("INSERT INTO payment_transactions(booking_id,provider,provider_reference,idempotency_key,amount,currency,status,request_payload,expires_at,created_at,updated_at) VALUES(?,'iyzico',?,?,?,?, 'pending',?,DATE_ADD(NOW(),INTERVAL 5 MINUTE),NOW(),NOW())");
             $insert->execute([$bookingId,$placeholder,$key,$amount,$currency,json_encode($requestPayload,JSON_UNESCAPED_UNICODE|JSON_UNESCAPED_SLASHES)]);
             $id = (int)$pdo->lastInsertId();
+            $extendHold = $pdo->prepare("UPDATE bookings SET hold_expires_at=DATE_ADD(NOW(),INTERVAL 30 MINUTE) WHERE id=? AND status='pending'");
+            $extendHold->execute([$bookingId]);
             $pdo->commit();
             return ['result'=>'reserved','transaction_id'=>$id,'provider_reference'=>$placeholder];
         } catch (Throwable $error) {
