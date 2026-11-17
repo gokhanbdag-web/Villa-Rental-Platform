@@ -147,7 +147,7 @@ paymentAssert(strpos($routesSource, "if(\$reservationResult==='verification_requ
 $paymentResultRoute = strpos($routesSource, "if(\$paymentResultType==='review'");
 $paymentResultView = file_get_contents(dirname(__DIR__) . '/themes/default/templates/pages/payment-result.php');
 paymentAssert($paymentResultRoute !== false && strpos($routesSource, "'paid_booking_conflict'?'review'") !== false, 'Paid booking conflicts are incorrectly sent to the success result screen.');
-paymentAssert(is_string($paymentResultView) && strpos($paymentResultView, 'Ödemeniz alındı, rezervasyon inceleniyor') !== false && strpos($paymentResultView, 'Ödeme alındı, iade incelemesi gerekli') !== false, 'Paid but unconfirmed/cancelled booking review is not explained to the guest.');
+paymentAssert(is_string($paymentResultView) && strpos($paymentResultView, 'Ödemeniz alındı, rezervasyon inceleniyor') !== false && strpos($paymentResultView, 'Ödeme alındı, rezervasyon incelemesi gerekli') !== false, 'Paid but unconfirmed/cancelled booking review is not explained to the guest.');
 
 $holdExpirySource = file_get_contents(dirname(__DIR__) . '/app/Core/BookingHoldExpiryService.php');
 paymentAssert(is_string($holdExpirySource) && strpos($holdExpirySource, 'manual_payment_reports') !== false && strpos($holdExpirySource, "in_array(\$status, ['failed','cancelled','expired','refunded'], true)") !== false, 'Booking hold expiry does not protect unresolved or paid payments and pending manual reports.');
