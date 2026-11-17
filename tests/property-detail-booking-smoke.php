@@ -6,8 +6,8 @@ $property = file_get_contents($root.'/themes/default/templates/pages/property.ph
 $routes = file_get_contents($root.'/routes/web.php');
 $checkout = file_get_contents($root.'/themes/default/templates/pages/checkout.php');
 
-$bookingRouteStart = strpos($routes, "$router->post('/property/{slug}/book'");
-$bookingRouteEnd = strpos($routes, "$router->get('/checkout/{bookingCode}'", $bookingRouteStart === false ? 0 : $bookingRouteStart);
+$bookingRouteStart = strpos($routes, '$router->post(\'/property/{slug}/book\'');
+$bookingRouteEnd = strpos($routes, '$router->get(\'/checkout/{bookingCode}\'', $bookingRouteStart === false ? 0 : $bookingRouteStart);
 $bookingRoute = $bookingRouteStart !== false && $bookingRouteEnd !== false
     ? substr($routes, $bookingRouteStart, $bookingRouteEnd - $bookingRouteStart)
     : '';
