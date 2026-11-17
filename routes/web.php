@@ -883,6 +883,11 @@ $router->get('/villa/{slug}/availability', static function (array $params): void
     $propertyStmt->execute([$params['slug'] ?? '']);
     $property = $propertyStmt->fetch();
     if (!$property) { $fail(404, 'Konaklama bulunamadı.'); return; }
+    try {
+        \App\Core\IyzicoPaymentReconciler::reconcileExpiredForProperty($pdo,(int)$property['id'],3);
+    } catch(Throwable $reconcileError) {
+        error_log('iyzico availability reconciliation deferred.');
+    }
     // Availability requests are a natural shared-hosting trigger for safe hold cleanup;
     // no SSH cron is required to release abandoned, payment-safe pending holds.
     $pdo->beginTransaction();
@@ -956,6 +961,11 @@ $router->post('/villa/{slug}/reserve', static function (array $params): void {
     $guests=(int)($_POST['guests']??0);$fullName=trim($first.' '.$last);
     if($first===''||$last===''||mb_strlen($first)>90||mb_strlen($last)>90||!filter_var($email,FILTER_VALIDATE_EMAIL)||strlen($email)>190||$phone===''||strlen($phone)>40||strlen($password)<10||strlen($password)>128||!$checkIn||!$checkOut||$checkIn->format('Y-m-d')!==$inRaw||$checkOut->format('Y-m-d')!==$outRaw||$checkIn<new DateTimeImmutable('today')||$checkOut<=$checkIn||(int)$checkIn->diff($checkOut)->days>365||$guests<1||$guests>(int)$property['max_guests']||($autoStartIyzico&&(!preg_match('/^[0-9]{11}$/',$identityNumber)||$billingAddress===''||mb_strlen($billingAddress)>500||$billingCity===''||mb_strlen($billingCity)>100))){
         http_response_code(422);exit('Lütfen tüm bilgileri ve rezervasyon tarihlerini kontrol edin. Şifre en az 10 karakter olmalıdır.');
+    }
+    try {
+        \App\Core\IyzicoPaymentReconciler::reconcileExpiredForProperty($pdo,(int)$property['id'],3);
+    } catch(Throwable $reconcileError) {
+        error_log('iyzico booking reconciliation deferred.');
     }
     $currentUser=Auth::user();$userId=0;$createNewAccount=false;$newUsername='';
     $existing=$pdo->prepare('SELECT id,username,email,password_hash,role,status FROM users WHERE email=? LIMIT 1');$existing->execute([$email]);$account=$existing->fetch();
