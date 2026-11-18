@@ -8,6 +8,7 @@ use App\Core\PaymentCallbackProcessor;
 use App\Core\PaymentCheckoutGuard;
 use App\Core\PaymentRefundService;
 use App\Core\IyzicoPaymentReconciler;
+use App\Core\PaymentWebhookInbox;
 
 function concurrencyAssert(bool $condition, string $message): void
 {
@@ -346,7 +347,41 @@ try {
     $pdoA->prepare("UPDATE payment_transactions SET status='paid' WHERE id=?")->execute([$reconcilePaymentId]);
     concurrencyAssert(!IyzicoPaymentReconciler::claimReconciliationAttempt($pdoA, $reconcilePaymentId), 'A paid iyzico transaction was incorrectly eligible for reconciliation.');
 
-    echo "Payment concurrency smoke tests passed: payment callback serialization/idempotency, checkout locking, refund reservation locking, pending-refund exclusion, verified settlement locking, duplicate settlement rejection, remaining-balance enforcement, and atomic iyzico reconciliation claims with cooldown.\n";
+    // The webhook inbox must allow exactly one concurrent claimant,
+    // recover failed events, and keep processed events closed to replay.
+    $webhookEventId = 'VRC-WEBHOOK-' . strtoupper(bin2hex(random_bytes(5)));
+    $webhookReference = 'VRC-PAY-' . strtoupper(bin2hex(random_bytes(5)));
+    $inboxA = new PaymentWebhookInbox($pdoA);
+    $inboxB = new PaymentWebhookInbox($pdoB);
+    $webhookPayload = ['status' => 'success', 'reference' => $webhookReference];
+    concurrencyAssert(
+        $inboxA->recordVerified('paytr', $webhookEventId, 'payment_callback', $webhookReference, $webhookPayload) === 'recorded',
+        'A verified webhook event was not recorded.'
+    );
+
+    $pdoA->beginTransaction();
+    $webhookRowLock = $pdoA->prepare('SELECT id FROM payment_webhook_events WHERE provider=? AND provider_event_id=? FOR UPDATE');
+    $webhookRowLock->execute(['paytr', $webhookEventId]);
+    $webhookClaimTimedOut = false;
+    try {
+        $inboxB->claim('paytr', $webhookEventId);
+    } catch (PDOException $error) {
+        $webhookClaimTimedOut = (int)($error->errorInfo[1] ?? 0) === 1205;
+        if ($pdoB->inTransaction()) $pdoB->rollBack();
+    } finally {
+        if ($pdoA->inTransaction()) $pdoA->commit();
+    }
+    concurrencyAssert($webhookClaimTimedOut, 'Concurrent webhook claim did not wait for the event-row lock.');
+
+    concurrencyAssert($inboxA->claim('paytr', $webhookEventId), 'First webhook claim was not acquired.');
+    concurrencyAssert(!$inboxB->claim('paytr', $webhookEventId), 'A second processor claimed an event already in processing.');
+    concurrencyAssert($inboxA->markFailed('paytr', $webhookEventId, 'Synthetic retryable failure'), 'Webhook failure state was not recorded.');
+    concurrencyAssert($inboxB->claim('paytr', $webhookEventId), 'A failed webhook could not be safely reclaimed for retry.');
+    concurrencyAssert($inboxB->markProcessed('paytr', $webhookEventId), 'Reclaimed webhook could not be marked processed.');
+    concurrencyAssert(!$inboxA->claim('paytr', $webhookEventId), 'A processed webhook was claimed again.');
+    concurrencyAssert(!$inboxA->markProcessed('paytr', $webhookEventId), 'A processed webhook accepted a second completion transition.');
+
+    echo "Payment concurrency smoke tests passed: payment callback serialization/idempotency, checkout locking, refund reservation locking, pending-refund exclusion, verified settlement locking, duplicate settlement rejection, remaining-balance enforcement, atomic iyzico reconciliation claims with cooldown, and exclusive webhook claiming with failed-event retry.\n";
 } finally {
     if (isset($pdoA) && $pdoA instanceof PDO && $pdoA->inTransaction()) {
         $pdoA->rollBack();
