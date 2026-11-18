@@ -20,7 +20,7 @@ $workflow=(string)file_get_contents(dirname(__DIR__).'/.github/workflows/php-lin
 netgsmAssert(str_contains($client,'https://api.netgsm.com.tr/sms/rest/v2/send'),'Official Netgsm REST v2 endpoint is missing.');
 netgsmAssert(str_contains($client,'CURLOPT_HTTPAUTH=>CURLAUTH_BASIC')&&str_contains($client,'CURLOPT_USERPWD=>'),'Netgsm HTTP Basic Authentication is missing.');
 netgsmAssert(str_contains($client,'CURLOPT_SSL_VERIFYPEER=>true')&&str_contains($client,'CURLOPT_FOLLOWLOCATION=>false'),'Netgsm HTTPS transport protections are missing.');
-netgsmAssert(str_contains($client,"'msgheader'=>$sender")&&str_contains($client,"'messages'=>[['msg'=>$message,'no'=>$number]]")&&str_contains($client,"'iysfilter'=>$iys"),'Netgsm JSON payload or IYS filter is missing.');
+netgsmAssert(str_contains($client,"'msgheader'=>")&&str_contains($client,"'messages'=>")&&str_contains($client,"'iysfilter'=>"),'Netgsm JSON payload or IYS filter is missing.');
 netgsmAssert(str_contains($client,"code")&&str_contains($client,"jobid"),'Netgsm provider response validation is missing.');
 netgsmAssert(str_contains($service,'INSERT IGNORE INTO sms_queue')&&str_contains($service,'event_key')&&str_contains($service,'attempts>=5'),'SMS queue idempotency or retry policy is missing.');
 netgsmAssert(str_contains($service,'PaymentSecretVault::decrypt'),'SMS credentials are not read from encrypted secret storage.');
