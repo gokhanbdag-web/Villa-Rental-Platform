@@ -47,6 +47,8 @@ jobs:
         run: php tests/router-smoke.php
       - name: Run user role boundary smoke test
         run: php tests/auth-authorization-smoke.php
+      - name: Run root document-root hardening smoke test
+        run: php tests/root-document-root-hardening-smoke.php
       - name: Run payment signature and secret security smoke tests
         run: php tests/payment-security-smoke.php
       - name: Run iyzico environment-aware checkout smoke tests
