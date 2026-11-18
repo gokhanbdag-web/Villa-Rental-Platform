@@ -2923,6 +2923,8 @@ $router->get('/admin/content-translations', static function (): void {
         'blog_post'=>['table'=>'blog_posts','label'=>'title','title'=>'Blog yazısı','fields'=>\App\Core\ContentTranslator::fields('blog_post')],
         'blog_category'=>['table'=>'blog_categories','label'=>'name','title'=>'Blog kategorisi','fields'=>\App\Core\ContentTranslator::fields('blog_category')],
         'blog_tag'=>['table'=>'blog_tags','label'=>'name','title'=>'Blog etiketi','fields'=>\App\Core\ContentTranslator::fields('blog_tag')],
+        'amenity'=>['table'=>'amenities','label'=>'name','title'=>'Donanım ve olanak','fields'=>\App\Core\ContentTranslator::fields('amenity')],
+        'location'=>['table'=>'locations','label'=>'name','title'=>'Destinasyon ve konum','fields'=>\App\Core\ContentTranslator::fields('location')],
     ];
     if(!isset($entityMaps[$type]))$type='property';
     $map=$entityMaps[$type];
@@ -2940,7 +2942,7 @@ $router->post('/admin/content-translations', static function (): void {
     Auth::requireRole(['super_admin','admin']);verify_csrf();
     $pdo=Database::connection();
     $type=(string)($_POST['type']??'');$entityId=(int)($_POST['entity_id']??0);$locale=(string)($_POST['lang']??'');
-    $maps=['property'=>['table'=>'properties'],'property_category'=>['table'=>'property_categories'],'blog_post'=>['table'=>'blog_posts'],'blog_category'=>['table'=>'blog_categories'],'blog_tag'=>['table'=>'blog_tags']];
+    $maps=['property'=>['table'=>'properties'],'property_category'=>['table'=>'property_categories'],'blog_post'=>['table'=>'blog_posts'],'blog_category'=>['table'=>'blog_categories'],'blog_tag'=>['table'=>'blog_tags'],'amenity'=>['table'=>'amenities'],'location'=>['table'=>'locations']];
     if(!isset($maps[$type])||$entityId<1){http_response_code(422);exit('Çeviri kaydı geçersiz.');}
     $language=$pdo->prepare('SELECT code,is_default FROM languages WHERE code=? AND is_active=1 LIMIT 1');$language->execute([$locale]);$languageRow=$language->fetch(PDO::FETCH_ASSOC);
     if(!$languageRow||(int)$languageRow['is_default']===1){http_response_code(422);exit('Varsayılan dilin içeriği ana kayıt üzerinden düzenlenmelidir.');}
