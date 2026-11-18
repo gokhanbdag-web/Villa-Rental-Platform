@@ -720,7 +720,7 @@ $router->get('/konaklamalar', static function (): void {
     $sql = "SELECT p.*, (SELECT pm.file_path FROM property_media pm WHERE pm.property_id=p.id ORDER BY pm.is_cover DESC,pm.sort_order,pm.id LIMIT 1) AS cover_image,(SELECT COUNT(*) FROM bookings b WHERE b.property_id=p.id AND b.status NOT IN ('cancelled','rejected')) AS booking_count,(SELECT AVG(r.rating) FROM reviews r WHERE r.property_id=p.id AND r.status='approved') AS rating_average,(SELECT COUNT(*) FROM reviews r WHERE r.property_id=p.id AND r.status='approved') AS rating_count FROM properties p WHERE p.status='published'";
     $params = [];
     if ($city !== '') { $sql .= ' AND (p.city LIKE ? OR p.district LIKE ? OR p.country LIKE ?)'; $like='%'.$city.'%'; array_push($params,$like,$like,$like); }
-    if ($villaNameQuery !== '') { $sql .= ' AND p.title LIKE ?'; $params[]='%'.$villaNameQuery.'%'; }
+    if ($villaNameQuery !== '') { $sql .= " AND (p.title LIKE ? OR EXISTS (SELECT 1 FROM content_translations ct WHERE ct.entity_type='property' AND ct.entity_id=p.id AND ct.language_code=? AND ct.field_key='title' AND ct.translation_value LIKE ?))"; $params[]='%'.$villaNameQuery.'%';$params[]=$locale;$params[]='%'.$villaNameQuery.'%'; }
     if($locationCountryId>0){$sql.=' AND p.location_country_id=?';$params[]=$locationCountryId;}
     if($locationCityId>0){$sql.=' AND p.location_city_id=?';$params[]=$locationCityId;}
     if($locationDistrictId>0){$sql.=' AND p.location_district_id=?';$params[]=$locationDistrictId;}
@@ -775,12 +775,13 @@ $router->get('/api/villas/suggest', static function (): void {
         return;
     }
     $pdo = Database::connection();
+    $locale=Translator::locale();
     $like = '%' . $term . '%';
-    $stmt = $pdo->prepare("SELECT p.title,p.slug,p.city,p.district,p.base_nightly_price,p.max_guests,
+    $stmt = $pdo->prepare("SELECT p.id,p.title,p.slug,p.city,p.district,p.base_nightly_price,p.max_guests,
         (SELECT pm.file_path FROM property_media pm WHERE pm.property_id=p.id ORDER BY pm.is_cover DESC,pm.sort_order,pm.id LIMIT 1) AS cover_image
         FROM properties p
         WHERE p.status='published'
-          AND (p.title LIKE ? OR p.district LIKE ? OR p.city LIKE ?)
+          AND (p.title LIKE ? OR p.district LIKE ? OR p.city LIKE ? OR EXISTS (SELECT 1 FROM content_translations ct WHERE ct.entity_type='property' AND ct.entity_id=p.id AND ct.language_code=? AND ct.field_key='title' AND ct.translation_value LIKE ?))
         ORDER BY
           CASE
             WHEN p.district LIKE ? THEN 0
@@ -790,9 +791,10 @@ $router->get('/api/villas/suggest', static function (): void {
           END,
           p.title ASC,p.id ASC
         LIMIT 15");
-    $stmt->execute([$like, $like, $like, $like, $like, $like]);
+    $stmt->execute([$like,$like,$like,$locale,$like,$like,$like,$like]);
+    $suggestions=\App\Core\ContentTranslator::apply($pdo,$stmt->fetchAll(PDO::FETCH_ASSOC),'property',$locale);
     $items = [];
-    foreach ($stmt->fetchAll(PDO::FETCH_ASSOC) as $property) {
+    foreach ($suggestions as $property) {
         $image = trim((string)($property['cover_image'] ?? ''));
         if ($image !== '' && !preg_match('~^https?://~i', $image)) {
             $image = '/' . ltrim($image, '/');
