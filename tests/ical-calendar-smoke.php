@@ -27,7 +27,7 @@ icalAssert($weeklyDates===['2026-12-07','2026-12-11','2026-12-14','2026-12-16'],
 $daily=array_values(array_filter($expanded,static fn(array $event):bool=>str_starts_with($event['uid'],'daily-villa#')));
 icalAssert(array_column($daily,'date_from')===['2026-12-01','2026-12-03','2026-12-05'],'DAILY INTERVAL/COUNT expansion returned incorrect dates.');
 $unsupported=false;
-try{IcalParser::parse("BEGIN:VCALENDAR\\nBEGIN:VEVENT\\nUID:monthly\\nDTSTART;VALUE=DATE:20261201\\nDTEND;VALUE=DATE:20261202\\nRRULE:FREQ=MONTHLY;COUNT=2\\nEND:VEVENT\\nEND:VCALENDAR");}catch(RuntimeException){$unsupported=true;}
+try{IcalParser::parse("BEGIN:VCALENDAR\nBEGIN:VEVENT\nUID:monthly\nDTSTART;VALUE=DATE:20261201\nDTEND;VALUE=DATE:20261202\nRRULE:FREQ=MONTHLY;COUNT=2\nEND:VEVENT\nEND:VCALENDAR");}catch(RuntimeException){$unsupported=true;}
 icalAssert($unsupported,'Unsupported recurrence rules must fail closed instead of silently importing one date.');
 
 $rejectedUrls=[
