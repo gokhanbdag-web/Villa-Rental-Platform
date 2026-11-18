@@ -215,12 +215,19 @@ final class CalendarSyncService
         $availability=$pdo->prepare("SELECT a.id,a.date_from,a.date_to FROM availability a LEFT JOIN calendar_feed_events e ON e.availability_id=a.id WHERE a.property_id=? AND a.status='blocked' AND a.date_to>CURDATE() AND e.id IS NULL");
         $availability->execute([$propertyId]);
         foreach($availability->fetchAll(PDO::FETCH_ASSOC) as $row)$events[]=['uid'=>'availability-'.$propertyId.'-'.$row['id'].'@calendar.villacms','from'=>$row['date_from'],'to'=>$row['date_to'],'summary'=>'Unavailable'];
+        return self::renderIcs($title,$events);
+    }
+
+    public static function renderIcs(string $title,array $events):string
+    {
         $escape=static function(string $value):string{return str_replace(["\\",";",",","\r","\n"],["\\\\","\\;","\\,",'','\\n'],$value);};
         $lines=['BEGIN:VCALENDAR','VERSION:2.0','PRODID:-//VillaCMS//Calendar Sync 1.0//TR','CALSCALE:GREGORIAN','METHOD:PUBLISH','X-WR-CALNAME:'.$escape($title)];
         foreach($events as $event) {
-            $lines[]='BEGIN:VEVENT';$lines[]='UID:'.$event['uid'];$lines[]='DTSTAMP:'.gmdate('Ymd\THis\Z');
-            $lines[]='DTSTART;VALUE=DATE:'.str_replace('-','',$event['from']);$lines[]='DTEND;VALUE=DATE:'.str_replace('-','',$event['to']);
-            $lines[]='SUMMARY:'.$escape($event['summary']);$lines[]='END:VEVENT';
+            $uid=trim((string)($event['uid']??''));$from=(string)($event['from']??'');$to=(string)($event['to']??'');
+            if($uid===''||strlen($uid)>255||preg_match('/[\r\n]/',$uid)||!self::validDateRange($from,$to))continue;
+            $lines[]='BEGIN:VEVENT';$lines[]='UID:'.$uid;$lines[]='DTSTAMP:'.gmdate('Ymd\THis\Z');
+            $lines[]='DTSTART;VALUE=DATE:'.str_replace('-','',$from);$lines[]='DTEND;VALUE=DATE:'.str_replace('-','',$to);
+            $lines[]='SUMMARY:'.$escape((string)($event['summary']??'Unavailable'));$lines[]='END:VEVENT';
         }
         $lines[]='END:VCALENDAR';
         return self::foldIcsLines($lines);
