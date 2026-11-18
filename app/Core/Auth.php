@@ -89,7 +89,7 @@ final class Auth
         }
 
         if ($actorRole === 'super_admin') {
-            return in_array($targetRole, ['admin', 'customer', 'vendor'], true);
+            return in_array($targetRole, ['admin', 'editor', 'support', 'customer', 'vendor'], true);
         }
 
         if ($actorRole === 'admin') {
@@ -97,6 +97,37 @@ final class Auth
         }
 
         return false;
+    }
+
+    /**
+     * Explicit least-privilege permissions for non-administrator staff roles.
+     * Existing administrators retain their current access while editor and
+     * support accounts receive only the routes listed here.
+     */
+    public static function roleCan(string $role, string $permission): bool
+    {
+        if (in_array($role, ['super_admin', 'admin'], true)) {
+            return true;
+        }
+
+        $permissions = [
+            'editor' => ['admin.pages.view', 'admin.pages.edit', 'admin.blog.view', 'admin.blog.edit'],
+            'support' => ['admin.bookings.view'],
+        ];
+
+        return in_array($permission, $permissions[$role] ?? [], true);
+    }
+
+    public static function requirePermission(string $permission): void
+    {
+        $user = self::user();
+        if (!$user) {
+            redirect('/login');
+        }
+        if (!self::roleCan((string)$user['role'], $permission)) {
+            http_response_code(403);
+            exit('Bu sayfaya erişim yetkiniz bulunmuyor.');
+        }
     }
 
     /** Pending vendors may prepare drafts, but cannot access guest bookings until approved. */
