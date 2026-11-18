@@ -165,7 +165,54 @@ try {
     );
     concurrencyAssert(($checkoutResult['result'] ?? '') === 'reserved', 'Checkout could not reserve after the booking lock was released.');
 
-    echo "Payment concurrency smoke tests passed: property-lock serialization, callback rollback/retry, overlapping paid-booking manual review, and checkout reservation locking.\n";
+    // A verified payment arriving after an administrator/customer cancellation
+    // must be recorded as paid for reconciliation, but must never reopen the booking.
+    $cancelled = $newBooking('cancelled-late-payment', (new DateTimeImmutable('+320 days'))->format('Y-m-d'), (new DateTimeImmutable('+322 days'))->format('Y-m-d'));
+    $cancelBooking = $pdoA->prepare("UPDATE bookings SET status='cancelled' WHERE id=? AND status='pending'");
+    $cancelBooking->execute([$cancelled['id']]);
+    concurrencyAssert($cancelBooking->rowCount() === 1, 'Could not prepare cancelled-booking callback scenario.');
+    $lateReference = 'VRC-PAY-' . strtoupper(bin2hex(random_bytes(5)));
+    $createPayment->execute([$cancelled['id'], $lateReference, '100.00', $currency]);
+    $lateEvent = 'VRC-EVENT-' . strtoupper(bin2hex(random_bytes(5)));
+    $lateCallback = [
+        'booking_id' => $cancelled['id'], 'provider' => 'paytr', 'provider_reference' => $lateReference,
+        'amount' => '100.00', 'currency' => $currency, 'status' => 'success',
+    ];
+    $lateProcessor = new PaymentCallbackProcessor($pdoA);
+    $latePayload = ['merchant_oid' => $lateReference, 'status' => 'success', 'total_amount' => '10000'];
+    $lateResult = $lateProcessor->processVerified(
+        'paytr', $lateEvent, 'payment_callback', $lateReference, $latePayload, $lateCallback
+    );
+    concurrencyAssert(($lateResult['result'] ?? '') === 'paid_booking_conflict'
+        && ($lateResult['manual_review_required'] ?? false) === true,
+        'Late payment for a cancelled booking was not flagged for manual review.');
+    $bookingState->execute([$cancelled['id']]);
+    concurrencyAssert($bookingState->fetchColumn() === 'cancelled', 'Late payment incorrectly reopened a cancelled booking.');
+    $paymentState->execute([$lateReference]);
+    concurrencyAssert($paymentState->fetchColumn() === 'paid', 'Verified late payment was not retained for reconciliation.');
+
+    // Exact event replay and a second event ID for the same paid transaction
+    // must both remain idempotent and must not create another payment record.
+    $replay = $lateProcessor->processVerified(
+        'paytr', $lateEvent, 'payment_callback', $lateReference, $latePayload, $lateCallback
+    );
+    concurrencyAssert(($replay['result'] ?? '') === 'duplicate' && ($replay['payment_updated'] ?? true) === false,
+        'Exact provider event replay was not treated as a no-op duplicate.');
+    $secondEvent = 'VRC-EVENT-' . strtoupper(bin2hex(random_bytes(5)));
+    $secondReplay = $lateProcessor->processVerified(
+        'paytr', $secondEvent, 'payment_callback', $lateReference, $latePayload, $lateCallback
+    );
+    concurrencyAssert(($secondReplay['result'] ?? '') === 'paid_booking_conflict'
+        && ($secondReplay['payment_updated'] ?? true) === false,
+        'A second event ID for an already-paid transaction was not idempotent.');
+    $paymentCount = $pdoA->prepare('SELECT COUNT(*) FROM payment_transactions WHERE booking_id=?');
+    $paymentCount->execute([$cancelled['id']]);
+    concurrencyAssert((int)$paymentCount->fetchColumn() === 1, 'Duplicate callbacks created an extra payment transaction.');
+    $eventCount = $pdoA->prepare("SELECT COUNT(*) FROM payment_webhook_events WHERE provider='paytr' AND transaction_reference=? AND processing_status='processed'");
+    $eventCount->execute([$lateReference]);
+    concurrencyAssert((int)$eventCount->fetchColumn() === 2, 'Distinct verified callback events were not recorded exactly once.');
+
+    echo "Payment concurrency smoke tests passed: property-lock serialization, callback rollback/retry, overlapping paid-booking manual review, checkout reservation locking, cancelled-booking late payment, and callback replay idempotency.\n";
 } finally {
     if (isset($pdoA) && $pdoA instanceof PDO && $pdoA->inTransaction()) {
         $pdoA->rollBack();
