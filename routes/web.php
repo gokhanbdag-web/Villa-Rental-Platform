@@ -832,8 +832,7 @@ $router->get('/villa/{slug}', static function (array $params): void {
     $media->execute([(int)$property['id']]); $property['images']=$media->fetchAll();
     $amenityStmt=$pdo->prepare('SELECT a.name,a.icon FROM amenities a JOIN property_amenities pa ON pa.amenity_id=a.id WHERE pa.property_id=? AND a.is_active=1 ORDER BY a.sort_order,a.name');$amenityStmt->execute([(int)$property['id']]);$propertyAmenities=$amenityStmt->fetchAll();
     $locale = Translator::locale();
-    $contentStmt=$pdo->prepare('SELECT content_key,content_value FROM site_content WHERE language_code=?');
-    $contentStmt->execute([$locale]); $content=$contentStmt->fetchAll(PDO::FETCH_KEY_PAIR);
+    $content=villa_site_content($pdo,$locale);
     $navigation=villa_navigation_tree($pdo,'header',$locale);
     $footerNavigation=villa_navigation_tree($pdo,'footer',$locale);
     $mode=(string)($pdo->query("SELECT setting_value FROM settings WHERE setting_key='app.mode' LIMIT 1")->fetchColumn() ?: 'single_vendor');
@@ -1118,9 +1117,7 @@ $router->get('/checkout/{bookingCode}', static function(array $params):void {
     $locale = Translator::locale();
     $navigation=villa_navigation_tree($pdo,'header',$locale);
     $footerNavigation=villa_navigation_tree($pdo,'footer',$locale);
-    $contentStmt=$pdo->prepare('SELECT content_key,content_value FROM site_content WHERE language_code=?');
-    $contentStmt->execute([$locale]);
-    $content=$contentStmt->fetchAll(PDO::FETCH_KEY_PAIR);
+    $content=villa_site_content($pdo,$locale);
     $siteName=(string)($content['site_name']??'VillaStay');
     ThemeManager::render('checkout.php',get_defined_vars());
 });
@@ -1483,8 +1480,7 @@ foreach(['success','failed','review'] as $paymentResultType){
         $locale = Translator::locale();
         $navigation=villa_navigation_tree($pdo,'header',$locale);
         $footerNavigation=villa_navigation_tree($pdo,'footer',$locale);
-        $contentStmt=$pdo->prepare('SELECT content_key,content_value FROM site_content WHERE language_code=?');
-        $contentStmt->execute([$locale]);$content=$contentStmt->fetchAll(PDO::FETCH_KEY_PAIR);
+        $content=villa_site_content($pdo,$locale);
         $siteName=(string)($content['site_name']??'VillaStay');
         $brandSettings=ThemeManager::brandSettings(ThemeManager::activeSlug());
         ThemeManager::renderTemplate('templates/pages/payment-result.php',get_defined_vars());
@@ -2711,6 +2707,7 @@ $router->get('/page/{slug}', static function (array $params): void {
     $pdo=Database::connection();
     $locale=Translator::locale();
     $s=$pdo->prepare("SELECT * FROM cms_pages WHERE slug=? AND language_code=? AND status='published' LIMIT 1");$s->execute([$params['slug'],$locale]);$page=$s->fetch();
+    if(!$page){$defaultLocale=(string)($pdo->query('SELECT code FROM languages WHERE is_default=1 AND is_active=1 LIMIT 1')->fetchColumn()?:'tr');if($locale!==$defaultLocale){$s->execute([$params['slug'],$defaultLocale]);$page=$s->fetch();}}
     if(!$page){http_response_code(404);echo 'Sayfa bulunamadı.';return;}
     $content=villa_site_content($pdo,$locale);
     $siteName=$content['site_name']??'VillaStay';
@@ -2720,6 +2717,7 @@ $router->get('/page/{slug}', static function (array $params): void {
     $user=Auth::user();
     $destinations=[];$featuredProperties=[];$latestProperties=[];$categories=[];$stylePhotos=[];
     $blogPosts=$pdo->query("SELECT id,title,slug,excerpt,featured_image,published_at FROM blog_posts WHERE status='published' AND (published_at IS NULL OR published_at<=NOW()) ORDER BY COALESCE(published_at,created_at) DESC,id DESC LIMIT 12")->fetchAll(PDO::FETCH_ASSOC);
+    $blogPosts=\App\Core\ContentTranslator::apply($pdo,$blogPosts,'blog_post',$locale);
     ThemeManager::render('page.php', get_defined_vars());
 });
 
