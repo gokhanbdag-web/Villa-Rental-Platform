@@ -596,6 +596,7 @@ $router->get('/', static function (): void {
     }
     villa_perf_mark('home:featured_query');
     $featuredProperties=$pdo->query("SELECT p.*,(SELECT pm.file_path FROM property_media pm WHERE pm.property_id=p.id ORDER BY pm.is_cover DESC,pm.sort_order,pm.id LIMIT 1) AS cover_image,(SELECT COUNT(*) FROM bookings b WHERE b.property_id=p.id AND b.status NOT IN ('cancelled','rejected')) AS booking_count,(SELECT AVG(r.rating) FROM reviews r WHERE r.property_id=p.id AND r.status='approved') AS rating_average,(SELECT COUNT(*) FROM reviews r WHERE r.property_id=p.id AND r.status='approved') AS rating_count FROM properties p WHERE p.status='published' ORDER BY booking_count DESC,p.created_at DESC,p.id DESC LIMIT 9")->fetchAll();
+     $featuredProperties=\App\Core\ContentTranslator::apply($pdo,$featuredProperties,'property',$locale);
     $featuredCardImages=[];$featuredIds=array_map(static fn(array $p):int=>(int)$p['id'],$featuredProperties);
     if($featuredIds){$marks=implode(',',array_fill(0,count($featuredIds),'?'));$media=$pdo->prepare("SELECT property_id,file_path FROM property_media WHERE property_id IN ($marks) ORDER BY property_id,is_cover DESC,sort_order,id");$media->execute($featuredIds);foreach($media->fetchAll() as $m){$pid=(int)$m['property_id'];if(count($featuredCardImages[$pid]??[])<4)$featuredCardImages[$pid][]=$m['file_path'];}}
     $favoritePropertyIds=[];
@@ -603,9 +604,11 @@ $router->get('/', static function (): void {
 
     villa_perf_mark('home:latest_query');
     $latestProperties=$pdo->query("SELECT p.*,(SELECT pm.file_path FROM property_media pm WHERE pm.property_id=p.id ORDER BY pm.is_cover DESC,pm.sort_order,pm.id LIMIT 1) AS cover_image,(SELECT AVG(r.rating) FROM reviews r WHERE r.property_id=p.id AND r.status='approved') AS rating_average,(SELECT COUNT(*) FROM reviews r WHERE r.property_id=p.id AND r.status='approved') AS rating_count,(SELECT COUNT(*) FROM bookings b WHERE b.property_id=p.id AND b.status NOT IN ('cancelled','rejected')) AS booking_count FROM properties p WHERE p.status='published' ORDER BY p.id DESC LIMIT 6")->fetchAll();
+     $latestProperties=\App\Core\ContentTranslator::apply($pdo,$latestProperties,'property',$locale);
     $activeHomeTheme='default';
       if($activeHomeTheme==='default'){
          $categories=$pdo->query("SELECT c.id,c.name,c.slug,COUNT(DISTINCT p.id) AS property_count,(SELECT pm.file_path FROM property_media pm JOIN properties p2 ON p2.id=pm.property_id WHERE p2.category_id=c.id AND p2.status='published' ORDER BY pm.is_cover DESC,pm.sort_order,pm.id LIMIT 1) AS cover_image FROM property_categories c LEFT JOIN properties p ON p.category_id=c.id AND p.status='published' WHERE c.is_active=1 GROUP BY c.id,c.name,c.slug,c.sort_order ORDER BY c.sort_order,c.name LIMIT 8")->fetchAll(PDO::FETCH_ASSOC);
+          $categories=\App\Core\ContentTranslator::apply($pdo,$categories,'property_category',$locale);
          $homeCategoryCollections=[];
          $homeCategoryIds=array_map(static fn(array $category):int=>(int)$category['id'],array_slice($categories,0,4));
          if($homeCategoryIds){
@@ -625,7 +628,9 @@ $router->get('/', static function (): void {
                  if($categoryRows)$homeCategoryCollections[]=['category'=>$homeCategory,'properties'=>$categoryRows];
              }
          }
-         $homeReviews=$pdo->query("SELECT r.rating,r.body,r.created_at,u.username,p.title AS property_title FROM reviews r JOIN users u ON u.id=r.guest_user_id JOIN properties p ON p.id=r.property_id WHERE r.status='approved' AND r.body IS NOT NULL AND TRIM(r.body)<>'' AND p.status='published' ORDER BY r.created_at DESC,r.id DESC LIMIT 6")->fetchAll(PDO::FETCH_ASSOC);
+         $homeReviews=$pdo->query("SELECT r.rating,r.body,r.created_at,u.username,p.id AS id,p.title AS title FROM reviews r JOIN users u ON u.id=r.guest_user_id JOIN properties p ON p.id=r.property_id WHERE r.status='approved' AND r.body IS NOT NULL AND TRIM(r.body)<>'' AND p.status='published' ORDER BY r.created_at DESC,r.id DESC LIMIT 6")->fetchAll(PDO::FETCH_ASSOC);
+          $homeReviews=\App\Core\ContentTranslator::apply($pdo,$homeReviews,'property',$locale);
+          foreach($homeReviews as &$homeReview){$homeReview['property_title']=$homeReview['title'];}unset($homeReview);
      }else{
          $categories=$pdo->query('SELECT id,name,slug FROM property_categories WHERE is_active=1 ORDER BY sort_order,name LIMIT 8')->fetchAll();
          $homeCategoryCollections=[];$homeReviews=[];
@@ -651,6 +656,7 @@ $router->get('/', static function (): void {
     }
     villa_perf_mark('home:blog_query');
     $blogPosts=$pdo->query("SELECT id,title,slug,excerpt,featured_image,published_at FROM blog_posts WHERE status='published' AND (published_at IS NULL OR published_at<=NOW()) ORDER BY COALESCE(published_at,created_at) DESC,id DESC LIMIT 12")->fetchAll(PDO::FETCH_ASSOC);
+     $blogPosts=\App\Core\ContentTranslator::apply($pdo,$blogPosts,'blog_post',$locale);
     $homeSections=[];foreach($pdo->query('SELECT * FROM homepage_sections ORDER BY sort_order,id')->fetchAll() as $section){$homeSections[$section['section_key']]=$section;}
     villa_perf_mark('home:countries_query');
     $locationCountries=$pdo->query("SELECT id,name FROM locations WHERE location_type='country' AND is_active=1 ORDER BY sort_order,name")->fetchAll();
@@ -669,6 +675,7 @@ $router->get('/konaklamalar', static function (): void {
     $navigation = villa_navigation_tree($pdo,'header',$locale);
     $footerNavigation = villa_navigation_tree($pdo,'footer',$locale);
     $categories = $pdo->query('SELECT id,name,slug FROM property_categories WHERE is_active=1 ORDER BY sort_order,name')->fetchAll();
+     $categories=\App\Core\ContentTranslator::apply($pdo,$categories,'property_category',$locale);
     $locationCountries=$pdo->query("SELECT id,name FROM locations WHERE location_type='country' AND is_active=1 ORDER BY sort_order,name")->fetchAll();
     $locationChildren=static function(int $parent) use($pdo): array {if(!$parent)return [];$s=$pdo->prepare('SELECT id,name FROM locations WHERE parent_id=? AND is_active=1 ORDER BY sort_order,name');$s->execute([$parent]);return $s->fetchAll();};    $locationCountryId=max(0,(int)($_GET['country_id']??0));$locationCityId=max(0,(int)($_GET['city_id']??0));$locationDistrictId=max(0,(int)($_GET['district_id']??0));$locationNeighborhoodId=max(0,(int)($_GET['neighborhood_id']??0));
     $selectedLocationId=max(0,(int)($_GET['location_id']??0));
@@ -734,6 +741,7 @@ $router->get('/konaklamalar', static function (): void {
     $perPage=12;$totalPages=max(1,(int)ceil($totalProperties/$perPage));$currentPage=min($totalPages,max(1,(int)($_GET['page']??1)));
     $sql .= ' ORDER BY ' . $orderBy . ' LIMIT ' . $perPage . ' OFFSET ' . (($currentPage-1)*$perPage);
     $stmt=$pdo->prepare($sql); $stmt->execute($params); $properties=$stmt->fetchAll();
+     $properties=\App\Core\ContentTranslator::apply($pdo,$properties,'property',$locale);
     $listingCardImages=[];$listingIds=array_map(static fn(array $p):int=>(int)$p['id'],$properties);
     if($listingIds){$marks=implode(',',array_fill(0,count($listingIds),'?'));$media=$pdo->prepare("SELECT property_id,file_path FROM property_media WHERE property_id IN ($marks) ORDER BY property_id,is_cover DESC,sort_order,id");$media->execute($listingIds);foreach($media->fetchAll() as $m){$pid=(int)$m['property_id'];if(count($listingCardImages[$pid]??[])<4)$listingCardImages[$pid][]=$m['file_path'];}}
     $favoritePropertyIds=[];
