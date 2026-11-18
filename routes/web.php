@@ -2886,8 +2886,8 @@ $router->get('/admin/content-translations', static function (): void {
     $entities=$pdo->query('SELECT id,'.$map['label'].' AS label FROM '.$map['table'].' ORDER BY '.$map['label'].' LIMIT 500')->fetchAll(PDO::FETCH_ASSOC);
     $entityId=max(0,(int)($_GET['id']??0));$entity=null;$values=[];
     if($entityId>0){
-        $entityStmt=$pdo->prepare('SELECT id,'.$map['label'].' AS label FROM '.$map['table'].' WHERE id=? LIMIT 1');$entityStmt->execute([$entityId]);$entity=$entityStmt->fetch(PDO::FETCH_ASSOC)?:null;
-        if($entity){$valueStmt=$pdo->prepare('SELECT field_key,translation_value FROM content_translations WHERE entity_type=? AND entity_id=? AND language_code=?');$valueStmt->execute([$type,$entityId,$locale]);$values=$valueStmt->fetchAll(PDO::FETCH_KEY_PAIR);}
+        $entityStmt=$pdo->prepare('SELECT * FROM '.$map['table'].' WHERE id=? LIMIT 1');$entityStmt->execute([$entityId]);$entity=$entityStmt->fetch(PDO::FETCH_ASSOC)?:null;
+        if($entity){$entity['label']=(string)($entity[$map['label']]??'');$valueStmt=$pdo->prepare('SELECT field_key,translation_value FROM content_translations WHERE entity_type=? AND entity_id=? AND language_code=?');$valueStmt->execute([$type,$entityId,$locale]);$values=$valueStmt->fetchAll(PDO::FETCH_KEY_PAIR);}
         else $entityId=0;
     }
     ThemeManager::renderTemplate('templates/pages/admin/content-translations.php',get_defined_vars());
