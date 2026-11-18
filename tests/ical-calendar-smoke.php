@@ -45,7 +45,7 @@ foreach($rejectedUrls as $url){
     try{CalendarFeedFetcher::validateUrl($url);}catch(RuntimeException){$rejected=true;}
     icalAssert($rejected,'Unsafe iCal URL was accepted: '.$url);
 }
-$export=\\App\\Core\\CalendarSyncService::renderIcs(str_repeat('Villa tatili & konaklama ',5),[
+$export=\App\Core\CalendarSyncService::renderIcs(str_repeat('Villa tatili & konaklama ',5),[
     ['uid'=>'booking-42-7@calendar.villacms','from'=>'2028-12-01','to'=>'2028-12-05','summary'=>'Reserved, private; stay'],
 ]);
 icalAssert(str_contains($export,'BEGIN:VCALENDAR')&&str_contains($export,'END:VCALENDAR'),'Calendar export wrapper is missing.');
