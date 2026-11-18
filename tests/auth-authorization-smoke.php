@@ -73,4 +73,16 @@ foreach ($cases as [$actorRole, $targetRole, $expected]) {
     }
 }
 
-fwrite(STDOUT, "User role boundary smoke test passed.\n");
+$calendarServiceSource = file_get_contents(dirname(__DIR__) . '/app/Core/CalendarSyncService.php');
+$calendarSyncRouteStart = strpos($routesSource, "\\$router->post('/vendor/properties/calendar-feed/sync'");
+$calendarSyncRouteEnd = $calendarSyncRouteStart !== false ? strpos($routesSource, "\\$router->post('/vendor/properties/calendar-feed/delete'", $calendarSyncRouteStart) : false;
+$calendarSyncRoute = $calendarSyncRouteStart !== false && $calendarSyncRouteEnd !== false ? substr($routesSource, $calendarSyncRouteStart, $calendarSyncRouteEnd - $calendarSyncRouteStart) : '';
+if ($calendarSyncRoute === ''
+    || strpos($calendarSyncRoute, 'properties WHERE id=? AND vendor_id=?') === false
+    || strpos($calendarSyncRoute, 'CalendarSyncService::syncFeed($pdo,$feedId,$pid)') === false
+    || strpos($calendarServiceSource, 'public static function syncFeed(PDO $pdo,int $feedId,?int $expectedPropertyId=null)') === false
+    || strpos($calendarServiceSource, "$sql.=' AND property_id=?'") === false) {
+    throw new RuntimeException('Vendor calendar sync must bind the feed ID to the vendor-owned property ID.');
+}
+
+fwrite(STDOUT, "User role boundary smoke test passed.\\n");
