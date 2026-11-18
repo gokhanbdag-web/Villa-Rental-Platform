@@ -97,6 +97,29 @@ foreach ($cases as [$actorRole, $targetRole, $expected]) {
     }
 }
 
+$roleRouteStart = strpos($routesSource, "$router->post('/admin/users/role'");
+$roleRouteEnd = $roleRouteStart !== false ? strpos($routesSource, "$router->post('/admin/users/status'", $roleRouteStart) : false;
+$roleRoute = $roleRouteStart !== false && $roleRouteEnd !== false ? substr($routesSource, $roleRouteStart, $roleRouteEnd - $roleRouteStart) : '';
+if ($roleRoute === ''
+    || strpos($roleRoute, "Auth::requireRole(['super_admin'])") === false
+    || strpos($roleRoute, 'session_version=session_version+1') === false
+    || strpos($roleRoute, "'editor', 'support'") === false) {
+    throw new RuntimeException('Staff role assignment must be super-admin-only and invalidate existing sessions.');
+}
+foreach ([
+    ["$router->get('/admin/pages'", "admin.pages.view"],
+    ["$router->post('/admin/pages/save'", "admin.pages.edit"],
+    ["$router->get('/admin/blog'", "admin.blog.view"],
+    ["$router->post('/admin/blog/save'", "admin.blog.edit"],
+    ["$router->get('/admin/bookings'", "admin.bookings.view"],
+] as [$routeNeedle, $permission]) {
+    $routeStart = strpos($routesSource, $routeNeedle);
+    $routeBody = $routeStart !== false ? substr($routesSource, $routeStart, 260) : '';
+    if ($routeBody === '' || strpos($routeBody, "Auth::requirePermission('$permission')") === false) {
+        throw new RuntimeException('Expected server-side permission guard missing for ' . $permission);
+    }
+}
+
 $calendarServiceSource = file_get_contents(dirname(__DIR__) . '/app/Core/CalendarSyncService.php');
 if (strpos($routesSource, 'syncFeed($pdo,$feedId,$pid)') === false
     || strpos($calendarServiceSource, 'public static function syncFeed(PDO $pdo,int $feedId,?int $expectedPropertyId=null)') === false
