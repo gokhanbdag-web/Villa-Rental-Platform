@@ -8,11 +8,13 @@ use PDO;
 final class ContentTranslator
 {
     private const FIELDS = [
-        'property' => ['title','summary','description','meta_title','meta_description'],
+        'property' => ['title','summary','description','country','city','district','neighborhood','meta_title','meta_description'],
         'property_category' => ['name','description'],
         'blog_post' => ['title','excerpt','content','meta_title','meta_description','featured_image_alt'],
         'blog_category' => ['name','description'],
         'blog_tag' => ['name'],
+        'amenity' => ['name'],
+        'location' => ['name'],
     ];
 
     /**
