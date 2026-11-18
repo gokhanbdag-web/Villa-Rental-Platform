@@ -1045,7 +1045,7 @@ $router->get('/checkout/{bookingCode}', static function(array $params):void {
     $latestManualReport->execute([(int)$booking['id']]);$latestManualReportRow=$latestManualReport->fetch(PDO::FETCH_ASSOC)?:[];
     $manualReportStatus=(string)($latestManualReportRow['status']??'');
     $iyzicoConfig=\App\Core\PaymentGatewayConfig::forProvider('iyzico');
-    $paytrConfig=\\App\\Core\\PaymentGatewayConfig::forProvider('paytr');
+    $paytrConfig=\App\\Core\\PaymentGatewayConfig::forProvider('paytr');
     $paytrPaymentAvailable=!empty($paytrConfig['enabled'])&&!empty($paytrConfig['configured']);
     $paytrIframeUrl='';
     if(!empty($_GET['paytr'])&&$paytrPaymentAvailable){
@@ -1081,6 +1081,13 @@ $router->get('/checkout/{bookingCode}', static function(array $params):void {
     if($latestPaymentStatus==='processing')$paymentStatus='review';
     elseif($latestPaymentStatus==='paid')$paymentStatus='paid';
     elseif($latestPaymentStatus==='failed'&&$paymentStatus!=='init_error')$paymentStatus='failed';
+    $latestPaytr=$pdo->prepare("SELECT status,response_payload FROM payment_transactions WHERE booking_id=? AND provider='paytr' ORDER BY id DESC LIMIT 1");
+    $latestPaytr->execute([(int)$booking['id']]);$latestPaytrRow=$latestPaytr->fetch(PDO::FETCH_ASSOC)?:[];
+    $latestPaytrStatus=(string)($latestPaytrRow['status']??'');
+    if($latestPaytrStatus==='processing')$paymentStatus='review';
+    elseif($latestPaytrStatus==='paid')$paymentStatus='paid';
+    elseif($latestPaytrStatus==='failed'&&$paymentStatus==='')$paymentStatus='failed';
+
 
     $locale = Translator::locale();
     $navigation=villa_navigation_tree($pdo,'header',$locale);
@@ -1129,7 +1136,7 @@ $router->post('/checkout/{bookingCode}/manual/notify', static function (array $p
 $router->post('/checkout/{bookingCode}/paytr/start', static function (array $params): void {
     verify_csrf();
     $user=Auth::user();if(!$user)redirect('/login');
-    $config=\\App\\Core\\PaymentGatewayConfig::forProvider('paytr');
+    $config=\App\\Core\\PaymentGatewayConfig::forProvider('paytr');
     if(empty($config['enabled'])||empty($config['configured'])){http_response_code(409);exit('PayTR ödeme altyapısı etkin değil veya mağaza bilgileri eksik.');}
     $pdo=Database::connection();
     $stmt=$pdo->prepare("SELECT b.*,p.title AS property_title,u.email AS account_email FROM bookings b JOIN properties p ON p.id=b.property_id JOIN users u ON u.id=b.guest_user_id WHERE b.booking_code=? AND b.guest_user_id=? LIMIT 1");
@@ -1155,7 +1162,7 @@ $router->post('/checkout/{bookingCode}/paytr/start', static function (array $par
     $testMode=($config['environment']??'sandbox')==='sandbox'?'1':'0';
     $request=['merchant_oid'=>$oid,'user_ip'=>(string)($_SERVER['REMOTE_ADDR']??''),'email'=>$email,'payment_amount'=>$cents,'user_basket'=>$basket,'no_installment'=>'0','max_installment'=>'0','currency'=>$paytrCurrency,'test_mode'=>$testMode];
     if(!filter_var($request['user_ip'],FILTER_VALIDATE_IP)){http_response_code(422);exit('Ödeme istemcisi IP adresi doğrulanamadı.');}
-    $reservation=\\App\\Core\\PaymentCheckoutGuard::reservePaytr($pdo,(int)$booking['id'],$oid,$amount,$currency,['merchant_oid'=>$oid,'environment'=>$config['environment']??'sandbox']);
+    $reservation=\App\\Core\\PaymentCheckoutGuard::reservePaytr($pdo,(int)$booking['id'],$oid,$amount,$currency,['merchant_oid'=>$oid,'environment'=>$config['environment']??'sandbox']);
     $result=(string)($reservation['result']??'');
     if($result==='already_paid'){http_response_code(409);exit('Bu rezervasyon için ödeme zaten doğrulanmış.');}
     if($result==='booking_not_found'){http_response_code(404);exit('Rezervasyon bulunamadı.');}
@@ -1171,7 +1178,7 @@ $router->post('/checkout/{bookingCode}/paytr/start', static function (array $par
     $transactionId=(int)$reservation['transaction_id'];
     try{
         $payload=$request+['user_name'=>mb_substr((string)$booking['guest_name'],0,60),'user_address'=>mb_substr(trim((string)($booking['guest_address']??'Türkiye')),0,400),'user_phone'=>$phone,'merchant_ok_url'=>$okUrl,'merchant_fail_url'=>$failUrl,'merchant_notify_url'=>$notifyUrl,'timeout_limit'=>'30','debug_on'=>$testMode,'lang'=>'tr'];
-        $token=\\App\\Core\\PaytrApiClient::getIframeToken($config,$payload);
+        $token=\App\\Core\\PaytrApiClient::getIframeToken($config,$payload);
         $stored=json_encode(['merchant_oid'=>$oid,'token'=>$token['token'],'iframe_url'=>$token['iframe_url'],'environment'=>$config['environment']??'sandbox'],JSON_UNESCAPED_UNICODE|JSON_UNESCAPED_SLASHES);
         $update=$pdo->prepare("UPDATE payment_transactions SET provider_reference=?,checkout_url=?,response_payload=?,expires_at=DATE_ADD(NOW(),INTERVAL 30 MINUTE),updated_at=NOW() WHERE id=? AND status='pending'");
         $update->execute([$oid,$token['iframe_url'],$stored,$transactionId]);
@@ -1351,10 +1358,10 @@ $router->post('/payments/paytr/callback', static function (): void {
     $total=trim((string)($payload['total_amount']??''));
     if($oid===''||strlen($oid)>64||!in_array($status,['success','failed'],true)||!preg_match('/^[0-9]+$/',$total)){http_response_code(400);exit('Invalid callback');}
     try{
-        $config=\\App\\Core\\PaymentGatewayConfig::forProvider('paytr');
+        $config=\App\\Core\\PaymentGatewayConfig::forProvider('paytr');
         if(empty($config['configured'])){http_response_code(503);exit('Not configured');}
         $key=(string)$config['credentials']['merchant_key'];$salt=(string)$config['credentials']['merchant_salt'];
-        if(!\\App\\Core\\PaymentSignatureVerifier::verifyPaytr($payload,$key,$salt)){http_response_code(401);exit('Invalid signature');}
+        if(!\App\\Core\\PaymentSignatureVerifier::verifyPaytr($payload,$key,$salt)){http_response_code(401);exit('Invalid signature');}
         $pdo=Database::connection();
         $find=$pdo->prepare("SELECT id,booking_id,amount,currency,status FROM payment_transactions WHERE provider='paytr' AND provider_reference=? LIMIT 1");
         $find->execute([$oid]);$transaction=$find->fetch(PDO::FETCH_ASSOC);
@@ -1363,7 +1370,7 @@ $router->post('/payments/paytr/callback', static function (): void {
         if(!hash_equals($expectedCents,ltrim($total,'0')?:'0')){error_log('PayTR callback rejected: amount mismatch for '.$oid);http_response_code(200);exit('OK');}
         $callback=['provider'=>'paytr','provider_reference'=>$oid,'booking_id'=>(int)$transaction['booking_id'],'amount'=>number_format(((int)$total)/100,2,'.',''),'currency'=>strtoupper((string)$transaction['currency']),'status'=>$status==='success'?'paid':'failed'];
         $eventId='paytr-'.substr(hash('sha256',$oid.'|'.$status.'|'.$total),0,48);
-        $processed=(new \\App\\Core\\PaymentCallbackProcessor($pdo))->processVerified('paytr',$eventId,'iframe.payment.'.$status,$oid,['merchant_oid'=>$oid,'status'=>$status,'total_amount'=>$total],$callback);
+        $processed=(new \App\\Core\\PaymentCallbackProcessor($pdo))->processVerified('paytr',$eventId,'iframe.payment.'.$status,$oid,['merchant_oid'=>$oid,'status'=>$status,'total_amount'=>$total],$callback);
         if(in_array((string)($processed['result']??''),['processed','duplicate','already_applied','in_progress','paid_booking_conflict'],true)){http_response_code(200);exit('OK');}
         error_log('PayTR signed callback rejected by payment guards: '.(string)($processed['result']??'unknown'));http_response_code(200);exit('OK');
     }catch(Throwable $e){error_log('PayTR callback processing failed: '.$e->getMessage());http_response_code(503);exit('Retry');}
