@@ -37,3 +37,12 @@ INSERT INTO translations(language_code,translation_key,translation_value) VALUES
 ('en','email.password.reset.html','<p>Use the link below to reset your password. It is valid for 60 minutes and can only be used once.</p><p><a href=":reset_url">Set a new password</a></p><p>If you did not request this, you can ignore this email.</p>'),
 ('en','email.password.reset.text','Reset your password (valid for 60 minutes): :reset_url')
 ON DUPLICATE KEY UPDATE translation_value=VALUES(translation_value);
+
+INSERT INTO translations(language_code,translation_key,translation_value) VALUES
+('tr','email.smtp.test.subject','Villa platformu SMTP test e-postası'),
+('tr','email.smtp.test.html','<p>SMTP bağlantınız başarıyla doğrulandı.</p><p>Villa platformu e-posta teslimat testi.</p>'),
+('tr','email.smtp.test.text','SMTP bağlantınız başarıyla doğrulandı. Villa platformu e-posta teslimat testi.'),
+('en','email.smtp.test.subject','Villa platform SMTP test email'),
+('en','email.smtp.test.html','<p>Your SMTP connection has been verified successfully.</p><p>Villa platform email delivery test.</p>'),
+('en','email.smtp.test.text','Your SMTP connection has been verified successfully. Villa platform email delivery test.')
+ON DUPLICATE KEY UPDATE translation_value=VALUES(translation_value);
