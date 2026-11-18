@@ -1045,6 +1045,18 @@ $router->get('/checkout/{bookingCode}', static function(array $params):void {
     $latestManualReport->execute([(int)$booking['id']]);$latestManualReportRow=$latestManualReport->fetch(PDO::FETCH_ASSOC)?:[];
     $manualReportStatus=(string)($latestManualReportRow['status']??'');
     $iyzicoConfig=\App\Core\PaymentGatewayConfig::forProvider('iyzico');
+    $paytrConfig=\App\Core\PaymentGatewayConfig::forProvider('paytr');
+    $paytrPaymentAvailable=!empty($paytrConfig['enabled'])&&!empty($paytrConfig['configured']);
+    $paytrIframeUrl='';
+    if(!empty($_GET['paytr'])&&$paytrPaymentAvailable){
+        $paytrStmt=$pdo->prepare("SELECT pt.response_payload,pt.status FROM payment_transactions pt WHERE pt.booking_id=? AND pt.provider='paytr' ORDER BY pt.id DESC LIMIT 1");
+        $paytrStmt->execute([(int)$booking['id']]);$paytrRow=$paytrStmt->fetch(PDO::FETCH_ASSOC)?:[];
+        $paytrData=json_decode((string)($paytrRow['response_payload']??''),true);
+        if(($paytrRow['status']??'')==='pending'&&is_array($paytrData)){
+            $candidate=(string)($paytrData['iframe_url']??'');
+            if(str_starts_with($candidate,'https://www.paytr.com/odeme/guvenli/'))$paytrIframeUrl=$candidate;
+        }
+    }
     $iyzicoPaymentAvailable=!empty($iyzicoConfig['enabled'])&&!empty($iyzicoConfig['configured'])&&in_array(($iyzicoConfig['environment']??''),['sandbox','production'],true);
     $autoStartIyzicoPayment=false;$iyzicoAutoStartData=[];
     if(!empty($_GET['start_iyzico'])&&$iyzicoPaymentAvailable){
@@ -1069,6 +1081,13 @@ $router->get('/checkout/{bookingCode}', static function(array $params):void {
     if($latestPaymentStatus==='processing')$paymentStatus='review';
     elseif($latestPaymentStatus==='paid')$paymentStatus='paid';
     elseif($latestPaymentStatus==='failed'&&$paymentStatus!=='init_error')$paymentStatus='failed';
+    $latestPaytr=$pdo->prepare("SELECT status,response_payload FROM payment_transactions WHERE booking_id=? AND provider='paytr' ORDER BY id DESC LIMIT 1");
+    $latestPaytr->execute([(int)$booking['id']]);$latestPaytrRow=$latestPaytr->fetch(PDO::FETCH_ASSOC)?:[];
+    $latestPaytrStatus=(string)($latestPaytrRow['status']??'');
+    if($latestPaytrStatus==='processing')$paymentStatus='review';
+    elseif($latestPaytrStatus==='paid')$paymentStatus=in_array((string)$booking['status'],['pending','cancelled','completed'],true)?'review':'paid';
+    elseif($latestPaytrStatus==='failed'&&$paymentStatus==='')$paymentStatus='failed';
+
 
     $locale = Translator::locale();
     $navigation=villa_navigation_tree($pdo,'header',$locale);
@@ -1111,6 +1130,65 @@ $router->post('/checkout/{bookingCode}/manual/notify', static function (array $p
         if($pdo->inTransaction())$pdo->rollBack();
         if($e instanceof PDOException && (string)$e->getCode()==='23000'){http_response_code(409);exit('Bu rezervasyon için zaten incelemede bir havale bildirimi var.');}
         error_log('Manual payment report submission failed: '.$e->getMessage());http_response_code(500);exit('Havale bildirimi kaydedilemedi. Lütfen tekrar deneyin.');
+    }
+});
+
+$router->post('/checkout/{bookingCode}/paytr/start', static function (array $params): void {
+    verify_csrf();
+    $user=Auth::user();if(!$user)redirect('/login');
+    $config=\App\Core\PaymentGatewayConfig::forProvider('paytr');
+    if(empty($config['enabled'])||empty($config['configured'])){http_response_code(409);exit('PayTR ödeme altyapısı etkin değil veya mağaza bilgileri eksik.');}
+    $pdo=Database::connection();
+    $stmt=$pdo->prepare("SELECT b.*,p.title AS property_title,u.email AS account_email FROM bookings b JOIN properties p ON p.id=b.property_id JOIN users u ON u.id=b.guest_user_id WHERE b.booking_code=? AND b.guest_user_id=? LIMIT 1");
+    $stmt->execute([(string)($params['bookingCode']??''),(int)$user['id']]);$booking=$stmt->fetch(PDO::FETCH_ASSOC);
+    if(!$booking){http_response_code(404);exit('Rezervasyon bulunamadı.');}
+    if((string)$booking['status']!=='pending'){http_response_code(409);exit('Yalnızca ödeme bekleyen rezervasyonlar için ödeme başlatılabilir.');}
+    $currency=strtoupper((string)$booking['currency']);if($currency==='TRY'||$currency==='TL')$paytrCurrency='TL';else $paytrCurrency=$currency;
+    if(!in_array($paytrCurrency,['TL','USD','EUR','GBP'],true)){http_response_code(422);exit('PayTR bu rezervasyonun para birimini desteklemiyor.');}
+    $amount=number_format((float)$booking['total'],2,'.','');
+    if((float)$amount<=0){http_response_code(422);exit('Ödeme tutarı geçersiz.');}
+    $email=trim((string)($booking['guest_email']??$booking['account_email']??''));
+    if(!filter_var($email,FILTER_VALIDATE_EMAIL)){http_response_code(422);exit('Ödeme için geçerli bir e-posta adresi gereklidir.');}
+    $phone=preg_replace('/[^0-9+]/','',(string)($booking['guest_phone']??''))??'';
+    if(strlen(preg_replace('/\D/','',$phone)??'')<10){http_response_code(422);exit('Ödeme için geçerli telefon numarası gereklidir.');}
+    $oid='VR'.(int)$booking['id'].strtoupper(bin2hex(random_bytes(10)));
+    $cents=(string)(int)round((float)$amount*100);
+    $basket=base64_encode(json_encode([[mb_substr((string)$booking['property_title'],0,100),$amount,1]],JSON_UNESCAPED_UNICODE|JSON_THROW_ON_ERROR));
+    try{
+        $okUrl=app_absolute_url('/checkout/'.rawurlencode((string)$booking['booking_code']).'?paytr=1');
+        $failUrl=app_absolute_url('/checkout/'.rawurlencode((string)$booking['booking_code']).'?payment=failed');
+    }catch(Throwable $e){http_response_code(503);exit('PayTR yönlendirmesi için geçerli HTTPS site adresi gereklidir.');}
+    $testMode=($config['environment']??'sandbox')==='sandbox'?'1':'0';
+    $request=['merchant_oid'=>$oid,'user_ip'=>(string)($_SERVER['REMOTE_ADDR']??''),'email'=>$email,'payment_amount'=>$cents,'user_basket'=>$basket,'no_installment'=>'1','max_installment'=>'0','currency'=>$paytrCurrency,'test_mode'=>$testMode];
+    if(!filter_var($request['user_ip'],FILTER_VALIDATE_IP)){http_response_code(422);exit('Ödeme istemcisi IP adresi doğrulanamadı.');}
+    $reservation=\App\Core\PaymentCheckoutGuard::reservePaytr($pdo,(int)$booking['id'],$oid,$amount,$currency,['merchant_oid'=>$oid,'environment'=>$config['environment']??'sandbox']);
+    $result=(string)($reservation['result']??'');
+    if($result==='already_paid'){http_response_code(409);exit('Bu rezervasyon için ödeme zaten doğrulanmış.');}
+    if($result==='booking_not_found'){http_response_code(404);exit('Rezervasyon bulunamadı.');}
+    if($result==='booking_not_pending'){http_response_code(409);exit('Rezervasyon artık ödeme beklemiyor.');}
+    if($result==='processing'||$result==='verification_required'){http_response_code(409);exit('Önceki PayTR oturumunun sonucu kesinleşmedi. Çift tahsilatı önlemek için yeni ödeme başlatılmadı.');}
+    if($result==='initializing'){http_response_code(409);exit('Ödeme oturumu hazırlanıyor. Birkaç saniye sonra tekrar deneyin.');}
+    if($result==='existing'){
+        $old=json_decode((string)($reservation['payment']['response_payload']??''),true);
+        if(is_array($old)&&str_starts_with((string)($old['iframe_url']??''),'https://www.paytr.com/odeme/guvenli/'))redirect('/checkout/'.rawurlencode((string)$booking['booking_code']).'?paytr=1');
+        http_response_code(409);exit('Mevcut PayTR ödeme oturumu doğrulanamadı.');
+    }
+    if($result!=='reserved'){http_response_code(409);exit('PayTR ödeme oturumu güvenli şekilde başlatılamadı.');}
+    $transactionId=(int)$reservation['transaction_id'];
+    try{
+        $payload=$request+['user_name'=>mb_substr((string)$booking['guest_name'],0,60),'user_address'=>mb_substr(trim((string)($booking['guest_address']??'Türkiye')),0,400),'user_phone'=>$phone,'merchant_ok_url'=>$okUrl,'merchant_fail_url'=>$failUrl,'timeout_limit'=>'30','debug_on'=>$testMode,'lang'=>'tr'];
+        $token=\App\Core\PaytrApiClient::getIframeToken($config,$payload);
+        $stored=json_encode(['merchant_oid'=>$oid,'token'=>$token['token'],'iframe_url'=>$token['iframe_url'],'environment'=>$config['environment']??'sandbox'],JSON_UNESCAPED_UNICODE|JSON_UNESCAPED_SLASHES);
+        $update=$pdo->prepare("UPDATE payment_transactions SET provider_reference=?,checkout_url=?,response_payload=?,expires_at=DATE_ADD(NOW(),INTERVAL 30 MINUTE),updated_at=NOW() WHERE id=? AND status='pending'");
+        $update->execute([$oid,$token['iframe_url'],$stored,$transactionId]);
+        if($update->rowCount()!==1)throw new RuntimeException('PayTR oturumu ödeme kaydına bağlanamadı.');
+        redirect('/checkout/'.rawurlencode((string)$booking['booking_code']).'?paytr=1');
+    }catch(Throwable $e){
+        $diagnostic=mb_substr(preg_replace('/(merchant[_-]?(key|salt|id)|paytr[_-]?token)\s*[:=]\s*\S+/i','$1=[gizlendi]',$e->getMessage())??'PayTR bağlantı hatası.',0,220);
+        $fail=$pdo->prepare("UPDATE payment_transactions SET status='failed',response_payload=?,updated_at=NOW() WHERE id=? AND status='pending'");
+        $fail->execute([json_encode(['initialization_error'=>$diagnostic],JSON_UNESCAPED_UNICODE),$transactionId]);
+        error_log('PayTR iframe initialize failed for '.$oid.': '.$diagnostic);
+        redirect('/checkout/'.rawurlencode((string)$booking['booking_code']).'?payment=init_error');
     }
 });
 
@@ -1269,6 +1347,44 @@ $router->post('/checkout/{bookingCode}/iyzico/start', static function (array $pa
         error_log('iyzico Checkout Form initialize failed ['.$errorReference.']: '.$diagnostic);
         redirect('/checkout/'.rawurlencode((string)$booking['booking_code']).'?payment=init_error');
     }
+});
+
+$router->post('/payments/paytr/callback', static function (): void {
+    $payload=$_POST;
+    if(!$payload){$raw=(string)file_get_contents('php://input');parse_str($raw,$payload);}
+    $oid=trim((string)($payload['merchant_oid']??''));
+    $status=strtolower(trim((string)($payload['status']??'')));
+    $total=trim((string)($payload['total_amount']??''));
+    if($oid===''||strlen($oid)>64||!in_array($status,['success','failed'],true)||!preg_match('/^[0-9]+$/',$total)||!in_array((string)($payload['payment_type']??''),['card','eft'],true)){http_response_code(400);exit('Invalid callback');}
+    try{
+        $config=\App\Core\PaymentGatewayConfig::forProvider('paytr');
+        if(empty($config['configured'])){http_response_code(503);exit('Not configured');}
+        $key=(string)$config['credentials']['merchant_key'];$salt=(string)$config['credentials']['merchant_salt'];
+        if(!\App\Core\PaymentSignatureVerifier::verifyPaytr($payload,$key,$salt)){http_response_code(401);exit('Invalid signature');}
+        $pdo=Database::connection();
+        $find=$pdo->prepare("SELECT id,booking_id,amount,currency,status,request_payload FROM payment_transactions WHERE provider='paytr' AND provider_reference=? LIMIT 1");
+        $find->execute([$oid]);$transaction=$find->fetch(PDO::FETCH_ASSOC);
+        if(!$transaction){http_response_code(200);exit('OK');}
+        $storedAmount=trim((string)$transaction['amount']);
+        if(!preg_match('/^[0-9]+(?:\\.[0-9]{1,2})?$/',$storedAmount)){http_response_code(200);exit('OK');}
+        [$wholeAmount,$fractionAmount]=array_pad(explode('.',$storedAmount,2),2,'');
+        $expectedCents=ltrim($wholeAmount.str_pad($fractionAmount,2,'0'), '0')?:'0';
+        $reportedCents=ltrim($total,'0')?:'0';
+        $storedCurrency=strtoupper((string)$transaction['currency']);
+        $expectedProviderCurrency=in_array($storedCurrency,['TRY','TL'],true)?'TL':$storedCurrency;
+        if($status==='success'&&!hash_equals($expectedCents,$reportedCents)){error_log('PayTR callback rejected: amount mismatch for '.$oid);http_response_code(200);exit('OK');}
+        if(isset($payload['currency'])&&strtoupper((string)$payload['currency'])!==$expectedProviderCurrency){error_log('PayTR callback rejected: currency mismatch for '.$oid);http_response_code(200);exit('OK');}
+        if(isset($payload['payment_amount'])&&(!preg_match('/^[0-9]+$/',(string)$payload['payment_amount'])||!hash_equals($expectedCents,ltrim((string)$payload['payment_amount'],'0')?:'0'))){error_log('PayTR callback rejected: original amount mismatch for '.$oid);http_response_code(200);exit('OK');}
+        $requestData=json_decode((string)($transaction['request_payload']??''),true);
+        $expectedTestMode=is_array($requestData)&&($requestData['environment']??'sandbox')==='sandbox'?'1':'0';
+        if(isset($payload['test_mode'])&&(string)$payload['test_mode']!==$expectedTestMode){error_log('PayTR callback rejected: test mode mismatch for '.$oid);http_response_code(200);exit('OK');}
+        $verifiedAmount=$status==='success'?number_format(((int)$total)/100,2,'.',''):(string)$transaction['amount'];
+        $callback=['provider'=>'paytr','provider_reference'=>$oid,'booking_id'=>(int)$transaction['booking_id'],'amount'=>$verifiedAmount,'currency'=>$storedCurrency,'status'=>$status==='success'?'paid':'failed'];
+        $eventId='paytr-'.substr(hash('sha256',$oid.'|'.$status.'|'.$total),0,48);
+        $processed=(new \App\Core\PaymentCallbackProcessor($pdo))->processVerified('paytr',$eventId,'iframe.payment.'.$status,$oid,['merchant_oid'=>$oid,'status'=>$status,'total_amount'=>$total],$callback);
+        if(in_array((string)($processed['result']??''),['processed','duplicate','already_applied','in_progress','paid_booking_conflict'],true)){http_response_code(200);exit('OK');}
+        error_log('PayTR signed callback rejected by payment guards: '.(string)($processed['result']??'unknown'));http_response_code(200);exit('OK');
+    }catch(Throwable $e){error_log('PayTR callback processing failed: '.$e->getMessage());http_response_code(503);exit('Retry');}
 });
 
 $router->post('/payments/iyzico/callback', static function (): void {
@@ -3255,6 +3371,7 @@ $router->get('/admin/settings', static function (): void {
     $mailConfigured=trim((string)($settings['mail.smtp.host']??''))!==''&&filter_var((string)($settings['mail.from_email']??''),FILTER_VALIDATE_EMAIL)!==false&&(((string)($settings['mail.smtp.username']??'')===''&&(string)($settings['mail.smtp.password']??'')==='')||((string)($settings['mail.smtp.username']??'')!==''&&(string)($settings['mail.smtp.password']??'')!==''));
     $mailCronToken=\App\Core\EmailService::cronToken(Database::connection());
     $emailCronUrl='';if($mailCronToken!==''){try{$emailCronUrl=app_absolute_url('/tasks/email/process?token='.rawurlencode($mailCronToken));}catch(Throwable $e){$emailCronUrl='HTTPS üzerinden açıldığında görev URL’si görüntülenir.';}}
+    try{$paytrCallbackUrl=app_absolute_url('/payments/paytr/callback');}catch(Throwable $e){$paytrCallbackUrl='/payments/paytr/callback';}
     $mailTestMessage=(string)($_SESSION['villa_mail_test_message']??'');
     $mailTestMessageType=(string)($_SESSION['villa_mail_test_message_type']??'success');
     unset($_SESSION['villa_mail_test_message'],$_SESSION['villa_mail_test_message_type']);
