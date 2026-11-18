@@ -46,3 +46,20 @@ INSERT INTO translations(language_code,translation_key,translation_value) VALUES
 ('en','email.smtp.test.html','<p>Your SMTP connection has been verified successfully.</p><p>Villa platform email delivery test.</p>'),
 ('en','email.smtp.test.text','Your SMTP connection has been verified successfully. Villa platform email delivery test.')
 ON DUPLICATE KEY UPDATE translation_value=VALUES(translation_value);
+
+INSERT INTO translations(language_code,translation_key,translation_value) VALUES
+('tr','seo.listing.title','Konaklamaları keşfet'),
+('tr','seo.listing.description','Size uygun tatil villalarını, özel havuzlu evleri ve benzersiz konaklamaları keşfedin.'),
+('en','seo.listing.title','Explore holiday stays'),
+('en','seo.listing.description','Discover holiday villas, private pool homes and unique places to stay.'),
+('tr','seo.blog.archive.title','Blog & Seyahat Rehberi'),
+('tr','seo.blog.archive.description','Villa tatili, destinasyonlar, seyahat önerileri ve konaklama rehberleri.'),
+('en','seo.blog.archive.title','Blog & Travel Guide'),
+('en','seo.blog.archive.description','Villa holidays, destinations, travel tips and accommodation guides.'),
+('tr','seo.blog.search.title','Arama sonuçları'),
+('en','seo.blog.search.title','Search results'),
+('tr','seo.blog.category.title','Kategori: :name'),
+('en','seo.blog.category.title','Category: :name'),
+('tr','seo.blog.tag.title','Etiket: :name'),
+('en','seo.blog.tag.title','Tag: :name')
+ON DUPLICATE KEY UPDATE translation_value=VALUES(translation_value);
