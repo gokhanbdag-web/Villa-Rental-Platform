@@ -148,8 +148,9 @@ final class IcalParser
                 $startWeek = $start->modify('monday this week');
                 $cursorWeek = $cursor->modify('monday this week');
                 $weeks = intdiv((int)$startWeek->diff($cursorWeek)->days, 7);
+                $daysToMatch = $byDays ?: [(int)$start->format('N')=>true];
                 $matches = $weeks % $interval === 0
-                    && isset(($byDays ?: [(int)$start->format('N')=>true])[(int)$cursor->format('N')]);
+                    && isset($daysToMatch[(int)$cursor->format('N')]);
             }
             if (!$matches) continue;
             $matched++;
