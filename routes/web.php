@@ -593,7 +593,8 @@ $router->get('/', static function (): void {
     villa_perf_mark('home:navigation_loaded');
     $navigation=villa_navigation_tree($pdo,'header',$locale);$footerNavigation=villa_navigation_tree($pdo,'footer',$locale);
     villa_perf_mark('home:destinations_query');
-    $destinations=$pdo->query("SELECT l.id AS location_id,l.name AS city,COUNT(DISTINCT p.id) AS property_count,(SELECT pm.file_path FROM property_media pm JOIN properties p2 ON p2.id=pm.property_id WHERE p2.status='published' AND p2.location_city_id=l.id ORDER BY pm.is_cover DESC,pm.sort_order,pm.id LIMIT 1) AS cover_image FROM locations l JOIN locations c ON c.id=l.parent_id AND c.location_type='country' AND c.is_active=1 JOIN properties p ON p.status='published' AND p.location_city_id=l.id WHERE l.location_type='city' AND l.is_active=1 GROUP BY l.id,l.name,l.sort_order ORDER BY property_count DESC,l.sort_order,l.name LIMIT 6")->fetchAll(PDO::FETCH_ASSOC);
+    $destinations=$pdo->query("SELECT l.id AS id,l.id AS location_id,l.name AS name,l.name AS city,COUNT(DISTINCT p.id) AS property_count,(SELECT pm.file_path FROM property_media pm JOIN properties p2 ON p2.id=pm.property_id WHERE p2.status='published' AND p2.location_city_id=l.id ORDER BY pm.is_cover DESC,pm.sort_order,pm.id LIMIT 1) AS cover_image FROM locations l JOIN locations c ON c.id=l.parent_id AND c.location_type='country' AND c.is_active=1 JOIN properties p ON p.status='published' AND p.location_city_id=l.id WHERE l.location_type='city' AND l.is_active=1 GROUP BY l.id,l.name,l.sort_order ORDER BY property_count DESC,l.sort_order,l.name LIMIT 6")->fetchAll(PDO::FETCH_ASSOC);
+     $destinations=\App\Core\ContentTranslator::apply($pdo,$destinations,'location',$locale);foreach($destinations as &$destination){$destination['city']=$destination['name'];}unset($destination);
     $homepageStatsSettings=ThemeManager::homepageStatsSettings();
     $homepageStatsLive=$pdo->query("SELECT
         (SELECT COUNT(*) FROM properties WHERE status='published') AS villas,
@@ -673,6 +674,8 @@ $router->get('/', static function (): void {
     $homeSections=[];foreach($pdo->query('SELECT * FROM homepage_sections ORDER BY sort_order,id')->fetchAll() as $section){$homeSections[$section['section_key']]=$section;}
     villa_perf_mark('home:countries_query');
     $locationCountries=$pdo->query("SELECT id,name FROM locations WHERE location_type='country' AND is_active=1 ORDER BY sort_order,name")->fetchAll();
+     $locationCountries=\App\Core\ContentTranslator::apply($pdo,$locationCountries,'location',$locale);
+     $locationCountries=\App\Core\ContentTranslator::apply($pdo,$locationCountries,'location',$locale);
      villa_perf_mark('home:theme_render');
     ThemeManager::render('landing.php', get_defined_vars());
 });
@@ -688,7 +691,7 @@ $router->get('/konaklamalar', static function (): void {
     $categories = $pdo->query('SELECT id,name,slug FROM property_categories WHERE is_active=1 ORDER BY sort_order,name')->fetchAll();
      $categories=\App\Core\ContentTranslator::apply($pdo,$categories,'property_category',$locale);
     $locationCountries=$pdo->query("SELECT id,name FROM locations WHERE location_type='country' AND is_active=1 ORDER BY sort_order,name")->fetchAll();
-    $locationChildren=static function(int $parent) use($pdo): array {if(!$parent)return [];$s=$pdo->prepare('SELECT id,name FROM locations WHERE parent_id=? AND is_active=1 ORDER BY sort_order,name');$s->execute([$parent]);return $s->fetchAll();};    $locationCountryId=max(0,(int)($_GET['country_id']??0));$locationCityId=max(0,(int)($_GET['city_id']??0));$locationDistrictId=max(0,(int)($_GET['district_id']??0));$locationNeighborhoodId=max(0,(int)($_GET['neighborhood_id']??0));
+    $locationChildren=static function(int $parent) use($pdo,$locale): array {if(!$parent)return [];$s=$pdo->prepare('SELECT id,name FROM locations WHERE parent_id=? AND is_active=1 ORDER BY sort_order,name');$s->execute([$parent]);return \App\Core\ContentTranslator::apply($pdo,$s->fetchAll(),'location',$locale);};    $locationCountryId=max(0,(int)($_GET['country_id']??0));$locationCityId=max(0,(int)($_GET['city_id']??0));$locationDistrictId=max(0,(int)($_GET['district_id']??0));$locationNeighborhoodId=max(0,(int)($_GET['neighborhood_id']??0));
     $selectedLocationId=max(0,(int)($_GET['location_id']??0));
     if($selectedLocationId>0){
         $selectedStmt=$pdo->prepare('SELECT location_type FROM locations WHERE id=? AND is_active=1 LIMIT 1');
@@ -766,7 +769,7 @@ $router->get('/destinasyonlar', static function (): void {
     $content=villa_site_content($pdo,$locale);
     $navigation=villa_navigation_tree($pdo,'header',$locale);$footerNavigation=villa_navigation_tree($pdo,'footer',$locale);
     $destinationsSql = "SELECT l.id AS location_id,l.name AS city,COUNT(DISTINCT p.id) AS property_count,(SELECT pm.file_path FROM property_media pm JOIN properties p2 ON p2.id=pm.property_id WHERE p2.status='published' AND p2.location_city_id=l.id ORDER BY pm.is_cover DESC,pm.sort_order,pm.id LIMIT 1) AS cover_image FROM locations l JOIN properties p ON p.location_city_id=l.id AND p.status='published' WHERE l.location_type='city' AND l.is_active=1 GROUP BY l.id,l.name,l.sort_order ORDER BY property_count DESC,l.sort_order,l.name";
-    $destinations = $pdo->query($destinationsSql)->fetchAll();
+    $destinations = \App\Core\ContentTranslator::apply($pdo,$pdo->query($destinationsSql)->fetchAll(),'location',$locale);
     
     $mode=(string)($pdo->query("SELECT setting_value FROM settings WHERE setting_key='app.mode' LIMIT 1")->fetchColumn() ?: 'single_vendor');
     $user=Auth::user();
@@ -830,7 +833,7 @@ $router->get('/villa/{slug}', static function (array $params): void {
     $property=\App\Core\ContentTranslator::apply($pdo,[$property],'property',$locale)[0];
     $media=$pdo->prepare('SELECT file_path,alt_text,is_cover FROM property_media WHERE property_id=? ORDER BY is_cover DESC,sort_order,id');
     $media->execute([(int)$property['id']]); $property['images']=$media->fetchAll();
-    $amenityStmt=$pdo->prepare('SELECT a.name,a.icon FROM amenities a JOIN property_amenities pa ON pa.amenity_id=a.id WHERE pa.property_id=? AND a.is_active=1 ORDER BY a.sort_order,a.name');$amenityStmt->execute([(int)$property['id']]);$propertyAmenities=$amenityStmt->fetchAll();
+    $amenityStmt=$pdo->prepare('SELECT a.id,a.name,a.icon FROM amenities a JOIN property_amenities pa ON pa.amenity_id=a.id WHERE pa.property_id=? AND a.is_active=1 ORDER BY a.sort_order,a.name');$amenityStmt->execute([(int)$property['id']]);$propertyAmenities=\App\Core\ContentTranslator::apply($pdo,$amenityStmt->fetchAll(),'amenity',$locale);
     $locale = Translator::locale();
     $content=villa_site_content($pdo,$locale);
     $navigation=villa_navigation_tree($pdo,'header',$locale);
