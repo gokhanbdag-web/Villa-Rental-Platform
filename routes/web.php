@@ -3565,6 +3565,29 @@ $router->post('/admin/settings', static function (): void {
             throw $e;
         }
     };
+    $saveSubmittedSmsSettings = static function (PDO $pdo): void {
+        $enabled=!empty($_POST['sms_enabled'])&&$_POST['sms_enabled']==='1';
+        $username=trim((string)($_POST['sms_netgsm_username']??''));
+        $sender=strtoupper(trim((string)($_POST['sms_netgsm_sender']??'')));
+        $encoding=(string)($_POST['sms_netgsm_encoding']??'TR');
+        $iys=(string)($_POST['sms_netgsm_iys_filter']??'0');
+        $password=trim((string)($_POST['sms_netgsm_password']??''));
+        $clear=!empty($_POST['sms_clear_password']);
+        $storedStmt=$pdo->prepare("SELECT setting_value FROM settings WHERE setting_key='sms.netgsm.password' LIMIT 1");$storedStmt->execute();$stored=(string)($storedStmt->fetchColumn()?:'');
+        if(($username!==''&&!preg_match('/^[0-9]{6,20}$/',$username))||($sender!==''&&!preg_match('/^[A-Z0-9]{3,11}$/',$sender))||!in_array($encoding,['TR','UTF-8','UNICODE'],true)||!in_array($iys,['0','11','12'],true)||strlen($password)>512||($enabled&&($username===''||$sender===''||($password===''&&($stored===''||$clear))))||($username===''&&$password!=='')){
+            throw new RuntimeException('Netgsm kullanıcı numarası, parola, onaylı gönderici başlığı ve SMS ayarlarını kontrol edin.');
+        }
+        $save=$pdo->prepare('INSERT INTO settings(setting_key,setting_value,autoload) VALUES(?,?,1) ON DUPLICATE KEY UPDATE setting_value=VALUES(setting_value),autoload=1');
+        $pdo->beginTransaction();
+        try{
+            foreach(['sms.enabled'=>$enabled?'1':'0','sms.provider'=>'netgsm','sms.netgsm.username'=>$username,'sms.netgsm.sender'=>$sender,'sms.netgsm.encoding'=>$encoding,'sms.netgsm.iys_filter'=>$iys] as $key=>$value)$save->execute([$key,$value]);
+            if($password!=='')$save->execute(['sms.netgsm.password',\\App\\Core\\PaymentSecretVault::encrypt($password)]);
+            elseif($clear)$pdo->prepare("DELETE FROM settings WHERE setting_key='sms.netgsm.password'")->execute();
+            $tokenStmt=$pdo->prepare("SELECT setting_value FROM settings WHERE setting_key='sms.cron_token' LIMIT 1");$tokenStmt->execute();
+            if(!(string)($tokenStmt->fetchColumn()?:''))$save->execute(['sms.cron_token',\\App\\Core\\PaymentSecretVault::encrypt(bin2hex(random_bytes(32)))]);
+            $pdo->commit();
+        }catch(Throwable $e){if($pdo->inTransaction())$pdo->rollBack();throw $e;}
+    };
     if (!empty($_POST['test_mail_connection'])) {
         try {
             $pdo = Database::connection();
@@ -3593,6 +3616,20 @@ $router->post('/admin/settings', static function (): void {
             error_log('SMTP test email failed: '.$e->getMessage());
             $_SESSION['villa_mail_test_message']='SMTP test gönderimi başarısız: '.$e->getMessage();
             $_SESSION['villa_mail_test_message_type']='error';
+        }
+        redirect('/admin/settings');
+    }
+    if (!empty($_POST['test_sms'])) {
+        try {
+            $recipient=trim((string)($_POST['sms_test_phone']??''));
+            $pdo=Database::connection();$saveSubmittedSmsSettings($pdo);
+            $result=\\App\\Core\\SmsService::sendTest($pdo,$recipient);
+            $_SESSION['villa_sms_test_message']='Test SMS Netgsm kuyruğuna kabul edildi. Görev: '.(string)$result['job_id'];
+            $_SESSION['villa_sms_test_message_type']='success';
+        }catch(Throwable $e){
+            error_log('Netgsm SMS test failed: '.$e->getMessage());
+            $_SESSION['villa_sms_test_message']='Test SMS gönderilemedi: '.$e->getMessage();
+            $_SESSION['villa_sms_test_message_type']='error';
         }
         redirect('/admin/settings');
     }
