@@ -163,4 +163,23 @@ if ($deleteRoute === ''
     throw new RuntimeException('User deletion must preserve vendor and booking history and enforce the management hierarchy.');
 }
 
+
+$calendarSyncRouteStart = strpos($routesSource, "\$router->post('/vendor/properties/calendar-feed/sync'");
+$calendarSyncRouteEnd = $calendarSyncRouteStart !== false ? strpos($routesSource, "\$router->post('/vendor/properties/calendar-feed/delete'", $calendarSyncRouteStart) : false;
+$calendarSyncRoute = $calendarSyncRouteStart !== false && $calendarSyncRouteEnd !== false ? substr($routesSource, $calendarSyncRouteStart, $calendarSyncRouteEnd - $calendarSyncRouteStart) : '';
+if ($calendarSyncRoute === '' || strpos($calendarSyncRoute, 'CalendarSyncService::syncFeed($pdo,$feedId,$pid)') === false) {
+    throw new RuntimeException('Vendor calendar sync must bind the feed ID to the vendor-owned property ID.');
+}
+
+$adminBookingsRouteStart = strpos($routesSource, "\$router->get('/admin/bookings'");
+$adminBookingsRouteEnd = $adminBookingsRouteStart !== false ? strpos($routesSource, "\$router->post('/admin/bookings/manual'", $adminBookingsRouteStart) : false;
+$adminBookingsRoute = $adminBookingsRouteStart !== false && $adminBookingsRouteEnd !== false ? substr($routesSource, $adminBookingsRouteStart, $adminBookingsRouteEnd - $adminBookingsRouteStart) : '';
+$adminBookingsView = file_get_contents(dirname(__DIR__) . '/themes/default/templates/pages/admin/bookings.php');
+if ($adminBookingsRoute === '' || strpos($adminBookingsRoute, '$canManageBookings=in_array') === false
+    || strpos($adminBookingsRoute, '$bookingProperties=$canManageBookings?') === false
+    || strpos($adminBookingsView, '<?php if ($canManageBookings): ?><section class="manual">') === false
+    || strpos($adminBookingsView, '<div class="actions"><?php if ($canManageBookings): ?>') === false) {
+    throw new RuntimeException('Support booking access must remain read-only and hide administrator-only booking controls.');
+}
+
 fwrite(STDOUT, "User role boundary smoke test passed.\n");
