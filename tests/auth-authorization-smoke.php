@@ -149,4 +149,19 @@ if (strpos($routesSource, 'syncFeed($pdo,$feedId,$pid)') === false
     throw new RuntimeException('Vendor calendar sync must bind the feed ID to the vendor-owned property ID.');
 }
 
+$deleteRouteStart = strpos($routesSource, "\$router->post('/admin/users/delete'");
+$deleteRouteEnd = $deleteRouteStart !== false ? strpos($routesSource, "\$router->get('/brand-assets/", $deleteRouteStart) : false;
+$deleteRoute = $deleteRouteStart !== false && $deleteRouteEnd !== false ? substr($routesSource, $deleteRouteStart, $deleteRouteEnd - $deleteRouteStart) : '';
+if ($deleteRoute === ''
+    || strpos($deleteRoute, "Auth::requireRole(['super_admin','admin'])") === false
+    || strpos($deleteRoute, 'Auth::canManageUserRole((string)$currentUser[\'role\'],(string)$target[\'role\'])') === false
+    || strpos($deleteRoute, "['customer','vendor']") === false
+    || strpos($deleteRoute, "status='disabled'") === false
+    || strpos($deleteRoute, 'session_version=session_version+1') === false
+    || strpos($deleteRoute, 'account_security_tokens SET used_at=COALESCE(used_at,NOW())') === false
+    || strpos($deleteRoute, 'DELETE FROM users') !== false
+    || strpos($deleteRoute, 'UPDATE bookings SET guest_user_id=NULL') !== false) {
+    throw new RuntimeException('Member closure must enforce role boundaries, invalidate credentials and preserve linked history.');
+}
+
 fwrite(STDOUT, "User role boundary smoke test passed.\n");
