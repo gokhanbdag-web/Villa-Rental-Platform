@@ -1151,14 +1151,13 @@ $router->post('/checkout/{bookingCode}/paytr/start', static function (array $par
     if(!filter_var($email,FILTER_VALIDATE_EMAIL)){http_response_code(422);exit('Ödeme için geçerli bir e-posta adresi gereklidir.');}
     $phone=preg_replace('/[^0-9+]/','',(string)($booking['guest_phone']??''))??'';
     if(strlen(preg_replace('/\D/','',$phone)??'')<10){http_response_code(422);exit('Ödeme için geçerli telefon numarası gereklidir.');}
-    $oid='VR'.(int)$booking['id'].'-'.bin2hex(random_bytes(10));
+    $oid='VR'.(int)$booking['id'].strtoupper(bin2hex(random_bytes(10)));
     $cents=(string)(int)round((float)$amount*100);
     $basket=base64_encode(json_encode([[mb_substr((string)$booking['property_title'],0,100),$amount,1]],JSON_UNESCAPED_UNICODE|JSON_THROW_ON_ERROR));
     try{
         $okUrl=app_absolute_url('/checkout/'.rawurlencode((string)$booking['booking_code']).'?paytr=1');
         $failUrl=app_absolute_url('/checkout/'.rawurlencode((string)$booking['booking_code']).'?payment=failed');
-        $notifyUrl=app_absolute_url('/payments/paytr/callback');
-    }catch(Throwable $e){http_response_code(503);exit('PayTR bildirimi için geçerli HTTPS site adresi gereklidir.');}
+    }catch(Throwable $e){http_response_code(503);exit('PayTR yönlendirmesi için geçerli HTTPS site adresi gereklidir.');}
     $testMode=($config['environment']??'sandbox')==='sandbox'?'1':'0';
     $request=['merchant_oid'=>$oid,'user_ip'=>(string)($_SERVER['REMOTE_ADDR']??''),'email'=>$email,'payment_amount'=>$cents,'user_basket'=>$basket,'no_installment'=>'0','max_installment'=>'0','currency'=>$paytrCurrency,'test_mode'=>$testMode];
     if(!filter_var($request['user_ip'],FILTER_VALIDATE_IP)){http_response_code(422);exit('Ödeme istemcisi IP adresi doğrulanamadı.');}
@@ -1177,7 +1176,7 @@ $router->post('/checkout/{bookingCode}/paytr/start', static function (array $par
     if($result!=='reserved'){http_response_code(409);exit('PayTR ödeme oturumu güvenli şekilde başlatılamadı.');}
     $transactionId=(int)$reservation['transaction_id'];
     try{
-        $payload=$request+['user_name'=>mb_substr((string)$booking['guest_name'],0,60),'user_address'=>mb_substr(trim((string)($booking['guest_address']??'Türkiye')),0,400),'user_phone'=>$phone,'merchant_ok_url'=>$okUrl,'merchant_fail_url'=>$failUrl,'merchant_notify_url'=>$notifyUrl,'timeout_limit'=>'30','debug_on'=>$testMode,'lang'=>'tr'];
+        $payload=$request+['user_name'=>mb_substr((string)$booking['guest_name'],0,60),'user_address'=>mb_substr(trim((string)($booking['guest_address']??'Türkiye')),0,400),'user_phone'=>$phone,'merchant_ok_url'=>$okUrl,'merchant_fail_url'=>$failUrl,'timeout_limit'=>'30','debug_on'=>$testMode,'lang'=>'tr'];
         $token=\App\Core\PaytrApiClient::getIframeToken($config,$payload);
         $stored=json_encode(['merchant_oid'=>$oid,'token'=>$token['token'],'iframe_url'=>$token['iframe_url'],'environment'=>$config['environment']??'sandbox'],JSON_UNESCAPED_UNICODE|JSON_UNESCAPED_SLASHES);
         $update=$pdo->prepare("UPDATE payment_transactions SET provider_reference=?,checkout_url=?,response_payload=?,expires_at=DATE_ADD(NOW(),INTERVAL 30 MINUTE),updated_at=NOW() WHERE id=? AND status='pending'");
