@@ -3581,10 +3581,10 @@ $router->post('/admin/settings', static function (): void {
         $pdo->beginTransaction();
         try{
             foreach(['sms.enabled'=>$enabled?'1':'0','sms.provider'=>'netgsm','sms.netgsm.username'=>$username,'sms.netgsm.sender'=>$sender,'sms.netgsm.encoding'=>$encoding,'sms.netgsm.iys_filter'=>$iys] as $key=>$value)$save->execute([$key,$value]);
-            if($password!=='')$save->execute(['sms.netgsm.password',\\App\\Core\\PaymentSecretVault::encrypt($password)]);
+            if($password!=='')$save->execute(['sms.netgsm.password',\App\Core\PaymentSecretVault::encrypt($password)]);
             elseif($clear)$pdo->prepare("DELETE FROM settings WHERE setting_key='sms.netgsm.password'")->execute();
             $tokenStmt=$pdo->prepare("SELECT setting_value FROM settings WHERE setting_key='sms.cron_token' LIMIT 1");$tokenStmt->execute();
-            if(!(string)($tokenStmt->fetchColumn()?:''))$save->execute(['sms.cron_token',\\App\\Core\\PaymentSecretVault::encrypt(bin2hex(random_bytes(32)))]);
+            if(!(string)($tokenStmt->fetchColumn()?:''))$save->execute(['sms.cron_token',\App\Core\PaymentSecretVault::encrypt(bin2hex(random_bytes(32)))]);
             $pdo->commit();
         }catch(Throwable $e){if($pdo->inTransaction())$pdo->rollBack();throw $e;}
     };
@@ -3623,7 +3623,7 @@ $router->post('/admin/settings', static function (): void {
         try {
             $recipient=trim((string)($_POST['sms_test_phone']??''));
             $pdo=Database::connection();$saveSubmittedSmsSettings($pdo);
-            $result=\\App\\Core\\SmsService::sendTest($pdo,$recipient);
+            $result=\App\Core\SmsService::sendTest($pdo,$recipient);
             $_SESSION['villa_sms_test_message']='Test SMS Netgsm kuyruğuna kabul edildi. Görev: '.(string)$result['job_id'];
             $_SESSION['villa_sms_test_message_type']='success';
         }catch(Throwable $e){
