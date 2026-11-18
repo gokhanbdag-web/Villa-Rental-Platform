@@ -34,7 +34,7 @@ $checks=[
  'homepage, search, listing and villa detail overlay localized property data'=>
   substr_count($routes,"ContentTranslator::apply")>=10&&str_contains($routes,"ct.entity_type='property'"),
  'blog archive and detail use localized post, category and tag fields'=>
-  str_contains($routes,"'blog_category',$locale")&&str_contains($routes,"'blog_tag',$locale")&&str_contains($routes,"'blog_post',$locale"),
+  str_contains($routes,'\'blog_category\',$locale')&&str_contains($routes,'\'blog_tag\',$locale')&&str_contains($routes,'\'blog_post\',$locale'),
  'site content, menus and CMS pages fall back to default language'=>
   str_contains($routes,'function villa_site_content')&&str_contains($routes,'if(!$rows&&$locale!==$default)')&&str_contains($routes,'$s->execute([$params[\'slug\'],$defaultLocale]);'),
  'booking, message, verification, password reset and SMTP test emails use translation catalogue'=>
