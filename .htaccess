@@ -4,7 +4,7 @@ DirectoryIndex index.php
 RewriteEngine On
 
 # Never expose application internals, configuration, SQL, or uploaded private storage.
-RewriteRule ^(app|config|database|storage|views|routes)/ - [F,L,NC]
+RewriteRule ^(app|config|database|storage|views|routes|scripts|tests|docs)/ - [F,L,NC]
 # Theme files are served only through the validated asset route.
 RewriteRule ^themes/ - [F,L,NC]
 RewriteRule ^\. - [F,L]
