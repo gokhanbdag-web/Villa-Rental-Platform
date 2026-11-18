@@ -1085,7 +1085,7 @@ $router->get('/checkout/{bookingCode}', static function(array $params):void {
     $latestPaytr->execute([(int)$booking['id']]);$latestPaytrRow=$latestPaytr->fetch(PDO::FETCH_ASSOC)?:[];
     $latestPaytrStatus=(string)($latestPaytrRow['status']??'');
     if($latestPaytrStatus==='processing')$paymentStatus='review';
-    elseif($latestPaytrStatus==='paid')$paymentStatus='paid';
+    elseif($latestPaytrStatus==='paid')$paymentStatus=in_array((string)$booking['status'],['pending','cancelled','completed'],true)?'review':'paid';
     elseif($latestPaytrStatus==='failed'&&$paymentStatus==='')$paymentStatus='failed';
 
 
