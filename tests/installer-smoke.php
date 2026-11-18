@@ -740,7 +740,7 @@ try {
     $deleteRouteSource = $deleteRouteStart !== false && $deleteRouteEnd !== false ? substr($themeRoutesSource, $deleteRouteStart, $deleteRouteEnd - $deleteRouteStart) : '';
     assertSmoke($deleteRouteSource !== ''
         && str_contains($deleteRouteSource, "Auth::requireRole(['super_admin','admin'])")
-        && str_contains($deleteRouteSource, 'Csrf::verify')
+        && str_contains($deleteRouteSource, 'verify_csrf();')
         && str_contains($deleteRouteSource, 'Auth::canManageUserRole')
         && str_contains($deleteRouteSource, "SELECT id FROM vendors WHERE user_id=? LIMIT 1 FOR UPDATE")
         && str_contains($deleteRouteSource, "SELECT id FROM bookings WHERE guest_user_id=? LIMIT 1 FOR UPDATE")
