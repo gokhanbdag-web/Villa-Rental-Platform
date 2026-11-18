@@ -22,7 +22,7 @@ $checks=[
  'translator overlays requested locale on active default-language catalogue'=>
   str_contains($translator,'is_default=1 AND is_active=1')&&str_contains($translator,'$catalogue[$key] = $value;'),
  'content translator supports villa, category, blog and SEO fields'=>
-  str_contains($contentTranslator,"'property' => ['title','summary','description','meta_title','meta_description']")&&str_contains($contentTranslator,"'property_category'")&&str_contains($contentTranslator,"'blog_post'")&&str_contains($contentTranslator,"'blog_category'"),
+  str_contains($contentTranslator,"'property' => [")&&str_contains($contentTranslator,"'meta_title'")&&str_contains($contentTranslator,"'property_category'")&&str_contains($contentTranslator,"'blog_post'")&&str_contains($contentTranslator,"'blog_category'")&&str_contains($contentTranslator,"'amenity'")&&str_contains($contentTranslator,"'location'"),
  'content translations are stored in fresh schema and upgrade migration'=>
   str_contains($schema,'CREATE TABLE IF NOT EXISTS content_translations')&&str_contains($migration,'CREATE TABLE IF NOT EXISTS content_translations'),
  'new language translation editor shows default source keys for missing translations'=>
