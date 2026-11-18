@@ -24,8 +24,8 @@ $checks = [
     'destinations page uses the active locale' =>
         str_contains($routeSection('$router->get(\'/destinasyonlar\''), '$locale=Translator::locale();'),
     'villa detail uses the active locale for content and navigation' =>
-        str_contains($routeSection('$router->get(\'/villa/{slug}\''), '$contentStmt->execute([$locale])')
-        && str_contains($routeSection('$router->get(\'/villa/{slug}\''), '$locale = Translator::locale();'),
+        str_contains($routeSection('$router->get(\'/villa/{slug}\''), 'villa_site_content($pdo,$locale)')
+        && str_contains($routeSection('$router->get(\'/villa/{slug}\''), '$locale=Translator::locale();'),
     'checkout page uses the active locale' =>
         str_contains($routeSection('$router->get(\'/checkout/{bookingCode}\''), '$locale = Translator::locale();'),
     'payment result uses the active locale' =>
