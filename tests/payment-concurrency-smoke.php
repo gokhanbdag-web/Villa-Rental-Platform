@@ -6,6 +6,7 @@ require_once dirname(__DIR__) . '/app/bootstrap.php';
 use App\Core\Installer;
 use App\Core\PaymentCallbackProcessor;
 use App\Core\PaymentCheckoutGuard;
+use App\Core\PaymentRefundService;
 
 function concurrencyAssert(bool $condition, string $message): void
 {
@@ -212,7 +213,105 @@ try {
     $eventCount->execute([$lateReference]);
     concurrencyAssert((int)$eventCount->fetchColumn() === 2, 'Distinct verified callback events were not recorded exactly once.');
 
-    echo "Payment concurrency smoke tests passed: property-lock serialization, callback rollback/retry, overlapping paid-booking manual review, checkout reservation locking, cancelled-booking late payment, and callback replay idempotency.\n";
+    // Refund reservations and settlement must serialize on the booking/payment rows.
+    // Reflection exercises the real reservation transaction without sending any
+    // external iyzico request or issuing a real refund.
+    $refundBooking = $newBooking('refund-concurrency', (new DateTimeImmutable('+330 days'))->format('Y-m-d'), (new DateTimeImmutable('+332 days'))->format('Y-m-d'));
+    $iyzicoPaymentReference = 'VRC-IYZ-' . strtoupper(bin2hex(random_bytes(5)));
+    $paymentId = 'VRC-IYZ-PAY-' . strtoupper(bin2hex(random_bytes(5)));
+    $paymentPayload = json_encode(['verified_checkout_form' => ['paymentId' => $paymentId]], JSON_THROW_ON_ERROR);
+    $requestPayload = json_encode(['environment' => 'sandbox'], JSON_THROW_ON_ERROR);
+    $createIyzicoPayment = $pdoA->prepare("INSERT INTO payment_transactions(booking_id,provider,provider_reference,amount,currency,status,request_payload,response_payload,created_at) VALUES(?,'iyzico',?, '100.00',?,'paid',?,?,NOW())");
+    $createIyzicoPayment->execute([$refundBooking['id'], $iyzicoPaymentReference, $currency, $requestPayload, $paymentPayload]);
+    $refundPaymentId = (int)$pdoA->lastInsertId();
+    $createFinancial = $pdoA->prepare("INSERT INTO booking_financials(booking_id,gross_amount,platform_fee,vendor_net_amount,currency,payout_status,created_at) VALUES(?, '100.00','12.00','88.00',?,'unpaid',NOW())");
+    $createFinancial->execute([$refundBooking['id'], $currency]);
+
+    $reserveRefund = new ReflectionMethod(PaymentRefundService::class, 'reserve');
+    $pdoA->beginTransaction();
+    $refundBookingLock = $pdoA->prepare('SELECT id FROM bookings WHERE id=? FOR UPDATE');
+    $refundBookingLock->execute([$refundBooking['id']]);
+    $refundReserveTimedOut = false;
+    try {
+        $reserveRefund->invoke(null, $pdoB, $customerId, $refundPaymentId, 6000, 'Concurrency test');
+    } catch (PDOException $error) {
+        $refundReserveTimedOut = (int)($error->errorInfo[1] ?? 0) === 1205;
+        if ($pdoB->inTransaction()) $pdoB->rollBack();
+    } finally {
+        if ($pdoA->inTransaction()) $pdoA->commit();
+    }
+    concurrencyAssert($refundReserveTimedOut, 'Concurrent refund reservation did not wait for the booking lock.');
+    $refundCount = $pdoA->prepare('SELECT COUNT(*) FROM payment_refunds WHERE payment_transaction_id=?');
+    $refundCount->execute([$refundPaymentId]);
+    concurrencyAssert((int)$refundCount->fetchColumn() === 0, 'Timed-out refund reservation left a partial refund row.');
+
+    $reservedRefund = $reserveRefund->invoke(null, $pdoA, $customerId, $refundPaymentId, 6000, 'First partial refund');
+    concurrencyAssert((int)$reservedRefund['id'] > 0, 'First partial refund was not reserved.');
+    $pendingRefundBlocked = false;
+    try {
+        $reserveRefund->invoke(null, $pdoB, $customerId, $refundPaymentId, 4000, 'Competing refund');
+    } catch (RuntimeException $error) {
+        $pendingRefundBlocked = str_contains($error->getMessage(), 'başka bir iade talebi');
+    }
+    concurrencyAssert($pendingRefundBlocked, 'A second refund was not blocked while the first refund outcome was pending.');
+
+    $refundSecret = 'refund-concurrency-secret';
+    $refundResponse = [
+        'status' => 'success',
+        'paymentId' => $paymentId,
+        'price' => '60.00',
+        'currency' => $currency,
+        'conversationId' => $reservedRefund['conversation_id'],
+        'refundHostReference' => 'VRC-REFUND-' . bin2hex(random_bytes(4)),
+    ];
+    $refundSignatureMessage = implode(':', [$refundResponse['paymentId'], '60', $refundResponse['currency'], $refundResponse['conversationId']]);
+    $refundResponse['signature'] = hash_hmac('sha256', $refundSignatureMessage, $refundSecret);
+
+    // Settlement must wait for the booking lock and must not partially
+    // decrement financial balances when the lock cannot be acquired.
+    $pdoA->beginTransaction();
+    $refundBookingLock->execute([$refundBooking['id']]);
+    $refundApplyTimedOut = false;
+    try {
+        PaymentRefundService::applyVerifiedRefund($pdoB, (int)$reservedRefund['id'], $customerId, $refundResponse, $refundSecret);
+    } catch (PDOException $error) {
+        $refundApplyTimedOut = (int)($error->errorInfo[1] ?? 0) === 1205;
+        if ($pdoB->inTransaction()) $pdoB->rollBack();
+    } finally {
+        if ($pdoA->inTransaction()) $pdoA->commit();
+    }
+    concurrencyAssert($refundApplyTimedOut, 'Concurrent refund settlement did not wait for the booking lock.');
+    $financialState = $pdoA->prepare('SELECT gross_amount FROM booking_financials WHERE booking_id=?');
+    $financialState->execute([$refundBooking['id']]);
+    concurrencyAssert((string)$financialState->fetchColumn() === '100.00', 'Timed-out refund settlement partially changed booking financials.');
+
+    $appliedRefund = PaymentRefundService::applyVerifiedRefund($pdoB, (int)$reservedRefund['id'], $customerId, $refundResponse, $refundSecret);
+    concurrencyAssert(($appliedRefund['status'] ?? '') === 'succeeded', 'Verified refund could not be applied after releasing the booking lock.');
+    $financialState->execute([$refundBooking['id']]);
+    concurrencyAssert((string)$financialState->fetchColumn() === '40.00', 'Refund settlement did not decrement the remaining gross amount exactly once.');
+    $refundStatus = $pdoA->prepare('SELECT status FROM payment_refunds WHERE id=?');
+    $refundStatus->execute([(int)$reservedRefund['id']]);
+    concurrencyAssert($refundStatus->fetchColumn() === 'succeeded', 'Refund was not marked succeeded after verified settlement.');
+
+    $duplicateSettlementBlocked = false;
+    try {
+        PaymentRefundService::applyVerifiedRefund($pdoA, (int)$reservedRefund['id'], $customerId, $refundResponse, $refundSecret);
+    } catch (RuntimeException $error) {
+        $duplicateSettlementBlocked = str_contains($error->getMessage(), 'artık işlenebilir durumda değil');
+    }
+    concurrencyAssert($duplicateSettlementBlocked, 'A replayed successful refund settlement was not rejected.');
+
+    $overRefundBlocked = false;
+    try {
+        $reserveRefund->invoke(null, $pdoA, $customerId, $refundPaymentId, 5000, 'Exceeds remaining balance');
+    } catch (RuntimeException $error) {
+        $overRefundBlocked = str_contains($error->getMessage(), 'kalan tahsilat tutarını aşıyor');
+    }
+    concurrencyAssert($overRefundBlocked, 'Refund reservation exceeded the remaining booking/payment balance.');
+    $secondPartialRefund = $reserveRefund->invoke(null, $pdoA, $customerId, $refundPaymentId, 4000, 'Remaining partial refund');
+    concurrencyAssert((int)$secondPartialRefund['id'] > 0, 'A valid refund within the remaining balance was rejected.');
+
+    echo "Payment concurrency smoke tests passed: payment callback serialization/idempotency, checkout locking, refund reservation locking, pending-refund exclusion, verified settlement locking, duplicate settlement rejection, and remaining-balance enforcement.\n";
 } finally {
     if (isset($pdoA) && $pdoA instanceof PDO && $pdoA->inTransaction()) {
         $pdoA->rollBack();
