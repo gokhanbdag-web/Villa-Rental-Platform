@@ -3459,9 +3459,19 @@ $router->get('/tasks/email/process', static function (): void {
     echo json_encode(\App\Core\EmailService::processPending($pdo,10),JSON_UNESCAPED_SLASHES|JSON_UNESCAPED_UNICODE);
 });
 
+$router->get('/tasks/sms/process', static function (): void {
+    header('Cache-Control: no-store');
+    $pdo=Database::connection();
+    $expected=\App\Core\SmsService::cronToken($pdo);
+    $provided=(string)($_GET['token']??'');
+    if($expected===''||$provided===''||!hash_equals($expected,$provided)){http_response_code(404);exit;}
+    header('Content-Type: application/json; charset=utf-8');
+    echo json_encode(\App\Core\SmsService::processPending($pdo,10),JSON_UNESCAPED_SLASHES|JSON_UNESCAPED_UNICODE);
+});
+
 $router->get('/admin/settings', static function (): void {
     Auth::requireRole(['super_admin','admin']);
-    $settings=Database::connection()->query("SELECT setting_key,setting_value FROM settings WHERE setting_key IN ('platform.commission_percent','app.currency','app.timezone','payments.iyzico.environment','payments.paytr.environment','payments.iyzico.enabled','payments.paytr.enabled','payments.iyzico.api_key','payments.iyzico.secret_key','payments.paytr.merchant_id','payments.paytr.merchant_key','payments.paytr.merchant_salt','payments.manual.enabled','payments.manual.bank_name','payments.manual.account_holder','payments.manual.iban','payments.manual.instructions','payments.manual.reference_prefix','mail.enabled','mail.smtp.host','mail.smtp.port','mail.smtp.encryption','mail.smtp.username','mail.smtp.password','mail.from_email','mail.from_name')")->fetchAll(PDO::FETCH_KEY_PAIR);
+    $settings=Database::connection()->query("SELECT setting_key,setting_value FROM settings WHERE setting_key IN ('platform.commission_percent','app.currency','app.timezone','payments.iyzico.environment','payments.paytr.environment','payments.iyzico.enabled','payments.paytr.enabled','payments.iyzico.api_key','payments.iyzico.secret_key','payments.paytr.merchant_id','payments.paytr.merchant_key','payments.paytr.merchant_salt','payments.manual.enabled','payments.manual.bank_name','payments.manual.account_holder','payments.manual.iban','payments.manual.instructions','payments.manual.reference_prefix','mail.enabled','mail.smtp.host','mail.smtp.port','mail.smtp.encryption','mail.smtp.username','mail.smtp.password','mail.from_email','mail.from_name','sms.enabled','sms.provider','sms.netgsm.username','sms.netgsm.password','sms.netgsm.sender','sms.netgsm.encoding','sms.netgsm.iys_filter')")->fetchAll(PDO::FETCH_KEY_PAIR);
     $iyzicoEnabled=($settings['payments.iyzico.enabled']??'0')==='1';
     $paytrEnabled=($settings['payments.paytr.enabled']??'0')==='1';
     $iyzicoConfigured=!empty($settings['payments.iyzico.api_key'])&&!empty($settings['payments.iyzico.secret_key']);
@@ -3469,6 +3479,12 @@ $router->get('/admin/settings', static function (): void {
     $manualEnabled=($settings['payments.manual.enabled']??'0')==='1';
     $manualConfigured=trim((string)($settings['payments.manual.bank_name']??''))!==''&&trim((string)($settings['payments.manual.account_holder']??''))!==''&&preg_match('/^[A-Z]{2}[0-9A-Z]{13,32}$/',strtoupper(preg_replace('/\\s+/','',(string)($settings['payments.manual.iban']??''))??''))===1;
     $mailEnabled=($settings['mail.enabled']??'0')==='1';
+    $smsEnabled=($settings['sms.enabled']??'0')==='1';
+    $smsConfigured=trim((string)($settings['sms.netgsm.username']??''))!==''&&(string)($settings['sms.netgsm.password']??'')!==''&&preg_match('/^[A-Z0-9]{3,11}$/i',(string)($settings['sms.netgsm.sender']??''))===1;
+    $smsCronToken=\App\Core\SmsService::cronToken(Database::connection());
+    $smsCronUrl='';if($smsCronToken!==''){try{$smsCronUrl=app_absolute_url('/tasks/sms/process?token='.rawurlencode($smsCronToken));}catch(Throwable $e){$smsCronUrl='HTTPS üzerinden açıldığında görev URL’si görüntülenir.';}}
+    $smsTestMessage=(string)($_SESSION['villa_sms_test_message']??'');$smsTestMessageType=(string)($_SESSION['villa_sms_test_message_type']??'success');unset($_SESSION['villa_sms_test_message'],$_SESSION['villa_sms_test_message_type']);
+    
     $mailConfigured=trim((string)($settings['mail.smtp.host']??''))!==''&&filter_var((string)($settings['mail.from_email']??''),FILTER_VALIDATE_EMAIL)!==false&&(((string)($settings['mail.smtp.username']??'')===''&&(string)($settings['mail.smtp.password']??'')==='')||((string)($settings['mail.smtp.username']??'')!==''&&(string)($settings['mail.smtp.password']??'')!==''));
     $mailCronToken=\App\Core\EmailService::cronToken(Database::connection());
     $emailCronUrl='';if($mailCronToken!==''){try{$emailCronUrl=app_absolute_url('/tasks/email/process?token='.rawurlencode($mailCronToken));}catch(Throwable $e){$emailCronUrl='HTTPS üzerinden açıldığında görev URL’si görüntülenir.';}}
@@ -3479,7 +3495,7 @@ $router->get('/admin/settings', static function (): void {
     $iyzicoTestMessage=(string)($_SESSION['villa_iyzico_test_message']??'');
     $iyzicoTestMessageType=(string)($_SESSION['villa_iyzico_test_message_type']??'success');
     unset($_SESSION['villa_iyzico_test_message'],$_SESSION['villa_iyzico_test_message_type']);
-    unset($settings['payments.iyzico.api_key'],$settings['payments.iyzico.secret_key'],$settings['payments.paytr.merchant_id'],$settings['payments.paytr.merchant_key'],$settings['payments.paytr.merchant_salt'],$settings['mail.smtp.password']);
+    unset($settings['payments.iyzico.api_key'],$settings['payments.iyzico.secret_key'],$settings['payments.paytr.merchant_id'],$settings['payments.paytr.merchant_key'],$settings['payments.paytr.merchant_salt'],$settings['mail.smtp.password'],$settings['sms.netgsm.password']);
     ThemeManager::renderTemplate('templates/pages/admin/settings.php',get_defined_vars());
 });
 $router->post('/admin/settings', static function (): void {
