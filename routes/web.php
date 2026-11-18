@@ -817,7 +817,7 @@ $router->get('/villa/{slug}', static function (array $params): void {
     $property=$stmt->fetch();
     if (!$property) { http_response_code(404); echo 'Konaklama bulunamadı.'; return; }
     $locale=Translator::locale();
-    $property=\\App\\Core\\ContentTranslator::apply($pdo,[$property],'property',$locale)[0];
+    $property=\App\Core\ContentTranslator::apply($pdo,[$property],'property',$locale)[0];
     $media=$pdo->prepare('SELECT file_path,alt_text,is_cover FROM property_media WHERE property_id=? ORDER BY is_cover DESC,sort_order,id');
     $media->execute([(int)$property['id']]); $property['images']=$media->fetchAll();
     $amenityStmt=$pdo->prepare('SELECT a.name,a.icon FROM amenities a JOIN property_amenities pa ON pa.amenity_id=a.id WHERE pa.property_id=? AND a.is_active=1 ORDER BY a.sort_order,a.name');$amenityStmt->execute([(int)$property['id']]);$propertyAmenities=$amenityStmt->fetchAll();
@@ -2785,7 +2785,7 @@ $router->get('/blog/etiket/{slug}', static function (array $params): void {redir
 $router->get('/blog/{slug}', static function (array $params): void {
     $pdo=Database::connection();$s=$pdo->prepare("SELECT * FROM blog_posts WHERE slug=? AND status='published' AND (published_at IS NULL OR published_at<=NOW()) LIMIT 1");$s->execute([(string)$params['slug']]);$post=$s->fetch(PDO::FETCH_ASSOC);
     if(!$post){http_response_code(404);echo 'Yazı bulunamadı.';return;}
-    $locale=Translator::locale();$post=\\App\\Core\\ContentTranslator::apply($pdo,[$post],'blog_post',$locale)[0];
+    $locale=Translator::locale();$post=\App\Core\ContentTranslator::apply($pdo,[$post],'blog_post',$locale)[0];
     // Count a post view once per session (30-minute window) to avoid duplicate
     // writes from refreshes, repeated requests and crawler retries.
     $viewPostId=(int)$post['id'];
@@ -2806,10 +2806,15 @@ $router->get('/blog/{slug}', static function (array $params): void {
     $contentStmt=$pdo->prepare('SELECT content_key,content_value FROM site_content WHERE language_code=?');$contentStmt->execute([$locale]);$content=$contentStmt->fetchAll(PDO::FETCH_KEY_PAIR);$siteName=$content['site_name']??'VillaStay';
     $navigation=villa_navigation_tree($pdo,'header',$locale);$footerNavigation=villa_navigation_tree($pdo,'footer',$locale);$user=Auth::user();
     $blogCategories=$pdo->query("SELECT c.*,COUNT(pc.post_id) AS post_count FROM blog_categories c LEFT JOIN blog_post_category pc ON pc.category_id=c.id LEFT JOIN blog_posts p ON p.id=pc.post_id AND p.status='published' AND (p.published_at IS NULL OR p.published_at<=NOW()) WHERE c.is_active=1 GROUP BY c.id ORDER BY c.sort_order,c.name")->fetchAll(PDO::FETCH_ASSOC);
+    $blogCategories=\App\Core\ContentTranslator::apply($pdo,$blogCategories,'blog_category',$locale);
     $popularPosts=$pdo->query("SELECT id,title,slug,featured_image,published_at,views_count FROM blog_posts WHERE status='published' AND id<>".(int)$post['id']." AND (published_at IS NULL OR published_at<=NOW()) ORDER BY views_count DESC,COALESCE(published_at,created_at) DESC LIMIT 5")->fetchAll(PDO::FETCH_ASSOC);
+    $popularPosts=\App\Core\ContentTranslator::apply($pdo,$popularPosts,'blog_post',$locale);
     $tagStmt=$pdo->prepare('SELECT t.* FROM blog_tags t JOIN blog_post_tag pt ON pt.tag_id=t.id WHERE pt.post_id=? ORDER BY t.name');$tagStmt->execute([(int)$post['id']]);$postTags=$tagStmt->fetchAll(PDO::FETCH_ASSOC);
+    $postTags=\App\Core\ContentTranslator::apply($pdo,$postTags,'blog_tag',$locale);
     $catStmt=$pdo->prepare('SELECT c.* FROM blog_categories c JOIN blog_post_category pc ON pc.category_id=c.id WHERE pc.post_id=? ORDER BY c.name');$catStmt->execute([(int)$post['id']]);$postCategories=$catStmt->fetchAll(PDO::FETCH_ASSOC);
+    $postCategories=\App\Core\ContentTranslator::apply($pdo,$postCategories,'blog_category',$locale);
     $relatedStmt=$pdo->prepare("SELECT DISTINCT p.id,p.title,p.slug,p.excerpt,p.featured_image,p.published_at FROM blog_posts p JOIN blog_post_category pc ON pc.post_id=p.id WHERE pc.category_id IN (SELECT category_id FROM blog_post_category WHERE post_id=?) AND p.id<>? AND p.status='published' AND (p.published_at IS NULL OR p.published_at<=NOW()) ORDER BY p.published_at DESC LIMIT 3");$relatedStmt->execute([(int)$post['id'],(int)$post['id']]);$relatedPosts=$relatedStmt->fetchAll(PDO::FETCH_ASSOC);
+    $relatedPosts=\App\Core\ContentTranslator::apply($pdo,$relatedPosts,'blog_post',$locale);
     $safeBlogHtml=static function(string $html):string{$html=strip_tags($html,'<p><h2><h3><h4><ul><ol><li><strong><b><em><i><blockquote><a><img><figure><figcaption><br><hr><table><thead><tbody><tr><th><td>');$html=preg_replace('/\\s+on[a-z]+\\s*=\\s*("[^"]*"|\\x27[^\\x27]*\\x27|[^\\s>]+)/i','',$html)??$html;$html=preg_replace('/(href|src)\\s*=\\s*(["\\x27])\\s*(?:javascript:|data:text\\/html)[^"\\x27]*\\2/i','$1="#"',$html)??$html;return $html;};
     $postHtml=$safeBlogHtml((string)$post['content']);
     $metaTitle=trim((string)($post['meta_title']??''))?:$post['title'];$metaDescription=trim((string)($post['meta_description']??''))?:mb_substr(trim(strip_tags((string)($post['excerpt']?:$post['content']))),0,160);
