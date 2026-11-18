@@ -4116,7 +4116,7 @@ $router->get('/calendar/export/{token}', static function (array $params): void {
     $pdo=Database::connection();$feed=\App\Core\CalendarSyncService::exportFeed($pdo,(string)($params['token']??''));
     if(!$feed){http_response_code(404);exit('Calendar feed not found.');}
     $calendar=\App\Core\CalendarSyncService::exportIcs($pdo,(int)$feed['property_id']);
-    header('Content-Type: text/calendar; charset=utf-8');header('Content-Disposition: inline; filename="villa-calendar.ics"');header('Cache-Control: no-store, max-age=0');header('X-Content-Type-Options: nosniff');
+    header('Content-Type: text/calendar; charset=utf-8');header('Content-Disposition: inline; filename="villa-calendar.ics"');header('Cache-Control: no-store, max-age=0');header('X-Robots-Tag: noindex, nofollow');header('X-Content-Type-Options: nosniff');
     echo $calendar;exit;
 });
 $router->get('/cron/calendar-sync', static function (): void {
