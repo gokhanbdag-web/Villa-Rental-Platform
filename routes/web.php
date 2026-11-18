@@ -2773,7 +2773,10 @@ $router->get('/blog', static function (): void {
     $popularPosts=\App\Core\ContentTranslator::apply($pdo,$popularPosts,'blog_post',$locale);
     $blogTags=$pdo->query("SELECT t.*,COUNT(pt.post_id) AS post_count FROM blog_tags t LEFT JOIN blog_post_tag pt ON pt.tag_id=t.id LEFT JOIN blog_posts p ON p.id=pt.post_id AND p.status='published' AND (p.published_at IS NULL OR p.published_at<=NOW()) GROUP BY t.id ORDER BY post_count DESC,t.name LIMIT 18")->fetchAll(PDO::FETCH_ASSOC);
     $blogTags=\App\Core\ContentTranslator::apply($pdo,$blogTags,'blog_tag',$locale);
-    $archiveTitle=$tagSlug!==''?'Etiket: '.(string)($pdo->query("SELECT name FROM blog_tags WHERE slug=".$pdo->quote($tagSlug)." LIMIT 1")->fetchColumn()?:$tagSlug):($categorySlug!==''?'Kategori: '.(string)($pdo->query("SELECT name FROM blog_categories WHERE slug=".$pdo->quote($categorySlug)." LIMIT 1")->fetchColumn()?:$categorySlug):($q!==''?'Arama sonuçları':'Blog & Seyahat Rehberi'));
+    $archiveTitle='Blog & Seyahat Rehberi';
+    if($tagSlug!==''){foreach($blogTags as $tagRow){if((string)$tagRow['slug']===$tagSlug){$archiveTitle='Etiket: '.(string)$tagRow['name'];break;}}}
+    elseif($categorySlug!==''){foreach($blogCategories as $categoryRow){if((string)$categoryRow['slug']===$categorySlug){$archiveTitle='Kategori: '.(string)$categoryRow['name'];break;}}}
+    elseif($q!=='')$archiveTitle='Arama sonuçları';
     $archiveDescription='Villa tatili, destinasyonlar, seyahat önerileri ve konaklama rehberleri.';
     ThemeManager::render('blog-index.php',get_defined_vars());
 });
@@ -2782,6 +2785,7 @@ $router->get('/blog/etiket/{slug}', static function (array $params): void {redir
 $router->get('/blog/{slug}', static function (array $params): void {
     $pdo=Database::connection();$s=$pdo->prepare("SELECT * FROM blog_posts WHERE slug=? AND status='published' AND (published_at IS NULL OR published_at<=NOW()) LIMIT 1");$s->execute([(string)$params['slug']]);$post=$s->fetch(PDO::FETCH_ASSOC);
     if(!$post){http_response_code(404);echo 'Yazı bulunamadı.';return;}
+    $locale=Translator::locale();$post=\\App\\Core\\ContentTranslator::apply($pdo,[$post],'blog_post',$locale)[0];
     // Count a post view once per session (30-minute window) to avoid duplicate
     // writes from refreshes, repeated requests and crawler retries.
     $viewPostId=(int)$post['id'];
