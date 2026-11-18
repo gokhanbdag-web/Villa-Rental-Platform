@@ -82,7 +82,7 @@ final class SmsService
             $claim=$pdo->prepare("UPDATE sms_queue SET status='sending',locked_at=NOW(),updated_at=NOW() WHERE id=? AND status='pending'");
             $claim->execute([(int)$item['id']]);if($claim->rowCount()!==1)continue;$result['processed']++;
             try{
-                $response=NetgsmApiClient::send($config,(string)$item['recipient_phone'],(string)$item['message_body']);
+                $response=NetgsmApiClient::send($config,(string)$item['recipient_phone'],(string)$item['message_body'],'sms-queue:'.(int)$item['id']);
                 $done=$pdo->prepare("UPDATE sms_queue SET status='sent',provider_job_id=?,sent_at=NOW(),locked_at=NULL,last_error=NULL,updated_at=NOW() WHERE id=? AND status='sending'");
                 $done->execute([(string)$response['job_id'],(int)$item['id']]);$result['sent']++;
             }catch(Throwable $e){
