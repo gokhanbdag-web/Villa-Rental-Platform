@@ -73,4 +73,11 @@ foreach ($cases as [$actorRole, $targetRole, $expected]) {
     }
 }
 
+$calendarServiceSource = file_get_contents(dirname(__DIR__) . '/app/Core/CalendarSyncService.php');
+if (strpos($routesSource, 'syncFeed($pdo,$feedId,$pid)') === false
+    || strpos($calendarServiceSource, 'public static function syncFeed(PDO $pdo,int $feedId,?int $expectedPropertyId=null)') === false
+    || strpos($calendarServiceSource, 'AND property_id=?') === false) {
+    throw new RuntimeException('Vendor calendar sync must bind the feed ID to the vendor-owned property ID.');
+}
+
 fwrite(STDOUT, "User role boundary smoke test passed.\n");

@@ -2122,7 +2122,7 @@ $router->post('/admin/properties/calendar-feed/sync', static function (): void {
     Auth::requireRole(['super_admin','admin']);verify_csrf();$pdo=Database::connection();$pid=(int)($_POST['property_id']??0);$feedId=(int)($_POST['feed_id']??0);
     $feedOwn=$pdo->prepare("SELECT id FROM property_calendar_feeds WHERE id=? AND property_id=? AND direction='import' AND enabled=1 LIMIT 1");$feedOwn->execute([$feedId,$pid]);if(!$feedOwn->fetchColumn()){http_response_code(404);return;}
     $feedOwn=$pdo->prepare("SELECT id FROM property_calendar_feeds WHERE id=? AND property_id=? AND direction='import' AND enabled=1 LIMIT 1");$feedOwn->execute([$feedId,$pid]);if(!$feedOwn->fetchColumn()){http_response_code(404);return;}
-    try{$result=\App\Core\CalendarSyncService::syncFeed($pdo,$feedId);$_SESSION['villa_admin_calendar_property_message']=$result['blocked'].' tarih aralığı engellendi; '.$result['conflicts'].' rezervasyon çakışması atlandı.';$_SESSION['villa_admin_calendar_property_message_type']='success';}
+    try{$result=\App\Core\CalendarSyncService::syncFeed($pdo,$feedId,$pid);$_SESSION['villa_admin_calendar_property_message']=$result['blocked'].' tarih aralığı engellendi; '.$result['conflicts'].' rezervasyon çakışması atlandı.';$_SESSION['villa_admin_calendar_property_message_type']='success';}
     catch(Throwable $e){$_SESSION['villa_admin_calendar_property_message']=$e->getMessage();$_SESSION['villa_admin_calendar_property_message_type']='error';}
     redirect('/admin/properties/'.$pid.'/calendar-sync');
 });

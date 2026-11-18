@@ -55,10 +55,13 @@ final class CalendarSyncService
         try { return hash_equals(self::cronToken($pdo),$token); } catch(Throwable) { return false; }
     }
 
-    public static function syncFeed(PDO $pdo,int $feedId): array
+    public static function syncFeed(PDO $pdo,int $feedId,?int $expectedPropertyId=null): array
     {
-        $stmt=$pdo->prepare("SELECT id,property_id,feed_url_encrypted FROM property_calendar_feeds WHERE id=? AND direction='import' AND enabled=1 LIMIT 1");
-        $stmt->execute([$feedId]);$feed=$stmt->fetch(PDO::FETCH_ASSOC);
+        $sql="SELECT id,property_id,feed_url_encrypted FROM property_calendar_feeds WHERE id=? AND direction='import' AND enabled=1";
+        $params=[$feedId];
+        if($expectedPropertyId!==null){$sql.=' AND property_id=?';$params[]=$expectedPropertyId;}
+        $stmt=$pdo->prepare($sql.' LIMIT 1');
+        $stmt->execute($params);$feed=$stmt->fetch(PDO::FETCH_ASSOC);
         if(!$feed) throw new RuntimeException('Etkin içe aktarma takvimi bulunamadı.');
         try {
             $url=PaymentSecretVault::decrypt((string)$feed['feed_url_encrypted']);
