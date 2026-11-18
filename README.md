@@ -54,3 +54,11 @@ The installer runs `database/schema.sql` and every `database/migrations/*.sql` f
 ## Automatic deployment
 
 Production deployment is handled by the server-side SSH-based automation configured for this project. Do not configure or use the retired FTP workflow. The admin Update Center is a read-only status page; it does not initiate deployments. Runtime configuration, installed database data, and uploaded media must be preserved by the server deployment process.
+
+## SMS notifications (Netgsm)
+
+SMS delivery uses Netgsm REST API v2 with HTTPS, HTTP Basic Authentication, an approved sender header, Turkish/UTF-8/Unicode encoding and optional İYS filters. Configure the subscriber number, API sub-user password and approved sender header under Admin → Settings → SMS. The password is encrypted with the same application secret vault used for payment credentials.
+
+The SMS outbox is processed by the authenticated `/tasks/sms/process?token=...` endpoint. Copy the full URL shown in Admin → Settings into a server Cron Job (recommended interval: every 5 minutes). Queue records use an event key to prevent duplicate enqueueing and retry transient delivery failures up to five attempts. Stable Netgsm reference IDs are reused when retrying a queued message.
+
+Netgsm does not provide a no-charge sandbox for this REST send endpoint. The admin test button sends a real SMS and may incur provider charges. API access must be enabled for the Netgsm API sub-user; if account IP restrictions are enabled, allowlist the hosting server IP. The sender header must be approved in the Netgsm account.
