@@ -11,7 +11,7 @@ CREATE TABLE IF NOT EXISTS content_translations (
     CONSTRAINT fk_content_translation_language FOREIGN KEY (language_code) REFERENCES languages(code) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
-INSERT IGNORE INTO languages(code,name,is_default,is_active) VALUES ('en','English',0,1);
+INSERT INTO languages(code,name,is_default,is_active) VALUES ('en','English',0,1) ON DUPLICATE KEY UPDATE name=VALUES(name),is_active=1;
 
 INSERT INTO translations(language_code,translation_key,translation_value) VALUES
 ('tr','email.booking.created.subject','Rezervasyon talebiniz alındı'),
