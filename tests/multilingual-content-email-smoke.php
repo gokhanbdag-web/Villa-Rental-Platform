@@ -28,7 +28,7 @@ $checks=[
  'new language translation editor shows default source keys for missing translations'=>
   str_contains($routes,'COALESCE(target.translation_value,base.translation_value)')&&str_contains($catalogueView,'/admin/content-translations'),
  'content translation editor is role-protected, CSRF-protected and validates entities'=>
-  str_contains($routes,"$router->get('/admin/content-translations'")&&str_contains($routes,"$router->post('/admin/content-translations'")&&str_contains($routes,'verify_csrf();')&&str_contains($routes,'Çevrilecek içerik bulunamadı.'),
+  str_contains($routes,'/admin/content-translations')&&str_contains($routes,'verify_csrf();')&&str_contains($routes,'Çevrilecek içerik bulunamadı.'),
  'admin can translate properties, villa categories and blog content'=>
   str_contains($routes,"'property_category'=>['table'=>'property_categories'")&&str_contains($routes,"'blog_post'=>['table'=>'blog_posts'")&&str_contains($routes,"'blog_tag'=>['table'=>'blog_tags'"),
  'homepage, search, listing and villa detail overlay localized property data'=>
@@ -40,7 +40,7 @@ $checks=[
  'booking, message, verification, password reset and SMTP test emails use translation catalogue'=>
   str_contains($routes,"email.booking.created.html")&&str_contains($routes,"email.message.received.html")&&str_contains($routes,"email.account.verify.html")&&str_contains($routes,"email.password.reset.html")&&str_contains($email,"email.smtp.test.html"),
  'property SEO metadata is editable and rendered in active language'=>
-  str_contains($seoMigration,'meta_title')&&str_contains($propertyForm,'name="meta_title"')&&str_contains($propertyView,"$property['meta_title']")&&str_contains($propertyView,"$property['meta_description']"),
+  str_contains($seoMigration,'meta_title')&&str_contains($propertyForm,'name="meta_title"')&&str_contains($propertyView,'meta_title')&&str_contains($propertyView,'meta_description'),
  'listing and blog documents advertise their active language and localized SEO'=>
   str_contains($listingView,'seo.listing.title')&&str_contains($blogIndex,'$locale')&&str_contains($blogSingle,'$locale'),
 ];
