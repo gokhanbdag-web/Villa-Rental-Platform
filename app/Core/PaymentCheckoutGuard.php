@@ -25,7 +25,9 @@ final class PaymentCheckoutGuard
             $cross->execute([$bookingId]);$crossRow=$cross->fetch(PDO::FETCH_ASSOC);
             if($crossRow){
                 $crossState=(string)$crossRow['status'];$crossRef=(string)$crossRow['provider_reference'];
-                if($crossState==='pending'&&str_starts_with($crossRef,'init:')&&(int)($crossRow['expires_now']??0)===1){
+                if($crossState==='expired'&&str_starts_with($crossRef,'init:')){
+                    // Expired initialization placeholders never reached the provider and are safe to ignore.
+                }elseif($crossState==='pending'&&str_starts_with($crossRef,'init:')&&(int)($crossRow['expires_now']??0)===1){
                     $pdo->prepare("UPDATE payment_transactions SET status='expired',updated_at=NOW() WHERE id=? AND status='pending'")->execute([(int)$crossRow['id']]);
                 }elseif($crossState==='pending'&&str_starts_with($crossRef,'init:')){
                     $pdo->commit();return ['result'=>'initializing'];
@@ -79,7 +81,9 @@ $active=$pdo->prepare("SELECT id,booking_id,provider,provider_reference,amount,c
             $cross->execute([$bookingId]);$crossRow=$cross->fetch(PDO::FETCH_ASSOC);
             if($crossRow){
                 $crossState=(string)$crossRow['status'];$crossRef=(string)$crossRow['provider_reference'];
-                if($crossState==='pending'&&str_starts_with($crossRef,'init:')&&(int)($crossRow['expires_now']??0)===1){
+                if($crossState==='expired'&&str_starts_with($crossRef,'init:')){
+                    // Expired initialization placeholders never reached the provider and are safe to ignore.
+                }elseif($crossState==='pending'&&str_starts_with($crossRef,'init:')&&(int)($crossRow['expires_now']??0)===1){
                     $pdo->prepare("UPDATE payment_transactions SET status='expired',updated_at=NOW() WHERE id=? AND status='pending'")->execute([(int)$crossRow['id']]);
                 }elseif($crossState==='pending'&&str_starts_with($crossRef,'init:')){
                     $pdo->commit();return ['result'=>'initializing'];
