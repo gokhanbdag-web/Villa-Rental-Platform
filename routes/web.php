@@ -3359,6 +3359,7 @@ $router->get('/admin/settings', static function (): void {
     $mailConfigured=trim((string)($settings['mail.smtp.host']??''))!==''&&filter_var((string)($settings['mail.from_email']??''),FILTER_VALIDATE_EMAIL)!==false&&(((string)($settings['mail.smtp.username']??'')===''&&(string)($settings['mail.smtp.password']??'')==='')||((string)($settings['mail.smtp.username']??'')!==''&&(string)($settings['mail.smtp.password']??'')!==''));
     $mailCronToken=\App\Core\EmailService::cronToken(Database::connection());
     $emailCronUrl='';if($mailCronToken!==''){try{$emailCronUrl=app_absolute_url('/tasks/email/process?token='.rawurlencode($mailCronToken));}catch(Throwable $e){$emailCronUrl='HTTPS üzerinden açıldığında görev URL’si görüntülenir.';}}
+    try{$paytrCallbackUrl=app_absolute_url('/payments/paytr/callback');}catch(Throwable $e){$paytrCallbackUrl='/payments/paytr/callback';}
     $mailTestMessage=(string)($_SESSION['villa_mail_test_message']??'');
     $mailTestMessageType=(string)($_SESSION['villa_mail_test_message_type']??'success');
     unset($_SESSION['villa_mail_test_message'],$_SESSION['villa_mail_test_message_type']);
