@@ -3,8 +3,8 @@ declare(strict_types=1);
 require_once dirname(__DIR__).'/app/bootstrap.php';
 
 function paytrCheckoutAssert(bool $ok,string $message):void{if(!$ok)throw new RuntimeException($message);}
-paytrCheckoutAssert(method_exists(\App\Core\\PaytrApiClient::class,'getIframeToken'),'PayTR token API client is missing.');
-paytrCheckoutAssert(method_exists(\App\Core\\PaymentCheckoutGuard::class,'reservePaytr'),'Atomic PayTR checkout reservation is missing.');
+paytrCheckoutAssert(method_exists(\App\Core\PaytrApiClient::class,'getIframeToken'),'PayTR token API client is missing.');
+paytrCheckoutAssert(method_exists(\App\Core\PaymentCheckoutGuard::class,'reservePaytr'),'Atomic PayTR checkout reservation is missing.');
 $client=(string)file_get_contents(dirname(__DIR__).'/app/Core/PaytrApiClient.php');
 $guard=(string)file_get_contents(dirname(__DIR__).'/app/Core/PaymentCheckoutGuard.php');
 $routes=(string)file_get_contents(dirname(__DIR__).'/routes/web.php');
@@ -17,7 +17,7 @@ paytrCheckoutAssert(str_contains($routes,'total_amount')&&str_contains($routes,'
 paytrCheckoutAssert(str_contains($guard,"provider='iyzico'")&&str_contains($guard,"provider='paytr'"),'Cross-provider parallel checkout lock is missing.');
 paytrCheckoutAssert(str_contains($checkout,'https://www.paytr.com/odeme/guvenli/')&&str_contains($checkout,'iframeResizer.min.js'),'Hosted PayTR iframe is not rendered.');
 foreach(['success','failure','tampered','amount_mismatch','wrong_order'] as $scenario){
-    $result=\App\Core\\PaymentSandboxSimulator::run('paytr',$scenario);
+    $result=\App\Core\PaymentSandboxSimulator::run('paytr',$scenario);
     paytrCheckoutAssert($result['network_requests']===0&&!$result['real_charge']&&!$result['booking_changed'],'PayTR local simulator performed a real action.');
     if($scenario==='success')paytrCheckoutAssert($result['callback_accepted']&&$result['payment_success'],'Valid PayTR callback simulation failed.');
     else paytrCheckoutAssert(!$result['payment_success'],'Invalid or failed PayTR scenario was treated as a successful payment.');
