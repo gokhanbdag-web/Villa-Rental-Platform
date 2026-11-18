@@ -1037,7 +1037,10 @@ $router->post('/villa/{slug}/reserve', static function (array $params): void {
         }
         $financial=$pdo->prepare("INSERT INTO booking_financials(booking_id,gross_amount,platform_fee,vendor_net_amount,currency,payout_status,created_at) VALUES(?,?,?,?,?,'unpaid',NOW())");$financial->execute([$bookingId,$total,$platformFee,$vendorNet,$current['currency']]);
         $notice=$pdo->prepare("INSERT INTO notifications(user_id,notification_type,title,body,created_at) VALUES(?,'booking.created','Rezervasyonunuz oluşturuldu',?,NOW())");$notice->execute([$userId,'Rezervasyon kodunuz: '.$code]);
-        \App\Core\EmailService::enqueue($pdo,$email,'Rezervasyon talebiniz alındı','<h2>Rezervasyon talebiniz alındı</h2><p>Merhaba '.e($fullName).',</p><p><strong>'.e($property['title']).'</strong> için rezervasyon talebiniz oluşturuldu.</p><p>Rezervasyon kodunuz: <strong>'.e($code).'</strong></p><p>Giriş: '.e($inRaw).' · Çıkış: '.e($outRaw).'</p><p>Toplam: '.e(number_format($total,2,',','.')).' '.e($current['currency']).'</p><p><a href="'.e(app_absolute_url('/checkout/'.rawurlencode($code))).'">Rezervasyon ayrıntılarını görüntüle</a></p>','Rezervasyon talebiniz alındı. Kod: '.$code,'booking.created.'.$bookingId);
+         $emailProperty=\App\Core\ContentTranslator::apply($pdo,[$property],'property',Translator::locale())[0];
+         $checkoutUrl=app_absolute_url('/checkout/'.rawurlencode($code));
+         $emailVars=['name'=>e($fullName),'property'=>e((string)$emailProperty['title']),'code'=>e($code),'checkin'=>e($inRaw),'checkout'=>e($outRaw),'total'=>e(number_format($total,2,',','.')),'currency'=>e((string)$current['currency']),'checkout_url'=>e($checkoutUrl)];
+         \App\Core\EmailService::enqueue($pdo,$email,Translator::get('email.booking.created.subject'),Translator::get('email.booking.created.html',$emailVars),Translator::get('email.booking.created.text',['name'=>$fullName,'property'=>(string)$emailProperty['title'],'code'=>$code,'checkin'=>$inRaw,'checkout'=>$outRaw,'total'=>number_format($total,2,',','.'),'currency'=>(string)$current['currency'],'checkout_url'=>$checkoutUrl]),'booking.created.'.$bookingId);
         $pdo->commit();
         if($createNewAccount)Auth::attempt($email,$password);
         if($autoStartIyzico){
@@ -1563,7 +1566,7 @@ $router->post('/account/messages/send', static function (): void {
     $save=$pdo->prepare('INSERT INTO messages(conversation_key,sender_user_id,recipient_user_id,booking_id,body,created_at) VALUES(?,?,?,?,?,NOW())');$save->execute([$key,$currentId,$recipientId,$bookingId,$body]);
     $notice=$pdo->prepare("INSERT INTO notifications(user_id,notification_type,title,body,created_at) VALUES(?,'message.received','Yeni mesaj',?,NOW())");$notice->execute([$recipientId,'Rezervasyon görüşmesinde yeni bir mesajınız var.']);
     $recipientStmt=$pdo->prepare('SELECT email FROM users WHERE id=? LIMIT 1');$recipientStmt->execute([$recipientId]);$recipientEmail=(string)($recipientStmt->fetchColumn()?:'');
-    if($recipientEmail!=='')\App\Core\EmailService::enqueue($pdo,$recipientEmail,'Rezervasyon görüşmesinde yeni mesajınız var','<p>Rezervasyon görüşmesinde yeni bir mesajınız var.</p><p><a href="'.e(app_absolute_url('/account/messages/'.$bookingId)).'">Mesajı görüntüle</a></p>','Rezervasyon görüşmesinde yeni mesajınız var.','message.received.'.$bookingId.'.'.(int)$pdo->lastInsertId());
+     if($recipientEmail!==''){$messagesUrl=app_absolute_url('/account/messages/'.$bookingId);\App\Core\EmailService::enqueue($pdo,$recipientEmail,Translator::get('email.message.received.subject'),Translator::get('email.message.received.html',['messages_url'=>e($messagesUrl)]),Translator::get('email.message.received.text',['messages_url'=>$messagesUrl]),'message.received.'.$bookingId.'.'.(int)$pdo->lastInsertId());}
     redirect('/account/messages/'.$bookingId);
 });
 
@@ -1746,7 +1749,7 @@ $router->post('/account/profile', static function (): void {
             $insert=$pdo->prepare("INSERT INTO account_security_tokens(user_id,purpose,token_hash,target_email,expires_at,created_at) VALUES(?,'email_change',?,?,DATE_ADD(NOW(),INTERVAL 60 MINUTE),NOW())");
             $insert->execute([(int)$user['id'],$hash,$newEmail]);
             $url=app_absolute_url('/account/email/verify?token='.$token);
-            \App\Core\EmailService::enqueue($pdo,$newEmail,'E-posta adresinizi doğrulayın','<p>E-posta adresinizi değiştirmek için aşağıdaki bağlantıyı kullanın. Bağlantı 60 dakika geçerlidir.</p><p><a href="'.e($url).'">E-posta adresimi doğrula</a></p>','E-posta adresinizi doğrulamak için: '.$url,'account.email.verify.'.(int)$user['id'].'.'.$hash);
+             \App\Core\EmailService::enqueue($pdo,$newEmail,Translator::get('email.account.verify.subject'),Translator::get('email.account.verify.html',['verify_url'=>e($url)]),Translator::get('email.account.verify.text',['verify_url'=>$url]),'account.email.verify.'.(int)$user['id'].'.'.$hash);
             $_SESSION['villa_profile_notice']='Profiliniz güncellendi. Yeni e-posta adresiniz, gönderilen doğrulama bağlantısını açana kadar değiştirilmeyecek.';
         }else{
             $_SESSION['villa_profile_notice']='Profil bilgileriniz güncellendi.';
@@ -1803,7 +1806,7 @@ $router->post('/forgot-password', static function (): void {
                 $pdo->prepare("UPDATE account_security_tokens SET used_at=NOW() WHERE user_id=? AND purpose='password_reset' AND used_at IS NULL")->execute([(int)$account['id']]);
                 $insert=$pdo->prepare("INSERT INTO account_security_tokens(user_id,purpose,token_hash,expires_at,created_at) VALUES(?,'password_reset',?,DATE_ADD(NOW(),INTERVAL 60 MINUTE),NOW())");$insert->execute([(int)$account['id'],$hash]);
                 $url=app_absolute_url('/reset-password?token='.$token);
-                \App\Core\EmailService::enqueue($pdo,(string)$account['email'],'Şifre yenileme bağlantınız','<p>Şifrenizi yenilemek için aşağıdaki bağlantıyı kullanın. Bağlantı 60 dakika geçerlidir ve yalnızca bir kez kullanılabilir.</p><p><a href="'.e($url).'">Yeni şifre belirle</a></p><p>Bu isteği siz yapmadıysanız bu e-postayı dikkate almayın.</p>','Şifrenizi yenilemek için (60 dakika geçerli): '.$url,'account.password.reset.'.(int)$account['id'].'.'.$hash);
+                 \App\Core\EmailService::enqueue($pdo,(string)$account['email'],Translator::get('email.password.reset.subject'),Translator::get('email.password.reset.html',['reset_url'=>e($url)]),Translator::get('email.password.reset.text',['reset_url'=>$url]),'account.password.reset.'.(int)$account['id'].'.'.$hash);
             }
         }
     }
