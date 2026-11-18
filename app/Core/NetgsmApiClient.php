@@ -22,7 +22,7 @@ final class NetgsmApiClient
         throw new RuntimeException('SMS alıcı telefon numarası geçersiz.');
     }
 
-    public static function send(array $config,string $phone,string $message):array
+    public static function send(array $config,string $phone,string $message,?string $referenceId=null):array
     {
         $credentials=(array)($config['credentials']??[]);
         $username=trim((string)($credentials['username']??''));
@@ -42,7 +42,7 @@ final class NetgsmApiClient
             'encoding'=>$encoding,
             'iysfilter'=>$iys,
             'appname'=>'VillaCMS',
-            'referansID'=>'V'.strtoupper(bin2hex(random_bytes(12))),
+            'referansID'=>$referenceId!==null?'V'.strtoupper(substr(hash('sha256',$referenceId),0,24)):'V'.strtoupper(bin2hex(random_bytes(12))),
         ];
         $body=json_encode($payload,JSON_UNESCAPED_UNICODE|JSON_UNESCAPED_SLASHES|JSON_THROW_ON_ERROR);
         $ch=curl_init(self::ENDPOINT);
