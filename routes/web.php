@@ -2885,15 +2885,36 @@ $router->post('/admin/users/delete', static function (): void {
         $lookup=$pdo->prepare('SELECT id,role FROM users WHERE id=? FOR UPDATE');
         $lookup->execute([$id]);
         $target=$lookup->fetch(PDO::FETCH_ASSOC);
-        if(!$target||!in_array((string)$target['role'],['customer','vendor'],true)){
+        if(!$target||!Auth::canManageUserRole((string)$currentUser['role'],(string)$target['role'])
+            ||!in_array((string)$target['role'],['customer','vendor'],true)){
             $pdo->rollBack();
             http_response_code(422);
-            exit('Yalnızca müşteri veya ev sahibi üyelikleri silinebilir. Yönetici hesapları korunur.');
+            exit('Yalnızca yetkiniz kapsamındaki müşteri hesapları silinebilir. Yönetici ve ev sahibi hesapları korunur.');
         }
-        // Keep reservation and payment history; detach the account before deleting it.
-        $bookings=$pdo->prepare('UPDATE bookings SET guest_user_id=NULL WHERE guest_user_id=?');
-        $bookings->execute([$id]);
-        $delete=$pdo->prepare("DELETE FROM users WHERE id=? AND role IN ('customer','vendor')");        $delete->execute([$id]);
+
+        // Vendor deletion cascades into payout history and detaches owned properties.
+        // Preserve the vendor record and its financial/property relationships.
+        if((string)$target['role']==='vendor'){
+            $vendor=$pdo->prepare('SELECT id FROM vendors WHERE user_id=? LIMIT 1 FOR UPDATE');
+            $vendor->execute([$id]);
+            if($vendor->fetchColumn()){
+                $pdo->rollBack();
+                http_response_code(409);
+                exit('İşletme ve ödeme geçmişi korunmalıdır. Ev sahibi hesabını silmek yerine devre dışı bırakın.');
+            }
+        }
+
+        // Booking guest_user_id is NOT NULL; reservations are retained as history.
+        $booking=$pdo->prepare('SELECT id FROM bookings WHERE guest_user_id=? LIMIT 1 FOR UPDATE');
+        $booking->execute([$id]);
+        if($booking->fetchColumn()){
+            $pdo->rollBack();
+            http_response_code(409);
+            exit('Rezervasyon geçmişi bulunan üyeler silinemez. Kayıtları korumak için hesabı devre dışı bırakın.');
+        }
+
+        $delete=$pdo->prepare("DELETE FROM users WHERE id=? AND role='customer'");
+        $delete->execute([$id]);
         if($delete->rowCount()!==1){
             throw new RuntimeException('Üye kaydı silinemedi.');
         }
