@@ -2786,11 +2786,11 @@ $router->get('/blog', static function (): void {
     $popularPosts=\App\Core\ContentTranslator::apply($pdo,$popularPosts,'blog_post',$locale);
     $blogTags=$pdo->query("SELECT t.*,COUNT(pt.post_id) AS post_count FROM blog_tags t LEFT JOIN blog_post_tag pt ON pt.tag_id=t.id LEFT JOIN blog_posts p ON p.id=pt.post_id AND p.status='published' AND (p.published_at IS NULL OR p.published_at<=NOW()) GROUP BY t.id ORDER BY post_count DESC,t.name LIMIT 18")->fetchAll(PDO::FETCH_ASSOC);
     $blogTags=\App\Core\ContentTranslator::apply($pdo,$blogTags,'blog_tag',$locale);
-    $archiveTitle='Blog & Seyahat Rehberi';
-    if($tagSlug!==''){foreach($blogTags as $tagRow){if((string)$tagRow['slug']===$tagSlug){$archiveTitle='Etiket: '.(string)$tagRow['name'];break;}}}
-    elseif($categorySlug!==''){foreach($blogCategories as $categoryRow){if((string)$categoryRow['slug']===$categorySlug){$archiveTitle='Kategori: '.(string)$categoryRow['name'];break;}}}
-    elseif($q!=='')$archiveTitle='Arama sonuçları';
-    $archiveDescription='Villa tatili, destinasyonlar, seyahat önerileri ve konaklama rehberleri.';
+    $archiveTitle=Translator::get('seo.blog.archive.title');
+    if($tagSlug!==''){foreach($blogTags as $tagRow){if((string)$tagRow['slug']===$tagSlug){$archiveTitle=Translator::get('seo.blog.tag.title',['name'=>(string)$tagRow['name']]);break;}}}
+    elseif($categorySlug!==''){foreach($blogCategories as $categoryRow){if((string)$categoryRow['slug']===$categorySlug){$archiveTitle=Translator::get('seo.blog.category.title',['name'=>(string)$categoryRow['name']]);break;}}}
+    elseif($q!=='')$archiveTitle=Translator::get('seo.blog.search.title');
+    $archiveDescription=Translator::get('seo.blog.archive.description');
     ThemeManager::render('blog-index.php',get_defined_vars());
 });
 $router->get('/blog/kategori/{slug}', static function (array $params): void {redirect('/blog?kategori='.rawurlencode((string)$params['slug']));});
