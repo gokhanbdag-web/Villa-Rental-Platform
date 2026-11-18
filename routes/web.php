@@ -647,6 +647,7 @@ $router->get('/', static function (): void {
           foreach($homeReviews as &$homeReview){$homeReview['property_title']=$homeReview['title'];}unset($homeReview);
      }else{
          $categories=$pdo->query('SELECT id,name,slug FROM property_categories WHERE is_active=1 ORDER BY sort_order,name LIMIT 8')->fetchAll();
+          $categories=\App\Core\ContentTranslator::apply($pdo,$categories,'property_category',$locale);
          $homeCategoryCollections=[];$homeReviews=[];
      }
      $homeCardPropertyIds=array_values(array_unique(array_merge(
@@ -674,7 +675,6 @@ $router->get('/', static function (): void {
     $homeSections=[];foreach($pdo->query('SELECT * FROM homepage_sections ORDER BY sort_order,id')->fetchAll() as $section){$homeSections[$section['section_key']]=$section;}
     villa_perf_mark('home:countries_query');
     $locationCountries=$pdo->query("SELECT id,name FROM locations WHERE location_type='country' AND is_active=1 ORDER BY sort_order,name")->fetchAll();
-     $locationCountries=\App\Core\ContentTranslator::apply($pdo,$locationCountries,'location',$locale);
      $locationCountries=\App\Core\ContentTranslator::apply($pdo,$locationCountries,'location',$locale);
      villa_perf_mark('home:theme_render');
     ThemeManager::render('landing.php', get_defined_vars());
