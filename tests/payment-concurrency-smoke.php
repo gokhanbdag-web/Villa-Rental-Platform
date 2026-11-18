@@ -3,7 +3,6 @@ declare(strict_types=1);
 
 require_once dirname(__DIR__) . '/app/bootstrap.php';
 
-use App\Core\BookingHoldExpiryService;
 use App\Core\Installer;
 use App\Core\PaymentCallbackProcessor;
 use App\Core\PaymentCheckoutGuard;
