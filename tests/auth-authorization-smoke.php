@@ -106,6 +106,17 @@ if ($roleRoute === ''
     || strpos($roleRoute, "'editor', 'support'") === false) {
     throw new RuntimeException('Staff role assignment must be super-admin-only and invalidate existing sessions.');
 }
+
+$statusRouteStart = strpos($routesSource, "\\$router->post('/admin/users/status'");
+$statusRouteEnd = $statusRouteStart !== false ? strpos($routesSource, "\\$router->post('/admin/users/delete'", $statusRouteStart) : false;
+$statusRoute = $statusRouteStart !== false && $statusRouteEnd !== false ? substr($routesSource, $statusRouteStart, $statusRouteEnd - $statusRouteStart) : '';
+if ($statusRoute === ''
+    || strpos($statusRoute, "Auth::requireRole(['super_admin','admin'])") === false
+    || strpos($statusRoute, 'Auth::canManageUserRole((string)$actor[\'role\'], $targetRole)') === false
+    || strpos($statusRoute, 'session_version=session_version+1') === false
+    || strpos($statusRoute, 'status=?,session_version=session_version+1') === false) {
+    throw new RuntimeException('Account status changes must enforce role boundaries and invalidate existing sessions.');
+}
 foreach ([
     ["\$router->get('/admin/pages'", "admin.pages.view"],
     ["\$router->post('/admin/pages/save'", "admin.pages.edit"],
