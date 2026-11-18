@@ -17,12 +17,12 @@ final class Translator
         if ($locale !== $defaultLocale) {
             $fallback = $pdo->prepare('SELECT translation_key,translation_value FROM translations WHERE language_code=?');
             $fallback->execute([$defaultLocale]);
-            $catalogue = $fallback->fetchAll(\\PDO::FETCH_KEY_PAIR);
+            $catalogue = $fallback->fetchAll(\PDO::FETCH_KEY_PAIR);
         }
 
         $stmt = $pdo->prepare('SELECT translation_key,translation_value FROM translations WHERE language_code=?');
         $stmt->execute([$locale]);
-        foreach ($stmt->fetchAll(\\PDO::FETCH_KEY_PAIR) as $key => $value) {
+        foreach ($stmt->fetchAll(\PDO::FETCH_KEY_PAIR) as $key => $value) {
             $catalogue[$key] = $value;
         }
 
