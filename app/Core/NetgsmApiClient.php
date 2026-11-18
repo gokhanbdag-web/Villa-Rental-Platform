@@ -13,7 +13,8 @@ final class NetgsmApiClient
     {
         $raw=trim($phone);
         $digits=preg_replace('/\D+/','',$raw)??'';
-        if(str_starts_with($raw,'+')&&strlen($digits)>10)$digits='00'.$digits;
+        if(str_starts_with($raw,'+')&&str_starts_with($digits,'90')&&strlen($digits)===12)$digits=substr($digits,2);
+        elseif(str_starts_with($raw,'+')&&strlen($digits)>10)$digits='00'.$digits;
         elseif(str_starts_with($digits,'90')&&strlen($digits)===12)$digits=substr($digits,2);
         elseif(str_starts_with($digits,'0')&&strlen($digits)===11)$digits=substr($digits,1);
         if(preg_match('/^[1-9][0-9]{9}$/',$digits)===1)return $digits;
