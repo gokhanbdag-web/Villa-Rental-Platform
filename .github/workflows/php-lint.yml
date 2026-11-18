@@ -125,3 +125,10 @@ jobs:
           DB_USER: root
           DB_PASSWORD: root
         run: php tests/installer-smoke.php
+      - name: Run MySQL payment concurrency integration tests
+        env:
+          DB_HOST: 127.0.0.1
+          DB_PORT: 3306
+          DB_USER: root
+          DB_PASSWORD: root
+        run: php tests/payment-concurrency-smoke.php
