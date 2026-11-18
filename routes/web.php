@@ -2888,22 +2888,35 @@ $router->post('/admin/users/delete', static function (): void {
         if(!$target||!in_array((string)$target['role'],['customer','vendor'],true)){
             $pdo->rollBack();
             http_response_code(422);
-            exit('Yalnızca müşteri veya ev sahibi üyelikleri silinebilir. Yönetici hesapları korunur.');
+            exit('Yalnızca müşteri veya ev sahibi üyelikleri kapatılabilir. Yönetici hesapları korunur.');
         }
-        // Keep reservation and payment history; detach the account before deleting it.
-        $bookings=$pdo->prepare('UPDATE bookings SET guest_user_id=NULL WHERE guest_user_id=?');
-        $bookings->execute([$id]);
-        $delete=$pdo->prepare("DELETE FROM users WHERE id=? AND role IN ('customer','vendor')");        $delete->execute([$id]);
-        if($delete->rowCount()!==1){
-            throw new RuntimeException('Üye kaydı silinemedi.');
+        if(!Auth::canManageUserRole((string)$currentUser['role'],(string)$target['role'])){
+            $pdo->rollBack();
+            http_response_code(403);
+            exit('Bu üyeliği kapatma yetkiniz bulunmuyor.');
         }
+
+        // Preserve bookings, reviews, vendor ownership, payouts and audit history.
+        // Replace account credentials and disable login instead of cascading deletes.
+        $token=bin2hex(random_bytes(8));
+        $anonymousUsername='deleted_'.$id.'_'.$token;
+        $anonymousEmail='deleted+'.$id.'.'.$token.'@invalid.local';
+        $anonymousPassword=password_hash(bin2hex(random_bytes(32)),PASSWORD_DEFAULT);
+        if(!is_string($anonymousPassword))throw new RuntimeException('Hesap güvenli şekilde kapatılamadı.');
+
+        $tokens=$pdo->prepare('UPDATE account_security_tokens SET used_at=COALESCE(used_at,NOW()) WHERE user_id=?');
+        $tokens->execute([$id]);
+        $update=$pdo->prepare("UPDATE users SET username=?,email=?,password_hash=?,status='disabled',session_version=session_version+1,updated_at=NOW() WHERE id=? AND role IN ('customer','vendor')");
+        $update->execute([$anonymousUsername,$anonymousEmail,$anonymousPassword,$id]);
+        if($update->rowCount()!==1)throw new RuntimeException('Üye hesabı güvenli şekilde kapatılamadı.');
+
         $pdo->commit();
         redirect('/admin/users?deleted=1');
     }catch(Throwable $e){
         if($pdo->inTransaction())$pdo->rollBack();
-        error_log('Admin member deletion failed: '.$e->getMessage());
+        error_log('Admin member anonymization failed: '.$e->getMessage());
         http_response_code(409);
-        exit('Üye silinemedi. İlişkili kayıtlar korunarak işlem güvenli şekilde durduruldu.');
+        exit('Üye hesabı kapatılamadı. İlişkili rezervasyon ve finans kayıtları korunarak işlem durduruldu.');
     }
 });
 
