@@ -63,17 +63,23 @@ final class CalendarSyncService
         $stmt=$pdo->prepare($sql.' LIMIT 1');
         $stmt->execute($params);$feed=$stmt->fetch(PDO::FETCH_ASSOC);
         if(!$feed) throw new RuntimeException('Etkin içe aktarma takvimi bulunamadı.');
+        $startedAt=date('Y-m-d H:i:s');
         try {
             $url=PaymentSecretVault::decrypt((string)$feed['feed_url_encrypted']);
             $calendar=CalendarFeedFetcher::fetch($url);
             $events=IcalParser::parse($calendar);
             $result=self::applyEvents($pdo,$feedId,$events);
+            $message=count($events).' etkinlik işlendi; '.$result['blocked'].' tarih aralığı engellendi, '.$result['cancelled'].' iptal işlendi, '.$result['conflicts'].' rezervasyon çakışması atlandı.';
             $update=$pdo->prepare("UPDATE property_calendar_feeds SET last_sync_status='success',last_sync_message=?,last_synced_at=NOW(),updated_at=NOW() WHERE id=?");
-            $update->execute([count($events).' etkinlik işlendi; '.$result['blocked'].' tarih aralığı engellendi, '.$result['cancelled'].' iptal işlendi, '.$result['conflicts'].' rezervasyon çakışması atlandı.',$feedId]);
+            $update->execute([$message,$feedId]);
+            $log=$pdo->prepare("INSERT INTO calendar_sync_logs(feed_id,property_id,started_at,finished_at,status,event_count,blocked_count,cancelled_count,conflict_count,error_message,created_at) VALUES(?,?,?,NOW(),'success',?,?,?,?,NULL,NOW())");
+            $log->execute([$feedId,(int)$feed['property_id'],$startedAt,(int)$result['events'],(int)$result['blocked'],(int)$result['cancelled'],(int)$result['conflicts']]);
             return $result;
         } catch(Throwable $e) {
+            $error=mb_substr(preg_replace('/[\r\n]+/',' ',$e->getMessage())??'Takvim hatası',0,450);
             $update=$pdo->prepare("UPDATE property_calendar_feeds SET last_sync_status='error',last_sync_message=?,last_synced_at=NOW(),updated_at=NOW() WHERE id=?");
-            $update->execute([mb_substr(preg_replace('/[\r\n]+/',' ',$e->getMessage())??'Takvim hatası',0,450),$feedId]);
+            $update->execute([$error,$feedId]);
+            try{$log=$pdo->prepare("INSERT INTO calendar_sync_logs(feed_id,property_id,started_at,finished_at,status,error_message,created_at) VALUES(?,?,?,NOW(),'error',?,NOW())");$log->execute([$feedId,(int)$feed['property_id'],$startedAt,$error]);}catch(Throwable $logError){error_log('Calendar sync log write failed: '.$logError->getMessage());}
             throw $e;
         }
     }
@@ -86,6 +92,7 @@ final class CalendarSyncService
             $feedStmt->execute([$feedId]);$feed=$feedStmt->fetch(PDO::FETCH_ASSOC);
             if(!$feed) throw new RuntimeException('İçe aktarma takvimi bulunamadı.');
             $propertyId=(int)$feed['property_id'];
+            $propertyLock=$pdo->prepare('SELECT id FROM properties WHERE id=? LIMIT 1 FOR UPDATE');$propertyLock->execute([$propertyId]);if(!$propertyLock->fetchColumn())throw new RuntimeException('Takvim ilanı bulunamadı.');
             $syncStartedAt=date('Y-m-d H:i:s');
             $blocked=0;$cancelled=0;$conflicts=0;$seenUids=[];
             foreach($events as $event) {
@@ -109,7 +116,7 @@ final class CalendarSyncService
                     $cancelled++;continue;
                 }
 
-                $booking=$pdo->prepare("SELECT id FROM bookings WHERE property_id=? AND status IN ('confirmed','completed') AND check_in < ? AND check_out > ? LIMIT 1");
+                $booking=$pdo->prepare("SELECT id FROM bookings WHERE property_id=? AND status IN ('pending','confirmed','completed') AND check_in < ? AND check_out > ? LIMIT 1");
                 $booking->execute([$propertyId,$to,$from]);
                 if($booking->fetchColumn()) {
                     if($existing&&$existing['availability_id']) {
@@ -204,10 +211,10 @@ final class CalendarSyncService
         $events=[];
         $bookings=$pdo->prepare("SELECT id,check_in,check_out FROM bookings WHERE property_id=? AND status IN ('confirmed','completed') AND check_out>CURDATE()");
         $bookings->execute([$propertyId]);
-        foreach($bookings->fetchAll(PDO::FETCH_ASSOC) as $row)$events[]=['uid'=>'booking-'.$row['id'].'@calendar.villacms','from'=>$row['check_in'],'to'=>$row['check_out'],'summary'=>'Reserved'];
+        foreach($bookings->fetchAll(PDO::FETCH_ASSOC) as $row)$events[]=['uid'=>'booking-'.$propertyId.'-'.$row['id'].'@calendar.villacms','from'=>$row['check_in'],'to'=>$row['check_out'],'summary'=>'Reserved'];
         $availability=$pdo->prepare("SELECT a.id,a.date_from,a.date_to FROM availability a LEFT JOIN calendar_feed_events e ON e.availability_id=a.id WHERE a.property_id=? AND a.status='blocked' AND a.date_to>CURDATE() AND e.id IS NULL");
         $availability->execute([$propertyId]);
-        foreach($availability->fetchAll(PDO::FETCH_ASSOC) as $row)$events[]=['uid'=>'availability-'.$row['id'].'@vill acms','from'=>$row['date_from'],'to'=>$row['date_to'],'summary'=>'Unavailable'];
+        foreach($availability->fetchAll(PDO::FETCH_ASSOC) as $row)$events[]=['uid'=>'availability-'.$propertyId.'-'.$row['id'].'@calendar.villacms','from'=>$row['date_from'],'to'=>$row['date_to'],'summary'=>'Unavailable'];
         $escape=static function(string $value):string{return str_replace(["\\",";",",","\r","\n"],["\\\\","\\;","\\,",'','\\n'],$value);};
         $lines=['BEGIN:VCALENDAR','VERSION:2.0','PRODID:-//VillaCMS//Calendar Sync 1.0//TR','CALSCALE:GREGORIAN','METHOD:PUBLISH','X-WR-CALNAME:'.$escape($title)];
         foreach($events as $event) {
@@ -216,7 +223,23 @@ final class CalendarSyncService
             $lines[]='SUMMARY:'.$escape($event['summary']);$lines[]='END:VEVENT';
         }
         $lines[]='END:VCALENDAR';
-        return implode("\r\n",$lines)."\r\n";
+        return self::foldIcsLines($lines);
+    }
+
+    private static function foldIcsLines(array $lines): string
+    {
+        $output=[];
+        foreach($lines as $line){
+            $characters=preg_split('//u',(string)$line,-1,PREG_SPLIT_NO_EMPTY);
+            if(!is_array($characters)){$output[]=(string)$line;continue;}
+            $part='';$limit=75;
+            foreach($characters as $character){
+                if(strlen($part)+strlen($character)>$limit){$output[]=$part;$part=' '.$character;$limit=75;}
+                else $part.=$character;
+            }
+            $output[]=$part;
+        }
+        return implode("\r\n",$output)."\r\n";
     }
 
     private static function validDateRange(string $from,string $to): bool
