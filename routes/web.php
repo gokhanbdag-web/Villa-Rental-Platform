@@ -2116,13 +2116,13 @@ $router->post('/vendor/bookings/status', static function (): void {
         $propertyLock->execute([$propertyId,$vendorId]);
         if(!$propertyLock->fetchColumn()){$pdo->rollBack();http_response_code(404);exit('Rezervasyon bulunamadı.');}
         \App\Core\BookingHoldExpiryService::expireSafePendingForProperty($pdo,$propertyId);
-        $s=$pdo->prepare('SELECT b.property_id,b.guest_user_id,b.check_in,b.check_out,b.status FROM bookings b JOIN properties p ON p.id=b.property_id WHERE b.id=? AND b.property_id=? AND p.vendor_id=? LIMIT 1 FOR UPDATE');
+        $s=$pdo->prepare('SELECT b.id,b.property_id,b.booking_code,b.guest_phone,b.guest_user_id,b.check_in,b.check_out,b.status FROM bookings b JOIN properties p ON p.id=b.property_id WHERE b.id=? AND b.property_id=? AND p.vendor_id=? LIMIT 1 FOR UPDATE');
         $s->execute([$id,$propertyId,$vendorId]);$booking=$s->fetch(PDO::FETCH_ASSOC);
         if(!$booking){$pdo->rollBack();http_response_code(404);exit('Rezervasyon bulunamadı.');}
         if(!\App\Core\BookingStatusPolicy::canVendorTransition((string)$booking['status'],$status)){
             $pdo->rollBack();http_response_code(409);exit('Bu rezervasyon durumundan seçilen işleme geçişe izin verilmiyor.');
         }
-        if((string)$booking['status']===$status){$pdo->commit();redirect('/vendor/bookings');}
+        if((string)$booking['status']===$status){$pdo->commit();try{\App\Core\SmsService::enqueueBookingStatus($pdo,$booking,$status);}catch(Throwable $smsError){error_log('Vendor booking SMS enqueue failed: '.$smsError->getMessage());}redirect('/vendor/bookings');}
         if($status==='confirmed'){
             $conflict=$pdo->prepare("SELECT id FROM bookings WHERE property_id=? AND id<>? AND status IN ('pending','confirmed') AND check_in < ? AND check_out > ? LIMIT 1 FOR UPDATE");
             $conflict->execute([$propertyId,$id,$booking['check_out'],$booking['check_in']]);
@@ -3889,7 +3889,7 @@ $router->post('/admin/bookings/manual', static function (): void {
         $financial->execute([$bookingId,$total,$total,$property['currency']]);
         $audit=$pdo->prepare('INSERT INTO audit_logs(user_id,action,entity_type,entity_id,ip_address,details,created_at) VALUES(?,?,?,?,?,?,NOW())');
         $audit->execute([(int)Auth::user()['id'],'booking.created_manual','booking',$bookingId,$_SERVER['REMOTE_ADDR']??null,json_encode(['property_id'=>$propertyId,'guest_name'=>$guestName,'check_in'=>$inRaw,'check_out'=>$outRaw,'source'=>$source],JSON_UNESCAPED_UNICODE)]);
-        $pdo->commit();redirect('/admin/bookings');
+        $pdo->commit();try{\App\Core\SmsService::enqueueBookingStatus($pdo,$booking,$status);}catch(Throwable $smsError){error_log('Admin booking SMS enqueue failed: '.$smsError->getMessage());}redirect('/admin/bookings');
     }catch(Throwable $e){if($pdo->inTransaction())$pdo->rollBack();error_log('Manual booking creation failed: '.$e->getMessage());http_response_code(500);exit('Manuel rezervasyon kaydedilemedi.');}
 });
 $router->post('/admin/bookings/status', static function (): void {
@@ -3910,7 +3910,7 @@ $router->post('/admin/bookings/status', static function (): void {
         $propertyLock->execute([$propertyId]);
         if(!$propertyLock->fetchColumn()){$pdo->rollBack();http_response_code(404);exit('Konaklama bulunamadı.');}
 
-        $s=$pdo->prepare('SELECT property_id,guest_user_id,check_in,check_out,status FROM bookings WHERE id=? FOR UPDATE');
+        $s=$pdo->prepare('SELECT id,property_id,booking_code,guest_phone,guest_user_id,check_in,check_out,status FROM bookings WHERE id=? FOR UPDATE');
         $s->execute([$id]);$booking=$s->fetch();
         if(!$booking){$pdo->rollBack();http_response_code(404);exit('Rezervasyon bulunamadı.');}
         if((int)$booking['property_id']!==$propertyId){$pdo->rollBack();http_response_code(409);exit('Rezervasyon kaydı işlem sırasında değişti. Lütfen tekrar deneyin.');}
@@ -3966,7 +3966,7 @@ $router->post('/admin/cancellations/review', static function (): void {
         $pdo->beginTransaction();
         $lookup=$pdo->prepare('SELECT booking_id FROM booking_cancellation_requests WHERE id=?');$lookup->execute([$requestId]);$bookingId=(int)($lookup->fetchColumn()?:0);
         if($bookingId<1)throw new RuntimeException('İptal talebi bulunamadı.');
-        $bookingLock=$pdo->prepare('SELECT id,guest_user_id,status FROM bookings WHERE id=? FOR UPDATE');$bookingLock->execute([$bookingId]);$booking=$bookingLock->fetch(PDO::FETCH_ASSOC);
+        $bookingLock=$pdo->prepare('SELECT id,booking_code,guest_phone,guest_user_id,status FROM bookings WHERE id=? FOR UPDATE');$bookingLock->execute([$bookingId]);$booking=$bookingLock->fetch(PDO::FETCH_ASSOC);
         $requestLock=$pdo->prepare("SELECT * FROM booking_cancellation_requests WHERE id=? AND booking_id=? FOR UPDATE");$requestLock->execute([$requestId,$bookingId]);$request=$requestLock->fetch(PDO::FETCH_ASSOC);
         if(!$booking||!$request||(string)$request['status']!=='pending')throw new RuntimeException('İptal talebi daha önce işlenmiş veya bulunamıyor.');
         if($decision==='approved'){
@@ -3985,7 +3985,7 @@ $router->post('/admin/cancellations/review', static function (): void {
         if((int)$booking['guest_user_id']>0){$notice=$pdo->prepare('INSERT INTO notifications(user_id,notification_type,title,body,created_at) VALUES(?,?,?,?,NOW())');$notice->execute([(int)$booking['guest_user_id'],'booking.cancellation_'.$decision,$noticeTitle,$noticeBody]);}
         $audit=$pdo->prepare('INSERT INTO audit_logs(user_id,action,entity_type,entity_id,ip_address,details,created_at) VALUES(?,?,?,?,?,?,NOW())');
         $audit->execute([(int)Auth::user()['id'],'booking.cancellation_'.$decision,'booking',$bookingId,$_SERVER['REMOTE_ADDR']??null,json_encode(['request_id'=>$requestId,'refund_amount'=>$request['refund_amount'],'refund_percent'=>$request['refund_percent_snapshot'],'note'=>$note],JSON_UNESCAPED_UNICODE)]);
-        $pdo->commit();redirect('/admin/cancellations');
+        $pdo->commit();if($decision==='approved'){try{\App\Core\SmsService::enqueueBookingStatus($pdo,$booking,'cancelled');}catch(Throwable $smsError){error_log('Cancellation SMS enqueue failed: '.$smsError->getMessage());}}redirect('/admin/cancellations');
     }catch(Throwable $e){if($pdo->inTransaction())$pdo->rollBack();http_response_code(409);exit($e->getMessage());}
 });
 
@@ -4016,7 +4016,7 @@ $router->post('/admin/payments/manual/review', static function (): void {
         $reportStmt=$pdo->prepare('SELECT * FROM manual_payment_reports WHERE id=? FOR UPDATE');$reportStmt->execute([$reportId]);$report=$reportStmt->fetch(PDO::FETCH_ASSOC);
         if(!$report){$pdo->rollBack();http_response_code(404);exit('Havale bildirimi bulunamadı.');}
         if((string)$report['status']!=='pending'){$pdo->rollBack();http_response_code(409);exit('Bu bildirim daha önce incelenmiş.');}
-        $bookingStmt=$pdo->prepare('SELECT id,guest_user_id,check_in,check_out,status,total,currency,booking_code FROM bookings WHERE id=? FOR UPDATE');$bookingStmt->execute([$bookingId]);$booking=$bookingStmt->fetch(PDO::FETCH_ASSOC);
+        $bookingStmt=$pdo->prepare('SELECT id,guest_user_id,guest_phone,check_in,check_out,status,total,currency,booking_code FROM bookings WHERE id=? FOR UPDATE');$bookingStmt->execute([$bookingId]);$booking=$bookingStmt->fetch(PDO::FETCH_ASSOC);
         if(!$booking){$pdo->rollBack();http_response_code(404);exit('Rezervasyon bulunamadı.');}
         if($decision==='approved'){
             if(!in_array((string)$booking['status'],['pending','confirmed'],true)){$pdo->rollBack();http_response_code(409);exit('İptal edilmiş veya tamamlanmış rezervasyonun ödemesi onaylanamaz.');}
@@ -4048,7 +4048,7 @@ $router->post('/admin/payments/manual/review', static function (): void {
         }
         $audit=$pdo->prepare('INSERT INTO audit_logs(user_id,action,entity_type,entity_id,ip_address,details,created_at) VALUES(?,?,?,?,?,?,NOW())');
         $audit->execute([(int)Auth::user()['id'],'manual_payment.'.$decision,'manual_payment_report',$reportId,$_SERVER['REMOTE_ADDR']??null,json_encode(['booking_id'=>$bookingId,'decision'=>$decision],JSON_UNESCAPED_UNICODE)]);
-        $pdo->commit();redirect('/admin/payments/manual?status='.$decision);
+        $pdo->commit();if($decision==='approved'){try{\App\Core\SmsService::enqueueBookingStatus($pdo,$booking,'confirmed');}catch(Throwable $smsError){error_log('Manual payment SMS enqueue failed: '.$smsError->getMessage());}}redirect('/admin/payments/manual?status='.$decision);
     }catch(Throwable $e){
         if($pdo->inTransaction())$pdo->rollBack();
         error_log('Manual payment review failed: '.$e->getMessage());http_response_code(500);exit('Havale bildirimi işlenemedi. İşlem geri alındı.');
