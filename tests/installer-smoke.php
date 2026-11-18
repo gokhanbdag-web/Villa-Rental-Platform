@@ -735,7 +735,18 @@ try {
 
     $themeRoutesSource = (string)file_get_contents($root . '/routes/web.php');
     $adminUsersViewSource = (string)file_get_contents($root . '/themes/default/templates/pages/admin/users.php');
-    assertSmoke(str_contains($themeRoutesSource, "/admin/users/delete") && str_contains($themeRoutesSource, "UPDATE bookings SET guest_user_id=NULL WHERE guest_user_id=?") && str_contains($themeRoutesSource, "role IN ('customer','vendor')"), 'Admin member deletion must be CSRF-protected, limited to customer/vendor accounts and preserve booking history.');
+    $deleteRouteStart = strpos($themeRoutesSource, "$router->post('/admin/users/delete'");
+    $deleteRouteEnd = $deleteRouteStart !== false ? strpos($themeRoutesSource, "$router->get('/brand-assets/", $deleteRouteStart) : false;
+    $deleteRouteSource = $deleteRouteStart !== false && $deleteRouteEnd !== false ? substr($themeRoutesSource, $deleteRouteStart, $deleteRouteEnd - $deleteRouteStart) : '';
+    assertSmoke($deleteRouteSource !== ''
+        && str_contains($deleteRouteSource, "Auth::requireRole(['super_admin','admin'])")
+        && str_contains($deleteRouteSource, 'Csrf::verify')
+        && str_contains($deleteRouteSource, 'Auth::canManageUserRole')
+        && str_contains($deleteRouteSource, "SELECT id FROM vendors WHERE user_id=? LIMIT 1 FOR UPDATE")
+        && str_contains($deleteRouteSource, "SELECT id FROM bookings WHERE guest_user_id=? LIMIT 1 FOR UPDATE")
+        && str_contains($deleteRouteSource, "DELETE FROM users WHERE id=? AND role='customer'")
+        && !str_contains($deleteRouteSource, 'UPDATE bookings SET guest_user_id=NULL'),
+        'Admin member deletion must be CSRF-protected, enforce role hierarchy and preserve vendor and booking history.');
     assertSmoke(str_contains($adminUsersViewSource, 'action="/admin/users/delete"') && str_contains($adminUsersViewSource, 'Üyeyi sil') && str_contains($adminUsersViewSource, 'confirm('), 'Admin user list must expose a confirmed delete action for eligible members.');
     $adminShellSource = (string)file_get_contents($root . '/themes/default/layouts/admin-shell.php');
     assertSmoke(str_contains($themeRoutesSource, "/admin/header-settings/social-icons") && !str_contains($themeRoutesSource, 'PageBuilder') && !str_contains($themeRoutesSource, '/admin/builder') && !str_contains($adminShellSource, '/admin/builder'), 'Builder routes and navigation must be removed while shared top information settings remain available.');
