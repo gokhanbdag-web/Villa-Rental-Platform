@@ -106,6 +106,15 @@ final class CalendarSyncService
                     if($existing&&$existing['availability_id']) {
                         $delete=$pdo->prepare('DELETE FROM availability WHERE id=? AND property_id=?');$delete->execute([(int)$existing['availability_id'],$propertyId]);
                     }
+                    if(!$existing){
+                        $recurringStmt=$pdo->prepare("SELECT id,availability_id FROM calendar_feed_events WHERE feed_id=? AND LEFT(external_uid,CHAR_LENGTH(?)+1)=CONCAT(?,'#') FOR UPDATE");
+                        $recurringStmt->execute([$feedId,$uid,$uid]);
+                        foreach($recurringStmt->fetchAll(PDO::FETCH_ASSOC) as $occurrence){
+                            if(!empty($occurrence['availability_id'])){$delete=$pdo->prepare('DELETE FROM availability WHERE id=? AND property_id=?');$delete->execute([(int)$occurrence['availability_id'],$propertyId]);}
+                            $cancelOccurrence=$pdo->prepare("UPDATE calendar_feed_events SET availability_id=NULL,event_status='cancelled',missed_syncs=0,last_seen_at=?,updated_at=NOW() WHERE id=?");
+                            $cancelOccurrence->execute([$syncStartedAt,(int)$occurrence['id']]);
+                        }
+                    }
                     if($existing) {
                         $update=$pdo->prepare("UPDATE calendar_feed_events SET availability_id=NULL,date_from=?,date_to=?,event_status='cancelled',missed_syncs=0,last_seen_at=?,updated_at=NOW() WHERE id=?");
                         $update->execute([$from,$to,$syncStartedAt,(int)$existing['id']]);
@@ -209,7 +218,7 @@ final class CalendarSyncService
     {
         $property=$pdo->prepare('SELECT title FROM properties WHERE id=?');$property->execute([$propertyId]);$title=(string)($property->fetchColumn()?:'Villa');
         $events=[];
-        $bookings=$pdo->prepare("SELECT id,check_in,check_out FROM bookings WHERE property_id=? AND status IN ('confirmed','completed') AND check_out>CURDATE()");
+        $bookings=$pdo->prepare("SELECT id,check_in,check_out FROM bookings WHERE property_id=? AND status IN ('pending','confirmed','completed') AND check_out>CURDATE()");
         $bookings->execute([$propertyId]);
         foreach($bookings->fetchAll(PDO::FETCH_ASSOC) as $row)$events[]=['uid'=>'booking-'.$propertyId.'-'.$row['id'].'@calendar.villacms','from'=>$row['check_in'],'to'=>$row['check_out'],'summary'=>'Reserved'];
         $availability=$pdo->prepare("SELECT a.id,a.date_from,a.date_to FROM availability a LEFT JOIN calendar_feed_events e ON e.availability_id=a.id WHERE a.property_id=? AND a.status='blocked' AND a.date_to>CURDATE() AND e.id IS NULL");
