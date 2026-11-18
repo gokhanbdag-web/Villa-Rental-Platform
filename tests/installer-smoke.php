@@ -735,8 +735,8 @@ try {
 
     $themeRoutesSource = (string)file_get_contents($root . '/routes/web.php');
     $adminUsersViewSource = (string)file_get_contents($root . '/themes/default/templates/pages/admin/users.php');
-    $deleteRouteStart = strpos($themeRoutesSource, "\\$router->post('/admin/users/delete'");
-    $deleteRouteEnd = $deleteRouteStart !== false ? strpos($themeRoutesSource, "\\$router->get('/brand-assets/", $deleteRouteStart) : false;
+    $deleteRouteStart = strpos($themeRoutesSource, "\$router->post('/admin/users/delete'");
+    $deleteRouteEnd = $deleteRouteStart !== false ? strpos($themeRoutesSource, "\$router->get('/brand-assets/", $deleteRouteStart) : false;
     $deleteRouteSource = $deleteRouteStart !== false && $deleteRouteEnd !== false ? substr($themeRoutesSource, $deleteRouteStart, $deleteRouteEnd - $deleteRouteStart) : '';
     assertSmoke($deleteRouteSource !== ''
         && str_contains($deleteRouteSource, "Auth::requireRole(['super_admin','admin'])")
