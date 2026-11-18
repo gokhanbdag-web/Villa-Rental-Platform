@@ -62,3 +62,12 @@ SMS delivery uses Netgsm REST API v2 with HTTPS, HTTP Basic Authentication, an a
 The SMS outbox is processed by the authenticated `/tasks/sms/process?token=...` endpoint. Copy the full URL shown in Admin → Settings into a server Cron Job (recommended interval: every 5 minutes). Queue records use an event key to prevent duplicate enqueueing and retry failed delivery attempts up to five times. Stable Netgsm reference IDs are reused when retrying a queued message.
 
 Netgsm does not provide a no-charge sandbox for this REST send endpoint. The admin test button sends a real SMS and may incur provider charges. API access must be enabled for the Netgsm API sub-user; if account IP restrictions are enabled, allowlist the hosting server IP. The sender header must be approved in the Netgsm account.
+
+
+## Airbnb / Booking.com iCalendar synchronization
+
+Each villa can import external HTTPS iCal/ICS feeds and publish a private VillaCMS export URL. Add the Airbnb or Booking.com export URL under the villa's Calendar synchronization page; copy the VillaCMS export URL into the channel's calendar-import area. The platform refreshes feeds when the configured calendar Cron runs (recommended every 30 minutes); channel providers may apply their own additional refresh delay, so iCal synchronization is not real-time.
+
+The parser supports all-day and TZID date-time events plus bounded DAILY/WEEKLY RRULE recurrence with INTERVAL, COUNT, UNTIL, BYDAY and EXDATE. Unsupported recurrence rules fail closed instead of silently importing only the first date. Exported ICS lines are folded to the RFC 5545 75-octet limit and use stable event UIDs. Imported recurring master cancellations remove all generated occurrences.
+
+Sync processing locks the property inventory while applying imported events, checks pending/confirmed/completed local bookings for conflicts, and records per-feed success/error history, imported event counts, blocked dates and conflicts. A missing external event is only removed after two consecutive successful syncs to avoid clearing availability during a temporary feed inconsistency. Feed URLs are encrypted at rest; export and Cron URLs are token-protected.
