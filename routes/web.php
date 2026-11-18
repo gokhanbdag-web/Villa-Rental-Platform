@@ -2122,7 +2122,7 @@ $router->post('/vendor/bookings/status', static function (): void {
         if(!\App\Core\BookingStatusPolicy::canVendorTransition((string)$booking['status'],$status)){
             $pdo->rollBack();http_response_code(409);exit('Bu rezervasyon durumundan seçilen işleme geçişe izin verilmiyor.');
         }
-        if((string)$booking['status']===$status){$pdo->commit();try{\App\Core\SmsService::enqueueBookingStatus($pdo,$booking,$status);}catch(Throwable $smsError){error_log('Vendor booking SMS enqueue failed: '.$smsError->getMessage());}redirect('/vendor/bookings');}
+        if((string)$booking['status']===$status){$pdo->commit();redirect('/vendor/bookings');}
         if($status==='confirmed'){
             $conflict=$pdo->prepare("SELECT id FROM bookings WHERE property_id=? AND id<>? AND status IN ('pending','confirmed') AND check_in < ? AND check_out > ? LIMIT 1 FOR UPDATE");
             $conflict->execute([$propertyId,$id,$booking['check_out'],$booking['check_in']]);
@@ -2144,7 +2144,7 @@ $router->post('/vendor/bookings/status', static function (): void {
         }
         $log=$pdo->prepare('INSERT INTO audit_logs(user_id,action,entity_type,entity_id,ip_address,details,created_at) VALUES(?,?,?,?,?,?,NOW())');
         $log->execute([(int)Auth::user()['id'],'booking.status_changed','booking',$id,$_SERVER['REMOTE_ADDR']??null,json_encode(['from'=>$booking['status'],'to'=>$status],JSON_UNESCAPED_UNICODE)]);
-        $pdo->commit();redirect('/vendor/bookings');
+        $pdo->commit();try{\App\Core\SmsService::enqueueBookingStatus($pdo,$booking,$status);}catch(Throwable $smsError){error_log('Vendor booking SMS enqueue failed: '.$smsError->getMessage());}redirect('/vendor/bookings');
     }catch(Throwable $e){if($pdo->inTransaction())$pdo->rollBack();error_log('Vendor booking status update failed: '.$e->getMessage());http_response_code(500);exit('Rezervasyon güncellenemedi.');}
 });
 
