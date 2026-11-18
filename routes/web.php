@@ -1362,7 +1362,7 @@ $router->post('/payments/paytr/callback', static function (): void {
         $key=(string)$config['credentials']['merchant_key'];$salt=(string)$config['credentials']['merchant_salt'];
         if(!\App\Core\PaymentSignatureVerifier::verifyPaytr($payload,$key,$salt)){http_response_code(401);exit('Invalid signature');}
         $pdo=Database::connection();
-        $find=$pdo->prepare("SELECT id,booking_id,amount,currency,status FROM payment_transactions WHERE provider='paytr' AND provider_reference=? LIMIT 1");
+        $find=$pdo->prepare("SELECT id,booking_id,amount,currency,status,request_payload FROM payment_transactions WHERE provider='paytr' AND provider_reference=? LIMIT 1");
         $find->execute([$oid]);$transaction=$find->fetch(PDO::FETCH_ASSOC);
         if(!$transaction){http_response_code(200);exit('OK');}
         $storedAmount=trim((string)$transaction['amount']);
@@ -1374,6 +1374,10 @@ $router->post('/payments/paytr/callback', static function (): void {
         $expectedProviderCurrency=in_array($storedCurrency,['TRY','TL'],true)?'TL':$storedCurrency;
         if($status==='success'&&!hash_equals($expectedCents,$reportedCents)){error_log('PayTR callback rejected: amount mismatch for '.$oid);http_response_code(200);exit('OK');}
         if(isset($payload['currency'])&&strtoupper((string)$payload['currency'])!==$expectedProviderCurrency){error_log('PayTR callback rejected: currency mismatch for '.$oid);http_response_code(200);exit('OK');}
+        if(isset($payload['payment_amount'])&&(!preg_match('/^[0-9]+$/',(string)$payload['payment_amount'])||!hash_equals($expectedCents,ltrim((string)$payload['payment_amount'],'0')?:'0'))){error_log('PayTR callback rejected: original amount mismatch for '.$oid);http_response_code(200);exit('OK');}
+        $requestData=json_decode((string)($transaction['request_payload']??''),true);
+        $expectedTestMode=is_array($requestData)&&($requestData['environment']??'sandbox')==='sandbox'?'1':'0';
+        if(isset($payload['test_mode'])&&(string)$payload['test_mode']!==$expectedTestMode){error_log('PayTR callback rejected: test mode mismatch for '.$oid);http_response_code(200);exit('OK');}
         $verifiedAmount=$status==='success'?number_format(((int)$total)/100,2,'.',''):(string)$transaction['amount'];
         $callback=['provider'=>'paytr','provider_reference'=>$oid,'booking_id'=>(int)$transaction['booking_id'],'amount'=>$verifiedAmount,'currency'=>$storedCurrency,'status'=>$status==='success'?'paid':'failed'];
         $eventId='paytr-'.substr(hash('sha256',$oid.'|'.$status.'|'.$total),0,48);
