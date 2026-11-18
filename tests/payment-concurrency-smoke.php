@@ -67,10 +67,10 @@ try {
     $baseEnd = (new DateTimeImmutable('+302 days'))->format('Y-m-d');
     $currency = (string)$property['currency'];
 
-    $newBooking = static function (string $label, string $start, string $end) use ($createBooking, $createPayment, $property, $customerId, $email, $currency): array {
+    $newBooking = static function (string $label, string $start, string $end) use ($createBooking, $createPayment, $property, $customerId, $email, $currency, $pdoA): array {
         $code = 'VRC' . strtoupper(bin2hex(random_bytes(5)));
         $createBooking->execute([$code, (int)$property['id'], $customerId, 'Concurrency Guest', $email, '', $start, $end, 1, 100, 0, 100, $currency]);
-        $bookingId = (int)$createBooking->getConnection()->lastInsertId();
+        $bookingId = (int)$pdoA->lastInsertId();
         return ['id' => $bookingId, 'code' => $code, 'label' => $label];
     };
 
