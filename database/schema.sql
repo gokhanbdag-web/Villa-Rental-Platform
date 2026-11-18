@@ -35,3 +35,18 @@ CREATE TABLE IF NOT EXISTS translations (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 INSERT IGNORE INTO languages (code,name,is_default,is_active) VALUES ('tr','Türkçe',1,1);
+
+CREATE TABLE IF NOT EXISTS content_translations (
+ id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+ entity_type VARCHAR(40) NOT NULL,
+ entity_id BIGINT UNSIGNED NOT NULL,
+ language_code VARCHAR(12) NOT NULL,
+ field_key VARCHAR(64) NOT NULL,
+ translation_value LONGTEXT NOT NULL,
+ updated_at DATETIME NULL,
+ UNIQUE KEY uq_content_translation (entity_type,entity_id,language_code,field_key),
+ KEY idx_content_translation_locale (language_code,entity_type,entity_id),
+ CONSTRAINT fk_content_translation_language FOREIGN KEY (language_code) REFERENCES languages(code) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+

@@ -9,9 +9,24 @@ final class Translator
     private static string $locale = 'tr';
     public static function setLocale(string $locale): void
     {
-        $stmt = Database::connection()->prepare('SELECT translation_key, translation_value FROM translations WHERE language_code = ?');
+        $pdo = Database::connection();
+        $default = $pdo->query('SELECT code FROM languages WHERE is_default=1 AND is_active=1 LIMIT 1')->fetchColumn();
+        $defaultLocale = is_string($default) && $default !== '' ? $default : 'tr';
+        $catalogue = [];
+
+        if ($locale !== $defaultLocale) {
+            $fallback = $pdo->prepare('SELECT translation_key,translation_value FROM translations WHERE language_code=?');
+            $fallback->execute([$defaultLocale]);
+            $catalogue = $fallback->fetchAll(\PDO::FETCH_KEY_PAIR);
+        }
+
+        $stmt = $pdo->prepare('SELECT translation_key,translation_value FROM translations WHERE language_code=?');
         $stmt->execute([$locale]);
-        self::$catalogue = $stmt->fetchAll(\PDO::FETCH_KEY_PAIR);
+        foreach ($stmt->fetchAll(\PDO::FETCH_KEY_PAIR) as $key => $value) {
+            $catalogue[$key] = $value;
+        }
+
+        self::$catalogue = $catalogue;
         self::$locale = $locale;
     }
     public static function locale(): string

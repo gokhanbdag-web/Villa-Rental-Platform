@@ -35,8 +35,11 @@ function villa_read_file_tail_lines(string $file, int $limit = 20, int $maxBytes
 }
 
 function villa_navigation_tree(PDO $pdo, string $location, string $locale): array {
+    $default=(string)($pdo->query('SELECT code FROM languages WHERE is_default=1 AND is_active=1 LIMIT 1')->fetchColumn()?:'tr');
     $stmt=$pdo->prepare('SELECT id,parent_id,label,url,target FROM navigation_items WHERE location=? AND language_code=? AND is_active=1 ORDER BY sort_order,id');
-    $stmt->execute([$location,$locale]);$rows=$stmt->fetchAll(PDO::FETCH_ASSOC);$byId=[];$children=[];$roots=[];
+    $stmt->execute([$location,$locale]);$rows=$stmt->fetchAll(PDO::FETCH_ASSOC);
+    if(!$rows&&$locale!==$default){$stmt->execute([$location,$default]);$rows=$stmt->fetchAll(PDO::FETCH_ASSOC);}
+    $byId=[];$children=[];$roots=[];
     foreach($rows as $row)$byId[(int)$row['id']]=$row;
     foreach($rows as $row){$id=(int)$row['id'];$parent=(int)($row['parent_id']??0);
         if($parent>0){if(isset($byId[$parent])&&$parent!==$id)$children[$parent][]=$row;elseif($parent===$id)$roots[]=$row;}
@@ -44,6 +47,15 @@ function villa_navigation_tree(PDO $pdo, string $location, string $locale): arra
     }
     foreach($roots as &$root)$root['children']=$children[(int)$root['id']]??[];
     unset($root);return $roots;
+}
+
+function villa_site_content(PDO $pdo,string $locale):array{
+    $default=(string)($pdo->query('SELECT code FROM languages WHERE is_default=1 AND is_active=1 LIMIT 1')->fetchColumn()?:'tr');
+    $content=[];
+    if($locale!==$default){$fallback=$pdo->prepare('SELECT content_key,content_value FROM site_content WHERE language_code=?');$fallback->execute([$default]);$content=$fallback->fetchAll(PDO::FETCH_KEY_PAIR);}
+    $localized=$pdo->prepare('SELECT content_key,content_value FROM site_content WHERE language_code=?');$localized->execute([$locale]);
+    foreach($localized->fetchAll(PDO::FETCH_KEY_PAIR) as $key=>$value)$content[$key]=$value;
+    return $content;
 }
 
 
@@ -98,9 +110,7 @@ function villa_render_account_view(string $view, array $variables): void {
     $locale = Translator::locale();
     $navigation = villa_navigation_tree($pdo, 'header', $locale);
     $footerNavigation = villa_navigation_tree($pdo, 'footer', $locale);
-    $contentStmt = $pdo->prepare('SELECT content_key,content_value FROM site_content WHERE language_code=?');
-    $contentStmt->execute([$locale]);
-    $content = $contentStmt->fetchAll(PDO::FETCH_KEY_PAIR);
+    $content = villa_site_content($pdo,$locale);
     $siteName = (string)($content['site_name'] ?? 'VillaStay');
     $accountView = $view;
     ThemeManager::render('account.php', array_merge($variables, compact('navigation','footerNavigation','content','siteName','accountView')));
@@ -579,11 +589,12 @@ $router->get('/', static function (): void {
     $locale = Translator::locale();
     villa_perf_mark('home:mode_loaded');
     $mode=(string)($pdo->query("SELECT setting_value FROM settings WHERE setting_key='app.mode' LIMIT 1")->fetchColumn() ?: 'single_vendor');
-    $contentStmt=$pdo->prepare('SELECT content_key,content_value FROM site_content WHERE language_code=?');$contentStmt->execute([$locale]);$content=$contentStmt->fetchAll(PDO::FETCH_KEY_PAIR);
+    $content=villa_site_content($pdo,$locale);
     villa_perf_mark('home:navigation_loaded');
     $navigation=villa_navigation_tree($pdo,'header',$locale);$footerNavigation=villa_navigation_tree($pdo,'footer',$locale);
     villa_perf_mark('home:destinations_query');
-    $destinations=$pdo->query("SELECT l.id AS location_id,l.name AS city,COUNT(DISTINCT p.id) AS property_count,(SELECT pm.file_path FROM property_media pm JOIN properties p2 ON p2.id=pm.property_id WHERE p2.status='published' AND p2.location_city_id=l.id ORDER BY pm.is_cover DESC,pm.sort_order,pm.id LIMIT 1) AS cover_image FROM locations l JOIN locations c ON c.id=l.parent_id AND c.location_type='country' AND c.is_active=1 JOIN properties p ON p.status='published' AND p.location_city_id=l.id WHERE l.location_type='city' AND l.is_active=1 GROUP BY l.id,l.name,l.sort_order ORDER BY property_count DESC,l.sort_order,l.name LIMIT 6")->fetchAll(PDO::FETCH_ASSOC);
+    $destinations=$pdo->query("SELECT l.id AS id,l.id AS location_id,l.name AS name,l.name AS city,COUNT(DISTINCT p.id) AS property_count,(SELECT pm.file_path FROM property_media pm JOIN properties p2 ON p2.id=pm.property_id WHERE p2.status='published' AND p2.location_city_id=l.id ORDER BY pm.is_cover DESC,pm.sort_order,pm.id LIMIT 1) AS cover_image FROM locations l JOIN locations c ON c.id=l.parent_id AND c.location_type='country' AND c.is_active=1 JOIN properties p ON p.status='published' AND p.location_city_id=l.id WHERE l.location_type='city' AND l.is_active=1 GROUP BY l.id,l.name,l.sort_order ORDER BY property_count DESC,l.sort_order,l.name LIMIT 6")->fetchAll(PDO::FETCH_ASSOC);
+     $destinations=\App\Core\ContentTranslator::apply($pdo,$destinations,'location',$locale);foreach($destinations as &$destination){$destination['city']=$destination['name'];}unset($destination);
     $homepageStatsSettings=ThemeManager::homepageStatsSettings();
     $homepageStatsLive=$pdo->query("SELECT
         (SELECT COUNT(*) FROM properties WHERE status='published') AS villas,
@@ -596,6 +607,7 @@ $router->get('/', static function (): void {
     }
     villa_perf_mark('home:featured_query');
     $featuredProperties=$pdo->query("SELECT p.*,(SELECT pm.file_path FROM property_media pm WHERE pm.property_id=p.id ORDER BY pm.is_cover DESC,pm.sort_order,pm.id LIMIT 1) AS cover_image,(SELECT COUNT(*) FROM bookings b WHERE b.property_id=p.id AND b.status NOT IN ('cancelled','rejected')) AS booking_count,(SELECT AVG(r.rating) FROM reviews r WHERE r.property_id=p.id AND r.status='approved') AS rating_average,(SELECT COUNT(*) FROM reviews r WHERE r.property_id=p.id AND r.status='approved') AS rating_count FROM properties p WHERE p.status='published' ORDER BY booking_count DESC,p.created_at DESC,p.id DESC LIMIT 9")->fetchAll();
+     $featuredProperties=\App\Core\ContentTranslator::apply($pdo,$featuredProperties,'property',$locale);
     $featuredCardImages=[];$featuredIds=array_map(static fn(array $p):int=>(int)$p['id'],$featuredProperties);
     if($featuredIds){$marks=implode(',',array_fill(0,count($featuredIds),'?'));$media=$pdo->prepare("SELECT property_id,file_path FROM property_media WHERE property_id IN ($marks) ORDER BY property_id,is_cover DESC,sort_order,id");$media->execute($featuredIds);foreach($media->fetchAll() as $m){$pid=(int)$m['property_id'];if(count($featuredCardImages[$pid]??[])<4)$featuredCardImages[$pid][]=$m['file_path'];}}
     $favoritePropertyIds=[];
@@ -603,9 +615,11 @@ $router->get('/', static function (): void {
 
     villa_perf_mark('home:latest_query');
     $latestProperties=$pdo->query("SELECT p.*,(SELECT pm.file_path FROM property_media pm WHERE pm.property_id=p.id ORDER BY pm.is_cover DESC,pm.sort_order,pm.id LIMIT 1) AS cover_image,(SELECT AVG(r.rating) FROM reviews r WHERE r.property_id=p.id AND r.status='approved') AS rating_average,(SELECT COUNT(*) FROM reviews r WHERE r.property_id=p.id AND r.status='approved') AS rating_count,(SELECT COUNT(*) FROM bookings b WHERE b.property_id=p.id AND b.status NOT IN ('cancelled','rejected')) AS booking_count FROM properties p WHERE p.status='published' ORDER BY p.id DESC LIMIT 6")->fetchAll();
+     $latestProperties=\App\Core\ContentTranslator::apply($pdo,$latestProperties,'property',$locale);
     $activeHomeTheme='default';
       if($activeHomeTheme==='default'){
          $categories=$pdo->query("SELECT c.id,c.name,c.slug,COUNT(DISTINCT p.id) AS property_count,(SELECT pm.file_path FROM property_media pm JOIN properties p2 ON p2.id=pm.property_id WHERE p2.category_id=c.id AND p2.status='published' ORDER BY pm.is_cover DESC,pm.sort_order,pm.id LIMIT 1) AS cover_image FROM property_categories c LEFT JOIN properties p ON p.category_id=c.id AND p.status='published' WHERE c.is_active=1 GROUP BY c.id,c.name,c.slug,c.sort_order ORDER BY c.sort_order,c.name LIMIT 8")->fetchAll(PDO::FETCH_ASSOC);
+          $categories=\App\Core\ContentTranslator::apply($pdo,$categories,'property_category',$locale);
          $homeCategoryCollections=[];
          $homeCategoryIds=array_map(static fn(array $category):int=>(int)$category['id'],array_slice($categories,0,4));
          if($homeCategoryIds){
@@ -625,9 +639,15 @@ $router->get('/', static function (): void {
                  if($categoryRows)$homeCategoryCollections[]=['category'=>$homeCategory,'properties'=>$categoryRows];
              }
          }
-         $homeReviews=$pdo->query("SELECT r.rating,r.body,r.created_at,u.username,p.title AS property_title FROM reviews r JOIN users u ON u.id=r.guest_user_id JOIN properties p ON p.id=r.property_id WHERE r.status='approved' AND r.body IS NOT NULL AND TRIM(r.body)<>'' AND p.status='published' ORDER BY r.created_at DESC,r.id DESC LIMIT 6")->fetchAll(PDO::FETCH_ASSOC);
+         foreach($homeCategoryCollections as &$homeCategoryCollection){
+             $homeCategoryCollection['properties']=\App\Core\ContentTranslator::apply($pdo,$homeCategoryCollection['properties'],'property',$locale);
+         }unset($homeCategoryCollection);
+         $homeReviews=$pdo->query("SELECT r.rating,r.body,r.created_at,u.username,p.id AS id,p.title AS title FROM reviews r JOIN users u ON u.id=r.guest_user_id JOIN properties p ON p.id=r.property_id WHERE r.status='approved' AND r.body IS NOT NULL AND TRIM(r.body)<>'' AND p.status='published' ORDER BY r.created_at DESC,r.id DESC LIMIT 6")->fetchAll(PDO::FETCH_ASSOC);
+          $homeReviews=\App\Core\ContentTranslator::apply($pdo,$homeReviews,'property',$locale);
+          foreach($homeReviews as &$homeReview){$homeReview['property_title']=$homeReview['title'];}unset($homeReview);
      }else{
          $categories=$pdo->query('SELECT id,name,slug FROM property_categories WHERE is_active=1 ORDER BY sort_order,name LIMIT 8')->fetchAll();
+          $categories=\App\Core\ContentTranslator::apply($pdo,$categories,'property_category',$locale);
          $homeCategoryCollections=[];$homeReviews=[];
      }
      $homeCardPropertyIds=array_values(array_unique(array_merge(
@@ -651,9 +671,11 @@ $router->get('/', static function (): void {
     }
     villa_perf_mark('home:blog_query');
     $blogPosts=$pdo->query("SELECT id,title,slug,excerpt,featured_image,published_at FROM blog_posts WHERE status='published' AND (published_at IS NULL OR published_at<=NOW()) ORDER BY COALESCE(published_at,created_at) DESC,id DESC LIMIT 12")->fetchAll(PDO::FETCH_ASSOC);
+     $blogPosts=\App\Core\ContentTranslator::apply($pdo,$blogPosts,'blog_post',$locale);
     $homeSections=[];foreach($pdo->query('SELECT * FROM homepage_sections ORDER BY sort_order,id')->fetchAll() as $section){$homeSections[$section['section_key']]=$section;}
     villa_perf_mark('home:countries_query');
     $locationCountries=$pdo->query("SELECT id,name FROM locations WHERE location_type='country' AND is_active=1 ORDER BY sort_order,name")->fetchAll();
+     $locationCountries=\App\Core\ContentTranslator::apply($pdo,$locationCountries,'location',$locale);
      villa_perf_mark('home:theme_render');
     ThemeManager::render('landing.php', get_defined_vars());
 });
@@ -663,14 +685,13 @@ $router->get('/konaklamalar', static function (): void {
     $user = Auth::user();
     $locale = Translator::locale();
     $mode = (string)($pdo->query("SELECT setting_value FROM settings WHERE setting_key='app.mode' LIMIT 1")->fetchColumn() ?: 'single_vendor');
-    $contentStmt = $pdo->prepare('SELECT content_key,content_value FROM site_content WHERE language_code=?');
-    $contentStmt->execute([$locale]);
-    $content = $contentStmt->fetchAll(PDO::FETCH_KEY_PAIR);
+    $content = villa_site_content($pdo,$locale);
     $navigation = villa_navigation_tree($pdo,'header',$locale);
     $footerNavigation = villa_navigation_tree($pdo,'footer',$locale);
     $categories = $pdo->query('SELECT id,name,slug FROM property_categories WHERE is_active=1 ORDER BY sort_order,name')->fetchAll();
+     $categories=\App\Core\ContentTranslator::apply($pdo,$categories,'property_category',$locale);
     $locationCountries=$pdo->query("SELECT id,name FROM locations WHERE location_type='country' AND is_active=1 ORDER BY sort_order,name")->fetchAll();
-    $locationChildren=static function(int $parent) use($pdo): array {if(!$parent)return [];$s=$pdo->prepare('SELECT id,name FROM locations WHERE parent_id=? AND is_active=1 ORDER BY sort_order,name');$s->execute([$parent]);return $s->fetchAll();};    $locationCountryId=max(0,(int)($_GET['country_id']??0));$locationCityId=max(0,(int)($_GET['city_id']??0));$locationDistrictId=max(0,(int)($_GET['district_id']??0));$locationNeighborhoodId=max(0,(int)($_GET['neighborhood_id']??0));
+    $locationChildren=static function(int $parent) use($pdo,$locale): array {if(!$parent)return [];$s=$pdo->prepare('SELECT id,name FROM locations WHERE parent_id=? AND is_active=1 ORDER BY sort_order,name');$s->execute([$parent]);return \App\Core\ContentTranslator::apply($pdo,$s->fetchAll(),'location',$locale);};    $locationCountryId=max(0,(int)($_GET['country_id']??0));$locationCityId=max(0,(int)($_GET['city_id']??0));$locationDistrictId=max(0,(int)($_GET['district_id']??0));$locationNeighborhoodId=max(0,(int)($_GET['neighborhood_id']??0));
     $selectedLocationId=max(0,(int)($_GET['location_id']??0));
     if($selectedLocationId>0){
         $selectedStmt=$pdo->prepare('SELECT location_type FROM locations WHERE id=? AND is_active=1 LIMIT 1');
@@ -710,7 +731,7 @@ $router->get('/konaklamalar', static function (): void {
     $sql = "SELECT p.*, (SELECT pm.file_path FROM property_media pm WHERE pm.property_id=p.id ORDER BY pm.is_cover DESC,pm.sort_order,pm.id LIMIT 1) AS cover_image,(SELECT COUNT(*) FROM bookings b WHERE b.property_id=p.id AND b.status NOT IN ('cancelled','rejected')) AS booking_count,(SELECT AVG(r.rating) FROM reviews r WHERE r.property_id=p.id AND r.status='approved') AS rating_average,(SELECT COUNT(*) FROM reviews r WHERE r.property_id=p.id AND r.status='approved') AS rating_count FROM properties p WHERE p.status='published'";
     $params = [];
     if ($city !== '') { $sql .= ' AND (p.city LIKE ? OR p.district LIKE ? OR p.country LIKE ?)'; $like='%'.$city.'%'; array_push($params,$like,$like,$like); }
-    if ($villaNameQuery !== '') { $sql .= ' AND p.title LIKE ?'; $params[]='%'.$villaNameQuery.'%'; }
+    if ($villaNameQuery !== '') { $sql .= " AND (p.title LIKE ? OR EXISTS (SELECT 1 FROM content_translations ct WHERE ct.entity_type='property' AND ct.entity_id=p.id AND ct.language_code=? AND ct.field_key='title' AND ct.translation_value LIKE ?))"; $params[]='%'.$villaNameQuery.'%';$params[]=$locale;$params[]='%'.$villaNameQuery.'%'; }
     if($locationCountryId>0){$sql.=' AND p.location_country_id=?';$params[]=$locationCountryId;}
     if($locationCityId>0){$sql.=' AND p.location_city_id=?';$params[]=$locationCityId;}
     if($locationDistrictId>0){$sql.=' AND p.location_district_id=?';$params[]=$locationDistrictId;}
@@ -734,6 +755,7 @@ $router->get('/konaklamalar', static function (): void {
     $perPage=12;$totalPages=max(1,(int)ceil($totalProperties/$perPage));$currentPage=min($totalPages,max(1,(int)($_GET['page']??1)));
     $sql .= ' ORDER BY ' . $orderBy . ' LIMIT ' . $perPage . ' OFFSET ' . (($currentPage-1)*$perPage);
     $stmt=$pdo->prepare($sql); $stmt->execute($params); $properties=$stmt->fetchAll();
+     $properties=\App\Core\ContentTranslator::apply($pdo,$properties,'property',$locale);
     $listingCardImages=[];$listingIds=array_map(static fn(array $p):int=>(int)$p['id'],$properties);
     if($listingIds){$marks=implode(',',array_fill(0,count($listingIds),'?'));$media=$pdo->prepare("SELECT property_id,file_path FROM property_media WHERE property_id IN ($marks) ORDER BY property_id,is_cover DESC,sort_order,id");$media->execute($listingIds);foreach($media->fetchAll() as $m){$pid=(int)$m['property_id'];if(count($listingCardImages[$pid]??[])<4)$listingCardImages[$pid][]=$m['file_path'];}}
     $favoritePropertyIds=[];
@@ -744,10 +766,10 @@ $router->get('/konaklamalar', static function (): void {
 
 $router->get('/destinasyonlar', static function (): void {
     $pdo=Database::connection();$user=Auth::user();$locale=Translator::locale();
-    $contentStmt=$pdo->prepare('SELECT content_key,content_value FROM site_content WHERE language_code=?');$contentStmt->execute([$locale]);$content=$contentStmt->fetchAll(PDO::FETCH_KEY_PAIR);
+    $content=villa_site_content($pdo,$locale);
     $navigation=villa_navigation_tree($pdo,'header',$locale);$footerNavigation=villa_navigation_tree($pdo,'footer',$locale);
     $destinationsSql = "SELECT l.id AS location_id,l.name AS city,COUNT(DISTINCT p.id) AS property_count,(SELECT pm.file_path FROM property_media pm JOIN properties p2 ON p2.id=pm.property_id WHERE p2.status='published' AND p2.location_city_id=l.id ORDER BY pm.is_cover DESC,pm.sort_order,pm.id LIMIT 1) AS cover_image FROM locations l JOIN properties p ON p.location_city_id=l.id AND p.status='published' WHERE l.location_type='city' AND l.is_active=1 GROUP BY l.id,l.name,l.sort_order ORDER BY property_count DESC,l.sort_order,l.name";
-    $destinations = $pdo->query($destinationsSql)->fetchAll();
+    $destinations = \App\Core\ContentTranslator::apply($pdo,$pdo->query($destinationsSql)->fetchAll(),'location',$locale);
     
     $mode=(string)($pdo->query("SELECT setting_value FROM settings WHERE setting_key='app.mode' LIMIT 1")->fetchColumn() ?: 'single_vendor');
     $user=Auth::user();
@@ -764,12 +786,13 @@ $router->get('/api/villas/suggest', static function (): void {
         return;
     }
     $pdo = Database::connection();
+    $locale=Translator::locale();
     $like = '%' . $term . '%';
-    $stmt = $pdo->prepare("SELECT p.title,p.slug,p.city,p.district,p.base_nightly_price,p.max_guests,
+    $stmt = $pdo->prepare("SELECT p.id,p.title,p.slug,p.city,p.district,p.base_nightly_price,p.max_guests,
         (SELECT pm.file_path FROM property_media pm WHERE pm.property_id=p.id ORDER BY pm.is_cover DESC,pm.sort_order,pm.id LIMIT 1) AS cover_image
         FROM properties p
         WHERE p.status='published'
-          AND (p.title LIKE ? OR p.district LIKE ? OR p.city LIKE ?)
+          AND (p.title LIKE ? OR p.district LIKE ? OR p.city LIKE ? OR EXISTS (SELECT 1 FROM content_translations ct WHERE ct.entity_type='property' AND ct.entity_id=p.id AND ct.language_code=? AND ct.field_key='title' AND ct.translation_value LIKE ?))
         ORDER BY
           CASE
             WHEN p.district LIKE ? THEN 0
@@ -779,9 +802,10 @@ $router->get('/api/villas/suggest', static function (): void {
           END,
           p.title ASC,p.id ASC
         LIMIT 15");
-    $stmt->execute([$like, $like, $like, $like, $like, $like]);
+    $stmt->execute([$like,$like,$like,$locale,$like,$like,$like,$like]);
+    $suggestions=\App\Core\ContentTranslator::apply($pdo,$stmt->fetchAll(PDO::FETCH_ASSOC),'property',$locale);
     $items = [];
-    foreach ($stmt->fetchAll(PDO::FETCH_ASSOC) as $property) {
+    foreach ($suggestions as $property) {
         $image = trim((string)($property['cover_image'] ?? ''));
         if ($image !== '' && !preg_match('~^https?://~i', $image)) {
             $image = '/' . ltrim($image, '/');
@@ -805,12 +829,12 @@ $router->get('/villa/{slug}', static function (array $params): void {
     $stmt->execute([$params['slug'] ?? '']);
     $property=$stmt->fetch();
     if (!$property) { http_response_code(404); echo 'Konaklama bulunamadı.'; return; }
+    $locale=Translator::locale();
+    $property=\App\Core\ContentTranslator::apply($pdo,[$property],'property',$locale)[0];
     $media=$pdo->prepare('SELECT file_path,alt_text,is_cover FROM property_media WHERE property_id=? ORDER BY is_cover DESC,sort_order,id');
     $media->execute([(int)$property['id']]); $property['images']=$media->fetchAll();
-    $amenityStmt=$pdo->prepare('SELECT a.name,a.icon FROM amenities a JOIN property_amenities pa ON pa.amenity_id=a.id WHERE pa.property_id=? AND a.is_active=1 ORDER BY a.sort_order,a.name');$amenityStmt->execute([(int)$property['id']]);$propertyAmenities=$amenityStmt->fetchAll();
-    $locale = Translator::locale();
-    $contentStmt=$pdo->prepare('SELECT content_key,content_value FROM site_content WHERE language_code=?');
-    $contentStmt->execute([$locale]); $content=$contentStmt->fetchAll(PDO::FETCH_KEY_PAIR);
+    $amenityStmt=$pdo->prepare('SELECT a.id,a.name,a.icon FROM amenities a JOIN property_amenities pa ON pa.amenity_id=a.id WHERE pa.property_id=? AND a.is_active=1 ORDER BY a.sort_order,a.name');$amenityStmt->execute([(int)$property['id']]);$propertyAmenities=\App\Core\ContentTranslator::apply($pdo,$amenityStmt->fetchAll(),'amenity',$locale);
+    $content=villa_site_content($pdo,$locale);
     $navigation=villa_navigation_tree($pdo,'header',$locale);
     $footerNavigation=villa_navigation_tree($pdo,'footer',$locale);
     $mode=(string)($pdo->query("SELECT setting_value FROM settings WHERE setting_key='app.mode' LIMIT 1")->fetchColumn() ?: 'single_vendor');
@@ -1022,7 +1046,10 @@ $router->post('/villa/{slug}/reserve', static function (array $params): void {
         }
         $financial=$pdo->prepare("INSERT INTO booking_financials(booking_id,gross_amount,platform_fee,vendor_net_amount,currency,payout_status,created_at) VALUES(?,?,?,?,?,'unpaid',NOW())");$financial->execute([$bookingId,$total,$platformFee,$vendorNet,$current['currency']]);
         $notice=$pdo->prepare("INSERT INTO notifications(user_id,notification_type,title,body,created_at) VALUES(?,'booking.created','Rezervasyonunuz oluşturuldu',?,NOW())");$notice->execute([$userId,'Rezervasyon kodunuz: '.$code]);
-        \App\Core\EmailService::enqueue($pdo,$email,'Rezervasyon talebiniz alındı','<h2>Rezervasyon talebiniz alındı</h2><p>Merhaba '.e($fullName).',</p><p><strong>'.e($property['title']).'</strong> için rezervasyon talebiniz oluşturuldu.</p><p>Rezervasyon kodunuz: <strong>'.e($code).'</strong></p><p>Giriş: '.e($inRaw).' · Çıkış: '.e($outRaw).'</p><p>Toplam: '.e(number_format($total,2,',','.')).' '.e($current['currency']).'</p><p><a href="'.e(app_absolute_url('/checkout/'.rawurlencode($code))).'">Rezervasyon ayrıntılarını görüntüle</a></p>','Rezervasyon talebiniz alındı. Kod: '.$code,'booking.created.'.$bookingId);
+         $emailProperty=\App\Core\ContentTranslator::apply($pdo,[$property],'property',Translator::locale())[0];
+         $checkoutUrl=app_absolute_url('/checkout/'.rawurlencode($code));
+         $emailVars=['name'=>e($fullName),'property'=>e((string)$emailProperty['title']),'code'=>e($code),'checkin'=>e($inRaw),'checkout'=>e($outRaw),'total'=>e(number_format($total,2,',','.')),'currency'=>e((string)$current['currency']),'checkout_url'=>e($checkoutUrl)];
+         \App\Core\EmailService::enqueue($pdo,$email,Translator::get('email.booking.created.subject'),Translator::get('email.booking.created.html',$emailVars),Translator::get('email.booking.created.text',['name'=>$fullName,'property'=>(string)$emailProperty['title'],'code'=>$code,'checkin'=>$inRaw,'checkout'=>$outRaw,'total'=>number_format($total,2,',','.'),'currency'=>(string)$current['currency'],'checkout_url'=>$checkoutUrl]),'booking.created.'.$bookingId);
         $pdo->commit();
         if($createNewAccount)Auth::attempt($email,$password);
         if($autoStartIyzico){
@@ -1092,9 +1119,7 @@ $router->get('/checkout/{bookingCode}', static function(array $params):void {
     $locale = Translator::locale();
     $navigation=villa_navigation_tree($pdo,'header',$locale);
     $footerNavigation=villa_navigation_tree($pdo,'footer',$locale);
-    $contentStmt=$pdo->prepare('SELECT content_key,content_value FROM site_content WHERE language_code=?');
-    $contentStmt->execute([$locale]);
-    $content=$contentStmt->fetchAll(PDO::FETCH_KEY_PAIR);
+    $content=villa_site_content($pdo,$locale);
     $siteName=(string)($content['site_name']??'VillaStay');
     ThemeManager::render('checkout.php',get_defined_vars());
 });
@@ -1457,8 +1482,7 @@ foreach(['success','failed','review'] as $paymentResultType){
         $locale = Translator::locale();
         $navigation=villa_navigation_tree($pdo,'header',$locale);
         $footerNavigation=villa_navigation_tree($pdo,'footer',$locale);
-        $contentStmt=$pdo->prepare('SELECT content_key,content_value FROM site_content WHERE language_code=?');
-        $contentStmt->execute([$locale]);$content=$contentStmt->fetchAll(PDO::FETCH_KEY_PAIR);
+        $content=villa_site_content($pdo,$locale);
         $siteName=(string)($content['site_name']??'VillaStay');
         $brandSettings=ThemeManager::brandSettings(ThemeManager::activeSlug());
         ThemeManager::renderTemplate('templates/pages/payment-result.php',get_defined_vars());
@@ -1548,7 +1572,7 @@ $router->post('/account/messages/send', static function (): void {
     $save=$pdo->prepare('INSERT INTO messages(conversation_key,sender_user_id,recipient_user_id,booking_id,body,created_at) VALUES(?,?,?,?,?,NOW())');$save->execute([$key,$currentId,$recipientId,$bookingId,$body]);
     $notice=$pdo->prepare("INSERT INTO notifications(user_id,notification_type,title,body,created_at) VALUES(?,'message.received','Yeni mesaj',?,NOW())");$notice->execute([$recipientId,'Rezervasyon görüşmesinde yeni bir mesajınız var.']);
     $recipientStmt=$pdo->prepare('SELECT email FROM users WHERE id=? LIMIT 1');$recipientStmt->execute([$recipientId]);$recipientEmail=(string)($recipientStmt->fetchColumn()?:'');
-    if($recipientEmail!=='')\App\Core\EmailService::enqueue($pdo,$recipientEmail,'Rezervasyon görüşmesinde yeni mesajınız var','<p>Rezervasyon görüşmesinde yeni bir mesajınız var.</p><p><a href="'.e(app_absolute_url('/account/messages/'.$bookingId)).'">Mesajı görüntüle</a></p>','Rezervasyon görüşmesinde yeni mesajınız var.','message.received.'.$bookingId.'.'.(int)$pdo->lastInsertId());
+     if($recipientEmail!==''){$messagesUrl=app_absolute_url('/account/messages/'.$bookingId);\App\Core\EmailService::enqueue($pdo,$recipientEmail,Translator::get('email.message.received.subject'),Translator::get('email.message.received.html',['messages_url'=>e($messagesUrl)]),Translator::get('email.message.received.text',['messages_url'=>$messagesUrl]),'message.received.'.$bookingId.'.'.(int)$pdo->lastInsertId());}
     redirect('/account/messages/'.$bookingId);
 });
 
@@ -1557,9 +1581,7 @@ $router->get('/karsilastir', static function (): void {
     $pdo = Database::connection();
     $user = Auth::user();
     $locale = Translator::locale();
-    $contentStmt = $pdo->prepare('SELECT content_key,content_value FROM site_content WHERE language_code=?');
-    $contentStmt->execute([$locale]);
-    $content = $contentStmt->fetchAll(PDO::FETCH_KEY_PAIR);
+    $content = villa_site_content($pdo,$locale);
     $navigation = villa_navigation_tree($pdo, 'header', $locale);
     $footerNavigation = villa_navigation_tree($pdo, 'footer', $locale);
     $compareIds = array_values(array_unique(array_filter(array_map('intval', explode(',', (string)($_GET['ids'] ?? ''))), static fn(int $id): bool => $id > 0)));
@@ -1731,7 +1753,7 @@ $router->post('/account/profile', static function (): void {
             $insert=$pdo->prepare("INSERT INTO account_security_tokens(user_id,purpose,token_hash,target_email,expires_at,created_at) VALUES(?,'email_change',?,?,DATE_ADD(NOW(),INTERVAL 60 MINUTE),NOW())");
             $insert->execute([(int)$user['id'],$hash,$newEmail]);
             $url=app_absolute_url('/account/email/verify?token='.$token);
-            \App\Core\EmailService::enqueue($pdo,$newEmail,'E-posta adresinizi doğrulayın','<p>E-posta adresinizi değiştirmek için aşağıdaki bağlantıyı kullanın. Bağlantı 60 dakika geçerlidir.</p><p><a href="'.e($url).'">E-posta adresimi doğrula</a></p>','E-posta adresinizi doğrulamak için: '.$url,'account.email.verify.'.(int)$user['id'].'.'.$hash);
+             \App\Core\EmailService::enqueue($pdo,$newEmail,Translator::get('email.account.verify.subject'),Translator::get('email.account.verify.html',['verify_url'=>e($url)]),Translator::get('email.account.verify.text',['verify_url'=>$url]),'account.email.verify.'.(int)$user['id'].'.'.$hash);
             $_SESSION['villa_profile_notice']='Profiliniz güncellendi. Yeni e-posta adresiniz, gönderilen doğrulama bağlantısını açana kadar değiştirilmeyecek.';
         }else{
             $_SESSION['villa_profile_notice']='Profil bilgileriniz güncellendi.';
@@ -1788,7 +1810,7 @@ $router->post('/forgot-password', static function (): void {
                 $pdo->prepare("UPDATE account_security_tokens SET used_at=NOW() WHERE user_id=? AND purpose='password_reset' AND used_at IS NULL")->execute([(int)$account['id']]);
                 $insert=$pdo->prepare("INSERT INTO account_security_tokens(user_id,purpose,token_hash,expires_at,created_at) VALUES(?,'password_reset',?,DATE_ADD(NOW(),INTERVAL 60 MINUTE),NOW())");$insert->execute([(int)$account['id'],$hash]);
                 $url=app_absolute_url('/reset-password?token='.$token);
-                \App\Core\EmailService::enqueue($pdo,(string)$account['email'],'Şifre yenileme bağlantınız','<p>Şifrenizi yenilemek için aşağıdaki bağlantıyı kullanın. Bağlantı 60 dakika geçerlidir ve yalnızca bir kez kullanılabilir.</p><p><a href="'.e($url).'">Yeni şifre belirle</a></p><p>Bu isteği siz yapmadıysanız bu e-postayı dikkate almayın.</p>','Şifrenizi yenilemek için (60 dakika geçerli): '.$url,'account.password.reset.'.(int)$account['id'].'.'.$hash);
+                 \App\Core\EmailService::enqueue($pdo,(string)$account['email'],Translator::get('email.password.reset.subject'),Translator::get('email.password.reset.html',['reset_url'=>e($url)]),Translator::get('email.password.reset.text',['reset_url'=>$url]),'account.password.reset.'.(int)$account['id'].'.'.$hash);
             }
         }
     }
@@ -2145,7 +2167,8 @@ $router->post('/vendor/properties/save', static function (): void {
     $slug=trim(strtolower(preg_replace('/[^a-z0-9-]+/','-',$slug)),'-');if($slug==='')$slug='villa-'.bin2hex(random_bytes(4));
     $id=(int)($_POST['id']??0);$status=$vendor['status']==='approved'&&($_POST['status']??'')==='published'?'published':'draft';
     $data=[$title,$slug,trim((string)($_POST['summary']??'')),trim((string)($_POST['description']??'')),trim((string)($_POST['country']??'Türkiye')),trim((string)($_POST['city']??'')),trim((string)($_POST['district']??'')),trim((string)($_POST['address']??'')),max(1,(int)($_POST['max_guests']??1)),max(0,(int)($_POST['bedrooms']??0)),max(0,(int)($_POST['beds']??0)),max(0,(float)($_POST['bathrooms']??1)),max(0,(float)($_POST['base_nightly_price']??0)),max(0,(float)($_POST['weekend_nightly_price']??0)),max(0,(float)($_POST['cleaning_fee']??0)),strtoupper(substr(preg_replace('/[^A-Za-z]/','',(string)($_POST['currency']??'TRY')),0,3))?:'TRY',$status,($_POST['booking_type']??'')==='instant'?'instant':'request',((int)($_POST['category_id']??0)>0?(int)$_POST['category_id']:null)];
-    if($id){$owned=$pdo->prepare('SELECT id FROM properties WHERE id=? AND vendor_id=?');$owned->execute([$id,(int)$vendor['id']]);if(!$owned->fetchColumn()){http_response_code(404);exit('İlan bulunamadı.');}$s=$pdo->prepare('UPDATE properties SET title=?,slug=?,summary=?,description=?,country=?,city=?,district=?,address=?,max_guests=?,bedrooms=?,beds=?,bathrooms=?,base_nightly_price=?,weekend_nightly_price=?,cleaning_fee=?,currency=?,status=?,booking_type=?,category_id=?,updated_at=NOW() WHERE id=? AND vendor_id=?');$s->execute([...$data,$id,(int)$vendor['id']]);}    else{$s=$pdo->prepare('INSERT INTO properties(vendor_id,title,slug,summary,description,country,city,district,address,max_guests,bedrooms,beds,bathrooms,base_nightly_price,weekend_nightly_price,cleaning_fee,currency,status,booking_type,category_id,created_at) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,NOW())');$s->execute([(int)$vendor['id'],...$data]);$id=(int)$pdo->lastInsertId();}
+    $metaTitle=trim((string)($_POST['meta_title']??''));$metaDescription=trim((string)($_POST['meta_description']??''));if(mb_strlen($metaTitle)>220||mb_strlen($metaDescription)>320){http_response_code(422);exit('SEO alanları çok uzun.');}$data[]=$metaTitle!==''?$metaTitle:null;$data[]=$metaDescription!==''?$metaDescription:null;
+    if($id){$owned=$pdo->prepare('SELECT id FROM properties WHERE id=? AND vendor_id=?');$owned->execute([$id,(int)$vendor['id']]);if(!$owned->fetchColumn()){http_response_code(404);exit('İlan bulunamadı.');}$s=$pdo->prepare('UPDATE properties SET title=?,slug=?,summary=?,description=?,country=?,city=?,district=?,address=?,max_guests=?,bedrooms=?,beds=?,bathrooms=?,base_nightly_price=?,weekend_nightly_price=?,cleaning_fee=?,currency=?,status=?,booking_type=?,category_id=?,meta_title=?,meta_description=?,updated_at=NOW() WHERE id=? AND vendor_id=?');$s->execute([...$data,$id,(int)$vendor['id']]);}    else{$s=$pdo->prepare('INSERT INTO properties(vendor_id,title,slug,summary,description,country,city,district,address,max_guests,bedrooms,beds,bathrooms,base_nightly_price,weekend_nightly_price,cleaning_fee,currency,status,booking_type,category_id,meta_title,meta_description,created_at) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,NOW())');$s->execute([(int)$vendor['id'],...$data]);$id=(int)$pdo->lastInsertId();}
     $latitudeRaw=trim((string)($_POST['latitude']??''));$longitudeRaw=trim((string)($_POST['longitude']??''));
     if(($latitudeRaw==='')!==($longitudeRaw==='')){http_response_code(422);exit('Harita için enlem ve boylam birlikte girilmelidir.');}
     $latitude=$latitudeRaw===''?null:(is_numeric($latitudeRaw)?(float)$latitudeRaw:null);$longitude=$longitudeRaw===''?null:(is_numeric($longitudeRaw)?(float)$longitudeRaw:null);
@@ -2477,6 +2500,8 @@ $router->post('/admin/properties/save', static function (): void {
     }
     $slug = trim(strtolower(preg_replace('/[^a-z0-9-]+/', '-', $slug)), '-');
     if ($slug === '') $slug = 'villa-' . bin2hex(random_bytes(4));
+    $metaTitle=trim((string)($_POST['meta_title']??''));$metaDescription=trim((string)($_POST['meta_description']??''));
+    if(mb_strlen($metaTitle)>220||mb_strlen($metaDescription)>320){http_response_code(422);exit('SEO başlığı veya açıklaması izin verilen uzunluğu aşıyor.');}
     $id = (int)($_POST['id'] ?? 0);
     $status = in_array($_POST['status'] ?? '', ['draft','published','archived'], true) ? $_POST['status'] : 'draft';
     $bookingType = ($_POST['booking_type'] ?? '') === 'instant' ? 'instant' : 'request';
@@ -2487,7 +2512,8 @@ $router->post('/admin/properties/save', static function (): void {
         max(0,min(100,(int)($_POST['bedrooms'] ?? 0))), max(0,min(100,(int)($_POST['beds'] ?? 0))),
         max(0,(float)($_POST['bathrooms'] ?? 1)), max(0,(float)($_POST['base_nightly_price'] ?? 0)), max(0,(float)($_POST['weekend_nightly_price'] ?? 0)), max(0,(float)($_POST['cleaning_fee'] ?? 0)),
         strtoupper(substr(preg_replace('/[^A-Za-z]/','',(string)($_POST['currency'] ?? 'TRY')),0,3)),
-        $status, $bookingType, ((int)($_POST['category_id'] ?? 0) > 0 ? (int)$_POST['category_id'] : null)
+        $status, $bookingType, ((int)($_POST['category_id'] ?? 0) > 0 ? (int)$_POST['category_id'] : null),
+        ($metaTitle!==''?$metaTitle:null),($metaDescription!==''?$metaDescription:null)
     ];
     if ($data[15] === '') $data[15] = 'TRY';
     $check = $pdo->prepare('SELECT id FROM properties WHERE slug=? AND id<>? LIMIT 1');
@@ -2496,10 +2522,10 @@ $router->post('/admin/properties/save', static function (): void {
     $data[1] = $slug;
     if ($id > 0) {
         $data[] = $id;
-        $stmt = $pdo->prepare('UPDATE properties SET title=?,slug=?,summary=?,description=?,country=?,city=?,district=?,address=?,max_guests=?,bedrooms=?,beds=?,bathrooms=?,base_nightly_price=?,weekend_nightly_price=?,cleaning_fee=?,currency=?,status=?,booking_type=?,category_id=?,updated_at=NOW() WHERE id=?');
+        $stmt = $pdo->prepare('UPDATE properties SET title=?,slug=?,summary=?,description=?,country=?,city=?,district=?,address=?,max_guests=?,bedrooms=?,beds=?,bathrooms=?,base_nightly_price=?,weekend_nightly_price=?,cleaning_fee=?,currency=?,status=?,booking_type=?,category_id=?,meta_title=?,meta_description=?,updated_at=NOW() WHERE id=?');
         $stmt->execute($data);
     } else {
-        $stmt = $pdo->prepare('INSERT INTO properties (title,slug,summary,description,country,city,district,address,max_guests,bedrooms,beds,bathrooms,base_nightly_price,weekend_nightly_price,cleaning_fee,currency,status,booking_type,category_id,created_at) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,NOW())');
+        $stmt = $pdo->prepare('INSERT INTO properties (title,slug,summary,description,country,city,district,address,max_guests,bedrooms,beds,bathrooms,base_nightly_price,weekend_nightly_price,cleaning_fee,currency,status,booking_type,category_id,meta_title,meta_description,created_at) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,NOW())');
         $stmt->execute($data);
         $id = (int)$pdo->lastInsertId();
     }
@@ -2687,8 +2713,9 @@ $router->get('/page/{slug}', static function (array $params): void {
     $pdo=Database::connection();
     $locale=Translator::locale();
     $s=$pdo->prepare("SELECT * FROM cms_pages WHERE slug=? AND language_code=? AND status='published' LIMIT 1");$s->execute([$params['slug'],$locale]);$page=$s->fetch();
+    if(!$page){$defaultLocale=(string)($pdo->query('SELECT code FROM languages WHERE is_default=1 AND is_active=1 LIMIT 1')->fetchColumn()?:'tr');if($locale!==$defaultLocale){$s->execute([$params['slug'],$defaultLocale]);$page=$s->fetch();}}
     if(!$page){http_response_code(404);echo 'Sayfa bulunamadı.';return;}
-    $contentStmt=$pdo->prepare('SELECT content_key,content_value FROM site_content WHERE language_code=?');$contentStmt->execute([$locale]);$content=$contentStmt->fetchAll(PDO::FETCH_KEY_PAIR);
+    $content=villa_site_content($pdo,$locale);
     $siteName=$content['site_name']??'VillaStay';
     $navigation=villa_navigation_tree($pdo,'header',$locale);
     $footerNavigation=villa_navigation_tree($pdo,'footer',$locale);
@@ -2696,6 +2723,7 @@ $router->get('/page/{slug}', static function (array $params): void {
     $user=Auth::user();
     $destinations=[];$featuredProperties=[];$latestProperties=[];$categories=[];$stylePhotos=[];
     $blogPosts=$pdo->query("SELECT id,title,slug,excerpt,featured_image,published_at FROM blog_posts WHERE status='published' AND (published_at IS NULL OR published_at<=NOW()) ORDER BY COALESCE(published_at,created_at) DESC,id DESC LIMIT 12")->fetchAll(PDO::FETCH_ASSOC);
+    $blogPosts=\App\Core\ContentTranslator::apply($pdo,$blogPosts,'blog_post',$locale);
     ThemeManager::render('page.php', get_defined_vars());
 });
 
@@ -2729,7 +2757,7 @@ $router->post('/contact', static function (): void {
 });
 $router->get('/blog', static function (): void {
     $pdo=Database::connection();$locale=Translator::locale();$user=Auth::user();
-    $contentStmt=$pdo->prepare('SELECT content_key,content_value FROM site_content WHERE language_code=?');$contentStmt->execute([$locale]);$content=$contentStmt->fetchAll(PDO::FETCH_KEY_PAIR);
+    $content=villa_site_content($pdo,$locale);
     $siteName=$content['site_name']??'VillaStay';$navigation=villa_navigation_tree($pdo,'header',$locale);$footerNavigation=villa_navigation_tree($pdo,'footer',$locale);
     $q=trim((string)($_GET['q']??''));$pageNo=max(1,(int)($_GET['page']??1));$perPage=9;
     $where=["p.status='published'","(p.published_at IS NULL OR p.published_at<=NOW())"];$params=[];
@@ -2749,12 +2777,22 @@ $router->get('/blog', static function (): void {
     if($categorySlug!==''){$where[]="EXISTS (SELECT 1 FROM blog_post_category pc JOIN blog_categories c ON c.id=pc.category_id WHERE pc.post_id=p.id AND c.slug=?)";$params[]=$categorySlug;}
     if($tagSlug!==''){$where[]="EXISTS (SELECT 1 FROM blog_post_tag pt JOIN blog_tags t ON t.id=pt.tag_id WHERE pt.post_id=p.id AND t.slug=?)";$params[]=$tagSlug;}
     $sqlWhere=implode(' AND ',$where);$count=$pdo->prepare("SELECT COUNT(*) FROM blog_posts p WHERE $sqlWhere");$count->execute($params);$totalPosts=(int)$count->fetchColumn();$totalPages=max(1,(int)ceil($totalPosts/$perPage));$pageNo=min($pageNo,$totalPages);$offset=($pageNo-1)*$perPage;
-    $stmt=$pdo->prepare("SELECT p.id,p.title,p.slug,p.excerpt,p.featured_image,p.featured_image_alt,p.published_at,p.created_at,p.reading_time,p.is_featured, (SELECT c.name FROM blog_post_category pc JOIN blog_categories c ON c.id=pc.category_id WHERE pc.post_id=p.id ORDER BY c.name LIMIT 1) AS category_name,(SELECT c.slug FROM blog_post_category pc JOIN blog_categories c ON c.id=pc.category_id WHERE pc.post_id=p.id ORDER BY c.name LIMIT 1) AS category_slug FROM blog_posts p WHERE $sqlWhere ORDER BY p.is_featured DESC,COALESCE(p.published_at,p.created_at) DESC,p.id DESC LIMIT $perPage OFFSET $offset");$stmt->execute($params);$posts=$stmt->fetchAll(PDO::FETCH_ASSOC);
+    $stmt=$pdo->prepare("SELECT p.id,p.title,p.slug,p.excerpt,p.featured_image,p.featured_image_alt,p.published_at,p.created_at,p.reading_time,p.is_featured, (SELECT c.id FROM blog_post_category pc JOIN blog_categories c ON c.id=pc.category_id WHERE pc.post_id=p.id ORDER BY c.name LIMIT 1) AS category_id,(SELECT c.name FROM blog_post_category pc JOIN blog_categories c ON c.id=pc.category_id WHERE pc.post_id=p.id ORDER BY c.name LIMIT 1) AS category_name,(SELECT c.slug FROM blog_post_category pc JOIN blog_categories c ON c.id=pc.category_id WHERE pc.post_id=p.id ORDER BY c.name LIMIT 1) AS category_slug FROM blog_posts p WHERE $sqlWhere ORDER BY p.is_featured DESC,COALESCE(p.published_at,p.created_at) DESC,p.id DESC LIMIT $perPage OFFSET $offset");$stmt->execute($params);$posts=$stmt->fetchAll(PDO::FETCH_ASSOC);
+    $posts=\App\Core\ContentTranslator::apply($pdo,$posts,'blog_post',$locale);
+    $postCategoryRefs=[];foreach($posts as $postRow){if(!empty($postRow['category_id']))$postCategoryRefs[]=['id'=>(int)$postRow['category_id'],'name'=>(string)$postRow['category_name']];}
+    $postCategoryRefs=\App\Core\ContentTranslator::apply($pdo,$postCategoryRefs,'blog_category',$locale);$translatedCategoryNames=[];foreach($postCategoryRefs as $categoryRef)$translatedCategoryNames[(int)$categoryRef['id']]=$categoryRef['name'];
+    foreach($posts as &$postRow){$postRow['category_name']=$translatedCategoryNames[(int)($postRow['category_id']??0)]??($postRow['category_name']??'');}unset($postRow);
     $blogCategories=$pdo->query("SELECT c.*,COUNT(p.id) AS post_count FROM blog_categories c LEFT JOIN blog_post_category pc ON pc.category_id=c.id LEFT JOIN blog_posts p ON p.id=pc.post_id AND p.status='published' AND (p.published_at IS NULL OR p.published_at<=NOW()) WHERE c.is_active=1 GROUP BY c.id ORDER BY c.sort_order,c.name")->fetchAll(PDO::FETCH_ASSOC);
+    $blogCategories=\App\Core\ContentTranslator::apply($pdo,$blogCategories,'blog_category',$locale);
     $popularPosts=$pdo->query("SELECT id,title,slug,featured_image,published_at,views_count FROM blog_posts WHERE status='published' AND (published_at IS NULL OR published_at<=NOW()) ORDER BY views_count DESC,COALESCE(published_at,created_at) DESC LIMIT 5")->fetchAll(PDO::FETCH_ASSOC);
+    $popularPosts=\App\Core\ContentTranslator::apply($pdo,$popularPosts,'blog_post',$locale);
     $blogTags=$pdo->query("SELECT t.*,COUNT(pt.post_id) AS post_count FROM blog_tags t LEFT JOIN blog_post_tag pt ON pt.tag_id=t.id LEFT JOIN blog_posts p ON p.id=pt.post_id AND p.status='published' AND (p.published_at IS NULL OR p.published_at<=NOW()) GROUP BY t.id ORDER BY post_count DESC,t.name LIMIT 18")->fetchAll(PDO::FETCH_ASSOC);
-    $archiveTitle=$tagSlug!==''?'Etiket: '.(string)($pdo->query("SELECT name FROM blog_tags WHERE slug=".$pdo->quote($tagSlug)." LIMIT 1")->fetchColumn()?:$tagSlug):($categorySlug!==''?'Kategori: '.(string)($pdo->query("SELECT name FROM blog_categories WHERE slug=".$pdo->quote($categorySlug)." LIMIT 1")->fetchColumn()?:$categorySlug):($q!==''?'Arama sonuçları':'Blog & Seyahat Rehberi'));
-    $archiveDescription='Villa tatili, destinasyonlar, seyahat önerileri ve konaklama rehberleri.';
+    $blogTags=\App\Core\ContentTranslator::apply($pdo,$blogTags,'blog_tag',$locale);
+    $archiveTitle=Translator::get('seo.blog.archive.title');
+    if($tagSlug!==''){foreach($blogTags as $tagRow){if((string)$tagRow['slug']===$tagSlug){$archiveTitle=Translator::get('seo.blog.tag.title',['name'=>(string)$tagRow['name']]);break;}}}
+    elseif($categorySlug!==''){foreach($blogCategories as $categoryRow){if((string)$categoryRow['slug']===$categorySlug){$archiveTitle=Translator::get('seo.blog.category.title',['name'=>(string)$categoryRow['name']]);break;}}}
+    elseif($q!=='')$archiveTitle=Translator::get('seo.blog.search.title');
+    $archiveDescription=Translator::get('seo.blog.archive.description');
     ThemeManager::render('blog-index.php',get_defined_vars());
 });
 $router->get('/blog/kategori/{slug}', static function (array $params): void {redirect('/blog?kategori='.rawurlencode((string)$params['slug']));});
@@ -2762,6 +2800,7 @@ $router->get('/blog/etiket/{slug}', static function (array $params): void {redir
 $router->get('/blog/{slug}', static function (array $params): void {
     $pdo=Database::connection();$s=$pdo->prepare("SELECT * FROM blog_posts WHERE slug=? AND status='published' AND (published_at IS NULL OR published_at<=NOW()) LIMIT 1");$s->execute([(string)$params['slug']]);$post=$s->fetch(PDO::FETCH_ASSOC);
     if(!$post){http_response_code(404);echo 'Yazı bulunamadı.';return;}
+    $locale=Translator::locale();$post=\App\Core\ContentTranslator::apply($pdo,[$post],'blog_post',$locale)[0];
     // Count a post view once per session (30-minute window) to avoid duplicate
     // writes from refreshes, repeated requests and crawler retries.
     $viewPostId=(int)$post['id'];
@@ -2779,13 +2818,18 @@ $router->get('/blog/{slug}', static function (array $params): void {
         $pdo->prepare('UPDATE blog_posts SET views_count=views_count+1 WHERE id=?')->execute([$viewPostId]);
     }
     $locale=Translator::locale();
-    $contentStmt=$pdo->prepare('SELECT content_key,content_value FROM site_content WHERE language_code=?');$contentStmt->execute([$locale]);$content=$contentStmt->fetchAll(PDO::FETCH_KEY_PAIR);$siteName=$content['site_name']??'VillaStay';
+    $content=villa_site_content($pdo,$locale);$siteName=$content['site_name']??'VillaStay';
     $navigation=villa_navigation_tree($pdo,'header',$locale);$footerNavigation=villa_navigation_tree($pdo,'footer',$locale);$user=Auth::user();
     $blogCategories=$pdo->query("SELECT c.*,COUNT(pc.post_id) AS post_count FROM blog_categories c LEFT JOIN blog_post_category pc ON pc.category_id=c.id LEFT JOIN blog_posts p ON p.id=pc.post_id AND p.status='published' AND (p.published_at IS NULL OR p.published_at<=NOW()) WHERE c.is_active=1 GROUP BY c.id ORDER BY c.sort_order,c.name")->fetchAll(PDO::FETCH_ASSOC);
+    $blogCategories=\App\Core\ContentTranslator::apply($pdo,$blogCategories,'blog_category',$locale);
     $popularPosts=$pdo->query("SELECT id,title,slug,featured_image,published_at,views_count FROM blog_posts WHERE status='published' AND id<>".(int)$post['id']." AND (published_at IS NULL OR published_at<=NOW()) ORDER BY views_count DESC,COALESCE(published_at,created_at) DESC LIMIT 5")->fetchAll(PDO::FETCH_ASSOC);
+    $popularPosts=\App\Core\ContentTranslator::apply($pdo,$popularPosts,'blog_post',$locale);
     $tagStmt=$pdo->prepare('SELECT t.* FROM blog_tags t JOIN blog_post_tag pt ON pt.tag_id=t.id WHERE pt.post_id=? ORDER BY t.name');$tagStmt->execute([(int)$post['id']]);$postTags=$tagStmt->fetchAll(PDO::FETCH_ASSOC);
+    $postTags=\App\Core\ContentTranslator::apply($pdo,$postTags,'blog_tag',$locale);
     $catStmt=$pdo->prepare('SELECT c.* FROM blog_categories c JOIN blog_post_category pc ON pc.category_id=c.id WHERE pc.post_id=? ORDER BY c.name');$catStmt->execute([(int)$post['id']]);$postCategories=$catStmt->fetchAll(PDO::FETCH_ASSOC);
+    $postCategories=\App\Core\ContentTranslator::apply($pdo,$postCategories,'blog_category',$locale);
     $relatedStmt=$pdo->prepare("SELECT DISTINCT p.id,p.title,p.slug,p.excerpt,p.featured_image,p.published_at FROM blog_posts p JOIN blog_post_category pc ON pc.post_id=p.id WHERE pc.category_id IN (SELECT category_id FROM blog_post_category WHERE post_id=?) AND p.id<>? AND p.status='published' AND (p.published_at IS NULL OR p.published_at<=NOW()) ORDER BY p.published_at DESC LIMIT 3");$relatedStmt->execute([(int)$post['id'],(int)$post['id']]);$relatedPosts=$relatedStmt->fetchAll(PDO::FETCH_ASSOC);
+    $relatedPosts=\App\Core\ContentTranslator::apply($pdo,$relatedPosts,'blog_post',$locale);
     $safeBlogHtml=static function(string $html):string{$html=strip_tags($html,'<p><h2><h3><h4><ul><ol><li><strong><b><em><i><blockquote><a><img><figure><figcaption><br><hr><table><thead><tbody><tr><th><td>');$html=preg_replace('/\\s+on[a-z]+\\s*=\\s*("[^"]*"|\\x27[^\\x27]*\\x27|[^\\s>]+)/i','',$html)??$html;$html=preg_replace('/(href|src)\\s*=\\s*(["\\x27])\\s*(?:javascript:|data:text\\/html)[^"\\x27]*\\2/i','$1="#"',$html)??$html;return $html;};
     $postHtml=$safeBlogHtml((string)$post['content']);
     $metaTitle=trim((string)($post['meta_title']??''))?:$post['title'];$metaDescription=trim((string)($post['meta_description']??''))?:mb_substr(trim(strip_tags((string)($post['excerpt']?:$post['content']))),0,160);
@@ -2855,15 +2899,72 @@ $router->post('/admin/messages/status', static function (): void {
 
 $router->get('/admin/translations', static function (): void {
     Auth::requireRole(['super_admin','admin']);$pdo=Database::connection();$languages=$pdo->query('SELECT code,name,is_default FROM languages WHERE is_active=1 ORDER BY is_default DESC,name')->fetchAll();
-    $locale=(string)($_GET['lang']??'tr');$codes=array_column($languages,'code');if(!in_array($locale,$codes,true))$locale='tr';
-    $s=$pdo->prepare('SELECT translation_key,translation_value FROM translations WHERE language_code=? ORDER BY translation_key');$s->execute([$locale]);$translations=$s->fetchAll(PDO::FETCH_KEY_PAIR);ThemeManager::renderTemplate('templates/pages/admin/translations.php', get_defined_vars());
+    $defaultLocale='tr';foreach($languages as $language){if((int)($language['is_default']??0)===1){$defaultLocale=(string)$language['code'];break;}}
+    $locale=(string)($_GET['lang']??$defaultLocale);$codes=array_column($languages,'code');if(!in_array($locale,$codes,true))$locale=$defaultLocale;
+    $s=$pdo->prepare('SELECT base.translation_key,COALESCE(target.translation_value,base.translation_value) AS translation_value FROM translations base LEFT JOIN translations target ON target.translation_key=base.translation_key AND target.language_code=? WHERE base.language_code=? ORDER BY base.translation_key');
+    $s->execute([$locale,$defaultLocale]);$translations=$s->fetchAll(PDO::FETCH_KEY_PAIR);ThemeManager::renderTemplate('templates/pages/admin/translations.php', get_defined_vars());
 });
 $router->post('/admin/translations', static function (): void {
-    Auth::requireRole(['super_admin','admin']);verify_csrf();$pdo=Database::connection();$locale=(string)($_POST['lang']??'tr');$check=$pdo->prepare('SELECT code FROM languages WHERE code=? AND is_active=1');$check->execute([$locale]);if(!$check->fetchColumn()){$locale='tr';}
+    Auth::requireRole(['super_admin','admin']);verify_csrf();$pdo=Database::connection();$defaultLocale=(string)($pdo->query('SELECT code FROM languages WHERE is_default=1 AND is_active=1 LIMIT 1')->fetchColumn()?:'tr');$locale=(string)($_POST['lang']??$defaultLocale);$check=$pdo->prepare('SELECT code FROM languages WHERE code=? AND is_active=1');$check->execute([$locale]);if(!$check->fetchColumn()){$locale=$defaultLocale;}
     $save=$pdo->prepare('INSERT INTO translations(language_code,translation_key,translation_value) VALUES(?,?,?) ON DUPLICATE KEY UPDATE translation_value=VALUES(translation_value)');
     foreach((array)($_POST['translations']??[]) as $key=>$value){$key=(string)$key;if(preg_match('/^[a-zA-Z0-9_.-]{1,190}$/',$key))$save->execute([$locale,$key,(string)$value]);}
     $newKey=trim((string)($_POST['new_key']??''));$newValue=(string)($_POST['new_value']??'');if($newKey!==''&&preg_match('/^[a-zA-Z0-9_.-]{1,190}$/',$newKey))$save->execute([$locale,$newKey,$newValue]);
     redirect('/admin/translations?lang='.rawurlencode($locale));
+});
+
+$router->get('/admin/content-translations', static function (): void {
+    Auth::requireRole(['super_admin','admin']);
+    $pdo=Database::connection();
+    $languages=$pdo->query('SELECT code,name,is_default FROM languages WHERE is_active=1 ORDER BY is_default DESC,name')->fetchAll(PDO::FETCH_ASSOC);
+    $defaultLocale='tr';foreach($languages as $language){if((int)$language['is_default']===1){$defaultLocale=(string)$language['code'];break;}}
+    $locale=(string)($_GET['lang']??$defaultLocale);$activeCodes=array_column($languages,'code');if(!in_array($locale,$activeCodes,true))$locale=$defaultLocale;
+    $type=(string)($_GET['type']??'property');
+    $entityMaps=[
+        'property'=>['table'=>'properties','label'=>'title','title'=>'Villa ilanı','fields'=>\App\Core\ContentTranslator::fields('property')],
+        'property_category'=>['table'=>'property_categories','label'=>'name','title'=>'Konaklama kategorisi','fields'=>\App\Core\ContentTranslator::fields('property_category')],
+        'blog_post'=>['table'=>'blog_posts','label'=>'title','title'=>'Blog yazısı','fields'=>\App\Core\ContentTranslator::fields('blog_post')],
+        'blog_category'=>['table'=>'blog_categories','label'=>'name','title'=>'Blog kategorisi','fields'=>\App\Core\ContentTranslator::fields('blog_category')],
+        'blog_tag'=>['table'=>'blog_tags','label'=>'name','title'=>'Blog etiketi','fields'=>\App\Core\ContentTranslator::fields('blog_tag')],
+        'amenity'=>['table'=>'amenities','label'=>'name','title'=>'Donanım ve olanak','fields'=>\App\Core\ContentTranslator::fields('amenity')],
+        'location'=>['table'=>'locations','label'=>'name','title'=>'Destinasyon ve konum','fields'=>\App\Core\ContentTranslator::fields('location')],
+    ];
+    if(!isset($entityMaps[$type]))$type='property';
+    $map=$entityMaps[$type];
+    $entities=$pdo->query('SELECT id,'.$map['label'].' AS label FROM '.$map['table'].' ORDER BY '.$map['label'].' LIMIT 500')->fetchAll(PDO::FETCH_ASSOC);
+    $entityId=max(0,(int)($_GET['id']??0));$entity=null;$values=[];
+    if($entityId>0){
+        $entityStmt=$pdo->prepare('SELECT * FROM '.$map['table'].' WHERE id=? LIMIT 1');$entityStmt->execute([$entityId]);$entity=$entityStmt->fetch(PDO::FETCH_ASSOC)?:null;
+        if($entity){$entity['label']=(string)($entity[$map['label']]??'');$valueStmt=$pdo->prepare('SELECT field_key,translation_value FROM content_translations WHERE entity_type=? AND entity_id=? AND language_code=?');$valueStmt->execute([$type,$entityId,$locale]);$values=$valueStmt->fetchAll(PDO::FETCH_KEY_PAIR);}
+        else $entityId=0;
+    }
+    ThemeManager::renderTemplate('templates/pages/admin/content-translations.php',get_defined_vars());
+});
+
+$router->post('/admin/content-translations', static function (): void {
+    Auth::requireRole(['super_admin','admin']);verify_csrf();
+    $pdo=Database::connection();
+    $type=(string)($_POST['type']??'');$entityId=(int)($_POST['entity_id']??0);$locale=(string)($_POST['lang']??'');
+    $maps=['property'=>['table'=>'properties'],'property_category'=>['table'=>'property_categories'],'blog_post'=>['table'=>'blog_posts'],'blog_category'=>['table'=>'blog_categories'],'blog_tag'=>['table'=>'blog_tags'],'amenity'=>['table'=>'amenities'],'location'=>['table'=>'locations']];
+    if(!isset($maps[$type])||$entityId<1){http_response_code(422);exit('Çeviri kaydı geçersiz.');}
+    $language=$pdo->prepare('SELECT code,is_default FROM languages WHERE code=? AND is_active=1 LIMIT 1');$language->execute([$locale]);$languageRow=$language->fetch(PDO::FETCH_ASSOC);
+    if(!$languageRow||(int)$languageRow['is_default']===1){http_response_code(422);exit('Varsayılan dilin içeriği ana kayıt üzerinden düzenlenmelidir.');}
+    $fields=\App\Core\ContentTranslator::fields($type);
+    $entity=$pdo->prepare('SELECT id FROM '.$maps[$type]['table'].' WHERE id=? LIMIT 1');$entity->execute([$entityId]);
+    if(!$entity->fetchColumn()){http_response_code(404);exit('Çevrilecek içerik bulunamadı.');}
+    $limits=['title'=>220,'summary'=>500,'description'=>100000,'name'=>190,'excerpt'=>3000,'content'=>1000000,'meta_title'=>220,'meta_description'=>320,'featured_image_alt'=>255];
+    $pdo->beginTransaction();
+    try{
+        $save=$pdo->prepare('INSERT INTO content_translations(entity_type,entity_id,language_code,field_key,translation_value,updated_at) VALUES(?,?,?,?,?,NOW()) ON DUPLICATE KEY UPDATE translation_value=VALUES(translation_value),updated_at=NOW()');
+        $delete=$pdo->prepare('DELETE FROM content_translations WHERE entity_type=? AND entity_id=? AND language_code=? AND field_key=?');
+        foreach($fields as $field){
+            $value=(string)($_POST['fields'][$field]??'');
+            if(mb_strlen($value)>($limits[$field]??100000)){throw new \InvalidArgumentException('Çeviri alanı izin verilen uzunluğu aşıyor: '.$field);}
+            if(trim($value)==='')$delete->execute([$type,$entityId,$locale,$field]);
+            else $save->execute([$type,$entityId,$locale,$field,$value]);
+        }
+        $pdo->commit();
+    }catch(Throwable $e){if($pdo->inTransaction())$pdo->rollBack();throw $e;}
+    redirect('/admin/content-translations?type='.rawurlencode($type).'&id='.$entityId.'&lang='.rawurlencode($locale));
 });
 
 $router->post('/admin/languages/save', static function (): void {
@@ -3545,9 +3646,7 @@ $router->get('/admin/content', static function (): void {
     if (!in_array($defaultLanguage, $activeLanguageCodes, true)) $defaultLanguage = (string)($activeLanguageCodes[0] ?? 'tr');
     $locale = trim((string)($_GET['lang'] ?? $defaultLanguage));
     if (!in_array($locale, $activeLanguageCodes, true)) $locale = $defaultLanguage;
-    $contentStmt = $pdo->prepare('SELECT content_key,content_value FROM site_content WHERE language_code=?');
-    $contentStmt->execute([$locale]);
-    $content = $contentStmt->fetchAll(PDO::FETCH_KEY_PAIR);
+    $content = villa_site_content($pdo,$locale);
     $contentFields = [
         'site_name'=>'Site adı',
         'home_eyebrow'=>'Ana sayfa kısa üst başlığı',

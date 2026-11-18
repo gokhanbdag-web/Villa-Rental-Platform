@@ -60,7 +60,7 @@ final class EmailService
     {
         $config = self::smtpConfig($pdo);
         if (!$config['enabled']) throw new \RuntimeException('SMTP e-posta gönderimi etkin değil.');
-        SmtpMailer::send($config, $recipient, 'Villa platformu SMTP test e-postası', '<p>SMTP bağlantınız başarıyla doğrulandı.</p><p>Villa platformu e-posta teslimat testi.</p>', "SMTP bağlantınız başarıyla doğrulandı.\nVilla platformu e-posta teslimat testi.");
+        SmtpMailer::send($config, $recipient, Translator::get('email.smtp.test.subject'), Translator::get('email.smtp.test.html'), Translator::get('email.smtp.test.text'));
     }
 
     public static function processPending(PDO $pdo, int $limit = 10): array
