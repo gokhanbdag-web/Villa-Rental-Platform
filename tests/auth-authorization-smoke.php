@@ -97,8 +97,8 @@ foreach ($cases as [$actorRole, $targetRole, $expected]) {
     }
 }
 
-$roleRouteStart = strpos($routesSource, "$router->post('/admin/users/role'");
-$roleRouteEnd = $roleRouteStart !== false ? strpos($routesSource, "$router->post('/admin/users/status'", $roleRouteStart) : false;
+$roleRouteStart = strpos($routesSource, "\\$router->post('/admin/users/role'");
+$roleRouteEnd = $roleRouteStart !== false ? strpos($routesSource, "\\$router->post('/admin/users/status'", $roleRouteStart) : false;
 $roleRoute = $roleRouteStart !== false && $roleRouteEnd !== false ? substr($routesSource, $roleRouteStart, $roleRouteEnd - $roleRouteStart) : '';
 if ($roleRoute === ''
     || strpos($roleRoute, "Auth::requireRole(['super_admin'])") === false
