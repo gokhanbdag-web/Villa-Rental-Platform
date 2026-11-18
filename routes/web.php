@@ -1126,6 +1126,66 @@ $router->post('/checkout/{bookingCode}/manual/notify', static function (array $p
     }
 });
 
+$router->post('/checkout/{bookingCode}/paytr/start', static function (array $params): void {
+    verify_csrf();
+    $user=Auth::user();if(!$user)redirect('/login');
+    $config=\\App\\Core\\PaymentGatewayConfig::forProvider('paytr');
+    if(empty($config['enabled'])||empty($config['configured'])){http_response_code(409);exit('PayTR ödeme altyapısı etkin değil veya mağaza bilgileri eksik.');}
+    $pdo=Database::connection();
+    $stmt=$pdo->prepare("SELECT b.*,p.title AS property_title,u.email AS account_email FROM bookings b JOIN properties p ON p.id=b.property_id JOIN users u ON u.id=b.guest_user_id WHERE b.booking_code=? AND b.guest_user_id=? LIMIT 1");
+    $stmt->execute([(string)($params['bookingCode']??''),(int)$user['id']]);$booking=$stmt->fetch(PDO::FETCH_ASSOC);
+    if(!$booking){http_response_code(404);exit('Rezervasyon bulunamadı.');}
+    if((string)$booking['status']!=='pending'){http_response_code(409);exit('Yalnızca ödeme bekleyen rezervasyonlar için ödeme başlatılabilir.');}
+    $currency=strtoupper((string)$booking['currency']);if($currency==='TRY'||$currency==='TL')$paytrCurrency='TL';else $paytrCurrency=$currency;
+    if(!in_array($paytrCurrency,['TL','USD','EUR','GBP'],true)){http_response_code(422);exit('PayTR bu rezervasyonun para birimini desteklemiyor.');}
+    $amount=number_format((float)$booking['total'],2,'.','');
+    if((float)$amount<=0){http_response_code(422);exit('Ödeme tutarı geçersiz.');}
+    $email=trim((string)($booking['guest_email']??$booking['account_email']??''));
+    if(!filter_var($email,FILTER_VALIDATE_EMAIL)){http_response_code(422);exit('Ödeme için geçerli bir e-posta adresi gereklidir.');}
+    $phone=preg_replace('/[^0-9+]/','',(string)($booking['guest_phone']??''))??'';
+    if(strlen(preg_replace('/\D/','',$phone)??'')<10){http_response_code(422);exit('Ödeme için geçerli telefon numarası gereklidir.');}
+    $oid='VR'.(int)$booking['id'].'-'.bin2hex(random_bytes(10));
+    $cents=(string)(int)round((float)$amount*100);
+    $basket=base64_encode(json_encode([[mb_substr((string)$booking['property_title'],0,100),$amount,1]],JSON_UNESCAPED_UNICODE|JSON_THROW_ON_ERROR));
+    try{
+        $okUrl=app_absolute_url('/checkout/'.rawurlencode((string)$booking['booking_code']).'?paytr=1');
+        $failUrl=app_absolute_url('/checkout/'.rawurlencode((string)$booking['booking_code']).'?payment=failed');
+        $notifyUrl=app_absolute_url('/payments/paytr/callback');
+    }catch(Throwable $e){http_response_code(503);exit('PayTR bildirimi için geçerli HTTPS site adresi gereklidir.');}
+    $testMode=($config['environment']??'sandbox')==='sandbox'?'1':'0';
+    $request=['merchant_oid'=>$oid,'user_ip'=>(string)($_SERVER['REMOTE_ADDR']??''),'email'=>$email,'payment_amount'=>$cents,'user_basket'=>$basket,'no_installment'=>'0','max_installment'=>'0','currency'=>$paytrCurrency,'test_mode'=>$testMode];
+    if(!filter_var($request['user_ip'],FILTER_VALIDATE_IP)){http_response_code(422);exit('Ödeme istemcisi IP adresi doğrulanamadı.');}
+    $reservation=\\App\\Core\\PaymentCheckoutGuard::reservePaytr($pdo,(int)$booking['id'],$oid,$amount,$currency,['merchant_oid'=>$oid,'environment'=>$config['environment']??'sandbox']);
+    $result=(string)($reservation['result']??'');
+    if($result==='already_paid'){http_response_code(409);exit('Bu rezervasyon için ödeme zaten doğrulanmış.');}
+    if($result==='booking_not_found'){http_response_code(404);exit('Rezervasyon bulunamadı.');}
+    if($result==='booking_not_pending'){http_response_code(409);exit('Rezervasyon artık ödeme beklemiyor.');}
+    if($result==='processing'||$result==='verification_required'){http_response_code(409);exit('Önceki PayTR oturumunun sonucu kesinleşmedi. Çift tahsilatı önlemek için yeni ödeme başlatılmadı.');}
+    if($result==='initializing'){http_response_code(409);exit('Ödeme oturumu hazırlanıyor. Birkaç saniye sonra tekrar deneyin.');}
+    if($result==='existing'){
+        $old=json_decode((string)($reservation['payment']['response_payload']??''),true);
+        if(is_array($old)&&str_starts_with((string)($old['iframe_url']??''),'https://www.paytr.com/odeme/guvenli/'))redirect('/checkout/'.rawurlencode((string)$booking['booking_code']).'?paytr=1');
+        http_response_code(409);exit('Mevcut PayTR ödeme oturumu doğrulanamadı.');
+    }
+    if($result!=='reserved'){http_response_code(409);exit('PayTR ödeme oturumu güvenli şekilde başlatılamadı.');}
+    $transactionId=(int)$reservation['transaction_id'];
+    try{
+        $payload=$request+['user_name'=>mb_substr((string)$booking['guest_name'],0,60),'user_address'=>mb_substr(trim((string)($booking['guest_address']??'Türkiye')),0,400),'user_phone'=>$phone,'merchant_ok_url'=>$okUrl,'merchant_fail_url'=>$failUrl,'merchant_notify_url'=>$notifyUrl,'timeout_limit'=>'30','debug_on'=>$testMode,'lang'=>'tr'];
+        $token=\\App\\Core\\PaytrApiClient::getIframeToken($config,$payload);
+        $stored=json_encode(['merchant_oid'=>$oid,'token'=>$token['token'],'iframe_url'=>$token['iframe_url'],'environment'=>$config['environment']??'sandbox'],JSON_UNESCAPED_UNICODE|JSON_UNESCAPED_SLASHES);
+        $update=$pdo->prepare("UPDATE payment_transactions SET provider_reference=?,checkout_url=?,response_payload=?,expires_at=DATE_ADD(NOW(),INTERVAL 30 MINUTE),updated_at=NOW() WHERE id=? AND status='pending'");
+        $update->execute([$oid,$token['iframe_url'],$stored,$transactionId]);
+        if($update->rowCount()!==1)throw new RuntimeException('PayTR oturumu ödeme kaydına bağlanamadı.');
+        redirect('/checkout/'.rawurlencode((string)$booking['booking_code']).'?paytr=1');
+    }catch(Throwable $e){
+        $diagnostic=mb_substr(preg_replace('/(merchant[_-]?(key|salt|id)|paytr[_-]?token)\s*[:=]\s*\S+/i','$1=[gizlendi]',$e->getMessage())??'PayTR bağlantı hatası.',0,220);
+        $fail=$pdo->prepare("UPDATE payment_transactions SET status='failed',response_payload=?,updated_at=NOW() WHERE id=? AND status='pending'");
+        $fail->execute([json_encode(['initialization_error'=>$diagnostic],JSON_UNESCAPED_UNICODE),$transactionId]);
+        error_log('PayTR iframe initialize failed for '.$oid.': '.$diagnostic);
+        redirect('/checkout/'.rawurlencode((string)$booking['booking_code']).'?payment=init_error');
+    }
+});
+
 $router->post('/checkout/{bookingCode}/iyzico/start', static function (array $params): void {
     verify_csrf();
     $user=Auth::user();if(!$user)redirect('/login');
