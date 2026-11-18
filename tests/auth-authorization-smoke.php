@@ -149,4 +149,18 @@ if (strpos($routesSource, 'syncFeed($pdo,$feedId,$pid)') === false
     throw new RuntimeException('Vendor calendar sync must bind the feed ID to the vendor-owned property ID.');
 }
 
+
+$deleteRouteStart = strpos($routesSource, "\$router->post('/admin/users/delete'");
+$deleteRouteEnd = $deleteRouteStart !== false ? strpos($routesSource, "\$router->get('/brand-assets/", $deleteRouteStart) : false;
+$deleteRoute = $deleteRouteStart !== false && $deleteRouteEnd !== false ? substr($routesSource, $deleteRouteStart, $deleteRouteEnd - $deleteRouteStart) : '';
+if ($deleteRoute === ''
+    || strpos($deleteRoute, "Auth::requireRole(['super_admin','admin'])") === false
+    || strpos($deleteRoute, 'Auth::canManageUserRole') === false
+    || strpos($deleteRoute, 'SELECT id FROM vendors WHERE user_id=? LIMIT 1 FOR UPDATE') === false
+    || strpos($deleteRoute, 'SELECT id FROM bookings WHERE guest_user_id=? LIMIT 1 FOR UPDATE') === false
+    || strpos($deleteRoute, "DELETE FROM users WHERE id=? AND role='customer'") === false
+    || strpos($deleteRoute, 'UPDATE bookings SET guest_user_id=NULL') !== false) {
+    throw new RuntimeException('User deletion must preserve vendor and booking history and enforce the management hierarchy.');
+}
+
 fwrite(STDOUT, "User role boundary smoke test passed.\n");
