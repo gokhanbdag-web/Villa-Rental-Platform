@@ -2876,10 +2876,10 @@ $router->get('/admin/content-translations', static function (): void {
     $locale=(string)($_GET['lang']??$defaultLocale);$activeCodes=array_column($languages,'code');if(!in_array($locale,$activeCodes,true))$locale=$defaultLocale;
     $type=(string)($_GET['type']??'property');
     $entityMaps=[
-        'property'=>['table'=>'properties','label'=>'title','title'=>'Villa ilanı','fields'=>\\App\\Core\\ContentTranslator::fields('property')],
-        'property_category'=>['table'=>'property_categories','label'=>'name','title'=>'Konaklama kategorisi','fields'=>\\App\\Core\\ContentTranslator::fields('property_category')],
-        'blog_post'=>['table'=>'blog_posts','label'=>'title','title'=>'Blog yazısı','fields'=>\\App\\Core\\ContentTranslator::fields('blog_post')],
-        'blog_category'=>['table'=>'blog_categories','label'=>'name','title'=>'Blog kategorisi','fields'=>\\App\\Core\\ContentTranslator::fields('blog_category')],
+        'property'=>['table'=>'properties','label'=>'title','title'=>'Villa ilanı','fields'=>\App\Core\ContentTranslator::fields('property')],
+        'property_category'=>['table'=>'property_categories','label'=>'name','title'=>'Konaklama kategorisi','fields'=>\App\Core\ContentTranslator::fields('property_category')],
+        'blog_post'=>['table'=>'blog_posts','label'=>'title','title'=>'Blog yazısı','fields'=>\App\Core\ContentTranslator::fields('blog_post')],
+        'blog_category'=>['table'=>'blog_categories','label'=>'name','title'=>'Blog kategorisi','fields'=>\App\Core\ContentTranslator::fields('blog_category')],
     ];
     if(!isset($entityMaps[$type]))$type='property';
     $map=$entityMaps[$type];
@@ -2901,7 +2901,7 @@ $router->post('/admin/content-translations', static function (): void {
     if(!isset($maps[$type])||$entityId<1){http_response_code(422);exit('Çeviri kaydı geçersiz.');}
     $language=$pdo->prepare('SELECT code,is_default FROM languages WHERE code=? AND is_active=1 LIMIT 1');$language->execute([$locale]);$languageRow=$language->fetch(PDO::FETCH_ASSOC);
     if(!$languageRow||(int)$languageRow['is_default']===1){http_response_code(422);exit('Varsayılan dilin içeriği ana kayıt üzerinden düzenlenmelidir.');}
-    $fields=\\App\\Core\\ContentTranslator::fields($type);
+    $fields=\App\Core\ContentTranslator::fields($type);
     $entity=$pdo->prepare('SELECT id FROM '.$maps[$type]['table'].' WHERE id=? LIMIT 1');$entity->execute([$entityId]);
     if(!$entity->fetchColumn()){http_response_code(404);exit('Çevrilecek içerik bulunamadı.');}
     $limits=['title'=>220,'summary'=>500,'description'=>100000,'name'=>190,'excerpt'=>3000,'content'=>1000000,'meta_title'=>220,'meta_description'=>320,'featured_image_alt'=>255];
@@ -2911,7 +2911,7 @@ $router->post('/admin/content-translations', static function (): void {
         $delete=$pdo->prepare('DELETE FROM content_translations WHERE entity_type=? AND entity_id=? AND language_code=? AND field_key=?');
         foreach($fields as $field){
             $value=(string)($_POST['fields'][$field]??'');
-            if(mb_strlen($value)>($limits[$field]??100000)){throw new \\InvalidArgumentException('Çeviri alanı izin verilen uzunluğu aşıyor: '.$field);}
+            if(mb_strlen($value)>($limits[$field]??100000)){throw new \InvalidArgumentException('Çeviri alanı izin verilen uzunluğu aşıyor: '.$field);}
             if(trim($value)==='')$delete->execute([$type,$entityId,$locale,$field]);
             else $save->execute([$type,$entityId,$locale,$field,$value]);
         }
