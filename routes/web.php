@@ -1049,6 +1049,7 @@ $router->post('/villa/{slug}/reserve', static function (array $params): void {
          $emailProperty=\App\Core\ContentTranslator::apply($pdo,[$property],'property',Translator::locale())[0];
          $checkoutUrl=app_absolute_url('/checkout/'.rawurlencode($code));
          $emailVars=['name'=>e($fullName),'property'=>e((string)$emailProperty['title']),'code'=>e($code),'checkin'=>e($inRaw),'checkout'=>e($outRaw),'total'=>e(number_format($total,2,',','.')),'currency'=>e((string)$current['currency']),'checkout_url'=>e($checkoutUrl)];
+        try{\App\Core\SmsService::enqueue($pdo,$phone,Translator::get('sms.booking.created',['code'=>$code,'url'=>app_absolute_url('/checkout/'.rawurlencode($code))]),'booking.created.'.$bookingId);}catch(Throwable $smsError){error_log('Booking SMS enqueue failed: '.$smsError->getMessage());}
          \App\Core\EmailService::enqueue($pdo,$email,Translator::get('email.booking.created.subject'),Translator::get('email.booking.created.html',$emailVars),Translator::get('email.booking.created.text',['name'=>$fullName,'property'=>(string)$emailProperty['title'],'code'=>$code,'checkin'=>$inRaw,'checkout'=>$outRaw,'total'=>number_format($total,2,',','.'),'currency'=>(string)$current['currency'],'checkout_url'=>$checkoutUrl]),'booking.created.'.$bookingId);
         $pdo->commit();
         if($createNewAccount)Auth::attempt($email,$password);
