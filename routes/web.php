@@ -1159,7 +1159,7 @@ $router->post('/checkout/{bookingCode}/paytr/start', static function (array $par
         $failUrl=app_absolute_url('/checkout/'.rawurlencode((string)$booking['booking_code']).'?payment=failed');
     }catch(Throwable $e){http_response_code(503);exit('PayTR yönlendirmesi için geçerli HTTPS site adresi gereklidir.');}
     $testMode=($config['environment']??'sandbox')==='sandbox'?'1':'0';
-    $request=['merchant_oid'=>$oid,'user_ip'=>(string)($_SERVER['REMOTE_ADDR']??''),'email'=>$email,'payment_amount'=>$cents,'user_basket'=>$basket,'no_installment'=>'0','max_installment'=>'0','currency'=>$paytrCurrency,'test_mode'=>$testMode];
+    $request=['merchant_oid'=>$oid,'user_ip'=>(string)($_SERVER['REMOTE_ADDR']??''),'email'=>$email,'payment_amount'=>$cents,'user_basket'=>$basket,'no_installment'=>'1','max_installment'=>'0','currency'=>$paytrCurrency,'test_mode'=>$testMode];
     if(!filter_var($request['user_ip'],FILTER_VALIDATE_IP)){http_response_code(422);exit('Ödeme istemcisi IP adresi doğrulanamadı.');}
     $reservation=\App\Core\PaymentCheckoutGuard::reservePaytr($pdo,(int)$booking['id'],$oid,$amount,$currency,['merchant_oid'=>$oid,'environment'=>$config['environment']??'sandbox']);
     $result=(string)($reservation['result']??'');
@@ -1355,7 +1355,7 @@ $router->post('/payments/paytr/callback', static function (): void {
     $oid=trim((string)($payload['merchant_oid']??''));
     $status=strtolower(trim((string)($payload['status']??'')));
     $total=trim((string)($payload['total_amount']??''));
-    if($oid===''||strlen($oid)>64||!in_array($status,['success','failed'],true)||!preg_match('/^[0-9]+$/',$total)){http_response_code(400);exit('Invalid callback');}
+    if($oid===''||strlen($oid)>64||!in_array($status,['success','failed'],true)||!preg_match('/^[0-9]+$/',$total)||!in_array((string)($payload['payment_type']??''),['card','eft'],true)){http_response_code(400);exit('Invalid callback');}
     try{
         $config=\App\Core\PaymentGatewayConfig::forProvider('paytr');
         if(empty($config['configured'])){http_response_code(503);exit('Not configured');}
@@ -1366,8 +1366,13 @@ $router->post('/payments/paytr/callback', static function (): void {
         $find->execute([$oid]);$transaction=$find->fetch(PDO::FETCH_ASSOC);
         if(!$transaction){http_response_code(200);exit('OK');}
         $expectedCents=(string)(int)round((float)$transaction['amount']*100);
-        if(!hash_equals($expectedCents,ltrim($total,'0')?:'0')){error_log('PayTR callback rejected: amount mismatch for '.$oid);http_response_code(200);exit('OK');}
-        $callback=['provider'=>'paytr','provider_reference'=>$oid,'booking_id'=>(int)$transaction['booking_id'],'amount'=>number_format(((int)$total)/100,2,'.',''),'currency'=>strtoupper((string)$transaction['currency']),'status'=>$status==='success'?'paid':'failed'];
+        $reportedCents=ltrim($total,'0')?:'0';
+        $storedCurrency=strtoupper((string)$transaction['currency']);
+        $expectedProviderCurrency=in_array($storedCurrency,['TRY','TL'],true)?'TL':$storedCurrency;
+        if($status==='success'&&!hash_equals($expectedCents,$reportedCents)){error_log('PayTR callback rejected: amount mismatch for '.$oid);http_response_code(200);exit('OK');}
+        if(isset($payload['currency'])&&strtoupper((string)$payload['currency'])!==$expectedProviderCurrency){error_log('PayTR callback rejected: currency mismatch for '.$oid);http_response_code(200);exit('OK');}
+        $verifiedAmount=$status==='success'?number_format(((int)$total)/100,2,'.',''):(string)$transaction['amount'];
+        $callback=['provider'=>'paytr','provider_reference'=>$oid,'booking_id'=>(int)$transaction['booking_id'],'amount'=>$verifiedAmount,'currency'=>$storedCurrency,'status'=>$status==='success'?'paid':'failed'];
         $eventId='paytr-'.substr(hash('sha256',$oid.'|'.$status.'|'.$total),0,48);
         $processed=(new \App\Core\PaymentCallbackProcessor($pdo))->processVerified('paytr',$eventId,'iframe.payment.'.$status,$oid,['merchant_oid'=>$oid,'status'=>$status,'total_amount'=>$total],$callback);
         if(in_array((string)($processed['result']??''),['processed','duplicate','already_applied','in_progress','paid_booking_conflict'],true)){http_response_code(200);exit('OK');}
