@@ -1771,6 +1771,19 @@ $router->post('/login/ajax', static function (): void {
             ];
             if ($role === 'super_admin') $menus[] = ['label'=>'Sistem Tanılama','url'=>'/admin/performance','icon'=>'⌁'];
             $roleLabel = $role === 'super_admin' ? 'Süper Yönetici' : 'Yönetici';
+        } elseif ($role === 'editor') {
+            $menus = [
+                ['label'=>'İçerik Yönetimi','url'=>'/admin/pages','icon'=>'▤'],
+                ['label'=>'Blog Yönetimi','url'=>'/admin/blog','icon'=>'✎'],
+                ['label'=>'Hesap Ayarları','url'=>'/account/profile','icon'=>'⚙'],
+            ];
+            $roleLabel = 'Editör';
+        } elseif ($role === 'support') {
+            $menus = [
+                ['label'=>'Rezervasyonlar','url'=>'/admin/bookings','icon'=>'▣'],
+                ['label'=>'Hesap Ayarları','url'=>'/account/profile','icon'=>'⚙'],
+            ];
+            $roleLabel = 'Destek';
         } elseif ($role === 'vendor') {
             $menus = [
                 ['label'=>'Ev Sahibi Paneli','url'=>'/vendor','icon'=>'⌂'],
