@@ -628,6 +628,9 @@ $router->get('/', static function (): void {
                  if($categoryRows)$homeCategoryCollections[]=['category'=>$homeCategory,'properties'=>$categoryRows];
              }
          }
+         foreach($homeCategoryCollections as &$homeCategoryCollection){
+             $homeCategoryCollection['properties']=\App\Core\ContentTranslator::apply($pdo,$homeCategoryCollection['properties'],'property',$locale);
+         }unset($homeCategoryCollection);
          $homeReviews=$pdo->query("SELECT r.rating,r.body,r.created_at,u.username,p.id AS id,p.title AS title FROM reviews r JOIN users u ON u.id=r.guest_user_id JOIN properties p ON p.id=r.property_id WHERE r.status='approved' AND r.body IS NOT NULL AND TRIM(r.body)<>'' AND p.status='published' ORDER BY r.created_at DESC,r.id DESC LIMIT 6")->fetchAll(PDO::FETCH_ASSOC);
           $homeReviews=\App\Core\ContentTranslator::apply($pdo,$homeReviews,'property',$locale);
           foreach($homeReviews as &$homeReview){$homeReview['property_title']=$homeReview['title'];}unset($homeReview);
