@@ -120,8 +120,8 @@ foreach ([
     }
 }
 
-$accountRouteStart = strpos($routesSource, "if (in_array($role, ['super_admin', 'admin'], true))");
-$accountRouteEnd = $accountRouteStart !== false ? strpos($routesSource, "elseif ($role === 'vendor')", $accountRouteStart) : false;
+$accountRouteStart = strpos($routesSource, "if (in_array(\$role, ['super_admin', 'admin'], true))");
+$accountRouteEnd = $accountRouteStart !== false ? strpos($routesSource, "elseif (\$role === 'vendor')", $accountRouteStart) : false;
 $accountNavigation = $accountRouteStart !== false && $accountRouteEnd !== false ? substr($routesSource, $accountRouteStart, $accountRouteEnd - $accountRouteStart) : '';
 if ($accountNavigation === ''
     || strpos($accountNavigation, "'editor'") === false
