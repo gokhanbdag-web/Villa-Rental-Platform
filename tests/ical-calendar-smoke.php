@@ -45,4 +45,20 @@ foreach($rejectedUrls as $url){
     try{CalendarFeedFetcher::validateUrl($url);}catch(RuntimeException){$rejected=true;}
     icalAssert($rejected,'Unsafe iCal URL was accepted: '.$url);
 }
+$export=\App\Core\CalendarSyncService::renderIcs(str_repeat('Villa tatili & konaklama ',5),[
+    ['uid'=>'booking-42-7@calendar.villacms','from'=>'2028-12-01','to'=>'2028-12-05','summary'=>'Reserved, private; stay'],
+]);
+icalAssert(str_contains($export,'BEGIN:VCALENDAR')&&str_contains($export,'END:VCALENDAR'),'Calendar export wrapper is missing.');
+icalAssert(str_contains($export,'UID:booking-42-7@calendar.villacms')&&!str_contains($export,'@vill acms'),'Calendar export contains an invalid event UID.');
+icalAssert(str_contains($export,"\r\n "),'Long iCalendar lines were not folded with RFC5545 continuation whitespace.');
+$exportLines=explode("\r\n",$export);
+foreach($exportLines as $line)icalAssert(strlen($line)<=75,'iCalendar export line exceeds the 75-octet folding limit.');
+$roundTrip=IcalParser::parse($export);
+icalAssert(count($roundTrip)===1&&$roundTrip[0]['date_from']==='2028-12-01'&&$roundTrip[0]['date_to']==='2028-12-05','Exported iCalendar event did not round-trip correctly.');
+icalAssert($roundTrip[0]['summary']==='Reserved, private; stay','iCalendar export summary escaping failed.');
+$syncService=(string)file_get_contents(dirname(__DIR__).'/app/Core/CalendarSyncService.php');
+$syncMigration=(string)file_get_contents(dirname(__DIR__).'/database/migrations/055_calendar_sync_logs.sql');
+icalAssert(str_contains($syncService,'calendar_sync_logs')&&str_contains($syncService,'FOR UPDATE')&&str_contains($syncService,"status IN ('pending','confirmed','completed')"),'Calendar sync history, inventory lock or pending-booking conflict guard is missing.');
+icalAssert(str_contains($syncService,"LEFT(external_uid,CHAR_LENGTH(?)+1)")&&str_contains($syncService,"status IN ('pending','confirmed','completed') AND check_out>CURDATE()"),'Recurring master cancellation or pending booking export protection is missing.');
+icalAssert(str_contains($syncMigration,'CREATE TABLE IF NOT EXISTS calendar_sync_logs'),'Calendar sync history migration is missing.');
 echo "iCalendar parser and SSRF validation smoke tests passed. No network requests were made.\n";

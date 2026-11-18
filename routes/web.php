@@ -2254,6 +2254,8 @@ $router->get('/admin/properties/{id}/calendar-sync', static function (array $par
     $propertyStmt=$pdo->prepare('SELECT id,title FROM properties WHERE id=? LIMIT 1');$propertyStmt->execute([(int)$params['id']]);$property=$propertyStmt->fetch(PDO::FETCH_ASSOC);
     if(!$property){http_response_code(404);return;}
     $feedStmt=$pdo->prepare('SELECT id,label,direction,last_sync_status,last_sync_message,last_synced_at FROM property_calendar_feeds WHERE property_id=? ORDER BY direction,id DESC');$feedStmt->execute([(int)$property['id']]);$feeds=$feedStmt->fetchAll(PDO::FETCH_ASSOC);
+    $syncLogsByFeed=[];$feedIds=array_map('intval',array_column($feeds,'id'));if($feedIds){$marks=implode(',',array_fill(0,count($feedIds),'?'));$logStmt=$pdo->prepare("SELECT * FROM calendar_sync_logs WHERE feed_id IN ($marks) ORDER BY id DESC LIMIT 60");$logStmt->execute($feedIds);foreach($logStmt->fetchAll(PDO::FETCH_ASSOC) as $log)$syncLogsByFeed[(int)$log['feed_id']][]=$log;}
+    $syncLogsByFeed=[];$feedIds=array_map('intval',array_column($feeds,'id'));if($feedIds){$marks=implode(',',array_fill(0,count($feedIds),'?'));$logStmt=$pdo->prepare("SELECT * FROM calendar_sync_logs WHERE feed_id IN ($marks) ORDER BY id DESC LIMIT 60");$logStmt->execute($feedIds);foreach($logStmt->fetchAll(PDO::FETCH_ASSOC) as $log)$syncLogsByFeed[(int)$log['feed_id']][]=$log;}
     $calendarMessage=(string)($_SESSION['villa_admin_calendar_property_message']??'');$calendarMessageType=(string)($_SESSION['villa_admin_calendar_property_message_type']??'success');$newExportUrl=(string)($_SESSION['villa_admin_calendar_property_export_url']??'');
     unset($_SESSION['villa_admin_calendar_property_message'],$_SESSION['villa_admin_calendar_property_message_type'],$_SESSION['villa_admin_calendar_property_export_url']);
     ThemeManager::renderTemplate('templates/pages/admin/property-calendar-sync.php',get_defined_vars());
@@ -4114,7 +4116,7 @@ $router->get('/calendar/export/{token}', static function (array $params): void {
     $pdo=Database::connection();$feed=\App\Core\CalendarSyncService::exportFeed($pdo,(string)($params['token']??''));
     if(!$feed){http_response_code(404);exit('Calendar feed not found.');}
     $calendar=\App\Core\CalendarSyncService::exportIcs($pdo,(int)$feed['property_id']);
-    header('Content-Type: text/calendar; charset=utf-8');header('Content-Disposition: inline; filename="villa-calendar.ics"');header('Cache-Control: no-store, max-age=0');header('X-Content-Type-Options: nosniff');
+    header('Content-Type: text/calendar; charset=utf-8');header('Content-Disposition: inline; filename="villa-calendar.ics"');header('Cache-Control: no-store, max-age=0');header('X-Robots-Tag: noindex, nofollow');header('X-Content-Type-Options: nosniff');
     echo $calendar;exit;
 });
 $router->get('/cron/calendar-sync', static function (): void {
@@ -4129,6 +4131,7 @@ $router->get('/admin/calendar-sync', static function (): void {
     $cronToken=\App\Core\CalendarSyncService::cronToken($pdo);
     $cronUrl=app_url('/cron/calendar-sync?token='.rawurlencode($cronToken));
     $feeds=$pdo->query('SELECT f.id,f.label,f.direction,f.enabled,f.last_sync_status,f.last_sync_message,f.last_synced_at,p.title AS property_title,p.city FROM property_calendar_feeds f JOIN properties p ON p.id=f.property_id ORDER BY f.id DESC LIMIT 100')->fetchAll(PDO::FETCH_ASSOC);
+    $syncLogs=$pdo->query('SELECT l.*,f.label,p.title AS property_title FROM calendar_sync_logs l JOIN property_calendar_feeds f ON f.id=l.feed_id JOIN properties p ON p.id=l.property_id ORDER BY l.id DESC LIMIT 100')->fetchAll(PDO::FETCH_ASSOC);
     $calendarMessage=(string)($_SESSION['villa_admin_calendar_message']??'');unset($_SESSION['villa_admin_calendar_message']);
     ThemeManager::renderTemplate('templates/pages/admin/calendar-sync.php',get_defined_vars());
 });
