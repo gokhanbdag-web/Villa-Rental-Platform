@@ -1,5 +1,5 @@
 <?php declare(strict_types=1);
-$fieldLabels=['title'=>'Başlık','summary'=>'Kısa açıklama','description'=>'Açıklama','name'=>'Kategori adı','excerpt'=>'Özet','content'=>'İçerik','meta_title'=>'SEO başlığı','meta_description'=>'SEO açıklaması','featured_image_alt'=>'Görsel alt metni'];
+$fieldLabels=['title'=>'Başlık','summary'=>'Kısa açıklama','description'=>'Açıklama','name'=>'Kategori adı','excerpt'=>'Özet','content'=>'İçerik','meta_title'=>'SEO başlığı','meta_description'=>'SEO açıklaması','featured_image_alt'=>'Görsel alt metni','country'=>'Ülke','city'=>'Şehir','district'=>'İlçe','neighborhood'=>'Mahalle'];
 ?>
 <!doctype html><html lang="<?= e($locale) ?>"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>İçerik çevirileri</title>
 <style>
