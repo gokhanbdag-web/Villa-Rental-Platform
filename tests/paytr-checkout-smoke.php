@@ -14,6 +14,7 @@ paytrCheckoutAssert(str_contains($client,'CURLOPT_FOLLOWLOCATION=>false')&&str_c
 paytrCheckoutAssert(str_contains($routes,"/checkout/{bookingCode}/paytr/start")&&str_contains($routes,"/payments/paytr/callback"),'PayTR checkout or callback route is missing.');
 paytrCheckoutAssert(str_contains($routes,'PaymentSignatureVerifier::verifyPaytr')&&str_contains($routes,'PaymentCallbackProcessor'),'PayTR callback signature or idempotent processor integration is missing.');
 paytrCheckoutAssert(str_contains($routes,'total_amount')&&str_contains($routes,'expectedCents'),'PayTR callback amount comparison is missing.');
+paytrCheckoutAssert(str_contains($routes,"payment_type")&&str_contains($routes,"no_installment'=>'1'"),'PayTR payment type validation or exact-total single-payment setting is missing.');
 paytrCheckoutAssert(str_contains($guard,"provider='iyzico'")&&str_contains($guard,"provider='paytr'"),'Cross-provider parallel checkout lock is missing.');
 paytrCheckoutAssert(str_contains($checkout,'$paytrIframeUrl')&&str_contains($checkout,'iframeResizer.min.js'),'Hosted PayTR iframe is not rendered.');
 foreach(['success','failure','tampered','amount_mismatch','wrong_order'] as $scenario){
