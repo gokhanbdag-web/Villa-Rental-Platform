@@ -120,6 +120,17 @@ foreach ([
     }
 }
 
+$accountRouteStart = strpos($routesSource, "if (in_array(\$role, ['super_admin', 'admin'], true))");
+$accountRouteEnd = $accountRouteStart !== false ? strpos($routesSource, "elseif (\$role === 'vendor')", $accountRouteStart) : false;
+$accountNavigation = $accountRouteStart !== false && $accountRouteEnd !== false ? substr($routesSource, $accountRouteStart, $accountRouteEnd - $accountRouteStart) : '';
+if ($accountNavigation === ''
+    || strpos($accountNavigation, "'editor'") === false
+    || strpos($accountNavigation, "'support'") === false
+    || strpos($accountNavigation, "'/admin/pages'") === false
+    || strpos($accountNavigation, "'/admin/bookings'") === false) {
+    throw new RuntimeException('Editor and support accounts must receive role-appropriate navigation.');
+}
+
 $calendarServiceSource = file_get_contents(dirname(__DIR__) . '/app/Core/CalendarSyncService.php');
 if (strpos($routesSource, 'syncFeed($pdo,$feedId,$pid)') === false
     || strpos($calendarServiceSource, 'public static function syncFeed(PDO $pdo,int $feedId,?int $expectedPropertyId=null)') === false
