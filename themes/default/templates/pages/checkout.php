@@ -102,6 +102,26 @@ $navigation = is_array($navigation ?? null) ? $navigation : [];
 <?php elseif(in_array(($paymentStatus??''),['failed','verify_error','init_error'],true)): ?>
 <div class="checkout-notice error"><span class="checkout-notice-icon">!</span><div><strong>Ödeme formu başlatılamadı</strong>Rezervasyonunuz beklemede kaldı. Lütfen tekrar deneyin.<?php if(!empty($iyzicoInitializationError)): ?><small style="display:block;margin-top:8px">Teknik açıklama: <?= e($iyzicoInitializationError) ?></small><?php endif; ?></div></div>
 <?php endif; ?>
+<?php if(!empty($paytrIframeUrl)): ?>
+<section class="checkout-payment">
+<div class="checkout-section-title"><span class="checkout-step">2</span><div><h2>PayTR güvenli ödeme</h2></div></div>
+<p class="checkout-payment-copy">Kart bilgilerinizi PayTR'nin güvenli ödeme alanına girin. Kart bilgileriniz VillaCMS sunucusuna kaydedilmez.</p>
+<div style="width:100%;min-height:650px;overflow:hidden;border:1px solid var(--villa-border);border-radius:14px;background:#fff">
+<iframe src="<?= e($paytrIframeUrl) ?>" id="paytr-iframe" frameborder="0" scrolling="no" style="width:100%;min-height:650px;border:0" title="PayTR güvenli ödeme formu" allow="payment *"></iframe>
+</div>
+<script src="https://www.paytr.com/js/iframeResizer.min.js"></script>
+<script>if(window.iFrameResize){iFrameResize({},'#paytr-iframe');}</script>
+</section>
+<?php elseif(!empty($paytrPaymentAvailable)&&$booking['status']==='pending'&&($paymentStatus??'')!=='review'): ?>
+<section class="checkout-payment">
+<div class="checkout-section-title"><span class="checkout-step"><?= !empty($iyzicoPaymentAvailable)?3:2 ?></span><div><h2>PayTR ile güvenli ödeme</h2></div></div>
+<p class="checkout-payment-copy">PayTR'nin barındırılan güvenli ödeme formu açılır. Ödeme sonucu doğrulanmadan rezervasyon onaylanmaz.</p>
+<form method="post" action="<?= e(app_url('/checkout/'.rawurlencode((string)$booking['booking_code']).'/paytr/start')) ?>">
+<?= csrf_field() ?>
+<button class="checkout-pay-button" type="submit">PayTR ile ödeme yap</button>
+</form>
+</section>
+<?php endif; ?>
 <?php if(!empty($iyzicoPaymentAvailable)&&$booking['status']==='pending'&&($paymentStatus??'')!=='review'): ?>
 <section class="checkout-payment">
 <div class="checkout-section-title"><span class="checkout-step">2</span><div><h2>iyzico ile güvenli ödeme</h2></div></div>
