@@ -7,6 +7,7 @@ use App\Core\Installer;
 use App\Core\PaymentCallbackProcessor;
 use App\Core\PaymentCheckoutGuard;
 use App\Core\PaymentRefundService;
+use App\Core\IyzicoPaymentReconciler;
 
 function concurrencyAssert(bool $condition, string $message): void
 {
@@ -311,7 +312,41 @@ try {
     $secondPartialRefund = $reserveRefund->invoke(null, $pdoA, $customerId, $refundPaymentId, 4000, 'Remaining partial refund');
     concurrencyAssert((int)$secondPartialRefund['id'] > 0, 'A valid refund within the remaining balance was rejected.');
 
-    echo "Payment concurrency smoke tests passed: payment callback serialization/idempotency, checkout locking, refund reservation locking, pending-refund exclusion, verified settlement locking, duplicate settlement rejection, and remaining-balance enforcement.\n";
+    // Expired iyzico provider sessions must have a single atomic
+    // reconciliation claimant and a one-minute retry cooldown.
+    $reconcileBooking = $newBooking('iyzico-reconciliation', (new DateTimeImmutable('+340 days'))->format('Y-m-d'), (new DateTimeImmutable('+342 days'))->format('Y-m-d'));
+    $reconcileReference = 'VRC-IYZ-TOKEN-' . strtoupper(bin2hex(random_bytes(5)));
+    $reconcileRequest = json_encode([
+        'conversationId' => 'VRC-CONV-' . bin2hex(random_bytes(5)),
+        'basketId' => $reconcileBooking['code'],
+        'environment' => 'sandbox',
+    ], JSON_THROW_ON_ERROR);
+    $createReconcilePayment = $pdoA->prepare("INSERT INTO payment_transactions(booking_id,provider,provider_reference,amount,currency,status,request_payload,expires_at,created_at,updated_at) VALUES(?,'iyzico',?,'100.00',?,'pending',?,DATE_SUB(NOW(),INTERVAL 2 MINUTE),NOW(),NOW())");
+    $createReconcilePayment->execute([$reconcileBooking['id'], $reconcileReference, $currency, $reconcileRequest]);
+    $reconcilePaymentId = (int)$pdoA->lastInsertId();
+
+    $pdoA->beginTransaction();
+    $reconcileRowLock = $pdoA->prepare('SELECT id FROM payment_transactions WHERE id=? FOR UPDATE');
+    $reconcileRowLock->execute([$reconcilePaymentId]);
+    $reconcileClaimTimedOut = false;
+    try {
+        IyzicoPaymentReconciler::claimReconciliationAttempt($pdoB, $reconcilePaymentId);
+    } catch (PDOException $error) {
+        $reconcileClaimTimedOut = (int)($error->errorInfo[1] ?? 0) === 1205;
+        if ($pdoB->inTransaction()) $pdoB->rollBack();
+    } finally {
+        if ($pdoA->inTransaction()) $pdoA->commit();
+    }
+    concurrencyAssert($reconcileClaimTimedOut, 'Concurrent iyzico reconciliation claim did not wait for the payment-row lock.');
+
+    concurrencyAssert(IyzicoPaymentReconciler::claimReconciliationAttempt($pdoA, $reconcilePaymentId), 'First iyzico reconciliation claim was not acquired.');
+    concurrencyAssert(!IyzicoPaymentReconciler::claimReconciliationAttempt($pdoB, $reconcilePaymentId), 'A second iyzico reconciliation claim bypassed the one-minute cooldown.');
+    $pdoA->prepare('UPDATE payment_transactions SET reconciliation_checked_at=DATE_SUB(NOW(),INTERVAL 61 SECOND) WHERE id=?')->execute([$reconcilePaymentId]);
+    concurrencyAssert(IyzicoPaymentReconciler::claimReconciliationAttempt($pdoB, $reconcilePaymentId), 'Iyzico reconciliation could not be retried after the cooldown elapsed.');
+    $pdoA->prepare("UPDATE payment_transactions SET status='paid' WHERE id=?")->execute([$reconcilePaymentId]);
+    concurrencyAssert(!IyzicoPaymentReconciler::claimReconciliationAttempt($pdoA, $reconcilePaymentId), 'A paid iyzico transaction was incorrectly eligible for reconciliation.');
+
+    echo "Payment concurrency smoke tests passed: payment callback serialization/idempotency, checkout locking, refund reservation locking, pending-refund exclusion, verified settlement locking, duplicate settlement rejection, remaining-balance enforcement, and atomic iyzico reconciliation claims with cooldown.\n";
 } finally {
     if (isset($pdoA) && $pdoA instanceof PDO && $pdoA->inTransaction()) {
         $pdoA->rollBack();
