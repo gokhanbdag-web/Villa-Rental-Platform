@@ -816,6 +816,8 @@ $router->get('/villa/{slug}', static function (array $params): void {
     $stmt->execute([$params['slug'] ?? '']);
     $property=$stmt->fetch();
     if (!$property) { http_response_code(404); echo 'Konaklama bulunamadı.'; return; }
+    $locale=Translator::locale();
+    $property=\\App\\Core\\ContentTranslator::apply($pdo,[$property],'property',$locale)[0];
     $media=$pdo->prepare('SELECT file_path,alt_text,is_cover FROM property_media WHERE property_id=? ORDER BY is_cover DESC,sort_order,id');
     $media->execute([(int)$property['id']]); $property['images']=$media->fetchAll();
     $amenityStmt=$pdo->prepare('SELECT a.name,a.icon FROM amenities a JOIN property_amenities pa ON pa.amenity_id=a.id WHERE pa.property_id=? AND a.is_active=1 ORDER BY a.sort_order,a.name');$amenityStmt->execute([(int)$property['id']]);$propertyAmenities=$amenityStmt->fetchAll();
