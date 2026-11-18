@@ -2493,7 +2493,7 @@ $router->post('/admin/navigation/delete', static function (): void {
 
 
 $router->get('/admin/pages', static function (): void {
-    Auth::requireRole(['super_admin','admin']);
+    Auth::requirePermission('admin.pages.view');
     $pdo = Database::connection();
     $languages = $pdo->query('SELECT code,name,is_default FROM languages WHERE is_active=1 ORDER BY is_default DESC,name')->fetchAll(PDO::FETCH_ASSOC);
     $activeCodes = array_column($languages, 'code');
@@ -2510,7 +2510,7 @@ $router->get('/admin/pages', static function (): void {
     ThemeManager::renderTemplate('templates/pages/admin/pages.php', get_defined_vars());
 });
 $router->get('/admin/pages/new', static function (): void {
-    Auth::requireRole(['super_admin','admin']);
+    Auth::requirePermission('admin.pages.edit');
     $pdo = Database::connection();
     $languages = $pdo->query('SELECT code,name,is_default FROM languages WHERE is_active=1 ORDER BY is_default DESC,name')->fetchAll(PDO::FETCH_ASSOC);
     $activeCodes = array_column($languages, 'code');
@@ -2520,7 +2520,7 @@ $router->get('/admin/pages/new', static function (): void {
     ThemeManager::renderTemplate('templates/pages/admin/page-form.php', get_defined_vars());
 });
 $router->get('/admin/pages/{id}', static function (array $params): void {
-    Auth::requireRole(['super_admin','admin']);
+    Auth::requirePermission('admin.pages.edit');
     $pdo = Database::connection();
     $languages = $pdo->query('SELECT code,name,is_default FROM languages WHERE is_active=1 ORDER BY is_default DESC,name')->fetchAll(PDO::FETCH_ASSOC);
     $activeCodes = array_column($languages, 'code');
@@ -2539,7 +2539,7 @@ $router->get('/admin/pages/{id}', static function (array $params): void {
     ThemeManager::renderTemplate('templates/pages/admin/page-form.php', get_defined_vars());
 });
 $router->post('/admin/pages/save', static function (): void {
-    Auth::requireRole(['super_admin','admin']);
+    Auth::requirePermission('admin.pages.edit');
     verify_csrf();
     $pdo = Database::connection();
     $id = (int)($_POST['id'] ?? 0);
@@ -2663,21 +2663,21 @@ $router->get('/blog/{slug}', static function (array $params): void {
     ThemeManager::render('blog-single.php',get_defined_vars());
 });
 $router->get('/admin/blog', static function (): void {
-    Auth::requireRole(['super_admin','admin']);$pdo=Database::connection();$q=trim((string)($_GET['q']??''));$status=(string)($_GET['status']??'');$where=[];$params=[];
+    Auth::requirePermission('admin.blog.view');$pdo=Database::connection();$q=trim((string)($_GET['q']??''));$status=(string)($_GET['status']??'');$where=[];$params=[];
     if($q!==''){$where[]='(title LIKE ? OR slug LIKE ?)';$params[]='%'.$q.'%';$params[]='%'.$q.'%';}
     if(in_array($status,['draft','published'],true)){$where[]='status=?';$params[]=$status;}
     $sql='SELECT * FROM blog_posts'.($where?' WHERE '.implode(' AND ',$where):'').' ORDER BY updated_at DESC,id DESC';$stmt=$pdo->prepare($sql);$stmt->execute($params);$posts=$stmt->fetchAll(PDO::FETCH_ASSOC);
     $post=null;$stats=$pdo->query("SELECT COUNT(*) total, SUM(status='published') published, SUM(status='draft') drafts, SUM(is_featured=1) featured FROM blog_posts")->fetch(PDO::FETCH_ASSOC);ThemeManager::renderTemplate('templates/pages/admin/blog.php',get_defined_vars());
 });
 $router->get('/admin/blog/new', static function (): void {
-    Auth::requireRole(['super_admin','admin']);$pdo=Database::connection();$posts=[];$post=[];$categories=$pdo->query('SELECT * FROM blog_categories ORDER BY sort_order,name')->fetchAll(PDO::FETCH_ASSOC);$postCategories=[];$postTags=[];ThemeManager::renderTemplate('templates/pages/admin/blog.php',get_defined_vars());
+    Auth::requirePermission('admin.blog.edit');$pdo=Database::connection();$posts=[];$post=[];$categories=$pdo->query('SELECT * FROM blog_categories ORDER BY sort_order,name')->fetchAll(PDO::FETCH_ASSOC);$postCategories=[];$postTags=[];ThemeManager::renderTemplate('templates/pages/admin/blog.php',get_defined_vars());
 });
 $router->get('/admin/blog/{id}', static function (array $params): void {
-    Auth::requireRole(['super_admin','admin']);$pdo=Database::connection();$posts=[];$s=$pdo->prepare('SELECT * FROM blog_posts WHERE id=?');$s->execute([(int)$params['id']]);$post=$s->fetch(PDO::FETCH_ASSOC);if(!$post){http_response_code(404);exit('Blog yazısı bulunamadı.');}
+    Auth::requirePermission('admin.blog.edit');$pdo=Database::connection();$posts=[];$s=$pdo->prepare('SELECT * FROM blog_posts WHERE id=?');$s->execute([(int)$params['id']]);$post=$s->fetch(PDO::FETCH_ASSOC);if(!$post){http_response_code(404);exit('Blog yazısı bulunamadı.');}
     $categories=$pdo->query('SELECT * FROM blog_categories ORDER BY sort_order,name')->fetchAll(PDO::FETCH_ASSOC);$c=$pdo->prepare('SELECT category_id FROM blog_post_category WHERE post_id=?');$c->execute([(int)$post['id']]);$postCategories=array_map('intval',$c->fetchAll(PDO::FETCH_COLUMN));$t=$pdo->prepare('SELECT t.name FROM blog_tags t JOIN blog_post_tag pt ON pt.tag_id=t.id WHERE pt.post_id=? ORDER BY t.name');$t->execute([(int)$post['id']]);$postTags=array_column($t->fetchAll(PDO::FETCH_ASSOC),'name');ThemeManager::renderTemplate('templates/pages/admin/blog.php',get_defined_vars());
 });
 $router->post('/admin/blog/save', static function (): void {
-    Auth::requireRole(['super_admin','admin']);verify_csrf();$pdo=Database::connection();$id=(int)($_POST['id']??0);
+    Auth::requirePermission('admin.blog.edit');verify_csrf();$pdo=Database::connection();$id=(int)($_POST['id']??0);
     $title=trim((string)($_POST['title']??''));$slug=strtolower(trim((string)($_POST['slug']??'')));$slug=trim(preg_replace('/[^a-z0-9-]+/','-',$slug),'-');
     $excerpt=trim((string)($_POST['excerpt']??''));$content=trim((string)($_POST['content']??''));$image=trim((string)($_POST['featured_image']??''));$imageAlt=trim((string)($_POST['featured_image_alt']??''));$status=($_POST['status']??'')==='published'?'published':'draft';
     $publishedRaw=trim((string)($_POST['published_at']??''));$publishedAt=$publishedRaw!==''?str_replace('T',' ',$publishedRaw).(strlen($publishedRaw)===16?':00':''):null;
@@ -2697,19 +2697,19 @@ $router->post('/admin/blog/save', static function (): void {
     redirect('/admin/blog');
 });
 $router->post('/admin/blog/delete', static function (): void {
-    Auth::requireRole(['super_admin','admin']);verify_csrf();$pdo=Database::connection();$s=$pdo->prepare('DELETE FROM blog_posts WHERE id=?');$s->execute([(int)($_POST['id']??0)]);redirect('/admin/blog');
+    Auth::requirePermission('admin.blog.edit');verify_csrf();$pdo=Database::connection();$s=$pdo->prepare('DELETE FROM blog_posts WHERE id=?');$s->execute([(int)($_POST['id']??0)]);redirect('/admin/blog');
 });
 $router->get('/admin/blog/categories', static function (): void {
-    Auth::requireRole(['super_admin','admin']);$categories=Database::connection()->query("SELECT c.*,COUNT(pc.post_id) post_count FROM blog_categories c LEFT JOIN blog_post_category pc ON pc.category_id=c.id GROUP BY c.id ORDER BY c.sort_order,c.name")->fetchAll(PDO::FETCH_ASSOC);ThemeManager::renderTemplate('templates/pages/admin/blog-categories.php',get_defined_vars());
+    Auth::requirePermission('admin.blog.edit');$categories=Database::connection()->query("SELECT c.*,COUNT(pc.post_id) post_count FROM blog_categories c LEFT JOIN blog_post_category pc ON pc.category_id=c.id GROUP BY c.id ORDER BY c.sort_order,c.name")->fetchAll(PDO::FETCH_ASSOC);ThemeManager::renderTemplate('templates/pages/admin/blog-categories.php',get_defined_vars());
 });
 $router->post('/admin/blog/categories/save', static function (): void {
-    Auth::requireRole(['super_admin','admin']);verify_csrf();$pdo=Database::connection();$id=(int)($_POST['id']??0);$name=trim((string)($_POST['name']??''));$slug=strtolower(trim((string)($_POST['slug']??'')));$slug=trim(preg_replace('/[^a-z0-9-]+/','-',iconv('UTF-8','ASCII//TRANSLIT//IGNORE',$slug)?:$slug),'-');$description=trim((string)($_POST['description']??''));$sort=max(0,(int)($_POST['sort_order']??0));
+    Auth::requirePermission('admin.blog.edit');verify_csrf();$pdo=Database::connection();$id=(int)($_POST['id']??0);$name=trim((string)($_POST['name']??''));$slug=strtolower(trim((string)($_POST['slug']??'')));$slug=trim(preg_replace('/[^a-z0-9-]+/','-',iconv('UTF-8','ASCII//TRANSLIT//IGNORE',$slug)?:$slug),'-');$description=trim((string)($_POST['description']??''));$sort=max(0,(int)($_POST['sort_order']??0));
     if($name===''||$slug===''||mb_strlen($name)>120||mb_strlen($slug)>140||mb_strlen($description)>500){http_response_code(422);exit('Kategori bilgilerini kontrol edin.');}
     try{if($id){$s=$pdo->prepare('UPDATE blog_categories SET name=?,slug=?,description=?,sort_order=? WHERE id=?');$s->execute([$name,$slug,$description,$sort,$id]);}else{$s=$pdo->prepare('INSERT INTO blog_categories(name,slug,description,sort_order) VALUES(?,?,?,?)');$s->execute([$name,$slug,$description,$sort]);}}catch(PDOException $e){http_response_code(409);exit('Bu kategori adı veya bağlantısı zaten kullanılıyor.');}
     redirect('/admin/blog/categories');
 });
 $router->post('/admin/blog/categories/delete', static function (): void {
-    Auth::requireRole(['super_admin','admin']);verify_csrf();$id=(int)($_POST['id']??0);Database::connection()->prepare('DELETE FROM blog_categories WHERE id=?')->execute([$id]);redirect('/admin/blog/categories');
+    Auth::requirePermission('admin.blog.edit');verify_csrf();$id=(int)($_POST['id']??0);Database::connection()->prepare('DELETE FROM blog_categories WHERE id=?')->execute([$id]);redirect('/admin/blog/categories');
 });
 $router->get('/admin/newsletter', static function (): void {
     Auth::requireRole(['super_admin','admin']);$pdo=Database::connection();$subscribers=$pdo->query('SELECT id,email,status,source,created_at FROM newsletter_subscribers ORDER BY created_at DESC,id DESC')->fetchAll(PDO::FETCH_ASSOC);$activeCount=(int)$pdo->query("SELECT COUNT(*) FROM newsletter_subscribers WHERE status='active'")->fetchColumn();ThemeManager::renderTemplate('templates/pages/admin/newsletter.php', get_defined_vars());
@@ -2778,6 +2778,43 @@ $router->post('/admin/languages/save', static function (): void {
 $router->get('/admin/users', static function (): void {
     Auth::requireRole(['super_admin','admin']);$users=Database::connection()->query('SELECT id,username,email,role,status,created_at FROM users ORDER BY created_at DESC LIMIT 500')->fetchAll();$currentUser=Auth::user();ThemeManager::renderTemplate('templates/pages/admin/users.php', get_defined_vars());
 });
+$router->post('/admin/users/role', static function (): void {
+    Auth::requireRole(['super_admin']);
+    verify_csrf();
+
+    $actor = Auth::user();
+    $id = (int)($_POST['id'] ?? 0);
+    $role = (string)($_POST['role'] ?? '');
+    $allowedRoles = ['admin', 'editor', 'support', 'customer', 'vendor'];
+    if ($id < 1 || $id === (int)$actor['id'] || !in_array($role, $allowedRoles, true)) {
+        http_response_code(422);
+        exit('Rol güncelleme bilgileri geçersiz.');
+    }
+
+    $pdo = Database::connection();
+    try {
+        $pdo->beginTransaction();
+        $lookup = $pdo->prepare('SELECT role FROM users WHERE id=? FOR UPDATE');
+        $lookup->execute([$id]);
+        $targetRole = $lookup->fetchColumn();
+        if (!is_string($targetRole) || !Auth::canManageUserRole('super_admin', $targetRole)) {
+            $pdo->rollBack();
+            http_response_code(403);
+            exit('Bu hesabın rolü değiştirilemez.');
+        }
+
+        $update = $pdo->prepare('UPDATE users SET role=?,session_version=session_version+1,updated_at=NOW() WHERE id=?');
+        $update->execute([$role, $id]);
+        $pdo->commit();
+        redirect('/admin/users?role_updated=1');
+    } catch (Throwable $e) {
+        if ($pdo->inTransaction()) $pdo->rollBack();
+        error_log('Admin user role update failed: ' . $e->getMessage());
+        http_response_code(409);
+        exit('Kullanıcı rolü güvenli şekilde güncellenemedi.');
+    }
+});
+
 $router->post('/admin/users/status', static function (): void {
     Auth::requireRole(['super_admin','admin']);
     verify_csrf();
@@ -3492,7 +3529,7 @@ $router->post('/admin/content', static function (): void {
 
 
 $router->get('/admin/bookings', static function (): void {
-    Auth::requireRole(['super_admin','admin']);
+    Auth::requirePermission('admin.bookings.view');
     $pdo=Database::connection();$status=(string)($_GET['status']??'');
     $allowed=['pending','confirmed','cancelled','completed'];
     $sql="SELECT b.*,p.title,COALESCE(NULLIF(b.guest_name,''),u.username,'Misafir') AS guest_name,COALESCE(NULLIF(b.guest_email,''),u.email,'') AS guest_email,COALESCE(b.guest_phone,'') AS guest_phone,EXISTS(SELECT 1 FROM payment_transactions pt WHERE pt.booking_id=b.id AND pt.status='paid') AS has_paid_payment FROM bookings b JOIN properties p ON p.id=b.property_id LEFT JOIN users u ON u.id=b.guest_user_id";

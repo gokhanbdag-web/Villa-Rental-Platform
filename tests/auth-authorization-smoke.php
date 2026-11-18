@@ -10,6 +10,10 @@ $cases = [
     ['super_admin', 'customer', true],
     ['super_admin', 'vendor', true],
     ['super_admin', 'super_admin', false],
+    ['super_admin', 'editor', true],
+    ['super_admin', 'support', true],
+    ['admin', 'editor', false],
+    ['admin', 'support', false],
     ['admin', 'customer', true],
     ['admin', 'vendor', true],
     ['admin', 'admin', false],
@@ -60,6 +64,26 @@ if ($vendorRoute === '' || strpos($vendorRoute, 'BookingStatusPolicy::canVendorT
     throw new RuntimeException('Vendor booking route does not enforce ownership, safe lock order, pending overlap and transition rules.');
 }
 
+$permissionCases = [
+    ['super_admin', 'admin.pages.edit', true],
+    ['admin', 'admin.bookings.view', true],
+    ['editor', 'admin.pages.view', true],
+    ['editor', 'admin.pages.edit', true],
+    ['editor', 'admin.blog.edit', true],
+    ['editor', 'admin.bookings.view', false],
+    ['editor', 'admin.users.manage', false],
+    ['support', 'admin.bookings.view', true],
+    ['support', 'admin.bookings.edit', false],
+    ['support', 'admin.pages.view', false],
+    ['customer', 'admin.bookings.view', false],
+    ['vendor', 'admin.blog.edit', false],
+];
+foreach ($permissionCases as [$role, $permission, $expected]) {
+    if (\App\Core\Auth::roleCan($role, $permission) !== $expected) {
+        throw new RuntimeException('Unexpected role permission: ' . $role . ' / ' . $permission);
+    }
+}
+
 foreach ($cases as [$actorRole, $targetRole, $expected]) {
     $actual = \App\Core\Auth::canManageUserRole($actorRole, $targetRole);
     if ($actual !== $expected) {
@@ -70,6 +94,29 @@ foreach ($cases as [$actorRole, $targetRole, $expected]) {
             $expected ? 'allow' : 'deny',
             $actual ? 'allow' : 'deny'
         ));
+    }
+}
+
+$roleRouteStart = strpos($routesSource, "\$router->post('/admin/users/role'");
+$roleRouteEnd = $roleRouteStart !== false ? strpos($routesSource, "\$router->post('/admin/users/status'", $roleRouteStart) : false;
+$roleRoute = $roleRouteStart !== false && $roleRouteEnd !== false ? substr($routesSource, $roleRouteStart, $roleRouteEnd - $roleRouteStart) : '';
+if ($roleRoute === ''
+    || strpos($roleRoute, "Auth::requireRole(['super_admin'])") === false
+    || strpos($roleRoute, 'session_version=session_version+1') === false
+    || strpos($roleRoute, "'editor', 'support'") === false) {
+    throw new RuntimeException('Staff role assignment must be super-admin-only and invalidate existing sessions.');
+}
+foreach ([
+    ["\$router->get('/admin/pages'", "admin.pages.view"],
+    ["\$router->post('/admin/pages/save'", "admin.pages.edit"],
+    ["\$router->get('/admin/blog'", "admin.blog.view"],
+    ["\$router->post('/admin/blog/save'", "admin.blog.edit"],
+    ["\$router->get('/admin/bookings'", "admin.bookings.view"],
+] as [$routeNeedle, $permission]) {
+    $routeStart = strpos($routesSource, $routeNeedle);
+    $routeBody = $routeStart !== false ? substr($routesSource, $routeStart, 260) : '';
+    if ($routeBody === '' || strpos($routeBody, "Auth::requirePermission('$permission')") === false) {
+        throw new RuntimeException('Expected server-side permission guard missing for ' . $permission);
     }
 }
 
