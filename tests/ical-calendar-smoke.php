@@ -59,5 +59,6 @@ icalAssert($roundTrip[0]['summary']==='Reserved, private; stay','iCalendar expor
 $syncService=(string)file_get_contents(dirname(__DIR__).'/app/Core/CalendarSyncService.php');
 $syncMigration=(string)file_get_contents(dirname(__DIR__).'/database/migrations/055_calendar_sync_logs.sql');
 icalAssert(str_contains($syncService,'calendar_sync_logs')&&str_contains($syncService,'FOR UPDATE')&&str_contains($syncService,"status IN ('pending','confirmed','completed')"),'Calendar sync history, inventory lock or pending-booking conflict guard is missing.');
+icalAssert(str_contains($syncService,"LEFT(external_uid,CHAR_LENGTH(?)+1)")&&str_contains($syncService,"status IN ('pending','confirmed','completed') AND check_out>CURDATE()"),'Recurring master cancellation or pending booking export protection is missing.');
 icalAssert(str_contains($syncMigration,'CREATE TABLE IF NOT EXISTS calendar_sync_logs'),'Calendar sync history migration is missing.');
 echo "iCalendar parser and SSRF validation smoke tests passed. No network requests were made.\n";
