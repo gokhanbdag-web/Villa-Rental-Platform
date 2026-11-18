@@ -2856,7 +2856,9 @@ $router->post('/admin/messages/status', static function (): void {
 $router->get('/admin/translations', static function (): void {
     Auth::requireRole(['super_admin','admin']);$pdo=Database::connection();$languages=$pdo->query('SELECT code,name,is_default FROM languages WHERE is_active=1 ORDER BY is_default DESC,name')->fetchAll();
     $locale=(string)($_GET['lang']??'tr');$codes=array_column($languages,'code');if(!in_array($locale,$codes,true))$locale='tr';
-    $s=$pdo->prepare('SELECT translation_key,translation_value FROM translations WHERE language_code=? ORDER BY translation_key');$s->execute([$locale]);$translations=$s->fetchAll(PDO::FETCH_KEY_PAIR);ThemeManager::renderTemplate('templates/pages/admin/translations.php', get_defined_vars());
+    $defaultLocale='tr';foreach($languages as $language){if((int)($language['is_default']??0)===1){$defaultLocale=(string)$language['code'];break;}}
+    $s=$pdo->prepare('SELECT base.translation_key,COALESCE(target.translation_value,base.translation_value) AS translation_value FROM translations base LEFT JOIN translations target ON target.translation_key=base.translation_key AND target.language_code=? WHERE base.language_code=? ORDER BY base.translation_key');
+    $s->execute([$locale,$defaultLocale]);$translations=$s->fetchAll(PDO::FETCH_KEY_PAIR);ThemeManager::renderTemplate('templates/pages/admin/translations.php', get_defined_vars());
 });
 $router->post('/admin/translations', static function (): void {
     Auth::requireRole(['super_admin','admin']);verify_csrf();$pdo=Database::connection();$locale=(string)($_POST['lang']??'tr');$check=$pdo->prepare('SELECT code FROM languages WHERE code=? AND is_active=1');$check->execute([$locale]);if(!$check->fetchColumn()){$locale='tr';}
@@ -2864,6 +2866,58 @@ $router->post('/admin/translations', static function (): void {
     foreach((array)($_POST['translations']??[]) as $key=>$value){$key=(string)$key;if(preg_match('/^[a-zA-Z0-9_.-]{1,190}$/',$key))$save->execute([$locale,$key,(string)$value]);}
     $newKey=trim((string)($_POST['new_key']??''));$newValue=(string)($_POST['new_value']??'');if($newKey!==''&&preg_match('/^[a-zA-Z0-9_.-]{1,190}$/',$newKey))$save->execute([$locale,$newKey,$newValue]);
     redirect('/admin/translations?lang='.rawurlencode($locale));
+});
+
+$router->get('/admin/content-translations', static function (): void {
+    Auth::requireRole(['super_admin','admin']);
+    $pdo=Database::connection();
+    $languages=$pdo->query('SELECT code,name,is_default FROM languages WHERE is_active=1 ORDER BY is_default DESC,name')->fetchAll(PDO::FETCH_ASSOC);
+    $defaultLocale='tr';foreach($languages as $language){if((int)$language['is_default']===1){$defaultLocale=(string)$language['code'];break;}}
+    $locale=(string)($_GET['lang']??$defaultLocale);$activeCodes=array_column($languages,'code');if(!in_array($locale,$activeCodes,true))$locale=$defaultLocale;
+    $type=(string)($_GET['type']??'property');
+    $entityMaps=[
+        'property'=>['table'=>'properties','label'=>'title','title'=>'Villa ilanı','fields'=>\\App\\Core\\ContentTranslator::fields('property')],
+        'property_category'=>['table'=>'property_categories','label'=>'name','title'=>'Konaklama kategorisi','fields'=>\\App\\Core\\ContentTranslator::fields('property_category')],
+        'blog_post'=>['table'=>'blog_posts','label'=>'title','title'=>'Blog yazısı','fields'=>\\App\\Core\\ContentTranslator::fields('blog_post')],
+        'blog_category'=>['table'=>'blog_categories','label'=>'name','title'=>'Blog kategorisi','fields'=>\\App\\Core\\ContentTranslator::fields('blog_category')],
+    ];
+    if(!isset($entityMaps[$type]))$type='property';
+    $map=$entityMaps[$type];
+    $entities=$pdo->query('SELECT id,'.$map['label'].' AS label FROM '.$map['table'].' ORDER BY '.$map['label'].' LIMIT 500')->fetchAll(PDO::FETCH_ASSOC);
+    $entityId=max(0,(int)($_GET['id']??0));$entity=null;$values=[];
+    if($entityId>0){
+        $entityStmt=$pdo->prepare('SELECT id,'.$map['label'].' AS label FROM '.$map['table'].' WHERE id=? LIMIT 1');$entityStmt->execute([$entityId]);$entity=$entityStmt->fetch(PDO::FETCH_ASSOC)?:null;
+        if($entity){$valueStmt=$pdo->prepare('SELECT field_key,translation_value FROM content_translations WHERE entity_type=? AND entity_id=? AND language_code=?');$valueStmt->execute([$type,$entityId,$locale]);$values=$valueStmt->fetchAll(PDO::FETCH_KEY_PAIR);}
+        else $entityId=0;
+    }
+    ThemeManager::renderTemplate('templates/pages/admin/content-translations.php',get_defined_vars());
+});
+
+$router->post('/admin/content-translations', static function (): void {
+    Auth::requireRole(['super_admin','admin']);verify_csrf();
+    $pdo=Database::connection();
+    $type=(string)($_POST['type']??'');$entityId=(int)($_POST['entity_id']??0);$locale=(string)($_POST['lang']??'');
+    $maps=['property'=>['table'=>'properties'],'property_category'=>['table'=>'property_categories'],'blog_post'=>['table'=>'blog_posts'],'blog_category'=>['table'=>'blog_categories']];
+    if(!isset($maps[$type])||$entityId<1){http_response_code(422);exit('Çeviri kaydı geçersiz.');}
+    $language=$pdo->prepare('SELECT code,is_default FROM languages WHERE code=? AND is_active=1 LIMIT 1');$language->execute([$locale]);$languageRow=$language->fetch(PDO::FETCH_ASSOC);
+    if(!$languageRow||(int)$languageRow['is_default']===1){http_response_code(422);exit('Varsayılan dilin içeriği ana kayıt üzerinden düzenlenmelidir.');}
+    $fields=\\App\\Core\\ContentTranslator::fields($type);
+    $entity=$pdo->prepare('SELECT id FROM '.$maps[$type]['table'].' WHERE id=? LIMIT 1');$entity->execute([$entityId]);
+    if(!$entity->fetchColumn()){http_response_code(404);exit('Çevrilecek içerik bulunamadı.');}
+    $limits=['title'=>220,'summary'=>500,'description'=>100000,'name'=>190,'excerpt'=>3000,'content'=>1000000,'meta_title'=>220,'meta_description'=>320,'featured_image_alt'=>255];
+    $pdo->beginTransaction();
+    try{
+        $save=$pdo->prepare('INSERT INTO content_translations(entity_type,entity_id,language_code,field_key,translation_value,updated_at) VALUES(?,?,?,?,?,NOW()) ON DUPLICATE KEY UPDATE translation_value=VALUES(translation_value),updated_at=NOW()');
+        $delete=$pdo->prepare('DELETE FROM content_translations WHERE entity_type=? AND entity_id=? AND language_code=? AND field_key=?');
+        foreach($fields as $field){
+            $value=(string)($_POST['fields'][$field]??'');
+            if(mb_strlen($value)>($limits[$field]??100000)){throw new \\InvalidArgumentException('Çeviri alanı izin verilen uzunluğu aşıyor: '.$field);}
+            if(trim($value)==='')$delete->execute([$type,$entityId,$locale,$field]);
+            else $save->execute([$type,$entityId,$locale,$field,$value]);
+        }
+        $pdo->commit();
+    }catch(Throwable $e){if($pdo->inTransaction())$pdo->rollBack();throw $e;}
+    redirect('/admin/content-translations?type='.rawurlencode($type).'&id='.$entityId.'&lang='.rawurlencode($locale));
 });
 
 $router->post('/admin/languages/save', static function (): void {
