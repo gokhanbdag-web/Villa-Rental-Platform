@@ -53,6 +53,17 @@ final class SmsService
         return $stmt->rowCount()===1;
     }
 
+    public static function enqueueBookingStatus(PDO $pdo,array $booking,string $status):bool
+    {
+        $phone=trim((string)($booking['guest_phone']??''));$code=trim((string)($booking['booking_code']??''));
+        if($phone===''||$code==='')return false;
+        if($status==='confirmed'){$template='sms.booking.confirmed';$vars=['code'=>$code,'checkin'=>!empty($booking['check_in'])?date('d.m.Y',strtotime((string)$booking['check_in'])):''];}
+        elseif($status==='cancelled'){$template='sms.booking.cancelled';$vars=['code'=>$code];}
+        elseif($status==='payment_received'){$template='sms.payment.received';$vars=['code'=>$code];}
+        else return false;
+        return self::enqueue($pdo,$phone,Translator::get($template,$vars),'booking.status.'.$status.'.'.(int)($booking['id']??0));
+    }
+
     public static function sendTest(PDO $pdo,string $recipient):array
     {
         $config=self::config($pdo);
