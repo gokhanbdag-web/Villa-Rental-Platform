@@ -17,9 +17,9 @@ final class PaytrApiClient
         foreach(['user_ip','merchant_oid','email','payment_amount','user_basket','no_installment','max_installment','currency','test_mode'] as $field){
             if(!isset($payload[$field])||!is_scalar($payload[$field])||(string)$payload[$field]==='')throw new RuntimeException('PayTR ödeme isteği alanı eksik: '.$field);
         }
-        if(!preg_match('/^[A-Za-z0-9_-]{1,64}$/',(string)$payload['merchant_oid']))throw new RuntimeException('PayTR sipariş numarası geçersiz.');
+        if(!preg_match('/^[A-Za-z0-9]{1,64}$/',(string)$payload['merchant_oid']))throw new RuntimeException('PayTR sipariş numarası geçersiz.');
         if(!preg_match('/^[0-9]+$/',(string)$payload['payment_amount'])||(int)$payload['payment_amount']<1)throw new RuntimeException('PayTR ödeme tutarı geçersiz.');
-        if(!filter_var((string)$payload['email'],FILTER_VALIDATE_EMAIL))throw new RuntimeException('PayTR e-posta adresi geçersiz.');
+        if(strlen((string)$payload['email'])>100||preg_match('/^[\\x20-\\x7E]+$/D',(string)$payload['email'])!==1||!filter_var((string)$payload['email'],FILTER_VALIDATE_EMAIL))throw new RuntimeException('PayTR e-posta adresi geçersiz.');
         $currency=strtoupper((string)$payload['currency']);
         if(!in_array($currency,['TL','USD','EUR','GBP'],true))throw new RuntimeException('PayTR para birimi desteklenmiyor.');
         $payload['merchant_id']=$merchantId;
