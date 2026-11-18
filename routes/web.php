@@ -2248,7 +2248,7 @@ $router->post('/vendor/properties/calendar-feed/sync', static function (): void 
     $vendorStmt=$pdo->prepare('SELECT id,status FROM vendors WHERE user_id=? LIMIT 1');$vendorStmt->execute([$userId]);$vendor=$vendorStmt->fetch(PDO::FETCH_ASSOC);
     if(!$vendor||!Auth::canManageVendorBookings((string)$vendor['status'])){http_response_code(403);return;}
     $own=$pdo->prepare('SELECT id FROM properties WHERE id=? AND vendor_id=? LIMIT 1');$own->execute([$pid,(int)$vendor['id']]);if(!$own->fetchColumn()){http_response_code(404);return;}
-    try{$result=\App\Core\CalendarSyncService::syncFeed($pdo,$feedId);$_SESSION['villa_calendar_message']=$result['blocked'].' tarih aralığı engellendi; '.$result['conflicts'].' rezervasyon çakışması atlandı.';$_SESSION['villa_calendar_message_type']='success';}
+    try{$result=\App\Core\CalendarSyncService::syncFeed($pdo,$feedId,$pid);$_SESSION['villa_calendar_message']=$result['blocked'].' tarih aralığı engellendi; '.$result['conflicts'].' rezervasyon çakışması atlandı.';$_SESSION['villa_calendar_message_type']='success';}
     catch(Throwable $e){$_SESSION['villa_calendar_message']=$e->getMessage();$_SESSION['villa_calendar_message_type']='error';}
     redirect('/vendor/properties/'.$pid.'/calendar-sync');
 });
@@ -3570,7 +3570,8 @@ $router->get('/admin/bookings', static function (): void {
     $sql="SELECT b.*,p.title,COALESCE(NULLIF(b.guest_name,''),u.username,'Misafir') AS guest_name,COALESCE(NULLIF(b.guest_email,''),u.email,'') AS guest_email,COALESCE(b.guest_phone,'') AS guest_phone,EXISTS(SELECT 1 FROM payment_transactions pt WHERE pt.booking_id=b.id AND pt.status='paid') AS has_paid_payment FROM bookings b JOIN properties p ON p.id=b.property_id LEFT JOIN users u ON u.id=b.guest_user_id";
     if(in_array($status,$allowed,true)){$sql.=' WHERE b.status=?';$s=$pdo->prepare($sql.' ORDER BY b.created_at DESC LIMIT 250');$s->execute([$status]);$bookings=$s->fetchAll();}
     else{$bookings=$pdo->query($sql.' ORDER BY b.created_at DESC LIMIT 250')->fetchAll();}
-    $bookingProperties=$pdo->query("SELECT id,title,max_guests,early_checkin_enabled,early_checkin_fee,late_checkout_enabled,late_checkout_fee FROM properties WHERE status<>'archived' ORDER BY title")->fetchAll();
+    $canManageBookings=in_array((string)(Auth::user()['role']??''),['super_admin','admin'],true);
+    $bookingProperties=$canManageBookings?$pdo->query("SELECT id,title,max_guests,early_checkin_enabled,early_checkin_fee,late_checkout_enabled,late_checkout_fee FROM properties WHERE status<>'archived' ORDER BY title")->fetchAll():[];
     $bookingFilter=in_array($status,$allowed,true)?$status:'';
     ThemeManager::renderTemplate('templates/pages/admin/bookings.php', get_defined_vars());
 });
