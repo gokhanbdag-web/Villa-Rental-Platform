@@ -55,6 +55,8 @@ jobs:
         run: php tests/paytr-checkout-smoke.php
       - name: Run multilingual content and email smoke tests
         run: php tests/multilingual-content-email-smoke.php
+      - name: Run Netgsm SMS integration smoke tests
+        run: php tests/netgsm-sms-smoke.php
       - name: Run manual bank transfer report workflow smoke tests
         run: php tests/manual-payment-report-smoke.php
       - name: Run villa detail booking flow smoke test

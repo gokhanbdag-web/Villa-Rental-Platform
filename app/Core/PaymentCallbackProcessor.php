@@ -88,7 +88,7 @@ final class PaymentCallbackProcessor
                 return ['result' => 'rejected_property', 'payment_updated' => false];
             }
 
-            $bookingLock = $this->pdo->prepare('SELECT id,property_id,status,check_in,check_out FROM bookings WHERE id=? LIMIT 1 FOR UPDATE');
+            $bookingLock = $this->pdo->prepare('SELECT id,property_id,booking_code,guest_phone,status,check_in,check_out FROM bookings WHERE id=? LIMIT 1 FOR UPDATE');
             $bookingLock->execute([(int)$paymentIdentity['booking_id']]);
             $booking = $bookingLock->fetch(PDO::FETCH_ASSOC);
             if (!$booking) {
@@ -187,6 +187,16 @@ final class PaymentCallbackProcessor
             }
 
             $this->pdo->commit();
+            if($targetStatus==='paid'&&!$bookingConflict&&!$bookingNeedsReview&&trim((string)($booking['guest_phone']??''))!==''){
+                try{
+                    $defaultLocale=(string)($this->pdo->query('SELECT code FROM languages WHERE is_default=1 AND is_active=1 LIMIT 1')->fetchColumn()?:'tr');
+                    Translator::setLocale($defaultLocale);
+                    $wasPending=(string)$booking['status']==='pending';
+                    $template=$wasPending?'sms.booking.confirmed':'sms.payment.received';
+                    $message=Translator::get($template,['code'=>(string)$booking['booking_code'],'checkin'=>date('d.m.Y',strtotime((string)$booking['check_in']))]);
+                    SmsService::enqueue($this->pdo,(string)$booking['guest_phone'],$message,'payment.confirmed.'.(int)$transaction['id']);
+                }catch(Throwable $smsError){error_log('Payment SMS enqueue failed: '.$smsError->getMessage());}
+            }
             if ($bookingConflict || $bookingNeedsReview) {
                 return [
                     'result' => 'paid_booking_conflict',

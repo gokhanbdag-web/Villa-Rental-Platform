@@ -1049,6 +1049,7 @@ $router->post('/villa/{slug}/reserve', static function (array $params): void {
          $emailProperty=\App\Core\ContentTranslator::apply($pdo,[$property],'property',Translator::locale())[0];
          $checkoutUrl=app_absolute_url('/checkout/'.rawurlencode($code));
          $emailVars=['name'=>e($fullName),'property'=>e((string)$emailProperty['title']),'code'=>e($code),'checkin'=>e($inRaw),'checkout'=>e($outRaw),'total'=>e(number_format($total,2,',','.')),'currency'=>e((string)$current['currency']),'checkout_url'=>e($checkoutUrl)];
+        try{\App\Core\SmsService::enqueue($pdo,$phone,Translator::get('sms.booking.created',['code'=>$code,'url'=>app_absolute_url('/checkout/'.rawurlencode($code))]),'booking.created.'.$bookingId);}catch(Throwable $smsError){error_log('Booking SMS enqueue failed: '.$smsError->getMessage());}
          \App\Core\EmailService::enqueue($pdo,$email,Translator::get('email.booking.created.subject'),Translator::get('email.booking.created.html',$emailVars),Translator::get('email.booking.created.text',['name'=>$fullName,'property'=>(string)$emailProperty['title'],'code'=>$code,'checkin'=>$inRaw,'checkout'=>$outRaw,'total'=>number_format($total,2,',','.'),'currency'=>(string)$current['currency'],'checkout_url'=>$checkoutUrl]),'booking.created.'.$bookingId);
         $pdo->commit();
         if($createNewAccount)Auth::attempt($email,$password);
@@ -1569,10 +1570,11 @@ $router->post('/account/messages/send', static function (): void {
     $vendorUserId=(int)($booking['vendor_user_id']??0);if(!$vendorUserId)$vendorUserId=(int)$pdo->query("SELECT id FROM users WHERE role='super_admin' ORDER BY id LIMIT 1")->fetchColumn();
     $guestId=(int)$booking['guest_user_id'];$currentId=(int)$user['id'];if($currentId!==$guestId&&$currentId!==$vendorUserId){http_response_code(403);return;}
     $recipientId=$currentId===$guestId?$vendorUserId:$guestId;$key=hash('sha256',$bookingId.':'.min($currentId,$recipientId).':'.max($currentId,$recipientId));
-    $save=$pdo->prepare('INSERT INTO messages(conversation_key,sender_user_id,recipient_user_id,booking_id,body,created_at) VALUES(?,?,?,?,?,NOW())');$save->execute([$key,$currentId,$recipientId,$bookingId,$body]);
+    $save=$pdo->prepare('INSERT INTO messages(conversation_key,sender_user_id,recipient_user_id,booking_id,body,created_at) VALUES(?,?,?,?,?,NOW())');$save->execute([$key,$currentId,$recipientId,$bookingId,$body]);$messageId=(int)$pdo->lastInsertId();
     $notice=$pdo->prepare("INSERT INTO notifications(user_id,notification_type,title,body,created_at) VALUES(?,'message.received','Yeni mesaj',?,NOW())");$notice->execute([$recipientId,'Rezervasyon görüşmesinde yeni bir mesajınız var.']);
     $recipientStmt=$pdo->prepare('SELECT email FROM users WHERE id=? LIMIT 1');$recipientStmt->execute([$recipientId]);$recipientEmail=(string)($recipientStmt->fetchColumn()?:'');
-     if($recipientEmail!==''){$messagesUrl=app_absolute_url('/account/messages/'.$bookingId);\App\Core\EmailService::enqueue($pdo,$recipientEmail,Translator::get('email.message.received.subject'),Translator::get('email.message.received.html',['messages_url'=>e($messagesUrl)]),Translator::get('email.message.received.text',['messages_url'=>$messagesUrl]),'message.received.'.$bookingId.'.'.(int)$pdo->lastInsertId());}
+     if($recipientId===$guestId&&trim((string)($booking['guest_phone']??''))!==''){try{$messagesUrl=app_absolute_url('/account/messages/'.$bookingId);\App\Core\SmsService::enqueue($pdo,(string)$booking['guest_phone'],Translator::get('sms.message.received',['url'=>$messagesUrl]),'message.received.'.$bookingId.'.'.$messageId);}catch(Throwable $smsError){error_log('Message SMS enqueue failed: '.$smsError->getMessage());}}
+     if($recipientEmail!==''){$messagesUrl=app_absolute_url('/account/messages/'.$bookingId);\App\Core\EmailService::enqueue($pdo,$recipientEmail,Translator::get('email.message.received.subject'),Translator::get('email.message.received.html',['messages_url'=>e($messagesUrl)]),Translator::get('email.message.received.text',['messages_url'=>$messagesUrl]),'message.received.'.$bookingId.'.'.$messageId);}
     redirect('/account/messages/'.$bookingId);
 });
 
@@ -2114,7 +2116,7 @@ $router->post('/vendor/bookings/status', static function (): void {
         $propertyLock->execute([$propertyId,$vendorId]);
         if(!$propertyLock->fetchColumn()){$pdo->rollBack();http_response_code(404);exit('Rezervasyon bulunamadı.');}
         \App\Core\BookingHoldExpiryService::expireSafePendingForProperty($pdo,$propertyId);
-        $s=$pdo->prepare('SELECT b.property_id,b.guest_user_id,b.check_in,b.check_out,b.status FROM bookings b JOIN properties p ON p.id=b.property_id WHERE b.id=? AND b.property_id=? AND p.vendor_id=? LIMIT 1 FOR UPDATE');
+        $s=$pdo->prepare('SELECT b.id,b.property_id,b.booking_code,b.guest_phone,b.guest_user_id,b.check_in,b.check_out,b.status FROM bookings b JOIN properties p ON p.id=b.property_id WHERE b.id=? AND b.property_id=? AND p.vendor_id=? LIMIT 1 FOR UPDATE');
         $s->execute([$id,$propertyId,$vendorId]);$booking=$s->fetch(PDO::FETCH_ASSOC);
         if(!$booking){$pdo->rollBack();http_response_code(404);exit('Rezervasyon bulunamadı.');}
         if(!\App\Core\BookingStatusPolicy::canVendorTransition((string)$booking['status'],$status)){
@@ -2142,7 +2144,7 @@ $router->post('/vendor/bookings/status', static function (): void {
         }
         $log=$pdo->prepare('INSERT INTO audit_logs(user_id,action,entity_type,entity_id,ip_address,details,created_at) VALUES(?,?,?,?,?,?,NOW())');
         $log->execute([(int)Auth::user()['id'],'booking.status_changed','booking',$id,$_SERVER['REMOTE_ADDR']??null,json_encode(['from'=>$booking['status'],'to'=>$status],JSON_UNESCAPED_UNICODE)]);
-        $pdo->commit();redirect('/vendor/bookings');
+        $pdo->commit();try{\App\Core\SmsService::enqueueBookingStatus($pdo,$booking,$status);}catch(Throwable $smsError){error_log('Vendor booking SMS enqueue failed: '.$smsError->getMessage());}redirect('/vendor/bookings');
     }catch(Throwable $e){if($pdo->inTransaction())$pdo->rollBack();error_log('Vendor booking status update failed: '.$e->getMessage());http_response_code(500);exit('Rezervasyon güncellenemedi.');}
 });
 
@@ -3459,9 +3461,19 @@ $router->get('/tasks/email/process', static function (): void {
     echo json_encode(\App\Core\EmailService::processPending($pdo,10),JSON_UNESCAPED_SLASHES|JSON_UNESCAPED_UNICODE);
 });
 
+$router->get('/tasks/sms/process', static function (): void {
+    header('Cache-Control: no-store');
+    $pdo=Database::connection();
+    $expected=\App\Core\SmsService::cronToken($pdo);
+    $provided=(string)($_GET['token']??'');
+    if($expected===''||$provided===''||!hash_equals($expected,$provided)){http_response_code(404);exit;}
+    header('Content-Type: application/json; charset=utf-8');
+    echo json_encode(\App\Core\SmsService::processPending($pdo,10),JSON_UNESCAPED_SLASHES|JSON_UNESCAPED_UNICODE);
+});
+
 $router->get('/admin/settings', static function (): void {
     Auth::requireRole(['super_admin','admin']);
-    $settings=Database::connection()->query("SELECT setting_key,setting_value FROM settings WHERE setting_key IN ('platform.commission_percent','app.currency','app.timezone','payments.iyzico.environment','payments.paytr.environment','payments.iyzico.enabled','payments.paytr.enabled','payments.iyzico.api_key','payments.iyzico.secret_key','payments.paytr.merchant_id','payments.paytr.merchant_key','payments.paytr.merchant_salt','payments.manual.enabled','payments.manual.bank_name','payments.manual.account_holder','payments.manual.iban','payments.manual.instructions','payments.manual.reference_prefix','mail.enabled','mail.smtp.host','mail.smtp.port','mail.smtp.encryption','mail.smtp.username','mail.smtp.password','mail.from_email','mail.from_name')")->fetchAll(PDO::FETCH_KEY_PAIR);
+    $settings=Database::connection()->query("SELECT setting_key,setting_value FROM settings WHERE setting_key IN ('platform.commission_percent','app.currency','app.timezone','payments.iyzico.environment','payments.paytr.environment','payments.iyzico.enabled','payments.paytr.enabled','payments.iyzico.api_key','payments.iyzico.secret_key','payments.paytr.merchant_id','payments.paytr.merchant_key','payments.paytr.merchant_salt','payments.manual.enabled','payments.manual.bank_name','payments.manual.account_holder','payments.manual.iban','payments.manual.instructions','payments.manual.reference_prefix','mail.enabled','mail.smtp.host','mail.smtp.port','mail.smtp.encryption','mail.smtp.username','mail.smtp.password','mail.from_email','mail.from_name','sms.enabled','sms.provider','sms.netgsm.username','sms.netgsm.password','sms.netgsm.sender','sms.netgsm.encoding','sms.netgsm.iys_filter')")->fetchAll(PDO::FETCH_KEY_PAIR);
     $iyzicoEnabled=($settings['payments.iyzico.enabled']??'0')==='1';
     $paytrEnabled=($settings['payments.paytr.enabled']??'0')==='1';
     $iyzicoConfigured=!empty($settings['payments.iyzico.api_key'])&&!empty($settings['payments.iyzico.secret_key']);
@@ -3469,6 +3481,12 @@ $router->get('/admin/settings', static function (): void {
     $manualEnabled=($settings['payments.manual.enabled']??'0')==='1';
     $manualConfigured=trim((string)($settings['payments.manual.bank_name']??''))!==''&&trim((string)($settings['payments.manual.account_holder']??''))!==''&&preg_match('/^[A-Z]{2}[0-9A-Z]{13,32}$/',strtoupper(preg_replace('/\\s+/','',(string)($settings['payments.manual.iban']??''))??''))===1;
     $mailEnabled=($settings['mail.enabled']??'0')==='1';
+    $smsEnabled=($settings['sms.enabled']??'0')==='1';
+    $smsConfigured=trim((string)($settings['sms.netgsm.username']??''))!==''&&(string)($settings['sms.netgsm.password']??'')!==''&&preg_match('/^[A-Z0-9]{3,11}$/i',(string)($settings['sms.netgsm.sender']??''))===1;
+    $smsCronToken=\App\Core\SmsService::cronToken(Database::connection());
+    $smsCronUrl='';if($smsCronToken!==''){try{$smsCronUrl=app_absolute_url('/tasks/sms/process?token='.rawurlencode($smsCronToken));}catch(Throwable $e){$smsCronUrl='HTTPS üzerinden açıldığında görev URL’si görüntülenir.';}}
+    $smsTestMessage=(string)($_SESSION['villa_sms_test_message']??'');$smsTestMessageType=(string)($_SESSION['villa_sms_test_message_type']??'success');unset($_SESSION['villa_sms_test_message'],$_SESSION['villa_sms_test_message_type']);
+    
     $mailConfigured=trim((string)($settings['mail.smtp.host']??''))!==''&&filter_var((string)($settings['mail.from_email']??''),FILTER_VALIDATE_EMAIL)!==false&&(((string)($settings['mail.smtp.username']??'')===''&&(string)($settings['mail.smtp.password']??'')==='')||((string)($settings['mail.smtp.username']??'')!==''&&(string)($settings['mail.smtp.password']??'')!==''));
     $mailCronToken=\App\Core\EmailService::cronToken(Database::connection());
     $emailCronUrl='';if($mailCronToken!==''){try{$emailCronUrl=app_absolute_url('/tasks/email/process?token='.rawurlencode($mailCronToken));}catch(Throwable $e){$emailCronUrl='HTTPS üzerinden açıldığında görev URL’si görüntülenir.';}}
@@ -3479,7 +3497,7 @@ $router->get('/admin/settings', static function (): void {
     $iyzicoTestMessage=(string)($_SESSION['villa_iyzico_test_message']??'');
     $iyzicoTestMessageType=(string)($_SESSION['villa_iyzico_test_message_type']??'success');
     unset($_SESSION['villa_iyzico_test_message'],$_SESSION['villa_iyzico_test_message_type']);
-    unset($settings['payments.iyzico.api_key'],$settings['payments.iyzico.secret_key'],$settings['payments.paytr.merchant_id'],$settings['payments.paytr.merchant_key'],$settings['payments.paytr.merchant_salt'],$settings['mail.smtp.password']);
+    unset($settings['payments.iyzico.api_key'],$settings['payments.iyzico.secret_key'],$settings['payments.paytr.merchant_id'],$settings['payments.paytr.merchant_key'],$settings['payments.paytr.merchant_salt'],$settings['mail.smtp.password'],$settings['sms.netgsm.password']);
     ThemeManager::renderTemplate('templates/pages/admin/settings.php',get_defined_vars());
 });
 $router->post('/admin/settings', static function (): void {
@@ -3549,6 +3567,29 @@ $router->post('/admin/settings', static function (): void {
             throw $e;
         }
     };
+    $saveSubmittedSmsSettings = static function (PDO $pdo): void {
+        $enabled=!empty($_POST['sms_enabled'])&&$_POST['sms_enabled']==='1';
+        $username=trim((string)($_POST['sms_netgsm_username']??''));
+        $sender=strtoupper(trim((string)($_POST['sms_netgsm_sender']??'')));
+        $encoding=(string)($_POST['sms_netgsm_encoding']??'TR');
+        $iys=(string)($_POST['sms_netgsm_iys_filter']??'0');
+        $password=trim((string)($_POST['sms_netgsm_password']??''));
+        $clear=!empty($_POST['sms_clear_password']);
+        $storedStmt=$pdo->prepare("SELECT setting_value FROM settings WHERE setting_key='sms.netgsm.password' LIMIT 1");$storedStmt->execute();$stored=(string)($storedStmt->fetchColumn()?:'');
+        if(($username!==''&&!preg_match('/^[0-9]{6,20}$/',$username))||($sender!==''&&!preg_match('/^[A-Z0-9]{3,11}$/',$sender))||!in_array($encoding,['TR','UTF-8','UNICODE'],true)||!in_array($iys,['0','11','12'],true)||strlen($password)>512||($enabled&&($username===''||$sender===''||($password===''&&($stored===''||$clear))))||($username===''&&$password!=='')){
+            throw new RuntimeException('Netgsm kullanıcı numarası, parola, onaylı gönderici başlığı ve SMS ayarlarını kontrol edin.');
+        }
+        $save=$pdo->prepare('INSERT INTO settings(setting_key,setting_value,autoload) VALUES(?,?,1) ON DUPLICATE KEY UPDATE setting_value=VALUES(setting_value),autoload=1');
+        $pdo->beginTransaction();
+        try{
+            foreach(['sms.enabled'=>$enabled?'1':'0','sms.provider'=>'netgsm','sms.netgsm.username'=>$username,'sms.netgsm.sender'=>$sender,'sms.netgsm.encoding'=>$encoding,'sms.netgsm.iys_filter'=>$iys] as $key=>$value)$save->execute([$key,$value]);
+            if($password!=='')$save->execute(['sms.netgsm.password',\App\Core\PaymentSecretVault::encrypt($password)]);
+            elseif($clear)$pdo->prepare("DELETE FROM settings WHERE setting_key='sms.netgsm.password'")->execute();
+            $tokenStmt=$pdo->prepare("SELECT setting_value FROM settings WHERE setting_key='sms.cron_token' LIMIT 1");$tokenStmt->execute();
+            if(!(string)($tokenStmt->fetchColumn()?:''))$save->execute(['sms.cron_token',\App\Core\PaymentSecretVault::encrypt(bin2hex(random_bytes(32)))]);
+            $pdo->commit();
+        }catch(Throwable $e){if($pdo->inTransaction())$pdo->rollBack();throw $e;}
+    };
     if (!empty($_POST['test_mail_connection'])) {
         try {
             $pdo = Database::connection();
@@ -3577,6 +3618,20 @@ $router->post('/admin/settings', static function (): void {
             error_log('SMTP test email failed: '.$e->getMessage());
             $_SESSION['villa_mail_test_message']='SMTP test gönderimi başarısız: '.$e->getMessage();
             $_SESSION['villa_mail_test_message_type']='error';
+        }
+        redirect('/admin/settings');
+    }
+    if (!empty($_POST['test_sms'])) {
+        try {
+            $recipient=trim((string)($_POST['sms_test_phone']??''));
+            $pdo=Database::connection();$saveSubmittedSmsSettings($pdo);
+            $result=\App\Core\SmsService::sendTest($pdo,$recipient);
+            $_SESSION['villa_sms_test_message']='Test SMS Netgsm kuyruğuna kabul edildi. Görev: '.(string)$result['job_id'];
+            $_SESSION['villa_sms_test_message_type']='success';
+        }catch(Throwable $e){
+            error_log('Netgsm SMS test failed: '.$e->getMessage());
+            $_SESSION['villa_sms_test_message']='Test SMS gönderilemedi: '.$e->getMessage();
+            $_SESSION['villa_sms_test_message_type']='error';
         }
         redirect('/admin/settings');
     }
@@ -3613,17 +3668,25 @@ $router->post('/admin/settings', static function (): void {
     $mailUsername=trim((string)($_POST['mail_smtp_username']??''));
     $mailFrom=trim((string)($_POST['mail_from_email']??''));
     $mailFromName=trim((string)($_POST['mail_from_name']??''));
+    $smsEnabled=!empty($_POST['sms_enabled'])&&$_POST['sms_enabled']==='1';
+    $smsUsername=trim((string)($_POST['sms_netgsm_username']??''));$smsSender=strtoupper(trim((string)($_POST['sms_netgsm_sender']??'')));
+    $smsEncoding=(string)($_POST['sms_netgsm_encoding']??'TR');$smsIys=(string)($_POST['sms_netgsm_iys_filter']??'0');$smsPassword=trim((string)($_POST['sms_netgsm_password']??''));
+    $storedSmsPasswordStmt=$pdo->prepare("SELECT setting_value FROM settings WHERE setting_key='sms.netgsm.password' LIMIT 1");$storedSmsPasswordStmt->execute();$storedSmsPassword=(string)($storedSmsPasswordStmt->fetchColumn()?:'');
+    if(($smsUsername!==''&&!preg_match('/^[0-9]{6,20}$/',$smsUsername))||($smsSender!==''&&!preg_match('/^[A-Z0-9]{3,11}$/',$smsSender))||!in_array($smsEncoding,['TR','UTF-8','UNICODE'],true)||!in_array($smsIys,['0','11','12'],true)||strlen($smsPassword)>512||($smsEnabled&&($smsUsername===''||$smsSender===''||($smsPassword===''&&($storedSmsPassword===''||!empty($_POST['sms_clear_password'])))))||($smsUsername===''&&$smsPassword!=='')){http_response_code(422);exit('Netgsm kullanıcı numarası, parola, gönderici başlığı ve SMS ayarlarını kontrol edin.');}
     $mailPassword=trim((string)($_POST['mail_smtp_password']??''));
     $storedMailPasswordStmt=$pdo->prepare("SELECT setting_value FROM settings WHERE setting_key='mail.smtp.password' LIMIT 1");$storedMailPasswordStmt->execute();
     $storedMailPassword=(string)($storedMailPasswordStmt->fetchColumn()?:'');
     if($mailPort<1||$mailPort>65535||!in_array($mailEncryption,['tls','ssl','none'],true)||strlen($mailHost)>253||preg_match('/[\s\r\n]/',$mailHost)===1||str_contains($mailHost,'/')||str_contains($mailHost,'\\')||strlen($mailUsername)>190||($mailFrom!==''&&!filter_var($mailFrom,FILTER_VALIDATE_EMAIL))||strlen($mailFromName)>120||preg_match('/[\r\n]/',$mailFromName)||strlen($mailPassword)>512||($mailEnabled&&($mailHost===''||!filter_var($mailFrom,FILTER_VALIDATE_EMAIL)))||($mailUsername===''&&($mailPassword!==''||($storedMailPassword!==''&&empty($_POST['mail_clear_password']))))||($mailEnabled&&$mailUsername!==''&&$mailPassword===''&&($storedMailPassword===''||!empty($_POST['mail_clear_password'])))){http_response_code(422);exit('SMTP sunucu, port, şifreleme, kullanıcı adı/parola ve gönderen bilgilerini kontrol edin.');}
     if($manualEnabled&&($manualBank===''||mb_strlen($manualBank)>120||$manualHolder===''||mb_strlen($manualHolder)>190||!preg_match('/^[A-Z]{2}[0-9A-Z]{13,32}$/',$manualIban)||mb_strlen($manualInstructions)>2000||!preg_match('/^[A-Z0-9_-]{2,16}$/i',$manualPrefix))){http_response_code(422);exit('Manuel havale için banka adı, hesap sahibi ve geçerli IBAN girilmelidir.');}
     $anyPaymentEnabled=$iyzicoEnabled||$paytrEnabled||$manualEnabled;
-    foreach(['platform.commission_percent'=>(string)$commission,'app.currency'=>$currency,'app.timezone'=>$timezone,'payments.iyzico.environment'=>$iyzicoEnvironment,'payments.paytr.environment'=>$paytrEnvironment,'payments.iyzico.enabled'=>$iyzicoEnabled?'1':'0','payments.paytr.enabled'=>$paytrEnabled?'1':'0','payments.manual.enabled'=>$manualEnabled?'1':'0','payments.manual.bank_name'=>$manualBank,'payments.manual.account_holder'=>$manualHolder,'payments.manual.iban'=>$manualIban,'payments.manual.instructions'=>$manualInstructions,'payments.manual.reference_prefix'=>$manualPrefix,'payments.enabled'=>$anyPaymentEnabled?'1':'0','payments.provider'=>$anyPaymentEnabled?'multiple':'none','mail.enabled'=>$mailEnabled?'1':'0','mail.smtp.host'=>$mailHost,'mail.smtp.port'=>(string)$mailPort,'mail.smtp.encryption'=>$mailEncryption,'mail.smtp.username'=>$mailUsername,'mail.from_email'=>$mailFrom,'mail.from_name'=>$mailFromName] as $key=>$value)$save->execute([$key,$value]);
+    foreach(['platform.commission_percent'=>(string)$commission,'app.currency'=>$currency,'app.timezone'=>$timezone,'payments.iyzico.environment'=>$iyzicoEnvironment,'payments.paytr.environment'=>$paytrEnvironment,'payments.iyzico.enabled'=>$iyzicoEnabled?'1':'0','payments.paytr.enabled'=>$paytrEnabled?'1':'0','payments.manual.enabled'=>$manualEnabled?'1':'0','payments.manual.bank_name'=>$manualBank,'payments.manual.account_holder'=>$manualHolder,'payments.manual.iban'=>$manualIban,'payments.manual.instructions'=>$manualInstructions,'payments.manual.reference_prefix'=>$manualPrefix,'payments.enabled'=>$anyPaymentEnabled?'1':'0','payments.provider'=>$anyPaymentEnabled?'multiple':'none','mail.enabled'=>$mailEnabled?'1':'0','mail.smtp.host'=>$mailHost,'mail.smtp.port'=>(string)$mailPort,'mail.smtp.encryption'=>$mailEncryption,'mail.smtp.username'=>$mailUsername,'mail.from_email'=>$mailFrom,'mail.from_name'=>$mailFromName,'sms.enabled'=>$smsEnabled?'1':'0','sms.provider'=>'netgsm','sms.netgsm.username'=>$smsUsername,'sms.netgsm.sender'=>$smsSender,'sms.netgsm.encoding'=>$smsEncoding,'sms.netgsm.iys_filter'=>$smsIys] as $key=>$value)$save->execute([$key,$value]);
     if($mailPassword!=='')$save->execute(['mail.smtp.password',\App\Core\PaymentSecretVault::encrypt($mailPassword)]);
+     if($smsPassword!=='')$save->execute(['sms.netgsm.password',\App\Core\PaymentSecretVault::encrypt($smsPassword)]);
+     if(!empty($_POST['sms_clear_password']))$pdo->prepare("DELETE FROM settings WHERE setting_key='sms.netgsm.password'")->execute();
     if(!empty($_POST['mail_clear_password']))$pdo->prepare("DELETE FROM settings WHERE setting_key='mail.smtp.password'")->execute();
     $cronTokenStmt=$pdo->prepare("SELECT setting_value FROM settings WHERE setting_key='mail.cron_token' LIMIT 1");$cronTokenStmt->execute();
     if(!(string)($cronTokenStmt->fetchColumn()?:''))$save->execute(['mail.cron_token',\App\Core\PaymentSecretVault::encrypt(bin2hex(random_bytes(32)))]);
+     $smsCronTokenStmt=$pdo->prepare("SELECT setting_value FROM settings WHERE setting_key='sms.cron_token' LIMIT 1");$smsCronTokenStmt->execute();if(!(string)($smsCronTokenStmt->fetchColumn()?:''))$save->execute(['sms.cron_token',\App\Core\PaymentSecretVault::encrypt(bin2hex(random_bytes(32)))]);
     $secrets=['payments.iyzico.api_key'=>'iyzico_api_key','payments.iyzico.secret_key'=>'iyzico_secret_key','payments.paytr.merchant_id'=>'paytr_merchant_id','payments.paytr.merchant_key'=>'paytr_merchant_key','payments.paytr.merchant_salt'=>'paytr_merchant_salt'];
     foreach($secrets as $key=>$field){$value=trim((string)($_POST[$field]??''));if($value!=='')$save->execute([$key,\App\Core\PaymentSecretVault::encrypt($value)]);}
     $clear=[];if(!empty($_POST['clear_iyzico']))$clear=array_merge($clear,['payments.iyzico.api_key','payments.iyzico.secret_key']);if(!empty($_POST['clear_paytr']))$clear=array_merge($clear,['payments.paytr.merchant_id','payments.paytr.merchant_key','payments.paytr.merchant_salt']);
@@ -3826,7 +3889,7 @@ $router->post('/admin/bookings/manual', static function (): void {
         $financial->execute([$bookingId,$total,$total,$property['currency']]);
         $audit=$pdo->prepare('INSERT INTO audit_logs(user_id,action,entity_type,entity_id,ip_address,details,created_at) VALUES(?,?,?,?,?,?,NOW())');
         $audit->execute([(int)Auth::user()['id'],'booking.created_manual','booking',$bookingId,$_SERVER['REMOTE_ADDR']??null,json_encode(['property_id'=>$propertyId,'guest_name'=>$guestName,'check_in'=>$inRaw,'check_out'=>$outRaw,'source'=>$source],JSON_UNESCAPED_UNICODE)]);
-        $pdo->commit();redirect('/admin/bookings');
+        $pdo->commit();try{\App\Core\SmsService::enqueueBookingStatus($pdo,['id'=>$bookingId,'booking_code'=>$code,'guest_phone'=>$guestPhone,'check_in'=>$inRaw],'confirmed');}catch(Throwable $smsError){error_log('Manual booking SMS enqueue failed: '.$smsError->getMessage());}redirect('/admin/bookings');
     }catch(Throwable $e){if($pdo->inTransaction())$pdo->rollBack();error_log('Manual booking creation failed: '.$e->getMessage());http_response_code(500);exit('Manuel rezervasyon kaydedilemedi.');}
 });
 $router->post('/admin/bookings/status', static function (): void {
@@ -3847,7 +3910,7 @@ $router->post('/admin/bookings/status', static function (): void {
         $propertyLock->execute([$propertyId]);
         if(!$propertyLock->fetchColumn()){$pdo->rollBack();http_response_code(404);exit('Konaklama bulunamadı.');}
 
-        $s=$pdo->prepare('SELECT property_id,guest_user_id,check_in,check_out,status FROM bookings WHERE id=? FOR UPDATE');
+        $s=$pdo->prepare('SELECT id,property_id,booking_code,guest_phone,guest_user_id,check_in,check_out,status FROM bookings WHERE id=? FOR UPDATE');
         $s->execute([$id]);$booking=$s->fetch();
         if(!$booking){$pdo->rollBack();http_response_code(404);exit('Rezervasyon bulunamadı.');}
         if((int)$booking['property_id']!==$propertyId){$pdo->rollBack();http_response_code(409);exit('Rezervasyon kaydı işlem sırasında değişti. Lütfen tekrar deneyin.');}
@@ -3875,7 +3938,7 @@ $router->post('/admin/bookings/status', static function (): void {
         }
         $log=$pdo->prepare('INSERT INTO audit_logs(user_id,action,entity_type,entity_id,ip_address,details,created_at) VALUES(?,?,?,?,?,?,NOW())');
         $log->execute([(int)Auth::user()['id'],'booking.status_changed','booking',$id,$_SERVER['REMOTE_ADDR']??null,json_encode(['from'=>$booking['status'],'to'=>$status],JSON_UNESCAPED_UNICODE)]);
-        $pdo->commit();redirect('/admin/bookings');
+        $pdo->commit();try{\App\Core\SmsService::enqueueBookingStatus($pdo,$booking,$status);}catch(Throwable $smsError){error_log('Admin booking SMS enqueue failed: '.$smsError->getMessage());}redirect('/admin/bookings');
     }catch(Throwable $e){if($pdo->inTransaction())$pdo->rollBack();error_log('Booking status update failed: '.$e->getMessage());http_response_code(500);exit('Rezervasyon güncellenemedi.');}
 });
 
@@ -3903,7 +3966,7 @@ $router->post('/admin/cancellations/review', static function (): void {
         $pdo->beginTransaction();
         $lookup=$pdo->prepare('SELECT booking_id FROM booking_cancellation_requests WHERE id=?');$lookup->execute([$requestId]);$bookingId=(int)($lookup->fetchColumn()?:0);
         if($bookingId<1)throw new RuntimeException('İptal talebi bulunamadı.');
-        $bookingLock=$pdo->prepare('SELECT id,guest_user_id,status FROM bookings WHERE id=? FOR UPDATE');$bookingLock->execute([$bookingId]);$booking=$bookingLock->fetch(PDO::FETCH_ASSOC);
+        $bookingLock=$pdo->prepare('SELECT id,booking_code,guest_phone,guest_user_id,status FROM bookings WHERE id=? FOR UPDATE');$bookingLock->execute([$bookingId]);$booking=$bookingLock->fetch(PDO::FETCH_ASSOC);
         $requestLock=$pdo->prepare("SELECT * FROM booking_cancellation_requests WHERE id=? AND booking_id=? FOR UPDATE");$requestLock->execute([$requestId,$bookingId]);$request=$requestLock->fetch(PDO::FETCH_ASSOC);
         if(!$booking||!$request||(string)$request['status']!=='pending')throw new RuntimeException('İptal talebi daha önce işlenmiş veya bulunamıyor.');
         if($decision==='approved'){
@@ -3922,7 +3985,7 @@ $router->post('/admin/cancellations/review', static function (): void {
         if((int)$booking['guest_user_id']>0){$notice=$pdo->prepare('INSERT INTO notifications(user_id,notification_type,title,body,created_at) VALUES(?,?,?,?,NOW())');$notice->execute([(int)$booking['guest_user_id'],'booking.cancellation_'.$decision,$noticeTitle,$noticeBody]);}
         $audit=$pdo->prepare('INSERT INTO audit_logs(user_id,action,entity_type,entity_id,ip_address,details,created_at) VALUES(?,?,?,?,?,?,NOW())');
         $audit->execute([(int)Auth::user()['id'],'booking.cancellation_'.$decision,'booking',$bookingId,$_SERVER['REMOTE_ADDR']??null,json_encode(['request_id'=>$requestId,'refund_amount'=>$request['refund_amount'],'refund_percent'=>$request['refund_percent_snapshot'],'note'=>$note],JSON_UNESCAPED_UNICODE)]);
-        $pdo->commit();redirect('/admin/cancellations');
+        $pdo->commit();if($decision==='approved'){try{\App\Core\SmsService::enqueueBookingStatus($pdo,$booking,'cancelled');}catch(Throwable $smsError){error_log('Cancellation SMS enqueue failed: '.$smsError->getMessage());}}redirect('/admin/cancellations');
     }catch(Throwable $e){if($pdo->inTransaction())$pdo->rollBack();http_response_code(409);exit($e->getMessage());}
 });
 
@@ -3953,7 +4016,7 @@ $router->post('/admin/payments/manual/review', static function (): void {
         $reportStmt=$pdo->prepare('SELECT * FROM manual_payment_reports WHERE id=? FOR UPDATE');$reportStmt->execute([$reportId]);$report=$reportStmt->fetch(PDO::FETCH_ASSOC);
         if(!$report){$pdo->rollBack();http_response_code(404);exit('Havale bildirimi bulunamadı.');}
         if((string)$report['status']!=='pending'){$pdo->rollBack();http_response_code(409);exit('Bu bildirim daha önce incelenmiş.');}
-        $bookingStmt=$pdo->prepare('SELECT id,guest_user_id,check_in,check_out,status,total,currency,booking_code FROM bookings WHERE id=? FOR UPDATE');$bookingStmt->execute([$bookingId]);$booking=$bookingStmt->fetch(PDO::FETCH_ASSOC);
+        $bookingStmt=$pdo->prepare('SELECT id,guest_user_id,guest_phone,check_in,check_out,status,total,currency,booking_code FROM bookings WHERE id=? FOR UPDATE');$bookingStmt->execute([$bookingId]);$booking=$bookingStmt->fetch(PDO::FETCH_ASSOC);
         if(!$booking){$pdo->rollBack();http_response_code(404);exit('Rezervasyon bulunamadı.');}
         if($decision==='approved'){
             if(!in_array((string)$booking['status'],['pending','confirmed'],true)){$pdo->rollBack();http_response_code(409);exit('İptal edilmiş veya tamamlanmış rezervasyonun ödemesi onaylanamaz.');}
@@ -3985,7 +4048,7 @@ $router->post('/admin/payments/manual/review', static function (): void {
         }
         $audit=$pdo->prepare('INSERT INTO audit_logs(user_id,action,entity_type,entity_id,ip_address,details,created_at) VALUES(?,?,?,?,?,?,NOW())');
         $audit->execute([(int)Auth::user()['id'],'manual_payment.'.$decision,'manual_payment_report',$reportId,$_SERVER['REMOTE_ADDR']??null,json_encode(['booking_id'=>$bookingId,'decision'=>$decision],JSON_UNESCAPED_UNICODE)]);
-        $pdo->commit();redirect('/admin/payments/manual?status='.$decision);
+        $pdo->commit();if($decision==='approved'){try{\App\Core\SmsService::enqueueBookingStatus($pdo,$booking,'confirmed');}catch(Throwable $smsError){error_log('Manual payment SMS enqueue failed: '.$smsError->getMessage());}}redirect('/admin/payments/manual?status='.$decision);
     }catch(Throwable $e){
         if($pdo->inTransaction())$pdo->rollBack();
         error_log('Manual payment review failed: '.$e->getMessage());http_response_code(500);exit('Havale bildirimi işlenemedi. İşlem geri alındı.');
