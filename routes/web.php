@@ -2857,7 +2857,8 @@ $router->post('/admin/users/status', static function (): void {
             exit('Bu kullanıcı hesabını yönetme yetkiniz yok.');
         }
 
-        $update = $pdo->prepare('UPDATE users SET status=? WHERE id=?');
+        // Invalidate every existing session as soon as an account is disabled or re-enabled.
+        $update = $pdo->prepare('UPDATE users SET status=?,session_version=session_version+1,updated_at=NOW() WHERE id=?');
         $update->execute([$status, $id]);
         $pdo->commit();
         redirect('/admin/users');
