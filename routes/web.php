@@ -1570,10 +1570,11 @@ $router->post('/account/messages/send', static function (): void {
     $vendorUserId=(int)($booking['vendor_user_id']??0);if(!$vendorUserId)$vendorUserId=(int)$pdo->query("SELECT id FROM users WHERE role='super_admin' ORDER BY id LIMIT 1")->fetchColumn();
     $guestId=(int)$booking['guest_user_id'];$currentId=(int)$user['id'];if($currentId!==$guestId&&$currentId!==$vendorUserId){http_response_code(403);return;}
     $recipientId=$currentId===$guestId?$vendorUserId:$guestId;$key=hash('sha256',$bookingId.':'.min($currentId,$recipientId).':'.max($currentId,$recipientId));
-    $save=$pdo->prepare('INSERT INTO messages(conversation_key,sender_user_id,recipient_user_id,booking_id,body,created_at) VALUES(?,?,?,?,?,NOW())');$save->execute([$key,$currentId,$recipientId,$bookingId,$body]);
+    $save=$pdo->prepare('INSERT INTO messages(conversation_key,sender_user_id,recipient_user_id,booking_id,body,created_at) VALUES(?,?,?,?,?,NOW())');$save->execute([$key,$currentId,$recipientId,$bookingId,$body]);$messageId=(int)$pdo->lastInsertId();
     $notice=$pdo->prepare("INSERT INTO notifications(user_id,notification_type,title,body,created_at) VALUES(?,'message.received','Yeni mesaj',?,NOW())");$notice->execute([$recipientId,'Rezervasyon görüşmesinde yeni bir mesajınız var.']);
     $recipientStmt=$pdo->prepare('SELECT email FROM users WHERE id=? LIMIT 1');$recipientStmt->execute([$recipientId]);$recipientEmail=(string)($recipientStmt->fetchColumn()?:'');
-     if($recipientEmail!==''){$messagesUrl=app_absolute_url('/account/messages/'.$bookingId);\App\Core\EmailService::enqueue($pdo,$recipientEmail,Translator::get('email.message.received.subject'),Translator::get('email.message.received.html',['messages_url'=>e($messagesUrl)]),Translator::get('email.message.received.text',['messages_url'=>$messagesUrl]),'message.received.'.$bookingId.'.'.(int)$pdo->lastInsertId());}
+     if($recipientId===$guestId&&trim((string)($booking['guest_phone']??''))!==''){try{$messagesUrl=app_absolute_url('/account/messages/'.$bookingId);\App\Core\SmsService::enqueue($pdo,(string)$booking['guest_phone'],Translator::get('sms.message.received',['url'=>$messagesUrl]),'message.received.'.$bookingId.'.'.$messageId);}catch(Throwable $smsError){error_log('Message SMS enqueue failed: '.$smsError->getMessage());}}
+     if($recipientEmail!==''){$messagesUrl=app_absolute_url('/account/messages/'.$bookingId);\App\Core\EmailService::enqueue($pdo,$recipientEmail,Translator::get('email.message.received.subject'),Translator::get('email.message.received.html',['messages_url'=>e($messagesUrl)]),Translator::get('email.message.received.text',['messages_url'=>$messagesUrl]),'message.received.'.$bookingId.'.'.$messageId);}
     redirect('/account/messages/'.$bookingId);
 });
 
