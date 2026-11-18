@@ -107,8 +107,8 @@ if ($roleRoute === ''
     throw new RuntimeException('Staff role assignment must be super-admin-only and invalidate existing sessions.');
 }
 
-$statusRouteStart = strpos($routesSource, "\\$router->post('/admin/users/status'");
-$statusRouteEnd = $statusRouteStart !== false ? strpos($routesSource, "\\$router->post('/admin/users/delete'", $statusRouteStart) : false;
+$statusRouteStart = strpos($routesSource, "\$router->post('/admin/users/status'");
+$statusRouteEnd = $statusRouteStart !== false ? strpos($routesSource, "\$router->post('/admin/users/delete'", $statusRouteStart) : false;
 $statusRoute = $statusRouteStart !== false && $statusRouteEnd !== false ? substr($routesSource, $statusRouteStart, $statusRouteEnd - $statusRouteStart) : '';
 if ($statusRoute === ''
     || strpos($statusRoute, "Auth::requireRole(['super_admin','admin'])") === false
