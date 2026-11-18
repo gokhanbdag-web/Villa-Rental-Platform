@@ -1365,7 +1365,10 @@ $router->post('/payments/paytr/callback', static function (): void {
         $find=$pdo->prepare("SELECT id,booking_id,amount,currency,status FROM payment_transactions WHERE provider='paytr' AND provider_reference=? LIMIT 1");
         $find->execute([$oid]);$transaction=$find->fetch(PDO::FETCH_ASSOC);
         if(!$transaction){http_response_code(200);exit('OK');}
-        $expectedCents=(string)(int)round((float)$transaction['amount']*100);
+        $storedAmount=trim((string)$transaction['amount']);
+        if(!preg_match('/^[0-9]+(?:\\.[0-9]{1,2})?$/',$storedAmount)){http_response_code(200);exit('OK');}
+        [$wholeAmount,$fractionAmount]=array_pad(explode('.',$storedAmount,2),2,'');
+        $expectedCents=ltrim($wholeAmount.str_pad($fractionAmount,2,'0'), '0')?:'0';
         $reportedCents=ltrim($total,'0')?:'0';
         $storedCurrency=strtoupper((string)$transaction['currency']);
         $expectedProviderCurrency=in_array($storedCurrency,['TRY','TL'],true)?'TL':$storedCurrency;
