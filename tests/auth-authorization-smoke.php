@@ -97,8 +97,8 @@ foreach ($cases as [$actorRole, $targetRole, $expected]) {
     }
 }
 
-$roleRouteStart = strpos($routesSource, "\\$router->post('/admin/users/role'");
-$roleRouteEnd = $roleRouteStart !== false ? strpos($routesSource, "\\$router->post('/admin/users/status'", $roleRouteStart) : false;
+$roleRouteStart = strpos($routesSource, "\$router->post('/admin/users/role'");
+$roleRouteEnd = $roleRouteStart !== false ? strpos($routesSource, "\$router->post('/admin/users/status'", $roleRouteStart) : false;
 $roleRoute = $roleRouteStart !== false && $roleRouteEnd !== false ? substr($routesSource, $roleRouteStart, $roleRouteEnd - $roleRouteStart) : '';
 if ($roleRoute === ''
     || strpos($roleRoute, "Auth::requireRole(['super_admin'])") === false
@@ -107,11 +107,11 @@ if ($roleRoute === ''
     throw new RuntimeException('Staff role assignment must be super-admin-only and invalidate existing sessions.');
 }
 foreach ([
-    ["$router->get('/admin/pages'", "admin.pages.view"],
-    ["$router->post('/admin/pages/save'", "admin.pages.edit"],
-    ["$router->get('/admin/blog'", "admin.blog.view"],
-    ["$router->post('/admin/blog/save'", "admin.blog.edit"],
-    ["$router->get('/admin/bookings'", "admin.bookings.view"],
+    ["\$router->get('/admin/pages'", "admin.pages.view"],
+    ["\$router->post('/admin/pages/save'", "admin.pages.edit"],
+    ["\$router->get('/admin/blog'", "admin.blog.view"],
+    ["\$router->post('/admin/blog/save'", "admin.blog.edit"],
+    ["\$router->get('/admin/bookings'", "admin.bookings.view"],
 ] as [$routeNeedle, $permission]) {
     $routeStart = strpos($routesSource, $routeNeedle);
     $routeBody = $routeStart !== false ? substr($routesSource, $routeStart, 260) : '';
