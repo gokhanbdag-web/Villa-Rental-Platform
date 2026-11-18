@@ -2855,13 +2855,13 @@ $router->post('/admin/messages/status', static function (): void {
 
 $router->get('/admin/translations', static function (): void {
     Auth::requireRole(['super_admin','admin']);$pdo=Database::connection();$languages=$pdo->query('SELECT code,name,is_default FROM languages WHERE is_active=1 ORDER BY is_default DESC,name')->fetchAll();
-    $locale=(string)($_GET['lang']??'tr');$codes=array_column($languages,'code');if(!in_array($locale,$codes,true))$locale='tr';
     $defaultLocale='tr';foreach($languages as $language){if((int)($language['is_default']??0)===1){$defaultLocale=(string)$language['code'];break;}}
+    $locale=(string)($_GET['lang']??$defaultLocale);$codes=array_column($languages,'code');if(!in_array($locale,$codes,true))$locale=$defaultLocale;
     $s=$pdo->prepare('SELECT base.translation_key,COALESCE(target.translation_value,base.translation_value) AS translation_value FROM translations base LEFT JOIN translations target ON target.translation_key=base.translation_key AND target.language_code=? WHERE base.language_code=? ORDER BY base.translation_key');
     $s->execute([$locale,$defaultLocale]);$translations=$s->fetchAll(PDO::FETCH_KEY_PAIR);ThemeManager::renderTemplate('templates/pages/admin/translations.php', get_defined_vars());
 });
 $router->post('/admin/translations', static function (): void {
-    Auth::requireRole(['super_admin','admin']);verify_csrf();$pdo=Database::connection();$locale=(string)($_POST['lang']??'tr');$check=$pdo->prepare('SELECT code FROM languages WHERE code=? AND is_active=1');$check->execute([$locale]);if(!$check->fetchColumn()){$locale='tr';}
+    Auth::requireRole(['super_admin','admin']);verify_csrf();$pdo=Database::connection();$defaultLocale=(string)($pdo->query('SELECT code FROM languages WHERE is_default=1 AND is_active=1 LIMIT 1')->fetchColumn()?:'tr');$locale=(string)($_POST['lang']??$defaultLocale);$check=$pdo->prepare('SELECT code FROM languages WHERE code=? AND is_active=1');$check->execute([$locale]);if(!$check->fetchColumn()){$locale=$defaultLocale;}
     $save=$pdo->prepare('INSERT INTO translations(language_code,translation_key,translation_value) VALUES(?,?,?) ON DUPLICATE KEY UPDATE translation_value=VALUES(translation_value)');
     foreach((array)($_POST['translations']??[]) as $key=>$value){$key=(string)$key;if(preg_match('/^[a-zA-Z0-9_.-]{1,190}$/',$key))$save->execute([$locale,$key,(string)$value]);}
     $newKey=trim((string)($_POST['new_key']??''));$newValue=(string)($_POST['new_value']??'');if($newKey!==''&&preg_match('/^[a-zA-Z0-9_.-]{1,190}$/',$newKey))$save->execute([$locale,$newKey,$newValue]);
