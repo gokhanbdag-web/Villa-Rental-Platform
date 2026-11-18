@@ -39,3 +39,8 @@ INSERT INTO translations(language_code,translation_key,translation_value) VALUES
 ('tr','sms.payment.received','Ödemeniz alındı. Rezervasyon kodu: :code.'),
 ('en','sms.payment.received','Your payment was received. Booking reference: :code.')
 ON DUPLICATE KEY UPDATE translation_value=VALUES(translation_value);
+
+INSERT INTO translations(language_code,translation_key,translation_value) VALUES
+('tr','sms.message.received','Rezervasyon görüşmenizde yeni mesajınız var. Mesajlar: :url'),
+('en','sms.message.received','You have a new booking message. Messages: :url')
+ON DUPLICATE KEY UPDATE translation_value=VALUES(translation_value);
