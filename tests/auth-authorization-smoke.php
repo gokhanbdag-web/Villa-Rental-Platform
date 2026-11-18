@@ -10,6 +10,10 @@ $cases = [
     ['super_admin', 'customer', true],
     ['super_admin', 'vendor', true],
     ['super_admin', 'super_admin', false],
+    ['super_admin', 'editor', true],
+    ['super_admin', 'support', true],
+    ['admin', 'editor', false],
+    ['admin', 'support', false],
     ['admin', 'customer', true],
     ['admin', 'vendor', true],
     ['admin', 'admin', false],
@@ -58,6 +62,26 @@ if ($vendorRoute === '' || strpos($vendorRoute, 'BookingStatusPolicy::canVendorT
     || strpos($vendorRoute, 'BookingHoldExpiryService::expireSafePendingForProperty') === false
     || strpos($vendorRoute, 'SELECT id FROM properties WHERE id=? AND vendor_id=? LIMIT 1 FOR UPDATE') === false) {
     throw new RuntimeException('Vendor booking route does not enforce ownership, safe lock order, pending overlap and transition rules.');
+}
+
+$permissionCases = [
+    ['super_admin', 'admin.pages.edit', true],
+    ['admin', 'admin.bookings.view', true],
+    ['editor', 'admin.pages.view', true],
+    ['editor', 'admin.pages.edit', true],
+    ['editor', 'admin.blog.edit', true],
+    ['editor', 'admin.bookings.view', false],
+    ['editor', 'admin.users.manage', false],
+    ['support', 'admin.bookings.view', true],
+    ['support', 'admin.bookings.edit', false],
+    ['support', 'admin.pages.view', false],
+    ['customer', 'admin.bookings.view', false],
+    ['vendor', 'admin.blog.edit', false],
+];
+foreach ($permissionCases as [$role, $permission, $expected]) {
+    if (\App\Core\Auth::roleCan($role, $permission) !== $expected) {
+        throw new RuntimeException('Unexpected role permission: ' . $role . ' / ' . $permission);
+    }
 }
 
 foreach ($cases as [$actorRole, $targetRole, $expected]) {
