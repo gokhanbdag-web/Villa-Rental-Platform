@@ -359,6 +359,16 @@ try {
         'A verified webhook event was not recorded.'
     );
 
+    // Duplicate identity is safe only when payload, type and transaction reference match.
+    concurrencyAssert($inboxB->recordVerified('paytr', $webhookEventId, 'payment_callback', $webhookReference, $webhookPayload) === 'duplicate', 'Identical webhook replay was not recognized.');
+    concurrencyAssert($inboxB->recordVerified('paytr', $webhookEventId, 'refund_callback', $webhookReference, $webhookPayload) === 'conflict', 'Same event ID with a different event type was accepted.');
+    concurrencyAssert($inboxB->recordVerified('paytr', $webhookEventId, 'payment_callback', $webhookReference . '-OTHER', $webhookPayload) === 'conflict', 'Same event ID with a different transaction reference was accepted.');
+    concurrencyAssert($inboxB->recordVerified('paytr', $webhookEventId, 'payment_callback', $webhookReference, ['status' => 'failed']) === 'conflict', 'Same event ID with different payload was accepted.');
+    $webhookIdentity = $pdoA->prepare('SELECT event_type,transaction_reference,processing_status FROM payment_webhook_events WHERE provider=? AND provider_event_id=?');
+    $webhookIdentity->execute(['paytr', $webhookEventId]);
+    $webhookOriginal = $webhookIdentity->fetch(PDO::FETCH_ASSOC);
+    concurrencyAssert($webhookOriginal['event_type'] === 'payment_callback' && $webhookOriginal['transaction_reference'] === $webhookReference && $webhookOriginal['processing_status'] === 'received', 'Conflicting webhook replay mutated the original event.');
+
     $pdoA->beginTransaction();
     $webhookRowLock = $pdoA->prepare('SELECT id FROM payment_webhook_events WHERE provider=? AND provider_event_id=? FOR UPDATE');
     $webhookRowLock->execute(['paytr', $webhookEventId]);
