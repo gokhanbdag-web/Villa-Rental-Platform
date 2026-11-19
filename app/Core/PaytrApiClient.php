@@ -9,6 +9,8 @@ final class PaytrApiClient
 
     public static function getIframeToken(array $config,array $payload):array
     {
+        $environment=(string)($config['environment']??'sandbox');
+        if(!in_array($environment,['sandbox','production'],true))throw new \InvalidArgumentException('PayTR ödeme ortamı geçersiz.');
         $credentials=(array)($config['credentials']??[]);
         $merchantId=trim((string)($credentials['merchant_id']??''));
         $key=(string)($credentials['merchant_key']??'');
