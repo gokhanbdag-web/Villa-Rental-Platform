@@ -162,8 +162,14 @@ paymentAssert(substr_count($routesSource, 'IyzicoPaymentReconciler::reconcileExp
 // A deleted or inconsistent payment must be rejected before its payload is read.
 $refundSource = file_get_contents(dirname(__DIR__) . '/app/Core/PaymentRefundService.php');
 paymentAssert(is_string($refundSource), 'Refund service source could not be inspected.');
-$refundGuard = strpos($refundSource, "if (!\\$payment || (string)\\$payment['status'] !== 'paid')");
-$refundPayloadRead = strpos($refundSource, "\\$paymentPayload=json_decode((string)\\$payment['response_payload']");
+$refundGuard = strpos($refundSource, <<<'GUARD'
+if (!$payment || (string)$payment['status'] !== 'paid')
+GUARD
+);
+$refundPayloadRead = strpos($refundSource, <<<'PAYLOAD'
+$paymentPayload=json_decode((string)$payment['response_payload']
+PAYLOAD
+);
 paymentAssert($refundGuard !== false && $refundPayloadRead !== false && $refundGuard < $refundPayloadRead, 'Refund settlement accesses payment data before checking the locked payment row.');
 
 echo "Payment security smoke tests passed. No gateway API requests were made.\n";
