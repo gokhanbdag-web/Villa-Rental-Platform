@@ -178,6 +178,9 @@ paymentAssert(is_string($payoutSource) && str_contains($payoutSource, "WHEN bf.v
 
 // Bank payout profile labels must reject multiline injection into payout documents.
 $profileValidationSource = file_get_contents(dirname(__DIR__) . '/app/Core/VendorPayoutService.php');
-paymentAssert(is_string($profileValidationSource) && str_contains($profileValidationSource, "preg_match('/[\\r\\n]/', \\$bankName.\\$accountHolder)"), 'Bank payout profile accepts multiline bank or account-holder labels.');
+paymentAssert(is_string($profileValidationSource) && str_contains($profileValidationSource, <<<'VALIDATION'
+preg_match('/[\\r\\n]/', $bankName.$accountHolder)
+VALIDATION
+), 'Bank payout profile accepts multiline bank or account-holder labels.');
 
 echo "Payment security smoke tests passed. No gateway API requests were made.\n";
