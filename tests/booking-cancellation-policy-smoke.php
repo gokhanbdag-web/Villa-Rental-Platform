@@ -20,6 +20,8 @@ $checks = [
     'approval recalculates against the remaining paid balance' => BookingCancellationPolicy::refundAmount('800.00', 25) === '200.00',
 ];
 $checks += [
+    'closed reservations cannot be reactivated by admin and rebooking requires new booking' => str_contains($routes, "in_array((string)\$booking['status'],['cancelled','completed'],true)") && str_contains($routes, "Kapanmış rezervasyon yeniden açılamaz") && str_contains($routes, "Onaylanmış rezervasyon beklemeye alınamaz"),
+
     'customer cancellation endpoint is authenticated and CSRF protected' => str_contains($routes, "'/account/bookings/cancel-request'") && str_contains($routes, 'verify_csrf();'),
     'customer can only request cancellation for an owned pending or confirmed booking' => str_contains($routes, 'guest_user_id=? LIMIT 1 FOR UPDATE') && str_contains($routes, "['pending','confirmed']"),
     'request snapshots policy days, refund percentage and amount' => str_contains($routes, 'policy_days_snapshot,refund_percent_snapshot,refund_amount') && str_contains($migration, 'policy_days_snapshot SMALLINT'),
