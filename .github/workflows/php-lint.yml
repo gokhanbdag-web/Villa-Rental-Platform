@@ -55,6 +55,14 @@ jobs:
         run: php tests/iyzico-production-mode-smoke.php
       - name: Run PayTR hosted checkout and callback smoke tests
         run: php tests/paytr-checkout-smoke.php
+      - name: Run payment provider sandbox scenario matrix
+        run: php tests/payment-provider-sandbox-matrix-smoke.php
+      - name: Run PayTR sandbox readiness checks
+        run: php tests/paytr-sandbox-readiness-smoke.php
+      - name: Run iyzico environment validation checks
+        run: php tests/iyzico-environment-validation-smoke.php
+      - name: Run PayTR environment validation checks
+        run: php tests/paytr-environment-validation-smoke.php
       - name: Run multilingual content and email smoke tests
         run: php tests/multilingual-content-email-smoke.php
       - name: Run Netgsm SMS integration smoke tests
