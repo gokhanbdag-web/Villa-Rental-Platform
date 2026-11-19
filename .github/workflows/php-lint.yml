@@ -87,6 +87,8 @@ jobs:
         run: php tests/manual-bank-refund-admin-review-smoke.php
       - name: Run verified manual bank refund settlement checks
         run: php tests/manual-bank-refund-settlement-smoke.php
+      - name: Run manual bank refund admin settlement checks
+        run: php tests/manual-bank-refund-admin-settle-smoke.php
       - name: Run villa detail booking flow smoke test
         run: php tests/property-detail-booking-smoke.php
       - name: Run homepage statistic settings smoke test
