@@ -59,6 +59,8 @@ jobs:
         run: php tests/payment-provider-sandbox-matrix-smoke.php
       - name: Run successful failed delayed and repeated callback matrix
         run: php tests/payment-callback-status-matrix-smoke.php
+      - name: Run refund reconciliation regression checks
+        run: php tests/payment-refund-reconciliation-smoke.php
       - name: Run PayTR sandbox readiness checks
         run: php tests/paytr-sandbox-readiness-smoke.php
       - name: Run iyzico environment validation checks
