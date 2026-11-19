@@ -3869,7 +3869,9 @@ $router->post('/admin/bookings/manual', static function (): void {
         $lock=$pdo->prepare("SELECT id,base_nightly_price,weekend_nightly_price,cleaning_fee,early_checkin_enabled,early_checkin_fee,late_checkout_enabled,late_checkout_fee,currency,max_guests FROM properties WHERE id=? AND status<>'archived' FOR UPDATE");
         $lock->execute([$propertyId]);$property=$lock->fetch();
         if(!$property||$guests<1||$guests>(int)$property['max_guests']){$pdo->rollBack();http_response_code(422);exit('Konaklama veya misafir kapasitesi geçersiz.');}
-        $conflict=$pdo->prepare("SELECT id FROM bookings WHERE property_id=? AND status='confirmed' AND check_in < ? AND check_out > ? LIMIT 1");
+        // Hold the property lock while expiring only payment-safe holds and checking all active reservations.
+        \App\Core\BookingHoldExpiryService::expireSafePendingForProperty($pdo,$propertyId);
+        $conflict=$pdo->prepare("SELECT id FROM bookings WHERE property_id=? AND status IN ('pending','confirmed') AND check_in < ? AND check_out > ? LIMIT 1 FOR UPDATE");
         $conflict->execute([$propertyId,$outRaw,$inRaw]);
         if($conflict->fetchColumn()){$pdo->rollBack();http_response_code(409);exit('Bu tarihlerde başka bir rezervasyon bulunuyor.');}
         $calendar=$pdo->prepare("SELECT date_from,date_to,status,nightly_price FROM availability WHERE property_id=? AND date_from < ? AND date_to > ?");
