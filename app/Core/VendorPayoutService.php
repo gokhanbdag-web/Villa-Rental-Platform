@@ -183,7 +183,7 @@ final class VendorPayoutService
 
             $recalculate = $pdo->prepare("UPDATE booking_financials bf
                 SET payout_status = CASE
-                    WHEN COALESCE((SELECT SUM(vpa.amount) FROM vendor_payout_allocations vpa JOIN vendor_payouts vp ON vp.id=vpa.payout_id WHERE vpa.booking_id=bf.booking_id AND vp.status='paid'),0) >= bf.vendor_net_amount THEN 'paid'
+                    WHEN bf.vendor_net_amount > 0 AND COALESCE((SELECT SUM(vpa.amount) FROM vendor_payout_allocations vpa JOIN vendor_payouts vp ON vp.id=vpa.payout_id WHERE vpa.booking_id=bf.booking_id AND vp.status='paid'),0) >= bf.vendor_net_amount THEN 'paid'
                     WHEN COALESCE((SELECT SUM(vpa.amount) FROM vendor_payout_allocations vpa JOIN vendor_payouts vp ON vp.id=vpa.payout_id WHERE vpa.booking_id=bf.booking_id AND vp.status IN ('requested','processing')),0) > 0 THEN 'processing'
                     ELSE 'unpaid'
                 END
