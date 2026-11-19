@@ -31,10 +31,10 @@ final class BookingStayRules
             $to=(string)($season['date_to']??'');
             if($from===''||$to===''||$to<=$from) continue;
             if($arrivalDate >= $from && $arrivalDate < $to) {
-                $arrivalMask=(int)($season['checkin_weekdays']??self::ALL_WEEKDAYS);
+                $arrivalMask &= (int)($season['checkin_weekdays']??self::ALL_WEEKDAYS);
             }
             if($lastNight >= $from && $lastNight < $to) {
-                $departureMask=(int)($season['checkout_weekdays']??self::ALL_WEEKDAYS);
+                $departureMask &= (int)($season['checkout_weekdays']??self::ALL_WEEKDAYS);
             }
             if($from < $checkOut->format('Y-m-d') && $to > $arrivalDate) {
                 $requiredNights=max($requiredNights,(int)($season['min_nights']??1));
