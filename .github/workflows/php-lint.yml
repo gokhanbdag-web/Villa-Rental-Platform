@@ -57,6 +57,8 @@ jobs:
         run: php tests/paytr-checkout-smoke.php
       - name: Run payment provider sandbox scenario matrix
         run: php tests/payment-provider-sandbox-matrix-smoke.php
+      - name: Run successful failed delayed and repeated callback matrix
+        run: php tests/payment-callback-status-matrix-smoke.php
       - name: Run PayTR sandbox readiness checks
         run: php tests/paytr-sandbox-readiness-smoke.php
       - name: Run iyzico environment validation checks
