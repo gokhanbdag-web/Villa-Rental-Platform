@@ -18,10 +18,13 @@ final class PaymentWebhookInbox
         $stmt=$this->pdo->prepare("INSERT IGNORE INTO payment_webhook_events (provider,provider_event_id,event_type,transaction_reference,payload_hash,processing_status,received_at) VALUES(?,?,?,?,?,'received',NOW())");
         $stmt->execute([$provider,$eventId,$eventType,$transactionReference,$hash]);
         if($stmt->rowCount()===1)return 'recorded';
-        $check=$this->pdo->prepare('SELECT payload_hash FROM payment_webhook_events WHERE provider=? AND provider_event_id=? LIMIT 1');
-        $check->execute([$provider,$eventId]);$existing=$check->fetchColumn();
+        $check=$this->pdo->prepare('SELECT payload_hash,event_type,transaction_reference FROM payment_webhook_events WHERE provider=? AND provider_event_id=? LIMIT 1');
+        $check->execute([$provider,$eventId]);$existing=$check->fetch(PDO::FETCH_ASSOC);
         if($existing===false)throw new \RuntimeException('Ödeme bildirimi kaydı doğrulanamadı.');
-        return hash_equals((string)$existing,$hash)?'duplicate':'conflict';
+        return hash_equals((string)$existing['payload_hash'],$hash)
+            && hash_equals((string)$existing['event_type'],$eventType)
+            && $existing['transaction_reference']===$transactionReference
+            ? 'duplicate' : 'conflict';
     }
 
     /** Atomically claim an event; only one worker can process it at a time. */
