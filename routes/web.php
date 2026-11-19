@@ -4011,6 +4011,7 @@ $router->get('/admin/payments/manual', static function (): void {
     $sql="SELECT mr.*,b.booking_code,p.title AS property_title,COALESCE(u.username,'Silinmiş kullanıcı') AS guest_name,COALESCE(u.email,'') AS guest_email,ru.username AS reviewer_name FROM manual_payment_reports mr JOIN bookings b ON b.id=mr.booking_id JOIN properties p ON p.id=b.property_id LEFT JOIN users u ON u.id=mr.guest_user_id LEFT JOIN users ru ON ru.id=mr.reviewed_by";
     if($reportFilter!=='all'){$s=$pdo->prepare($sql." WHERE mr.status=? ORDER BY CASE WHEN mr.status='pending' THEN 0 ELSE 1 END,mr.submitted_at DESC,mr.id DESC LIMIT 300");$s->execute([$reportFilter]);$manualPaymentReports=$s->fetchAll(PDO::FETCH_ASSOC);}
     else{$manualPaymentReports=$pdo->query($sql.' ORDER BY mr.submitted_at DESC,mr.id DESC LIMIT 300')->fetchAll(PDO::FETCH_ASSOC);}
+    $bankRefunds=$pdo->query("SELECT r.id,r.amount,r.currency,r.status,r.bank_reference,r.reason,r.created_at,r.completed_at,b.booking_code,p.title AS property_title,COALESCE(u.username,'—') AS reviewer_name FROM manual_bank_refunds r JOIN bookings b ON b.id=r.booking_id JOIN properties p ON p.id=b.property_id LEFT JOIN users u ON u.id=r.reviewed_by_user_id ORDER BY r.created_at DESC,r.id DESC LIMIT 100")->fetchAll(PDO::FETCH_ASSOC);
     ThemeManager::renderTemplate('templates/pages/admin/manual-payment-reports.php',get_defined_vars());
 });
 $router->post('/admin/payments/manual/review', static function (): void {
