@@ -410,6 +410,17 @@ try {
     }
     concurrencyAssert($webhookClaimTimedOut, 'Concurrent webhook claim did not wait for the event-row lock.');
 
+    // A worker that crashes before commit must not strand an event in
+    // processing: InnoDB rolls the claim back with the whole transaction.
+    $pdoA->beginTransaction();
+    concurrencyAssert($inboxA->claim('paytr', $webhookEventId), 'Transactional webhook claim was not acquired.');
+    $pdoA->rollBack();
+    $claimAfterRollback = $pdoB->prepare('SELECT processing_status FROM payment_webhook_events WHERE provider=? AND provider_event_id=?');
+    $claimAfterRollback->execute(['paytr', $webhookEventId]);
+    concurrencyAssert($claimAfterRollback->fetchColumn() === 'received', 'Rolled-back worker stranded webhook in processing.');
+    concurrencyAssert($inboxB->claim('paytr', $webhookEventId), 'Webhook could not be claimed after worker rollback.');
+    concurrencyAssert($inboxB->markFailed('paytr', $webhookEventId, 'Synthetic rollback recovery'), 'Recovered claim could not be marked failed.');
+
     concurrencyAssert($inboxA->claim('paytr', $webhookEventId), 'First webhook claim was not acquired.');
     concurrencyAssert(!$inboxB->claim('paytr', $webhookEventId), 'A second processor claimed an event already in processing.');
     concurrencyAssert($inboxA->markFailed('paytr', $webhookEventId, 'Synthetic retryable failure'), 'Webhook failure state was not recorded.');
