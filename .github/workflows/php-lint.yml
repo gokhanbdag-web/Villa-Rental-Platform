@@ -73,6 +73,8 @@ jobs:
         run: php tests/netgsm-sms-smoke.php
       - name: Run manual bank transfer report workflow smoke tests
         run: php tests/manual-payment-report-smoke.php
+      - name: Run manual bank refund audit schema checks
+        run: php tests/manual-bank-refund-audit-smoke.php
       - name: Run villa detail booking flow smoke test
         run: php tests/property-detail-booking-smoke.php
       - name: Run homepage statistic settings smoke test
