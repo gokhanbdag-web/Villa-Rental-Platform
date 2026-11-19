@@ -15,7 +15,13 @@ $manualBookingEnd = strpos($routes, "\$router->post('/admin/bookings/status'", $
 $manualBookingRoute = $manualBookingStart !== false && $manualBookingEnd !== false
     ? substr($routes, $manualBookingStart, $manualBookingEnd - $manualBookingStart)
     : '';
+$adminStatusStart = strpos($routes, "\$router->post('/admin/bookings/status'");
+$adminStatusEnd = strpos($routes, "\$router->", ($adminStatusStart === false ? 0 : $adminStatusStart + 12));
+$adminStatusRoute = $adminStatusStart !== false ? substr($routes, $adminStatusStart, $adminStatusEnd === false ? null : $adminStatusEnd - $adminStatusStart) : '';
+
 $checks = [
+    'admin confirmation expires safe holds before checking booking conflicts' => str_contains($adminStatusRoute, 'BookingHoldExpiryService::expireSafePendingForProperty($pdo,$propertyId)') && str_contains($adminStatusRoute, "status IN ('pending','confirmed')") && str_contains($adminStatusRoute, 'BookingStayRules::validate') && str_contains($adminStatusRoute, "status<>'available'"),
+
     'manual admin booking serializes pending and confirmed holds under property lock' => str_contains($manualBookingRoute, "status IN ('pending','confirmed')") && str_contains($manualBookingRoute, 'BookingHoldExpiryService::expireSafePendingForProperty($pdo,$propertyId)') && str_contains($manualBookingRoute, 'LIMIT 1 FOR UPDATE'),
     'booking creation rejects overlapping pending and confirmed reservations under the property lock' => str_contains($bookingRoute, "status IN ('pending','confirmed')") && str_contains($bookingRoute, 'FOR UPDATE') && str_contains($bookingRoute, 'SELECT id,base_nightly_price') ,
 
