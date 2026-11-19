@@ -172,4 +172,8 @@ PAYLOAD
 );
 paymentAssert($refundGuard !== false && $refundPayloadRead !== false && $refundGuard < $refundPayloadRead, 'Refund settlement accesses payment data before checking the locked payment row.');
 
+// A fully refunded (zero-net) booking must never be marked paid with no payout.
+$payoutSource = file_get_contents(dirname(__DIR__) . '/app/Core/VendorPayoutService.php');
+paymentAssert(is_string($payoutSource) && str_contains($payoutSource, "WHEN bf.vendor_net_amount > 0 AND COALESCE("), 'Zero-net bookings can be incorrectly marked as paid without a vendor payout.');
+
 echo "Payment security smoke tests passed. No gateway API requests were made.\n";
