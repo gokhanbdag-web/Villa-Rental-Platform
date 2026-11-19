@@ -3921,6 +3921,14 @@ $router->post('/admin/bookings/status', static function (): void {
         if(!$booking){$pdo->rollBack();http_response_code(404);exit('Rezervasyon bulunamadı.');}
         if((int)$booking['property_id']!==$propertyId){$pdo->rollBack();http_response_code(409);exit('Rezervasyon kaydı işlem sırasında değişti. Lütfen tekrar deneyin.');}
 
+        // Closed bookings cannot be reopened: a new reservation must pass the
+        // normal availability, stay-rule and payment validation paths.
+        if(in_array((string)$booking['status'],['cancelled','completed'],true) && $status!==(string)$booking['status']){
+            $pdo->rollBack();http_response_code(409);exit('Kapanmış rezervasyon yeniden açılamaz. Yeni rezervasyon oluşturun.');
+        }
+        if($status==='pending' && (string)$booking['status']!=='pending'){
+            $pdo->rollBack();http_response_code(409);exit('Onaylanmış rezervasyon beklemeye alınamaz.');
+        }
         if($status==='confirmed'){
             // Locking reads see the latest committed rows after waiting for the
             // property lock; a snapshot read could otherwise miss a concurrent change.
