@@ -696,7 +696,7 @@ try {
     $bookingCreateRoute = $bookingCreateRouteStart !== false ? substr($webRoutesSource, $bookingCreateRouteStart) : '';
     assertSmoke(
         substr_count($webRoutesSource, "status='confirmed'") >= 7
-        && substr_count($webRoutesSource, "status IN ('pending','confirmed')") === 4
+        && substr_count($webRoutesSource, "status IN ('pending','confirmed')") >= 5
         && str_contains($bookingCreateRoute, "status IN ('pending','confirmed')")
         && str_contains($bookingCreateRoute, 'FOR UPDATE')
         && str_contains($webRoutesSource, "SELECT id FROM bookings WHERE property_id=? AND id<>? AND status IN ('pending','confirmed')"),

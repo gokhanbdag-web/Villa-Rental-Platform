@@ -10,7 +10,13 @@ $bookingRouteStart = strpos($routes, '$router->post(\'/villa/{slug}/reserve\'');
 $bookingRoute = $bookingRouteStart !== false
     ? substr($routes, $bookingRouteStart)
     : '';
+$manualBookingStart = strpos($routes, "\$router->post('/admin/bookings/manual'");
+$manualBookingEnd = strpos($routes, "\$router->post('/admin/bookings/status'", $manualBookingStart === false ? 0 : $manualBookingStart);
+$manualBookingRoute = $manualBookingStart !== false && $manualBookingEnd !== false
+    ? substr($routes, $manualBookingStart, $manualBookingEnd - $manualBookingStart)
+    : '';
 $checks = [
+    'manual admin booking serializes pending and confirmed holds under property lock' => str_contains($manualBookingRoute, "status IN ('pending','confirmed')") && str_contains($manualBookingRoute, 'BookingHoldExpiryService::expireSafePendingForProperty($pdo,$propertyId)') && str_contains($manualBookingRoute, 'LIMIT 1 FOR UPDATE'),
     'booking creation rejects overlapping pending and confirmed reservations under the property lock' => str_contains($bookingRoute, "status IN ('pending','confirmed')") && str_contains($bookingRoute, 'FOR UPDATE') && str_contains($bookingRoute, 'SELECT id,base_nightly_price') ,
 
     'villa detail uses a dedicated 1/3 + 2/3 hero layout' => str_contains($property, 'property-hero-layout') && str_contains($property, 'property-hero-gallery'),
