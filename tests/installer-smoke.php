@@ -691,6 +691,14 @@ try {
     $landingThemeSource = (string)file_get_contents($root . '/themes/default/templates/landing.php');
     $listingPageSource = (string)file_get_contents($root . '/themes/default/templates/pages/listing.php');
     assertSmoke(str_contains($landingThemeSource, "renderPartial('components/cards/villa-card.php'") && str_contains($listingPageSource, "renderPartial('components/cards/villa-card.php'"), 'Homepage and search results must use the same shared villa card component.');
+    $holdExpirySource = (string)file_get_contents($root . '/app/Core/BookingHoldExpiryService.php');
+    assertSmoke(
+        str_contains($holdExpirySource, 'AND id>?')
+        && str_contains($holdExpirySource, 'ORDER BY id LIMIT {$limit} FOR UPDATE')
+        && str_contains($holdExpirySource, '$lastId = (int)$booking[\'id\']')
+        && str_contains($holdExpirySource, 'while (count($rows) === $limit)'),
+        'Expired holds must be scanned across batches so unresolved first-page payments cannot starve safe later holds.'
+    );
     $webRoutesSource = (string)file_get_contents($root . '/routes/web.php');
     $bookingCreateRouteStart = strpos($webRoutesSource, '$router->post(\'/villa/{slug}/reserve\'');
     $bookingCreateRoute = $bookingCreateRouteStart !== false ? substr($webRoutesSource, $bookingCreateRouteStart) : '';
