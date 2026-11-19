@@ -170,7 +170,7 @@ final class PaymentRefundService
             $refundLock = $pdo->prepare("SELECT id,provider,amount,currency,status,conversation_id FROM payment_refunds WHERE id=? AND payment_transaction_id=? LIMIT 1 FOR UPDATE");
             $refundLock->execute([$refundId, (int)$payment['id']]);
             $refund = $refundLock->fetch(PDO::FETCH_ASSOC);
-            if (!$refund || (string)$refund['status'] !== 'processing') throw new \RuntimeException('İade kaydı artık işlenebilir durumda değil.');
+            if (!$refund || !in_array((string)$refund['status'], ['processing','unknown'], true)) throw new \RuntimeException('İade kaydı artık işlenebilir durumda değil.');
 
             $amountCents = self::toMinorUnits((string)$refund['amount']);
             if (!hash_equals((string)$refund['conversation_id'], (string)($response['conversationId'] ?? ''))
@@ -208,7 +208,7 @@ final class PaymentRefundService
 
             $responseJson = json_encode($response, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_THROW_ON_ERROR);
             $providerReference = trim((string)($response['refundHostReference'] ?? ''));
-            $updateRefund = $pdo->prepare("UPDATE payment_refunds SET status='succeeded',provider_reference=?,response_payload=?,error_message=NULL,completed_at=NOW(),updated_at=NOW() WHERE id=? AND status='processing'");
+            $updateRefund = $pdo->prepare("UPDATE payment_refunds SET status='succeeded',provider_reference=?,response_payload=?,error_message=NULL,completed_at=NOW(),updated_at=NOW() WHERE id=? AND status IN ('processing','unknown')");
             $updateRefund->execute([$providerReference !== '' ? $providerReference : null, $responseJson, $refundId]);
             if ($updateRefund->rowCount() !== 1) throw new \RuntimeException('İade kaydı eşzamanlı olarak değişti.');
 
