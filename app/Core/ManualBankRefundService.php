@@ -109,6 +109,10 @@ final class ManualBankRefundService
             $refund->execute([$refundId,(int)$paid['id']]);$row=$refund->fetch(PDO::FETCH_ASSOC);
             if(!$row||$row['status']!=='processing')throw new \RuntimeException('Yalnızca işleme alınmış iadeler sonuçlandırılabilir.');
             if(strtoupper((string)$row['currency'])!==strtoupper((string)$paid['currency']))throw new \RuntimeException('İade para birimi uyuşmuyor.');
+            // Never settle two refunds against the same bank transaction evidence.
+            $referenceCheck=$pdo->prepare("SELECT id FROM manual_bank_refunds WHERE bank_reference=? AND status='succeeded' AND id<>? LIMIT 1 FOR UPDATE");
+            $referenceCheck->execute([$bankReference,$refundId]);
+            if($referenceCheck->fetchColumn())throw new \RuntimeException('Bu banka işlem referansı başka bir iadede kullanılmış.');
             $cents=static fn($v):int=>(int)round((float)$v*100);
             $amount=$cents($row['amount']);$gross=$cents($money['gross_amount']);$fee=$cents($money['platform_fee']);$vendor=$cents($money['vendor_net_amount']);
             if($amount<1||$amount>$gross||$gross!==$fee+$vendor)throw new \RuntimeException('İade finans dağılımı tutarsız.');
