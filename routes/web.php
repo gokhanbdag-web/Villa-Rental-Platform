@@ -4014,6 +4014,22 @@ $router->get('/admin/payments/manual', static function (): void {
     $bankRefunds=$pdo->query("SELECT r.id,r.amount,r.currency,r.status,r.bank_reference,r.reason,r.created_at,r.completed_at,b.booking_code,p.title AS property_title,COALESCE(u.username,'—') AS reviewer_name FROM manual_bank_refunds r JOIN bookings b ON b.id=r.booking_id JOIN properties p ON p.id=b.property_id LEFT JOIN users u ON u.id=r.reviewed_by_user_id ORDER BY r.created_at DESC,r.id DESC LIMIT 100")->fetchAll(PDO::FETCH_ASSOC);
     ThemeManager::renderTemplate('templates/pages/admin/manual-payment-reports.php',get_defined_vars());
 });
+$router->post('/admin/payments/manual/refunds/settle', static function (): void {
+    Auth::requireRole(['super_admin','admin']);verify_csrf();
+    $actor=Auth::user();
+    $refundId=filter_var($_POST['refund_id']??null,FILTER_VALIDATE_INT);
+    $reference=trim((string)($_POST['bank_reference']??''));
+    $confirmed=(string)($_POST['bank_transfer_verified']??'')==='1';
+    if(!$actor||!$refundId||$refundId<1||$reference===''||mb_strlen($reference)>190||!$confirmed){
+        http_response_code(422);exit('Banka dekontu doğrulanmadan iade sonuçlandırılamaz.');
+    }
+    try{
+        \App\Core\ManualBankRefundService::settleVerified(Database::connection(),(int)$actor['id'],$refundId,$reference);
+    }catch(\InvalidArgumentException|\RuntimeException $error){
+        http_response_code(409);exit(e($error->getMessage()));
+    }
+    redirect('/admin/payments/manual');
+});
 $router->post('/admin/payments/manual/refunds/review', static function (): void {
     Auth::requireRole(['super_admin','admin']);verify_csrf();
     $actor=Auth::user();
