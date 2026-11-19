@@ -18,14 +18,14 @@ final class BookingHoldExpiryService
             throw new RuntimeException('Rezervasyon süresi kontrolü için kilitli işlem gereklidir.');
         }
         $limit = max(1, min(200, $limit));
+        // Scan expired holds in bounded batches. A first page of unresolved payments
+        // must not starve later, safely releasable reservations indefinitely.
         $bookings = $pdo->prepare(
             "SELECT id,guest_user_id,guest_name,guest_email,booking_code FROM bookings
-             WHERE property_id=? AND status='pending'
+             WHERE property_id=? AND status='pending' AND id>?
                AND hold_expires_at IS NOT NULL AND hold_expires_at<=NOW()
-             ORDER BY hold_expires_at,id LIMIT {$limit} FOR UPDATE"
+             ORDER BY id LIMIT {$limit} FOR UPDATE"
         );
-        $bookings->execute([$propertyId]);
-        $rows = $bookings->fetchAll(PDO::FETCH_ASSOC);
         $expired = 0;
 
         $manual = $pdo->prepare("SELECT id FROM manual_payment_reports WHERE booking_id=? AND status='pending' LIMIT 1 FOR UPDATE");
@@ -38,7 +38,12 @@ final class BookingHoldExpiryService
         );
         $cancel = $pdo->prepare("UPDATE bookings SET status='cancelled' WHERE id=? AND status='pending' AND hold_expires_at<=NOW()");
 
-        foreach ($rows as $booking) {
+        $lastId = 0;
+        do {
+            $bookings->execute([$propertyId, $lastId]);
+            $rows = $bookings->fetchAll(PDO::FETCH_ASSOC);
+            foreach ($rows as $booking) {
+                $lastId = (int)$booking['id'];
             $bookingId = (int)$booking['id'];
             $manual->execute([$bookingId]);
             if ($manual->fetchColumn() !== false) {
@@ -101,7 +106,8 @@ final class BookingHoldExpiryService
                     );
                 }
             }
-        }
+            }
+        } while (count($rows) === $limit);
         return $expired;
     }
 }
