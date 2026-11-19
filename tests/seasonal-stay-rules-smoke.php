@@ -31,6 +31,17 @@ stayRuleAssert($outside,'Season weekday restrictions must not affect dates outsi
 $overlapMinimum=false;
 try{BookingStayRules::validate(new DateTimeImmutable('2027-05-30'),new DateTimeImmutable('2027-06-03'),$season);}catch(InvalidArgumentException $e){$overlapMinimum=str_contains($e->getMessage(),'minimum');}
 stayRuleAssert($overlapMinimum,'Minimum nights must apply when the stay overlaps a season, even if arrival is earlier.');
+// Overlapping seasons must not let a later row override an earlier restriction.
+$overlappingSeasons=[
+    ['date_from'=>'2027-06-01','date_to'=>'2027-06-20','min_nights'=>1,'checkin_weekdays'=>64,'checkout_weekdays'=>127],
+    ['date_from'=>'2027-06-01','date_to'=>'2027-06-20','min_nights'=>1,'checkin_weekdays'=>127,'checkout_weekdays'=>64],
+];
+$overlapArrivalRejected=false;
+try{BookingStayRules::validate(new DateTimeImmutable('2027-06-05'),new DateTimeImmutable('2027-06-13'),$overlappingSeasons);}catch(InvalidArgumentException $e){$overlapArrivalRejected=str_contains($e->getMessage(),'giriş');}
+stayRuleAssert($overlapArrivalRejected,'Overlapping seasons must preserve restrictive arrival weekdays.');
+$overlapDepartureRejected=false;
+try{BookingStayRules::validate(new DateTimeImmutable('2027-06-06'),new DateTimeImmutable('2027-06-14'),$overlappingSeasons);}catch(InvalidArgumentException $e){$overlapDepartureRejected=str_contains($e->getMessage(),'çıkış');}
+stayRuleAssert($overlapDepartureRejected,'Overlapping seasons must preserve restrictive departure weekdays.');
 $mask=BookingStayRules::weekdayMask(['1','3','7']);
 stayRuleAssert($mask===69,'Weekday bitmask must use Monday=1 through Sunday=64.');
 $empty=false;
