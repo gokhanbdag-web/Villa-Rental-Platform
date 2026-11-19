@@ -109,7 +109,7 @@ final class ManualBankRefundService
             $refund->execute([$refundId,(int)$paid['id']]);$row=$refund->fetch(PDO::FETCH_ASSOC);
             if(!$row||$row['status']!=='processing')throw new \RuntimeException('Yalnızca işleme alınmış iadeler sonuçlandırılabilir.');
             if(strtoupper((string)$row['currency'])!==strtoupper((string)$paid['currency']))throw new \RuntimeException('İade para birimi uyuşmuyor.');
-            $cents=static fn($v):(int)round((float)$v*100);
+            $cents=static fn($v):int=>(int)round((float)$v*100);
             $amount=$cents($row['amount']);$gross=$cents($money['gross_amount']);$fee=$cents($money['platform_fee']);$vendor=$cents($money['vendor_net_amount']);
             if($amount<1||$amount>$gross||$gross!==$fee+$vendor)throw new \RuntimeException('İade finans dağılımı tutarsız.');
             $vendorRefund=$amount===$gross?$vendor:(int)round($amount*$vendor/$gross);
