@@ -13,7 +13,7 @@ final class VendorPayoutService
         $bankName=trim($bankName);
         $accountHolder=trim($accountHolder);
         $iban=strtoupper(preg_replace('/\\s+/', '', $iban) ?? '');
-        if($userId<1||$bankName===''||strlen($bankName)>120||$accountHolder===''||strlen($accountHolder)>190||!self::validIban($iban)) {
+        if($userId<1||$bankName===''||strlen($bankName)>120||$accountHolder===''||strlen($accountHolder)>190||preg_match('/[\r\n]/', $bankName.$accountHolder)||!self::validIban($iban)) {
             throw new \InvalidArgumentException('Banka adı, hesap sahibi ve geçerli IBAN bilgilerini kontrol edin.');
         }
         $vendor=$pdo->prepare('SELECT id FROM vendors WHERE user_id=? LIMIT 1');
