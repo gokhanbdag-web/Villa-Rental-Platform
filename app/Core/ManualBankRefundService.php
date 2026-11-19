@@ -49,4 +49,39 @@ final class ManualBankRefundService
             throw $e;
         }
     }
+    /** A reviewer records the transfer lifecycle; success requires a bank reference. */
+    public static function review(PDO $pdo, int $reviewerId, int $refundId, string $decision, string $bankReference = ''): void
+    {
+        if ($reviewerId < 1 || $refundId < 1 || !in_array($decision, ['processing','failed','cancelled'], true)) {
+            throw new \InvalidArgumentException('Banka iadesi inceleme bilgileri geçersiz.');
+        }
+        $bankReference = trim($bankReference);
+        if (mb_strlen($bankReference) > 190) throw new \InvalidArgumentException('Banka referansı çok uzun.');
+        $pdo->beginTransaction();
+        try {
+            $identity = $pdo->prepare('SELECT booking_id,payment_transaction_id FROM manual_bank_refunds WHERE id=?');
+            $identity->execute([$refundId]);
+            $record = $identity->fetch(PDO::FETCH_ASSOC);
+            if (!$record) throw new \RuntimeException('Banka iadesi bulunamadı.');
+            $booking = $pdo->prepare('SELECT id FROM bookings WHERE id=? FOR UPDATE');
+            $booking->execute([(int)$record['booking_id']]);
+            if (!$booking->fetchColumn()) throw new \RuntimeException('Rezervasyon bulunamadı.');
+            $payment = $pdo->prepare('SELECT id FROM payment_transactions WHERE id=? AND booking_id=? FOR UPDATE');
+            $payment->execute([(int)$record['payment_transaction_id'],(int)$record['booking_id']]);
+            if (!$payment->fetchColumn()) throw new \RuntimeException('Ödeme bulunamadı.');
+            $refund = $pdo->prepare('SELECT status FROM manual_bank_refunds WHERE id=? FOR UPDATE');
+            $refund->execute([$refundId]);
+            $status = $refund->fetchColumn();
+            if ($status !== 'pending' && $status !== 'processing') throw new \RuntimeException('Banka iadesi daha önce sonuçlandırılmış.');
+            if ($status === 'processing' && $decision === 'processing') throw new \RuntimeException('Banka iadesi zaten işleniyor.');
+            $update = $pdo->prepare("UPDATE manual_bank_refunds SET status=?,bank_reference=?,reviewed_by_user_id=?,updated_at=NOW() WHERE id=? AND status=?");
+            $update->execute([$decision,$bankReference !== '' ? $bankReference : null,$reviewerId,$refundId,$status]);
+            if ($update->rowCount() !== 1) throw new \RuntimeException('Banka iadesi eşzamanlı değiştirildi.');
+            $pdo->commit();
+        } catch (\Throwable $e) {
+            if ($pdo->inTransaction()) $pdo->rollBack();
+            throw $e;
+        }
+    }
+
 }
