@@ -23,6 +23,9 @@ final class IyzicoApiClient
         }
 
         $environment ??= (string)($config['environment'] ?? 'sandbox');
+        if (!in_array($environment, ['sandbox', 'production'], true)) {
+            throw new \InvalidArgumentException('iyzico ödeme ortamı geçersiz.');
+        }
         $baseUrl = $environment === 'production' ? self::PRODUCTION_BASE_URL : self::SANDBOX_BASE_URL;
         $body = json_encode($payload, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_THROW_ON_ERROR);
         $randomKey = (string)round(microtime(true) * 1000) . bin2hex(random_bytes(8));
