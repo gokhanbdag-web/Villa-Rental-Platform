@@ -3914,6 +3914,8 @@ $router->post('/admin/bookings/status', static function (): void {
         $propertyLock->execute([$propertyId]);
         if(!$propertyLock->fetchColumn()){$pdo->rollBack();http_response_code(404);exit('Konaklama bulunamadı.');}
 
+        // Apply the same payment-safe hold expiry used by customer and vendor booking paths.
+        \App\Core\BookingHoldExpiryService::expireSafePendingForProperty($pdo,$propertyId);
         $s=$pdo->prepare('SELECT id,property_id,booking_code,guest_phone,guest_user_id,check_in,check_out,status FROM bookings WHERE id=? FOR UPDATE');
         $s->execute([$id]);$booking=$s->fetch();
         if(!$booking){$pdo->rollBack();http_response_code(404);exit('Rezervasyon bulunamadı.');}
