@@ -176,4 +176,11 @@ paymentAssert($refundGuard !== false && $refundPayloadRead !== false && $refundG
 $payoutSource = file_get_contents(dirname(__DIR__) . '/app/Core/VendorPayoutService.php');
 paymentAssert(is_string($payoutSource) && str_contains($payoutSource, "WHEN bf.vendor_net_amount > 0 AND COALESCE("), 'Zero-net bookings can be incorrectly marked as paid without a vendor payout.');
 
+// Bank payout profile labels must reject multiline injection into payout documents.
+$profileValidationSource = file_get_contents(dirname(__DIR__) . '/app/Core/VendorPayoutService.php');
+paymentAssert(is_string($profileValidationSource) && str_contains($profileValidationSource, <<<'VALIDATION'
+preg_match('/[\r\n]/', $bankName.$accountHolder)
+VALIDATION
+), 'Bank payout profile accepts multiline bank or account-holder labels.');
+
 echo "Payment security smoke tests passed. No gateway API requests were made.\n";
