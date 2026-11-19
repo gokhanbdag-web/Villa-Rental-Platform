@@ -159,4 +159,17 @@ paymentAssert(strpos($routesSource, 'IyzicoPaymentReconciler::reconcile') !== fa
 paymentAssert(strpos($reconcilerSource, "['pending','expired']") !== false && strpos($reconcilerSource, 'verifyIyzicoCheckoutFormRetrieve') !== false, 'Legacy expired provider tokens are not reconciled against a signed provider response.');
 paymentAssert(strpos($reconcilerSource, 'reconcileExpiredForProperty') !== false && strpos($reconcilerSource, 'reconciliation_checked_at') !== false && strpos($reconcilerSource, 'INTERVAL 1 MINUTE') !== false, 'Automatic provider reconciliation is not throttled for shared-hosting requests.');
 paymentAssert(substr_count($routesSource, 'IyzicoPaymentReconciler::reconcileExpiredForProperty') >= 2, 'Availability and booking flows do not trigger safe provider reconciliation.');
+// A deleted or inconsistent payment must be rejected before its payload is read.
+$refundSource = file_get_contents(dirname(__DIR__) . '/app/Core/PaymentRefundService.php');
+paymentAssert(is_string($refundSource), 'Refund service source could not be inspected.');
+$refundGuard = strpos($refundSource, <<<'GUARD'
+if (!$payment || (string)$payment['status'] !== 'paid')
+GUARD
+);
+$refundPayloadRead = strpos($refundSource, <<<'PAYLOAD'
+$paymentPayload=json_decode((string)$payment['response_payload']
+PAYLOAD
+);
+paymentAssert($refundGuard !== false && $refundPayloadRead !== false && $refundGuard < $refundPayloadRead, 'Refund settlement accesses payment data before checking the locked payment row.');
+
 echo "Payment security smoke tests passed. No gateway API requests were made.\n";

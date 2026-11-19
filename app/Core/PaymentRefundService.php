@@ -157,10 +157,10 @@ final class PaymentRefundService
             $paymentLock = $pdo->prepare('SELECT id,booking_id,provider,amount,currency,status,response_payload FROM payment_transactions WHERE id=? AND booking_id=? LIMIT 1 FOR UPDATE');
             $paymentLock->execute([(int)$refundIdentity['payment_transaction_id'], (int)$booking['id']]);
             $payment = $paymentLock->fetch(PDO::FETCH_ASSOC);
+            if (!$payment || (string)$payment['status'] !== 'paid') throw new \RuntimeException('İade için tahsil edilmiş ödeme kaydı bulunamadı.');
             $paymentPayload=json_decode((string)$payment['response_payload'],true);
             $expectedPaymentId=is_array($paymentPayload)?trim((string)($paymentPayload['verified_checkout_form']['paymentId']??'')):'';
             if($expectedPaymentId===''||!hash_equals($expectedPaymentId,(string)($response['paymentId']??''))) throw new \RuntimeException('İade yanıtındaki ödeme kimliği yerel ödeme kaydıyla eşleşmedi.');
-            if (!$payment || (string)$payment['status'] !== 'paid') throw new \RuntimeException('İade için tahsil edilmiş ödeme kaydı bulunamadı.');
 
             $financialLock = $pdo->prepare('SELECT gross_amount,platform_fee,vendor_net_amount,payout_status FROM booking_financials WHERE booking_id=? LIMIT 1 FOR UPDATE');
             $financialLock->execute([(int)$booking['id']]);
