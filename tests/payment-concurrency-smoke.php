@@ -215,6 +215,33 @@ try {
     $eventCount->execute([$lateReference]);
     concurrencyAssert((int)$eventCount->fetchColumn() === 2, 'Distinct verified callback events were not recorded exactly once.');
 
+    // A separate checkout/provider cannot record a second successful payment
+    // against a booking that already has a paid transaction.
+    $duplicateBooking = $newBooking('cross-provider-duplicate', (new DateTimeImmutable('+325 days'))->format('Y-m-d'), (new DateTimeImmutable('+327 days'))->format('Y-m-d'));
+    $primaryRef = 'VRC-PAY-' . strtoupper(bin2hex(random_bytes(5)));
+    $secondaryRef = 'VRC-IYZ-' . strtoupper(bin2hex(random_bytes(5)));
+    $createPayment->execute([$duplicateBooking['id'], $primaryRef, '100.00', $currency]);
+    $createIyzicoDuplicate = $pdoA->prepare("INSERT INTO payment_transactions(booking_id,provider,provider_reference,amount,currency,status,created_at) VALUES(?,'iyzico',?, '100.00',?,'pending',NOW())");
+    $createIyzicoDuplicate->execute([$duplicateBooking['id'], $secondaryRef, $currency]);
+    $firstPaid = $processorA->processVerified('paytr', 'VRC-EVENT-' . bin2hex(random_bytes(5)), 'payment_callback', $primaryRef, ['status'=>'success'], [
+        'booking_id'=>$duplicateBooking['id'], 'provider'=>'paytr', 'provider_reference'=>$primaryRef, 'amount'=>'100.00', 'currency'=>$currency, 'status'=>'success',
+    ]);
+    concurrencyAssert(($firstPaid['result'] ?? '') === 'processed', 'Primary payment for duplicate-provider test failed.');
+    $secondProviderEvent = 'VRC-EVENT-' . bin2hex(random_bytes(5));
+    $secondProviderPaid = $processorA->processVerified('iyzico', $secondProviderEvent, 'payment_callback', $secondaryRef, ['status'=>'success'], [
+        'booking_id'=>$duplicateBooking['id'], 'provider'=>'iyzico', 'provider_reference'=>$secondaryRef, 'amount'=>'100.00', 'currency'=>$currency, 'status'=>'success',
+    ]);
+    concurrencyAssert(($secondProviderPaid['result'] ?? '') === 'rejected_duplicate_booking_payment' && ($secondProviderPaid['payment_updated'] ?? true) === false, 'Second provider payment was not rejected.');
+    $secondaryState = $pdoA->prepare('SELECT status FROM payment_transactions WHERE provider=? AND provider_reference=?');
+    $secondaryState->execute(['iyzico', $secondaryRef]);
+    concurrencyAssert($secondaryState->fetchColumn() === 'pending', 'Rejected second provider callback modified the transaction.');
+    $bookingState->execute([$duplicateBooking['id']]);
+    concurrencyAssert($bookingState->fetchColumn() === 'confirmed', 'Rejected second provider callback changed the confirmed booking.');
+    $secondProviderReplay = $processorA->processVerified('iyzico', $secondProviderEvent, 'payment_callback', $secondaryRef, ['status'=>'success'], [
+        'booking_id'=>$duplicateBooking['id'], 'provider'=>'iyzico', 'provider_reference'=>$secondaryRef, 'amount'=>'100.00', 'currency'=>$currency, 'status'=>'success',
+    ]);
+    concurrencyAssert(($secondProviderReplay['result'] ?? '') === 'rejected_duplicate_booking_payment', 'Retry bypassed duplicate booking payment guard.');
+
     // Refund reservations and settlement must serialize on the booking/payment rows.
     // Reflection exercises the real reservation transaction without sending any
     // external iyzico request or issuing a real refund.
