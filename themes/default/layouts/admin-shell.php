@@ -29,7 +29,6 @@ return static function (string $html, string $requestPath, string $platformMode)
             'Web Sitesi' => [
                 '/admin/pages' => 'Sayfa Yönetimi',
                 '/admin/navigation' => 'Menü Yönetimi',
-                '/admin/content' => 'Site İçerikleri',
                 '/admin/blog' => 'Blog Yönetimi',
                 '/admin/blog/categories' => 'Blog Kategorileri',
                 '/admin/newsletter' => 'E-posta Aboneleri',
