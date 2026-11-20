@@ -471,7 +471,9 @@ $router->get('/', static function (): void {
         $homeStmt->execute([$homeId]);
         $homePage=$homeStmt->fetch(PDO::FETCH_ASSOC) ?: null;
     }
-    if(!$homePage){http_response_code(404);echo 'No homepage has been selected in Page Management.';return;}
+    // Existing installations keep their current homepage until an administrator
+    // explicitly publishes and selects a CMS page. Never break the live site.
+    if($homePage){
     $pdo=$homePdo;
     $page=$homePage;
     $locale=(string)$page['language_code'];
@@ -490,6 +492,7 @@ $router->get('/', static function (): void {
     if(is_string($layoutRaw))$pageLayout=json_decode($layoutRaw,true);
     ThemeManager::render('page.php',get_defined_vars());
     return;
+    }
     villa_perf_mark('home:begin');
     $pdo=Database::connection();
     villa_perf_mark('home:database_connected');
