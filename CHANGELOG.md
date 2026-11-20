@@ -1,3 +1,7 @@
+## 1.9.6 - 2026-11-20
+- Redirect legacy homepage administration to the shared page editor and disable legacy save endpoint.
+- Hide old homepage banner, counters and icon controls from theme design navigation.
+
 ## 1.9.5 - 2026-11-20
 - Introduce shared homepage and CMS page layout editor with responsive widget rendering.
 - Add installer demo-homepage choice and migrate banner editing entry into the page editor.
