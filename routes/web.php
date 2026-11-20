@@ -3007,6 +3007,26 @@ $router->post('/admin/content-translations', static function (): void {
     redirect('/admin/content-translations?type='.rawurlencode($type).'&id='.$entityId.'&lang='.rawurlencode($locale));
 });
 
+$router->post('/admin/languages/default', static function (): void {
+    Auth::requireRole(['super_admin','admin']);
+    verify_csrf();
+    $locale = trim((string)($_POST['locale'] ?? ''));
+    $pdo = Database::connection();
+    $check = $pdo->prepare('SELECT code FROM languages WHERE code=? AND is_active=1 LIMIT 1');
+    $check->execute([$locale]);
+    if (!$check->fetchColumn()) { http_response_code(422); exit('Aktif bir dil seçin.'); }
+    $pdo->beginTransaction();
+    try {
+        $pdo->exec('UPDATE languages SET is_default=0');
+        $stmt = $pdo->prepare('UPDATE languages SET is_default=1 WHERE code=? AND is_active=1');
+        $stmt->execute([$locale]);
+        $setting = $pdo->prepare('INSERT INTO settings(setting_key,setting_value,autoload) VALUES(?,?,1) ON DUPLICATE KEY UPDATE setting_value=VALUES(setting_value),autoload=1');
+        $setting->execute(['app.locale',$locale]);
+        $pdo->commit();
+    } catch (Throwable $e) { if ($pdo->inTransaction()) $pdo->rollBack(); throw $e; }
+    redirect('/admin/translations?lang='.rawurlencode($locale));
+});
+
 $router->post('/admin/languages/save', static function (): void {
     Auth::requireRole(['super_admin','admin']);
     verify_csrf();
