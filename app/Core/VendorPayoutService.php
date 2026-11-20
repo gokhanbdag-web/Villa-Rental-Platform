@@ -49,7 +49,7 @@ final class VendorPayoutService
             JOIN bookings b ON b.id=bf.booking_id
             JOIN properties p ON p.id=b.property_id
             WHERE p.vendor_id=? AND b.status IN ('confirmed','completed') AND b.check_out<=CURDATE()
-              AND EXISTS (SELECT 1 FROM payment_transactions pt WHERE pt.booking_id=b.id AND pt.status='paid' AND NOT EXISTS (SELECT 1 FROM payment_refunds pr WHERE pr.payment_transaction_id=pt.id AND pr.status IN ('processing','unknown')))
+              AND EXISTS (SELECT 1 FROM payment_transactions pt WHERE pt.booking_id=b.id AND pt.status='paid' AND NOT EXISTS (SELECT 1 FROM payment_refunds pr WHERE pr.payment_transaction_id=pt.id AND pr.status IN ('processing','unknown'))) AND NOT EXISTS (SELECT 1 FROM manual_bank_refunds mbr WHERE mbr.booking_id=b.id AND mbr.status IN ('pending','processing'))
             GROUP BY bf.currency
             HAVING available_amount > 0
             ORDER BY bf.currency");
@@ -90,7 +90,7 @@ final class VendorPayoutService
                 JOIN bookings b ON b.id=bf.booking_id
                 JOIN properties p ON p.id=b.property_id
                 WHERE p.vendor_id=? AND bf.currency=? AND b.status IN ('confirmed','completed') AND b.check_out<=CURDATE()
-                  AND EXISTS (SELECT 1 FROM payment_transactions pt WHERE pt.booking_id=b.id AND pt.status='paid' AND NOT EXISTS (SELECT 1 FROM payment_refunds pr WHERE pr.payment_transaction_id=pt.id AND pr.status IN ('processing','unknown')))
+                  AND EXISTS (SELECT 1 FROM payment_transactions pt WHERE pt.booking_id=b.id AND pt.status='paid' AND NOT EXISTS (SELECT 1 FROM payment_refunds pr WHERE pr.payment_transaction_id=pt.id AND pr.status IN ('processing','unknown'))) AND NOT EXISTS (SELECT 1 FROM manual_bank_refunds mbr WHERE mbr.booking_id=b.id AND mbr.status IN ('pending','processing'))
                 ORDER BY bf.booking_id
                 FOR UPDATE");
             $rowsStmt->execute([$vendorId, $currency]);
