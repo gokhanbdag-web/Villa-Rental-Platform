@@ -2154,7 +2154,7 @@ $router->get('/vendor/properties', static function (): void {
     $newUrl='/vendor/properties/new';$editBase='/vendor/properties';$deleteAction='/vendor/properties/delete';$backUrl='/vendor';ThemeManager::renderTemplate('templates/pages/admin/properties.php', get_defined_vars());
 });
 $router->get('/vendor/properties/new', static function (): void {
-    Auth::requireRole(['vendor']);$property=[];$existingImages=[];$deleteMediaAction='/vendor/properties/media/delete';$categories=Database::connection()->query('SELECT id,name FROM property_categories WHERE is_active=1 ORDER BY sort_order,name')->fetchAll();$amenities=Database::connection()->query('SELECT id,name FROM amenities WHERE is_active=1 ORDER BY sort_order,name')->fetchAll();$selectedAmenities=[];$defaultCurrency=(string)(Database::connection()->query("SELECT setting_value FROM settings WHERE setting_key='app.currency'")->fetchColumn()?:'TRY');$formAction='/vendor/properties/save';$backUrl='/vendor/properties';ThemeManager::renderTemplate('templates/pages/admin/property-form.php', get_defined_vars());
+    Auth::requireRole(['vendor']);$pdo=Database::connection();$v=$pdo->prepare('SELECT status FROM vendors WHERE user_id=? LIMIT 1');$v->execute([(int)Auth::user()['id']]);if($v->fetchColumn()!=='approved'){http_response_code(403);return;}$property=[];$existingImages=[];$deleteMediaAction='/vendor/properties/media/delete';$categories=Database::connection()->query('SELECT id,name FROM property_categories WHERE is_active=1 ORDER BY sort_order,name')->fetchAll();$amenities=Database::connection()->query('SELECT id,name FROM amenities WHERE is_active=1 ORDER BY sort_order,name')->fetchAll();$selectedAmenities=[];$defaultCurrency=(string)(Database::connection()->query("SELECT setting_value FROM settings WHERE setting_key='app.currency'")->fetchColumn()?:'TRY');$formAction='/vendor/properties/save';$backUrl='/vendor/properties';ThemeManager::renderTemplate('templates/pages/admin/property-form.php', get_defined_vars());
 });
 $router->get('/vendor/properties/{id}', static function (array $params): void {
     Auth::requireRole(['vendor']);$pdo=Database::connection();$s=$pdo->prepare('SELECT id FROM vendors WHERE user_id=?');$s->execute([(int)Auth::user()['id']]);$vid=(int)$s->fetchColumn();
@@ -2164,6 +2164,7 @@ $router->get('/vendor/properties/{id}', static function (array $params): void {
 $router->post('/vendor/properties/save', static function (): void {
     Auth::requireRole(['vendor']);verify_csrf();$pdo=Database::connection();
     $s=$pdo->prepare('SELECT id,status FROM vendors WHERE user_id=?');$s->execute([(int)Auth::user()['id']]);$vendor=$s->fetch();if(!$vendor){http_response_code(403);return;}
+    if((string)$vendor['status']!=='approved'){http_response_code(403);exit('Villa ekleme ve düzenleme için ev sahibi hesabınızın onaylanması gerekiyor.');}
     $title=trim((string)($_POST['title']??''));if($title===''){http_response_code(422);exit('İlan başlığı zorunludur.');}
     $slug=trim((string)($_POST['slug']??''));if($slug===''){$a=iconv('UTF-8','ASCII//TRANSLIT//IGNORE',$title);$slug=strtolower(trim(preg_replace('/[^a-zA-Z0-9]+/','-',$a!==false?$a:$title),'-'));}
     $slug=trim(strtolower(preg_replace('/[^a-z0-9-]+/','-',$slug)),'-');if($slug==='')$slug='villa-'.bin2hex(random_bytes(4));
