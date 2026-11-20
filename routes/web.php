@@ -2149,7 +2149,7 @@ $router->post('/vendor/bookings/status', static function (): void {
 });
 
 $router->get('/vendor/properties', static function (): void {
-    Auth::requireRole(['vendor']);$pdo=Database::connection();$s=$pdo->prepare('SELECT id FROM vendors WHERE user_id=?');$s->execute([(int)Auth::user()['id']]);$vid=(int)$s->fetchColumn();
+    Auth::requireRole(['vendor']);$pdo=Database::connection();$s=$pdo->prepare('SELECT id,status FROM vendors WHERE user_id=?');$s->execute([(int)Auth::user()['id']]);$vendor=$s->fetch(PDO::FETCH_ASSOC);if(!$vendor||!Auth::canManageVendorBookings((string)$vendor['status'])){http_response_code(403);return;}$vid=(int)$vendor['id'];
     $s=$pdo->prepare('SELECT id,title,slug,city,district,max_guests,base_nightly_price,currency,status FROM properties WHERE vendor_id=? ORDER BY id DESC');$s->execute([$vid]);$properties=$s->fetchAll();
     $newUrl='/vendor/properties/new';$editBase='/vendor/properties';$deleteAction='/vendor/properties/delete';$backUrl='/vendor';ThemeManager::renderTemplate('templates/pages/admin/properties.php', get_defined_vars());
 });
@@ -2157,7 +2157,7 @@ $router->get('/vendor/properties/new', static function (): void {
     Auth::requireRole(['vendor']);$pdo=Database::connection();$v=$pdo->prepare('SELECT status FROM vendors WHERE user_id=? LIMIT 1');$v->execute([(int)Auth::user()['id']]);if($v->fetchColumn()!=='approved'){http_response_code(403);return;}$property=[];$existingImages=[];$deleteMediaAction='/vendor/properties/media/delete';$categories=Database::connection()->query('SELECT id,name FROM property_categories WHERE is_active=1 ORDER BY sort_order,name')->fetchAll();$amenities=Database::connection()->query('SELECT id,name FROM amenities WHERE is_active=1 ORDER BY sort_order,name')->fetchAll();$selectedAmenities=[];$defaultCurrency=(string)(Database::connection()->query("SELECT setting_value FROM settings WHERE setting_key='app.currency'")->fetchColumn()?:'TRY');$formAction='/vendor/properties/save';$backUrl='/vendor/properties';ThemeManager::renderTemplate('templates/pages/admin/property-form.php', get_defined_vars());
 });
 $router->get('/vendor/properties/{id}', static function (array $params): void {
-    Auth::requireRole(['vendor']);$pdo=Database::connection();$s=$pdo->prepare('SELECT id FROM vendors WHERE user_id=?');$s->execute([(int)Auth::user()['id']]);$vid=(int)$s->fetchColumn();
+    Auth::requireRole(['vendor']);$pdo=Database::connection();$s=$pdo->prepare('SELECT id,status FROM vendors WHERE user_id=?');$s->execute([(int)Auth::user()['id']]);$vendor=$s->fetch(PDO::FETCH_ASSOC);if(!$vendor||!Auth::canManageVendorBookings((string)$vendor['status'])){http_response_code(403);return;}$vid=(int)$vendor['id'];
     $s=$pdo->prepare('SELECT * FROM properties WHERE id=? AND vendor_id=?');$s->execute([(int)$params['id'],$vid]);$property=$s->fetch();
     if(!$property){http_response_code(404);return;}$mediaStmt=$pdo->prepare('SELECT * FROM property_media WHERE property_id=? ORDER BY is_cover DESC,sort_order,id');$mediaStmt->execute([(int)$property['id']]);$existingImages=$mediaStmt->fetchAll();$deleteMediaAction='/vendor/properties/media/delete';$categories=$pdo->query('SELECT id,name FROM property_categories WHERE is_active=1 ORDER BY sort_order,name')->fetchAll();$amenities=$pdo->query('SELECT id,name FROM amenities WHERE is_active=1 ORDER BY sort_order,name')->fetchAll();$a=$pdo->prepare('SELECT amenity_id FROM property_amenities WHERE property_id=?');$a->execute([(int)$property['id']]);$selectedAmenities=array_map('intval',$a->fetchAll(PDO::FETCH_COLUMN));$defaultCurrency=(string)($pdo->query("SELECT setting_value FROM settings WHERE setting_key='app.currency'")->fetchColumn()?:'TRY');$formAction='/vendor/properties/save';$backUrl='/vendor/properties';$availabilityUrl='/vendor/properties/'.(int)$property['id'].'/availability';ThemeManager::renderTemplate('templates/pages/admin/property-form.php', get_defined_vars());
 });
@@ -2467,7 +2467,7 @@ $router->get('/admin/properties/{id}', static function (array $params): void {
 
 $router->post('/vendor/properties/delete', static function (): void {
     Auth::requireRole(['vendor']);verify_csrf();$pdo=Database::connection();
-    $v=$pdo->prepare('SELECT id FROM vendors WHERE user_id=?');$v->execute([(int)Auth::user()['id']]);$vendorId=(int)$v->fetchColumn();$id=(int)($_POST['id']??0);
+    $v=$pdo->prepare('SELECT id,status FROM vendors WHERE user_id=?');$v->execute([(int)Auth::user()['id']]);$vendor=$v->fetch(PDO::FETCH_ASSOC);if(!$vendor||!Auth::canManageVendorBookings((string)$vendor['status'])){http_response_code(403);return;}$vendorId=(int)$vendor['id'];$id=(int)($_POST['id']??0);
     $check=$pdo->prepare('SELECT id FROM properties WHERE id=? AND vendor_id=?');$check->execute([$id,$vendorId]);
     if(!$check->fetchColumn()){http_response_code(404);exit('İlan bulunamadı.');}
     $b=$pdo->prepare('SELECT COUNT(*) FROM bookings WHERE property_id=?');$b->execute([$id]);if((int)$b->fetchColumn()>0){$archive=$pdo->prepare("UPDATE properties SET status='archived',updated_at=NOW() WHERE id=? AND vendor_id=?");$archive->execute([$id,$vendorId]);}else{delete_property_uploads($pdo,$id);$del=$pdo->prepare('DELETE FROM properties WHERE id=? AND vendor_id=?');$del->execute([$id,$vendorId]);}redirect('/vendor/properties');
