@@ -142,10 +142,15 @@ final class Installer
                     $add->execute();
                     $homeId=(int)$pdo->lastInsertId();
                 }
-                $demoLayout=['rows'=>[
-                    ['columns'=>[[['type'=>'heading','text'=>'Discover your next villa escape'],['type'=>'text','text'=>'Explore exceptional villas and find your ideal stay.']]]],
-                    ['columns'=>[[['type'=>'banner','eyebrow'=>'VILLA COLLECTION','text'=>'Private villas for memorable holidays','description'=>'Discover stays selected for comfort and privacy.','url'=>'https://images.unsplash.com/photo-1613490493576-7fde63acd811?auto=format&fit=crop&w=1800&q=85','button_text'=>'Browse villas','button_url'=>'/konaklamalar']]]]
-                ]];
+                // Use the same reusable homepage template exposed to the page editor.
+                // Avoid a second, divergent hard-coded installer homepage.
+                $templateStmt=$pdo->prepare("SELECT layout_json FROM cms_page_templates WHERE slug='villa-classic' LIMIT 1");
+                $templateStmt->execute();
+                $templateJson=$templateStmt->fetchColumn();
+                $demoLayout=is_string($templateJson) ? json_decode($templateJson,true) : null;
+                if(!is_array($demoLayout)||!isset($demoLayout['rows'])){
+                    throw new \\RuntimeException('Default homepage template is missing or invalid.');
+                }
                 $layoutStmt=$pdo->prepare('INSERT INTO cms_page_layouts(page_key,language_code,layout_json) VALUES(?,?,?) ON DUPLICATE KEY UPDATE layout_json=layout_json');
                 $layoutStmt->execute(['page:'.$homeId,'en',json_encode($demoLayout,JSON_THROW_ON_ERROR|JSON_UNESCAPED_UNICODE)]);
             }
