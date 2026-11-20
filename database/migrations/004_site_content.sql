@@ -1,7 +1,7 @@
 CREATE TABLE IF NOT EXISTS site_content (
  id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
  content_key VARCHAR(190) NOT NULL,
- language_code VARCHAR(12) NOT NULL DEFAULT 'tr',
+ language_code VARCHAR(12) NOT NULL DEFAULT 'en',
  content_value LONGTEXT NOT NULL,
  updated_at DATETIME NULL,
  UNIQUE KEY uq_site_content (content_key, language_code),
@@ -11,7 +11,7 @@ CREATE TABLE IF NOT EXISTS site_content (
 CREATE TABLE IF NOT EXISTS navigation_items (
  id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
  location VARCHAR(40) NOT NULL DEFAULT 'header',
- language_code VARCHAR(12) NOT NULL DEFAULT 'tr',
+ language_code VARCHAR(12) NOT NULL DEFAULT 'en',
  label VARCHAR(120) NOT NULL,
  url VARCHAR(500) NOT NULL,
  target VARCHAR(20) NOT NULL DEFAULT '_self',
