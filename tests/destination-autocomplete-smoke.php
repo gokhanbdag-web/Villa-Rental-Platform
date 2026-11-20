@@ -25,7 +25,7 @@ foreach ([
     "mobile-premium-search,.mobile-premium-search__form{overflow:visible}",
     ".mobile-premium-search{position:relative;z-index:12}",
     "input[name=\"location_id\"]",
-    'Lütfen açılan önerilerden bir lokasyon seçin.',
+    'Please select a location from the suggestions.',
     '.mobile-premium-search__destination{grid-column:1/-1;min-height:68px;position:relative;z-index:8}',
 ] as $required) {
     if (!str_contains($landing, $required)) {
