@@ -62,6 +62,7 @@ final class Installer
     {
         if (self::isInstalled()) throw new \RuntimeException('The application is already installed.');
         $mode = (string)($input['mode'] ?? '');
+        $installDemo = (string)($input['install_demo'] ?? '') === '1';
         if (!in_array($mode, ['single_vendor', 'multi_vendor'], true)) throw new \InvalidArgumentException('Invalid business model.');
         $username = trim((string)($input['admin_username'] ?? ''));
         $email = filter_var(trim((string)($input['admin_email'] ?? '')), FILTER_VALIDATE_EMAIL);
@@ -111,7 +112,7 @@ final class Installer
             // Single-vendor installations retain platform-owned properties.
             // Multi-vendor installations assign the demo portfolio to a dedicated
             // approved demo vendor backed by a separate account.
-            if ($mode === 'multi_vendor') {
+            if ($mode === 'multi_vendor' && $installDemo) {
                 $demoPassword = bin2hex(random_bytes(24));
                 $demoEmail = 'demo-vendor@localhost.invalid';
                 $demoUsername = 'demo_vendor';
@@ -129,6 +130,7 @@ final class Installer
             $stmt->execute([$username, $email, password_hash($password, PASSWORD_DEFAULT), 'super_admin', 'active']);
             $settings = [
                 'app.mode' => $mode,
+                'app.demo_enabled' => $installDemo ? '1' : '0',
                 'app.locale' => 'en',
                 'app.timezone' => 'Europe/Istanbul',
                 'app.installed_at' => date(DATE_ATOM),
