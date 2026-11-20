@@ -2123,6 +2123,9 @@ $router->post('/vendor/bookings/status', static function (): void {
             $pdo->rollBack();http_response_code(409);exit('Bu rezervasyon durumundan seçilen işleme geçişe izin verilmiyor.');
         }
         if((string)$booking['status']===$status){$pdo->commit();redirect('/vendor/bookings');}
+        if($status==='completed' && (string)$booking['check_out'] > (new DateTimeImmutable('today'))->format('Y-m-d')){
+            $pdo->rollBack();http_response_code(409);exit('Çıkış tarihi gelmeden rezervasyon tamamlandı olarak işaretlenemez.');
+        }
         if($status==='confirmed'){
             $conflict=$pdo->prepare("SELECT id FROM bookings WHERE property_id=? AND id<>? AND status IN ('pending','confirmed') AND check_in < ? AND check_out > ? LIMIT 1 FOR UPDATE");
             $conflict->execute([$propertyId,$id,$booking['check_out'],$booking['check_in']]);
