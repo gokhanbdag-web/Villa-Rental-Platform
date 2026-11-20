@@ -159,6 +159,8 @@ jobs:
         run: php tests/account-security-smoke.php
       - name: Run iCalendar parser and SSRF validation smoke tests
         run: php tests/ical-calendar-smoke.php
+      - name: Run calendar sync lock ordering regression checks
+        run: php tests/calendar-sync-lock-order-smoke.php
       - name: Run seasonal pricing precedence smoke tests
         run: php tests/seasonal-pricing-smoke.php
       - name: Run seasonal minimum-stay and weekday restriction smoke tests

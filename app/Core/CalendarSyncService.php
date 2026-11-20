@@ -86,13 +86,19 @@ final class CalendarSyncService
 
     public static function applyEvents(PDO $pdo,int $feedId,array $events): array
     {
-        $feedStmt=$pdo->prepare("SELECT id,property_id FROM property_calendar_feeds WHERE id=? AND direction='import' AND enabled=1 LIMIT 1 FOR UPDATE");
+        // Resolve the immutable property association before taking row locks.
+        // All booking and calendar writers must lock the property first.
+        $lookup=$pdo->prepare("SELECT property_id FROM property_calendar_feeds WHERE id=? AND direction='import' AND enabled=1 LIMIT 1");
+        $lookup->execute([$feedId]);$propertyId=(int)($lookup->fetchColumn()?:0);
+        if($propertyId<1) throw new RuntimeException('İçe aktarma takvimi bulunamadı.');
         $pdo->beginTransaction();
         try {
-            $feedStmt->execute([$feedId]);$feed=$feedStmt->fetch(PDO::FETCH_ASSOC);
+            $propertyLock=$pdo->prepare('SELECT id FROM properties WHERE id=? LIMIT 1 FOR UPDATE');
+            $propertyLock->execute([$propertyId]);
+            if(!$propertyLock->fetchColumn())throw new RuntimeException('Takvim ilanı bulunamadı.');
+            $feedStmt=$pdo->prepare("SELECT id,property_id FROM property_calendar_feeds WHERE id=? AND property_id=? AND direction='import' AND enabled=1 LIMIT 1 FOR UPDATE");
+            $feedStmt->execute([$feedId,$propertyId]);$feed=$feedStmt->fetch(PDO::FETCH_ASSOC);
             if(!$feed) throw new RuntimeException('İçe aktarma takvimi bulunamadı.');
-            $propertyId=(int)$feed['property_id'];
-            $propertyLock=$pdo->prepare('SELECT id FROM properties WHERE id=? LIMIT 1 FOR UPDATE');$propertyLock->execute([$propertyId]);if(!$propertyLock->fetchColumn())throw new RuntimeException('Takvim ilanı bulunamadı.');
             $syncStartedAt=date('Y-m-d H:i:s');
             $blocked=0;$cancelled=0;$conflicts=0;$seenUids=[];
             foreach($events as $event) {
