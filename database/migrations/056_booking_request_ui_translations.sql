@@ -36,5 +36,9 @@ INSERT INTO translations(language_code,translation_key,translation_value) VALUES
 ('tr','booking.network_error','Anlık kontrol yapılamadı. Talep gönderildiğinde sunucu tarihleri yeniden doğrulayacaktır.'),
 ('en','booking.network_error','Live availability could not be checked. The server will recheck dates when you submit.'),
 ('tr','booking.select_dates','Lütfen müsait tarihleri seçin.'),
-('en','booking.select_dates','Please select available dates.')
+('en','booking.select_dates','Please select available dates.'),
+('tr','booking.notice','Bu aşamada ödeme alınmaz. Rezervasyon talebiniz ev sahibi veya yönetim tarafından incelenir.'),
+('en','booking.notice','No payment is collected at this stage. Your booking request will be reviewed by the host or administrator.'),
+('tr','booking.guests_short','misafir'),
+('en','booking.guests_short','guests')
 ON DUPLICATE KEY UPDATE translation_value=VALUES(translation_value);
