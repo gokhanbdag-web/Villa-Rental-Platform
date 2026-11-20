@@ -20,11 +20,11 @@ SELECT
  u.id,
  8 + MOD(p.id + samples.slot_no,3),
  CASE samples.slot_no
-   WHEN 1 THEN CONCAT(p.title, ' için örnek değerlendirme: Villa temiz, ferah ve fotoğraflardaki gibiydi. Konaklama öncesi iletişim de oldukça rahattı.')
-   WHEN 2 THEN CONCAT(p.title, ' için örnek değerlendirme: Konumu ve manzarası tatilimizi güzelleştirdi. Ailemizle keyifli ve huzurlu vakit geçirdik.')
-   WHEN 3 THEN CONCAT(p.title, ' için örnek değerlendirme: Mutfak ve yaşam alanları kullanışlıydı. Giriş süreci kolaydı, tekrar tercih edebiliriz.')
-   WHEN 4 THEN CONCAT(p.title, ' için örnek değerlendirme: Havuz ve dış alanlar çok keyifliydi. Genel temizlik ve konfor beklentimizi karşıladı.')
-   ELSE CONCAT(p.title, ' — A lovely choice for a peaceful getaway. We would happily stay again.')
+   WHEN 1 THEN CONCAT(p.title, ' - The villa was clean, spacious and matched the photos. Communication before arrival was excellent.')
+   WHEN 2 THEN CONCAT(p.title, ' - A beautiful location and wonderful views made our family holiday memorable.')
+   WHEN 3 THEN CONCAT(p.title, ' - The kitchen and living areas were practical, and check-in was straightforward.')
+   WHEN 4 THEN CONCAT(p.title, ' - We enjoyed the pool and outdoor spaces. The comfort and cleanliness met our expectations.')
+   ELSE CONCAT(p.title, ' - A lovely choice for a peaceful getaway. We would happily stay again.')
  END,
  'approved',
  DATE_SUB(NOW(), INTERVAL (samples.slot_no * 13 + MOD(p.id,17)) DAY),
