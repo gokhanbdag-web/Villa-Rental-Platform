@@ -130,10 +130,12 @@ final class Installer
             if (!$installDemo) {
                 $pdo->exec('DELETE FROM cms_page_layouts');
                 $pdo->exec('DELETE FROM navigation_items');
-                $pdo->exec('DELETE FROM cms_pages');
                 $pdo->exec('DELETE FROM blog_posts');
                 $pdo->exec('DELETE FROM properties');
-            } else {
+            }
+            // Every installation must have an editable CMS homepage record, including
+            // installations without sample properties. Never delete real CMS pages.
+            {
                 $home=$pdo->prepare("SELECT id FROM cms_pages WHERE slug='home' AND language_code='en' LIMIT 1");
                 $home->execute();
                 $homeId=(int)($home->fetchColumn() ?: 0);
@@ -142,6 +144,7 @@ final class Installer
                     $add->execute();
                     $homeId=(int)$pdo->lastInsertId();
                 }
+                if ($installDemo) {
                 // Use the same reusable homepage template exposed to the page editor.
                 // Avoid a second, divergent hard-coded installer homepage.
                 $templateStmt=$pdo->prepare("SELECT layout_json FROM cms_page_templates WHERE slug='villa-classic' LIMIT 1");
@@ -153,6 +156,7 @@ final class Installer
                 }
                 $layoutStmt=$pdo->prepare('INSERT INTO cms_page_layouts(page_key,language_code,layout_json) VALUES(?,?,?) ON DUPLICATE KEY UPDATE layout_json=layout_json');
                 $layoutStmt->execute(['page:'.$homeId,'en',json_encode($demoLayout,JSON_THROW_ON_ERROR|JSON_UNESCAPED_UNICODE)]);
+                }
             }
 
             $pdo->beginTransaction();
