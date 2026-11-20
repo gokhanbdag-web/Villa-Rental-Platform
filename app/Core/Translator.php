@@ -6,12 +6,12 @@ namespace App\Core;
 final class Translator
 {
     private static array $catalogue = [];
-    private static string $locale = 'tr';
+    private static string $locale = 'en';
     public static function setLocale(string $locale): void
     {
         $pdo = Database::connection();
         $default = $pdo->query('SELECT code FROM languages WHERE is_default=1 AND is_active=1 LIMIT 1')->fetchColumn();
-        $defaultLocale = is_string($default) && $default !== '' ? $default : 'tr';
+        $defaultLocale = is_string($default) && $default !== '' ? $default : 'en';
         $catalogue = [];
 
         if ($locale !== $defaultLocale) {
