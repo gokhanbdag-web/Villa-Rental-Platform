@@ -1,3 +1,8 @@
+## 1.9.5 - 2026-11-20
+- Introduce shared homepage and CMS page layout editor with responsive widget rendering.
+- Add installer demo-homepage choice and migrate banner editing entry into the page editor.
+- Preserve legacy demo homepage until full section conversion is completed.
+
 ## 1.9.4 - 2026-11-20
 - Convert initial installation wizard and installer validation messages to English.
 - Set new installations to English locale by default.
