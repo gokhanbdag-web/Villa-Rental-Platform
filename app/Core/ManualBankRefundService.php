@@ -113,6 +113,10 @@ final class ManualBankRefundService
             $referenceCheck=$pdo->prepare("SELECT id FROM manual_bank_refunds WHERE bank_reference=? AND status='succeeded' AND id<>? LIMIT 1 FOR UPDATE");
             $referenceCheck->execute([$bankReference,$refundId]);
             if($referenceCheck->fetchColumn())throw new \RuntimeException('Bu banka işlem referansı başka bir iadede kullanılmış.');
+            $allocated=$pdo->prepare("SELECT COALESCE(SUM(vpa.amount),0) FROM vendor_payout_allocations vpa JOIN vendor_payouts vp ON vp.id=vpa.payout_id WHERE vpa.booking_id=? AND vp.status IN ('requested','processing','paid')");
+            $allocated->execute([(int)$record['booking_id']]);
+            $reservedVendor=(int)round((float)$allocated->fetchColumn()*100);
+            if($reservedVendor>0)throw new \RuntimeException('Satıcıya tahsis edilmiş bakiye varken banka iadesi sonuçlandırılamaz; önce tahsisi mutabık hale getirin.');
             $cents=static fn($v):int=>(int)round((float)$v*100);
             $amount=$cents($row['amount']);$gross=$cents($money['gross_amount']);$fee=$cents($money['platform_fee']);$vendor=$cents($money['vendor_net_amount']);
             if($amount<1||$amount>$gross||$gross!==$fee+$vendor)throw new \RuntimeException('İade finans dağılımı tutarsız.');

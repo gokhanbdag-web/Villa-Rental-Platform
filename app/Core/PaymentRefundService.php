@@ -179,6 +179,10 @@ final class PaymentRefundService
                 throw new \RuntimeException('İade yanıtı ayrılmış iade tutarıyla eşleşmiyor.');
             }
 
+            $allocated=$pdo->prepare("SELECT COALESCE(SUM(vpa.amount),0) FROM vendor_payout_allocations vpa JOIN vendor_payouts vp ON vp.id=vpa.payout_id WHERE vpa.booking_id=? AND vp.status IN ('requested','processing','paid')");
+            $allocated->execute([(int)$booking['id']]);
+            if((float)$allocated->fetchColumn()>0)throw new \RuntimeException('Satıcıya tahsis edilmiş bakiye varken finans kaydı düşürülemez; önce tahsisi mutabık hale getirin.');
+
             $grossCents = self::toMinorUnits((string)$financial['gross_amount']);
             $platformCents = self::toMinorUnits((string)$financial['platform_fee']);
             $vendorCents = self::toMinorUnits((string)$financial['vendor_net_amount']);
