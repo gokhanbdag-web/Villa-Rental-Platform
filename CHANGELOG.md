@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.9.1 - 2026-11-20
+- Hide vendor management from AJAX account menus on single-vendor installations.
+- Reject vendor account AJAX sessions when the installation is not in multi-vendor mode.
+- Keep multi-vendor account menus and access behavior unchanged.
+
 ## 1.9.0 - 2026-11-16
 - Add configurable global cancellation rules with a threshold in days and separate early/late refund percentages.
 - Let customers submit cancellation requests with a policy snapshot and estimated refund; administrators can approve or reject requests with audit and customer notifications.
