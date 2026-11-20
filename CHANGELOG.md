@@ -1,3 +1,7 @@
+## 1.9.7 - 2026-11-20
+- Begin single CMS page management: published page homepage assignment and rendering.
+- Migration of existing demo homepage and installation defaults remains required before merge.
+
 ## 1.9.6 - 2026-11-20
 - Redirect legacy homepage administration to the shared page editor and disable legacy save endpoint.
 - Hide old homepage banner, counters and icon controls from theme design navigation.
