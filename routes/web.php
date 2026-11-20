@@ -2620,6 +2620,44 @@ $router->get('/admin/pages', static function (): void {
     $pages = $pageQuery->fetchAll(PDO::FETCH_ASSOC);
     ThemeManager::renderTemplate('templates/pages/admin/pages.php', get_defined_vars());
 });
+$router->get('/admin/pages/layout', static function (): void {
+    Auth::requirePermission('admin.pages.edit');
+    $pdo=Database::connection();
+    $key=(string)($_GET['page']??'home');
+    if(!preg_match('/^(home|page:[0-9]+)$/',$key)){http_response_code(422);return;}
+    $locale=(string)($_GET['lang']??'en');
+    $stmt=$pdo->prepare('SELECT layout_json FROM cms_page_layouts WHERE page_key=? AND language_code=?');
+    $stmt->execute([$key,$locale]);
+    $layout=(string)($stmt->fetchColumn()?:'{"rows":[]}');
+    ThemeManager::renderTemplate('templates/pages/admin/page-layout-editor.php',get_defined_vars());
+});
+$router->post('/admin/pages/layout/save', static function (): void {
+    Auth::requirePermission('admin.pages.edit');
+    verify_csrf();
+    $key=(string)($_POST['page_key']??'');
+    $locale=(string)($_POST['language_code']??'en');
+    if(!preg_match('/^(home|page:[0-9]+)$/',$key)){http_response_code(422);exit('Invalid page key.');}
+    $pdo=Database::connection();
+    $language=$pdo->prepare('SELECT code FROM languages WHERE code=? AND is_active=1');
+    $language->execute([$locale]);
+    if(!$language->fetchColumn()){http_response_code(422);exit('Invalid language.');}
+    $raw=(string)($_POST['layout_json']??'');
+    $layout=json_decode($raw,true);
+    if(!is_array($layout)||!isset($layout['rows'])||!is_array($layout['rows'])||count($layout['rows'])>80){http_response_code(422);exit('Invalid layout.');}
+    foreach($layout['rows'] as $row){
+        if(!is_array($row)||!isset($row['columns'])||!is_array($row['columns'])||count($row['columns'])<1||count($row['columns'])>6){http_response_code(422);exit('Invalid columns.');}
+        foreach($row['columns'] as $column){
+            if(!is_array($column)||count($column)>30){http_response_code(422);exit('Invalid widgets.');}
+            foreach($column as $widget){
+                if(!is_array($widget)||!in_array($widget['type']??'', ['heading','text','image','button','spacer'],true)){http_response_code(422);exit('Invalid widget.');}
+            }
+        }
+    }
+    if(strlen($raw)>500000){http_response_code(422);exit('Layout is too large.');}
+    $stmt=$pdo->prepare('INSERT INTO cms_page_layouts(page_key,language_code,layout_json) VALUES(?,?,?) ON DUPLICATE KEY UPDATE layout_json=VALUES(layout_json)');
+    $stmt->execute([$key,$locale,json_encode($layout,JSON_UNESCAPED_UNICODE|JSON_UNESCAPED_SLASHES)]);
+    redirect('/admin/pages/layout?page='.rawurlencode($key).'&lang='.rawurlencode($locale));
+});
 $router->get('/admin/pages/new', static function (): void {
     Auth::requirePermission('admin.pages.edit');
     $pdo = Database::connection();
