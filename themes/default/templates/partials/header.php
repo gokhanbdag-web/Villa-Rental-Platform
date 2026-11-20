@@ -2,8 +2,8 @@
 declare(strict_types=1);
 
 /**
- * Ana sayfanın hero başlangıcından önceki ortak üst alanı.
- * Logo, navigasyon ve mobil menü tüm sayfalarda aynı HTML yapısını kullanır.
+ * Shared top section before the homepage hero.
+ * Logo, navigation and mobile menu share the same HTML structure across pages.
  */
 $themeSiteName = (string) ($content['site_name'] ?? $siteName ?? 'VillaStay');
 $themeBrandSettings = is_array($brandSettings ?? null) ? $brandSettings : [];
