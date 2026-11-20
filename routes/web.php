@@ -585,6 +585,11 @@ $router->get('/', static function (): void {
     $locationCountries=$pdo->query("SELECT id,name FROM locations WHERE location_type='country' AND is_active=1 ORDER BY sort_order,name")->fetchAll();
      $locationCountries=\App\Core\ContentTranslator::apply($pdo,$locationCountries,'location',$locale);
      villa_perf_mark('home:theme_render');
+    $pageLayout=null;
+    $layoutStmt=$pdo->prepare('SELECT layout_json FROM cms_page_layouts WHERE page_key=? AND language_code=? LIMIT 1');
+    $layoutStmt->execute(['home',$locale]);
+    $layoutRaw=$layoutStmt->fetchColumn();
+    if(is_string($layoutRaw))$pageLayout=json_decode($layoutRaw,true);
     ThemeManager::render('landing.php', get_defined_vars());
 });
 
@@ -2718,6 +2723,11 @@ $router->get('/page/{slug}', static function (array $params): void {
     $destinations=[];$featuredProperties=[];$latestProperties=[];$categories=[];$stylePhotos=[];
     $blogPosts=$pdo->query("SELECT id,title,slug,excerpt,featured_image,published_at FROM blog_posts WHERE status='published' AND (published_at IS NULL OR published_at<=NOW()) ORDER BY COALESCE(published_at,created_at) DESC,id DESC LIMIT 12")->fetchAll(PDO::FETCH_ASSOC);
     $blogPosts=\App\Core\ContentTranslator::apply($pdo,$blogPosts,'blog_post',$locale);
+    $pageLayout=null;
+    $layoutStmt=$pdo->prepare('SELECT layout_json FROM cms_page_layouts WHERE page_key=? AND language_code=? LIMIT 1');
+    $layoutStmt->execute(['page:'.(int)$page['id'],$locale]);
+    $layoutRaw=$layoutStmt->fetchColumn();
+    if(is_string($layoutRaw))$pageLayout=json_decode($layoutRaw,true);
     ThemeManager::render('page.php', get_defined_vars());
 });
 
