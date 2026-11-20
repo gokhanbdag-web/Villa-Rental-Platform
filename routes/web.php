@@ -490,6 +490,7 @@ $router->get('/', static function (): void {
     $layoutStmt->execute(['page:'.(int)$page['id'],$locale]);
     $layoutRaw=$layoutStmt->fetchColumn();
     if(is_string($layoutRaw))$pageLayout=json_decode($layoutRaw,true);
+    $isHomepage=true;
     ThemeManager::render('page.php',get_defined_vars());
     return;
     }
