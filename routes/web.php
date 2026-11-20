@@ -2486,7 +2486,7 @@ $router->post('/admin/properties/media/manage', static function (): void {
 });
 $router->post('/vendor/properties/media/manage', static function (): void {
     Auth::requireRole(['vendor']); verify_csrf();$pdo=Database::connection();
-    $v=$pdo->prepare('SELECT id FROM vendors WHERE user_id=?');$v->execute([(int)Auth::user()['id']]);$vid=(int)$v->fetchColumn();$pid=(int)($_POST['property_id']??0);
+    $v=$pdo->prepare('SELECT id,status FROM vendors WHERE user_id=?');$v->execute([(int)Auth::user()['id']]);$vendor=$v->fetch(PDO::FETCH_ASSOC);if(!$vendor||!Auth::canManageVendorBookings((string)$vendor['status'])){http_response_code(403);return;}$vid=(int)$vendor['id'];$pid=(int)($_POST['property_id']??0);
     $own=$pdo->prepare('SELECT id FROM properties WHERE id=? AND vendor_id=?');$own->execute([$pid,$vid]);if(!$own->fetchColumn()){http_response_code(404);exit('Konaklama bulunamadı.');}
     $action=(string)($_POST['action']??'');
     if($action==='cover'){$mid=(int)($_POST['media_id']??0);$valid=$pdo->prepare('SELECT id FROM property_media WHERE id=? AND property_id=?');$valid->execute([$mid,$pid]);if(!$valid->fetchColumn()){http_response_code(404);exit('Fotoğraf bulunamadı.');}$pdo->beginTransaction();try{$pdo->prepare('UPDATE property_media SET is_cover=0 WHERE property_id=?')->execute([$pid]);$pdo->prepare('UPDATE property_media SET is_cover=1 WHERE id=? AND property_id=?')->execute([$mid,$pid]);$pdo->commit();}catch(Throwable $e){$pdo->rollBack();throw $e;}}
@@ -2498,7 +2498,7 @@ $router->post('/admin/properties/media/delete', static function (): void {
     Auth::requireRole(['super_admin','admin']);verify_csrf();$pid=(int)($_POST['property_id']??0);$mid=(int)($_POST['media_id']??0);delete_property_media(Database::connection(),$pid,$mid);redirect('/admin/properties/'.$pid);
 });
 $router->post('/vendor/properties/media/delete', static function (): void {
-    Auth::requireRole(['vendor']);verify_csrf();$pdo=Database::connection();$v=$pdo->prepare('SELECT id FROM vendors WHERE user_id=?');$v->execute([(int)Auth::user()['id']]);$vid=(int)$v->fetchColumn();$pid=(int)($_POST['property_id']??0);$own=$pdo->prepare('SELECT id FROM properties WHERE id=? AND vendor_id=?');$own->execute([$pid,$vid]);if(!$own->fetchColumn()){http_response_code(404);return;}delete_property_media($pdo,$pid,(int)($_POST['media_id']??0));redirect('/vendor/properties/'.$pid);
+    Auth::requireRole(['vendor']);verify_csrf();$pdo=Database::connection();$v=$pdo->prepare('SELECT id,status FROM vendors WHERE user_id=?');$v->execute([(int)Auth::user()['id']]);$vendor=$v->fetch(PDO::FETCH_ASSOC);if(!$vendor||!Auth::canManageVendorBookings((string)$vendor['status'])){http_response_code(403);return;}$vid=(int)$vendor['id'];$pid=(int)($_POST['property_id']??0);$own=$pdo->prepare('SELECT id FROM properties WHERE id=? AND vendor_id=?');$own->execute([$pid,$vid]);if(!$own->fetchColumn()){http_response_code(404);return;}delete_property_media($pdo,$pid,(int)($_POST['media_id']??0));redirect('/vendor/properties/'.$pid);
 });
 
 $router->post('/admin/properties/delete', static function (): void {
