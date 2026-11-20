@@ -2198,10 +2198,24 @@ $router->post('/admin/vendors/commission', static function (): void {
     $s=Database::connection()->prepare('UPDATE vendors SET commission_rate=? WHERE id=?');$s->execute([$rate,(int)($_POST['id']??0)]);redirect('/admin/vendors');
 });
 
+$router->post('/admin/vendors/reject', static function (): void {
+    Auth::requireRole(['super_admin','admin']);verify_csrf();$pdo=Database::connection();
+    if((string)$pdo->query("SELECT setting_value FROM settings WHERE setting_key='app.mode'")->fetchColumn()!=='multi_vendor'){http_response_code(404);return;}
+    $id=(int)($_POST['id']??0);if($id<1){http_response_code(422);return;}
+    $pdo->beginTransaction();
+    try{
+        $v=$pdo->prepare('SELECT id,status FROM vendors WHERE id=? FOR UPDATE');$v->execute([$id]);$vendor=$v->fetch(PDO::FETCH_ASSOC);
+        if(!$vendor||!in_array((string)$vendor['status'],['pending','rejected'],true)){http_response_code(409);$pdo->rollBack();return;}
+        $u=$pdo->prepare("UPDATE vendors SET status='rejected' WHERE id=? AND status='pending'");$u->execute([$id]);
+        $hide=$pdo->prepare("UPDATE properties SET status='draft',updated_at=NOW() WHERE vendor_id=? AND status='published'");$hide->execute([$id]);
+        $pdo->commit();
+    }catch(Throwable $e){if($pdo->inTransaction())$pdo->rollBack();throw $e;}
+    redirect('/admin/vendors');
+});
 $router->post('/admin/vendors/approve', static function (): void {
     Auth::requireRole(['super_admin','admin']);$pdo=Database::connection();
     if((string)$pdo->query("SELECT setting_value FROM settings WHERE setting_key='app.mode'")->fetchColumn()!=='multi_vendor')redirect('/admin');
-    verify_csrf();$s=$pdo->prepare("UPDATE vendors SET status='approved' WHERE id=?");$s->execute([(int)($_POST['id']??0)]);redirect('/admin/vendors');
+    verify_csrf();$id=(int)($_POST['id']??0);if($id<1){http_response_code(422);return;}$s=$pdo->prepare("UPDATE vendors SET status='approved' WHERE id=? AND status IN ('pending','rejected')");$s->execute([$id]);redirect('/admin/vendors');
 });
 
 
