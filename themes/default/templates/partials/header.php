@@ -61,13 +61,13 @@ $currentLocale = \App\Core\Translator::locale();
         <form class="site-language-switcher" method="post" action="<?= e(app_url('/language')) ?>">
           <input type="hidden" name="_csrf" value="<?= e(csrf_token()) ?>">
           <input type="hidden" name="return_to" value="<?= e((string)($_SERVER['REQUEST_URI'] ?? '/')) ?>">
-          <label for="siteLanguageSelect">Dil</label>
-          <select id="siteLanguageSelect" name="locale" onchange="this.form.submit()" aria-label="Site dili">
+          <label for="siteLanguageSelect"><?= e(\App\Core\Translator::get("nav.language")) ?></label>
+          <select id="siteLanguageSelect" name="locale" onchange="this.form.submit()" aria-label='<?= e(\App\Core\Translator::get("nav.site_language")) ?>'>
             <?php foreach ($availableLanguages as $language): ?>
               <option value="<?= e((string)$language['code']) ?>" <?= (string)$language['code'] === $currentLocale ? 'selected' : '' ?>><?= e((string)$language['name']) ?></option>
             <?php endforeach; ?>
           </select>
-          <noscript><button type="submit">Uygula</button></noscript>
+          <noscript><button type="submit"><?= e(\App\Core\Translator::get("nav.apply")) ?></button></noscript>
         </form>
       <?php endif; ?>
       <?php $drawerSocialLinks = \App\Core\ThemeManager::desktopSocialLinks(); ?>
