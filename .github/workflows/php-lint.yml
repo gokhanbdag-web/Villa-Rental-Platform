@@ -107,6 +107,8 @@ jobs:
         run: php tests/vendor-property-access-smoke.php
       - name: Run vendor calendar booking conflict checks
         run: php tests/vendor-calendar-booking-conflict-smoke.php
+      - name: Run vendor booking completion date checks
+        run: php tests/vendor-booking-completion-date-smoke.php
       - name: Run villa detail booking flow smoke test
         run: php tests/property-detail-booking-smoke.php
       - name: Run homepage statistic settings smoke test
