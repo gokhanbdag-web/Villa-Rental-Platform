@@ -326,7 +326,7 @@ $router->post('/admin/performance/cleanup', static function (): void {
 
 $router->get('/admin/homepage', static function (): void {
     Auth::requirePermission('admin.pages.edit');
-    redirect('/admin/pages/layout?page=home&lang=en');
+    redirect('/admin/pages');
 });
 $router->post('/admin/homepage', static function (): void {
     Auth::requirePermission('admin.pages.edit');
@@ -490,6 +490,7 @@ $router->get('/', static function (): void {
     $layoutStmt->execute(['page:'.(int)$page['id'],$locale]);
     $layoutRaw=$layoutStmt->fetchColumn();
     if(is_string($layoutRaw))$pageLayout=json_decode($layoutRaw,true);
+    $isHomepage=true;
     ThemeManager::render('page.php',get_defined_vars());
     return;
     }
@@ -2670,9 +2671,14 @@ $router->get('/admin/pages', static function (): void {
 $router->get('/admin/pages/layout', static function (): void {
     Auth::requirePermission('admin.pages.edit');
     $pdo=Database::connection();
-    $key=(string)($_GET['page']??'home');
-    if(!preg_match('/^(home|page:[0-9]+)$/',$key)){http_response_code(422);return;}
+    $key=(string)($_GET['page']??'');
+    if(!preg_match('/^page:[1-9][0-9]*$/',$key)){http_response_code(422);return;}
     $locale=(string)($_GET['lang']??'en');
+    $pageId=(int)substr($key,5);
+    $pageStmt=$pdo->prepare('SELECT id,title FROM cms_pages WHERE id=? AND language_code=? LIMIT 1');
+    $pageStmt->execute([$pageId,$locale]);
+    $editorPage=$pageStmt->fetch(PDO::FETCH_ASSOC);
+    if(!$editorPage){http_response_code(404);exit('Page not found.');}
     $stmt=$pdo->prepare('SELECT layout_json FROM cms_page_layouts WHERE page_key=? AND language_code=?');
     $stmt->execute([$key,$locale]);
     $layout=(string)($stmt->fetchColumn()?:'{"rows":[]}');
@@ -2683,8 +2689,12 @@ $router->post('/admin/pages/layout/save', static function (): void {
     verify_csrf();
     $key=(string)($_POST['page_key']??'');
     $locale=(string)($_POST['language_code']??'en');
-    if(!preg_match('/^(home|page:[0-9]+)$/',$key)){http_response_code(422);exit('Invalid page key.');}
+    if(!preg_match('/^page:[1-9][0-9]*$/',$key)){http_response_code(422);exit('Invalid page key.');}
     $pdo=Database::connection();
+    $pageId=(int)substr($key,5);
+    $pageCheck=$pdo->prepare('SELECT id FROM cms_pages WHERE id=? AND language_code=? LIMIT 1');
+    $pageCheck->execute([$pageId,$locale]);
+    if(!$pageCheck->fetchColumn()){http_response_code(404);exit('Page not found.');}
     $language=$pdo->prepare('SELECT code FROM languages WHERE code=? AND is_active=1');
     $language->execute([$locale]);
     if(!$language->fetchColumn()){http_response_code(422);exit('Invalid language.');}
@@ -2747,7 +2757,7 @@ $router->post('/admin/pages/save', static function (): void {
     if (!$languageCheck->fetchColumn()) { http_response_code(422); exit('Sayfa dili geçersiz veya devre dışı.'); }
     $title=trim((string)($_POST['title']??''));$slug=strtolower(trim((string)($_POST['slug']??'')));
     $slug=trim(preg_replace('/[^a-z0-9-]+/','-',$slug),'-');$content=trim((string)($_POST['content']??''));$metaTitle=trim((string)($_POST['meta_title']??''));$metaDescription=trim((string)($_POST['meta_description']??''));$focusKeyword=trim((string)($_POST['focus_keyword']??''));$status=($_POST['status']??'')==='published'?'published':'draft';
-    if($title===''||$slug===''||$content===''||mb_strlen($focusKeyword)>120){http_response_code(422);exit('Başlık, URL, odak kelime veya içerik alanlarını kontrol edin.');}
+    if($title===''||$slug===''||mb_strlen($focusKeyword)>120){http_response_code(422);exit('Başlık, URL, odak kelime veya içerik alanlarını kontrol edin.');}
     if($id){$s=$pdo->prepare('UPDATE cms_pages SET title=?,slug=?,content=?,status=?,meta_title=?,meta_description=?,focus_keyword=? WHERE id=? AND language_code=?');$s->execute([$title,$slug,$content,$status,$metaTitle,$metaDescription,$focusKeyword,$id,$locale]);}
     else{$s=$pdo->prepare('INSERT INTO cms_pages(language_code,title,slug,content,status,meta_title,meta_description,focus_keyword) VALUES(?,?,?,?,?,?,?,?)');$s->execute([$locale,$title,$slug,$content,$status,$metaTitle,$metaDescription,$focusKeyword]);}
     redirect('/admin/pages?lang=' . rawurlencode($locale));

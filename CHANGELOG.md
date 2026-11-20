@@ -1,3 +1,8 @@
+## 1.9.8 - 2026-11-21
+- Restrict visual layouts to real CMS pages and validate page language before saving.
+- Support layout-only pages without mandatory plain-text content.
+- Consolidate admin page navigation and retire separate site-content navigation entry.
+
 ## 1.9.7 - 2026-11-20
 - Begin single CMS page management: published page homepage assignment and rendering.
 - Migration of existing demo homepage and installation defaults remains required before merge.

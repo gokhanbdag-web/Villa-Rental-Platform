@@ -5,7 +5,7 @@
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title><?= e($page['meta_title'] ?: $page['title']) ?></title>
 <meta name="description" content="<?= e($page['meta_description']??'') ?>">
-<link rel="canonical" href="<?= e(app_url('/page/'.rawurlencode((string)$page['slug']))) ?>">
+<link rel="canonical" href="<?= e(app_url(!empty($isHomepage) ? '/' : '/page/'.rawurlencode((string)$page['slug']))) ?>">
 <meta name="robots" content="index,follow">
 <style>
 :root{--green:#167c80;--ink:#20332c;--line:#e8eeea}
@@ -18,7 +18,7 @@ body{font-family:var(--villa-font-body);"Segoe UI",sans-serif;color:var(--villa-
 .site-nav{display:flex;align-items:center;gap:18px;font-size:var(--villa-body-size);font-weight:var(--villa-body-weight);}
 .site-nav a{color:var(--villa-text);text-decoration:none;white-space:nowrap}
 .mobile-menu-toggle{display:none;width:42px;height:42px;border:1px solid #e5ebe6;border-radius:11px;background:#fff;color:var(--villa-text);font-size:var(--villa-body-size);cursor:pointer;align-items:center;justify-content:center}
-article{line-height:var(--villa-body-line-height);white-space:pre-line;padding:30px 0;color:var(--villa-text);}
+.villa-homepage-canvas{max-width:1180px;width:min(1180px,calc(100% - 32px));margin:0 auto;padding:0}.villa-homepage-canvas .villa-builder-row{margin:0 0 24px}.villa-homepage-canvas .villa-builder-banner{border-radius:0}article{line-height:var(--villa-body-line-height);white-space:pre-line;padding:30px 0;color:var(--villa-text);}
 .drawer-overlay{display:none}
 @media(max-width:700px){
 .site-header{position:relative;z-index:1001}
@@ -47,6 +47,6 @@ body.menu-open{overflow:hidden}
 <button class="mobile-menu-toggle" type="button" aria-label="Menüyü aç" aria-controls="siteNavigation" aria-expanded="false">☰</button>
 <nav class="site-nav" id="siteNavigation"><?php $navItems=$navigation??[];$navAllowAuth=true;\App\Core\ThemeManager::renderPartial('partials/navigation-items.php', get_defined_vars()); ?></nav></div></header>
 <div class="drawer-overlay" id="siteMenuOverlay" aria-hidden="true"></div>
-<main class="wrap"><h1><?= e($page['title']) ?></h1><?php if(is_array($pageLayout??null)): $builderFile=dirname(__DIR__).'/partials/page-builder-render.php';include $builderFile;else: ?><article><?= nl2br(e($page['content'])) ?></article><?php endif; ?></main>
+<main class="wrap<?= !empty($isHomepage) ? ' villa-homepage-canvas' : '' ?>"><?php if(empty($isHomepage)): ?><h1><?= e($page['title']) ?></h1><?php endif; ?><?php if(is_array($pageLayout??null)): $builderFile=dirname(__DIR__).'/partials/page-builder-render.php';include $builderFile;else: ?><article><?= nl2br(e($page['content'])) ?></article><?php endif; ?></main>
 <script>(function(){var button=document.querySelector(".mobile-menu-toggle"),menu=document.getElementById("siteNavigation"),overlay=document.getElementById("siteMenuOverlay");if(!button||!menu||!overlay)return;function close(){menu.classList.remove("is-open");overlay.classList.remove("is-open");document.body.classList.remove("menu-open");button.setAttribute("aria-expanded","false");button.setAttribute("aria-label","Menüyü aç");button.textContent="☰"}function open(){menu.classList.add("is-open");overlay.classList.add("is-open");document.body.classList.add("menu-open");button.setAttribute("aria-expanded","true");button.setAttribute("aria-label","Menüyü kapat");button.textContent="×"}button.addEventListener("click",function(){menu.classList.contains("is-open")?close():open()});overlay.addEventListener("click",close);menu.addEventListener("click",function(e){if(e.target.closest("a"))close()});document.addEventListener("keydown",function(e){if(e.key==="Escape")close()});window.addEventListener("resize",function(){if(window.innerWidth>700)close()})})();</script>
 <?php \App\Core\ThemeManager::renderPartial('partials/login-modal.php', get_defined_vars()); ?></body></html>
