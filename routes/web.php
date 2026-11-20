@@ -2430,16 +2430,24 @@ $router->post('/vendor/properties/availability/save', static function (): void {
     Auth::requireRole(['vendor']);verify_csrf();$pdo=Database::connection();$v=$pdo->prepare('SELECT id,status FROM vendors WHERE user_id=?');$v->execute([(int)Auth::user()['id']]);$vendor=$v->fetch(PDO::FETCH_ASSOC);if(!$vendor||!Auth::canManageVendorBookings((string)$vendor['status'])){http_response_code(403);return;}$vid=(int)$vendor['id'];$pid=(int)($_POST['property_id']??0);$own=$pdo->prepare('SELECT id FROM properties WHERE id=? AND vendor_id=?');$own->execute([$pid,$vid]);if(!$own->fetchColumn()){http_response_code(404);return;}
     $ruleId=(int)($_POST['id']??0);$from=(string)($_POST['date_from']??'');$to=(string)($_POST['date_to']??'');$status=($_POST['status']??'')==='available'?'available':'blocked';$price=trim((string)($_POST['nightly_price']??''));$a=DateTimeImmutable::createFromFormat('!Y-m-d',$from);$b=DateTimeImmutable::createFromFormat('!Y-m-d',$to);
     if(!$a||!$b||$a->format('Y-m-d')!==$from||$b->format('Y-m-d')!==$to||$a<new DateTimeImmutable('today')||$b<=$a){http_response_code(422);exit('Tarih aralığı geçersiz.');}
-    $over=$pdo->prepare('SELECT id FROM availability WHERE property_id=? AND id<>? AND date_from < ? AND date_to > ? LIMIT 1');$over->execute([$pid,$ruleId,$to,$from]);if($over->fetchColumn()){http_response_code(409);exit('Bu tarih aralığı mevcut bir takvim kuralıyla çakışıyor.');}
+    $pdo->beginTransaction();
+    try{
+        // Booking transitions lock the property before checking availability.
+        $propertyLock=$pdo->prepare('SELECT id FROM properties WHERE id=? AND vendor_id=? FOR UPDATE');
+        $propertyLock->execute([$pid,$vid]);
+        if(!$propertyLock->fetchColumn()){ $pdo->rollBack();http_response_code(404);return; }
+    $over=$pdo->prepare('SELECT id FROM availability WHERE property_id=? AND id<>? AND date_from < ? AND date_to > ? LIMIT 1');$over->execute([$pid,$ruleId,$to,$from]);if($over->fetchColumn()){$pdo->rollBack();http_response_code(409);exit('Bu tarih aralığı mevcut bir takvim kuralıyla çakışıyor.');}
     if($status==='blocked'){
         $booked=$pdo->prepare("SELECT id FROM bookings WHERE property_id=? AND status='confirmed' AND check_in < ? AND check_out > ? LIMIT 1");
         $booked->execute([$pid,$to,$from]);
-        if($booked->fetchColumn()){http_response_code(409);exit('Onaylanmış rezervasyon bulunan tarihler kapatılamaz.');}
+        if($booked->fetchColumn()){$pdo->rollBack();http_response_code(409);exit('Onaylanmış rezervasyon bulunan tarihler kapatılamaz.');}
     }
-    if($price!==''&&(!is_numeric($price)||!is_finite((float)$price)||(float)$price<0)){http_response_code(422);exit('Gecelik fiyat geçersiz.');}
+    if($price!==''&&(!is_numeric($price)||!is_finite((float)$price)||(float)$price<0)){$pdo->rollBack();http_response_code(422);exit('Gecelik fiyat geçersiz.');}
     $amount=$price===''?null:max(0,(float)$price);
     if($ruleId>0){$s=$pdo->prepare('UPDATE availability SET date_from=?,date_to=?,status=?,nightly_price=? WHERE id=? AND property_id=?');$s->execute([$from,$to,$status,$amount,$ruleId,$pid]);}
     else{$s=$pdo->prepare('INSERT INTO availability(property_id,date_from,date_to,status,nightly_price) VALUES(?,?,?,?,?)');$s->execute([$pid,$from,$to,$status,$amount]);}
+    $pdo->commit();
+    }catch(Throwable $e){if($pdo->inTransaction())$pdo->rollBack();throw $e;}
     redirect('/vendor/properties/'.$pid.'/availability');
 });
 $router->post('/vendor/properties/availability/delete', static function (): void {
