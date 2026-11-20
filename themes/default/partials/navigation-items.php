@@ -8,14 +8,14 @@ $renderVillaNav = function(array $entries) use (&$renderVillaNav, &$villaHasAuth
         // Account shortcuts are role-aware: administrators must never see a customer
         // account destination in the public header.
         if(!empty($user)&&in_array($normalizedUrl,['/account','/account/bookings'],true)){
-            if(in_array($role,['admin','super_admin'],true)){$url='/admin';$label='Yönetim Paneli';}
-            elseif($role==='vendor'){$url='/vendor';$label='Ev Sahibi Paneli';}
-            else{$url='/account/bookings';$label='Hesabım';}
+            if(in_array($role,['admin','super_admin'],true)){$url='/admin';$label=\App\Core\Translator::get('nav.admin');}
+            elseif($role==='vendor'){$url='/vendor';$label=\App\Core\Translator::get('nav.vendor');}
+            else{$url='/account/bookings';$label=\App\Core\Translator::get('nav.account');}
         }
         $isLogin=in_array(rtrim($url,'/'),['/login','/logout'],true);if($isLogin)continue;
         $isAuthUser=!empty($user);
         $hasChildren=!empty($entry['children']);
-        if($isLogin){$villaHasAuthLink=true;$url=$isAuthUser?(($user['role']??'')==='customer'?'/account/bookings':((($user['role']??'')==='vendor')?'/vendor':'/admin')):'#login';$label=$isAuthUser?(in_array(($user['role']??''),['admin','super_admin'],true)?'Yönetim Paneli':((($user['role']??'')==='vendor')?'Ev Sahibi Paneli':'Hesabım')):'Giriş Yap';}
+        if($isLogin){$villaHasAuthLink=true;$url=$isAuthUser?(($user['role']??'')==='customer'?'/account/bookings':((($user['role']??'')==='vendor')?'/vendor':'/admin')):'#login';$label=$isAuthUser?(in_array(($user['role']??''),['admin','super_admin'],true)?\App\Core\Translator::get('nav.admin'):((($user['role']??'')==='vendor')?\App\Core\Translator::get('nav.vendor'):\App\Core\Translator::get('nav.account'))):\App\Core\Translator::get('nav.login');}
         $href=preg_match('~^https?://~i',$url)?$url:app_url($url);
         echo '<div class="nav-entry'.($hasChildren?' has-children':'').'">';
         echo '<div class="nav-entry-top"><a '.($isLogin?'data-auth-link="1"':'').' '.(!$isAuthUser&&$isLogin?'data-login-trigger="1"':'').' href="'.e($isLogin&&!$isAuthUser?'#login':$href).'"'.($target==='_blank'?' target="_blank" rel="noopener noreferrer"':'').'>'.e($label).'</a>';
