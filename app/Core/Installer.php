@@ -107,6 +107,23 @@ final class Installer
             }
             Migrator::run($pdo, $root);
 
+            // Seed the selected storefront model after the shared schema and content.
+            // Single-vendor installations retain platform-owned properties.
+            // Multi-vendor installations assign the demo portfolio to a dedicated
+            // approved demo vendor backed by a separate account.
+            if ($mode === 'multi_vendor') {
+                $demoPassword = bin2hex(random_bytes(24));
+                $demoEmail = 'demo-vendor@localhost.invalid';
+                $demoUsername = 'demo_vendor';
+                $demoUser = $pdo->prepare("INSERT INTO users (username,email,password_hash,role,status,created_at) VALUES (?,?,?,'vendor','active',NOW()) ON DUPLICATE KEY UPDATE id=LAST_INSERT_ID(id)");
+                $demoUser->execute([$demoUsername, $demoEmail, password_hash($demoPassword, PASSWORD_DEFAULT)]);
+                $demoUserId = (int)$pdo->lastInsertId();
+                $demoVendor = $pdo->prepare("INSERT INTO vendors (user_id,business_name,status,created_at) VALUES (?,'Demo Villa Collection','approved',NOW()) ON DUPLICATE KEY UPDATE id=LAST_INSERT_ID(id)");
+                $demoVendor->execute([$demoUserId]);
+                $demoVendorId = (int)$pdo->lastInsertId();
+                $pdo->prepare('UPDATE properties SET vendor_id=? WHERE vendor_id IS NULL')->execute([$demoVendorId]);
+            }
+
             $pdo->beginTransaction();
             $stmt = $pdo->prepare('INSERT INTO users (username,email,password_hash,role,status,created_at) VALUES (?,?,?,?,?,NOW()) ON DUPLICATE KEY UPDATE username=VALUES(username),email=VALUES(email),password_hash=VALUES(password_hash),role=\'super_admin\',status=\'active\'');
             $stmt->execute([$username, $email, password_hash($password, PASSWORD_DEFAULT), 'super_admin', 'active']);
