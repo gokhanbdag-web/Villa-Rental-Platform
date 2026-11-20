@@ -105,6 +105,8 @@ jobs:
         run: php tests/vendor-property-atomic-smoke.php
       - name: Run vendor property access checks
         run: php tests/vendor-property-access-smoke.php
+      - name: Run vendor calendar booking conflict checks
+        run: php tests/vendor-calendar-booking-conflict-smoke.php
       - name: Run villa detail booking flow smoke test
         run: php tests/property-detail-booking-smoke.php
       - name: Run homepage statistic settings smoke test
