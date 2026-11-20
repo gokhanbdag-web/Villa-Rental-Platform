@@ -2615,6 +2615,25 @@ $router->post('/admin/navigation/delete', static function (): void {
 });
 
 
+$router->post('/admin/pages/apply-template', static function (): void {
+    Auth::requirePermission('admin.pages.edit');
+    verify_csrf();
+    $pdo=Database::connection();
+    $pageId=(int)($_POST['page_id']??0);
+    $templateId=(int)($_POST['template_id']??0);
+    $pageStmt=$pdo->prepare('SELECT id,language_code FROM cms_pages WHERE id=? LIMIT 1');
+    $pageStmt->execute([$pageId]);
+    $page=$pageStmt->fetch(PDO::FETCH_ASSOC);
+    $templateStmt=$pdo->prepare('SELECT layout_json FROM cms_page_templates WHERE id=? LIMIT 1');
+    $templateStmt->execute([$templateId]);
+    $layout=$templateStmt->fetchColumn();
+    if(!$page||!is_string($layout)){http_response_code(422);exit('Invalid page or template.');}
+    $decoded=json_decode($layout,true);
+    if(!is_array($decoded)||!isset($decoded['rows'])||!is_array($decoded['rows'])){http_response_code(422);exit('Invalid template layout.');}
+    $save=$pdo->prepare('INSERT INTO cms_page_layouts(page_key,language_code,layout_json) VALUES(?,?,?) ON DUPLICATE KEY UPDATE layout_json=VALUES(layout_json)');
+    $save->execute(['page:'.$pageId,(string)$page['language_code'],$layout]);
+    redirect('/admin/pages/layout?page=page:'.$pageId.'&lang='.rawurlencode((string)$page['language_code']));
+});
 $router->post('/admin/pages/set-home', static function (): void {
     Auth::requirePermission('admin.pages.edit');
     verify_csrf();
@@ -2691,6 +2710,7 @@ $router->get('/admin/pages/new', static function (): void {
     $locale = trim((string)($_GET['lang'] ?? 'tr'));
     if (!in_array($locale, $activeCodes, true)) $locale = (string)($activeCodes[0] ?? 'tr');
     $page = ['language_code' => $locale];
+    $pageTemplates=$pdo->query('SELECT id,name,category FROM cms_page_templates ORDER BY category,name')->fetchAll(PDO::FETCH_ASSOC);
     ThemeManager::renderTemplate('templates/pages/admin/page-form.php', get_defined_vars());
 });
 $router->get('/admin/pages/{id}', static function (array $params): void {
@@ -2710,6 +2730,7 @@ $router->get('/admin/pages/{id}', static function (array $params): void {
     $s->execute([$id, $locale]);
     $page = $s->fetch(PDO::FETCH_ASSOC);
     if (!$page) { http_response_code(404); return; }
+    $pageTemplates=$pdo->query('SELECT id,name,category FROM cms_page_templates ORDER BY category,name')->fetchAll(PDO::FETCH_ASSOC);
     ThemeManager::renderTemplate('templates/pages/admin/page-form.php', get_defined_vars());
 });
 $router->post('/admin/pages/save', static function (): void {
