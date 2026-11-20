@@ -2685,6 +2685,10 @@ $router->post('/admin/pages/layout/save', static function (): void {
     $locale=(string)($_POST['language_code']??'en');
     if(!preg_match('/^page:[1-9][0-9]*$/',$key)){http_response_code(422);exit('Invalid page key.');}
     $pdo=Database::connection();
+    $pageId=(int)substr($key,5);
+    $pageCheck=$pdo->prepare('SELECT id FROM cms_pages WHERE id=? AND language_code=? LIMIT 1');
+    $pageCheck->execute([$pageId,$locale]);
+    if(!$pageCheck->fetchColumn()){http_response_code(404);exit('Page not found.');}
     $language=$pdo->prepare('SELECT code FROM languages WHERE code=? AND is_active=1');
     $language->execute([$locale]);
     if(!$language->fetchColumn()){http_response_code(422);exit('Invalid language.');}
