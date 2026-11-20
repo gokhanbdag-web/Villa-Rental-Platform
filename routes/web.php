@@ -2655,7 +2655,7 @@ $router->post('/admin/pages/layout/save', static function (): void {
         foreach($row['columns'] as $column){
             if(!is_array($column)||count($column)>30){http_response_code(422);exit('Invalid widgets.');}
             foreach($column as $widget){
-                if(!is_array($widget)||!in_array($widget['type']??'', ['heading','text','image','button','spacer'],true)){http_response_code(422);exit('Invalid widget.');}
+                if(!is_array($widget)||!in_array($widget['type']??'', ['heading','text','image','banner','button','spacer'],true)){http_response_code(422);exit('Invalid widget.');}
             }
         }
     }
