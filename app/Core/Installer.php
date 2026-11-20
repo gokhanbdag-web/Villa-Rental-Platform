@@ -149,7 +149,7 @@ final class Installer
                 $templateJson=$templateStmt->fetchColumn();
                 $demoLayout=is_string($templateJson) ? json_decode($templateJson,true) : null;
                 if(!is_array($demoLayout)||!isset($demoLayout['rows'])){
-                    throw new \\RuntimeException('Default homepage template is missing or invalid.');
+                    throw new \RuntimeException('Default homepage template is missing or invalid.');
                 }
                 $layoutStmt=$pdo->prepare('INSERT INTO cms_page_layouts(page_key,language_code,layout_json) VALUES(?,?,?) ON DUPLICATE KEY UPDATE layout_json=layout_json');
                 $layoutStmt->execute(['page:'.$homeId,'en',json_encode($demoLayout,JSON_THROW_ON_ERROR|JSON_UNESCAPED_UNICODE)]);
