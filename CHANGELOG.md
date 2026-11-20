@@ -1,3 +1,8 @@
+## 1.9.4 - 2026-11-20
+- Convert initial installation wizard and installer validation messages to English.
+- Set new installations to English locale by default.
+- Begin English-only conversion; remaining frontend, admin and database seed translations require a separate comprehensive audit.
+
 ## 1.9.3 - 2026-11-20
 - Replace GitHub-dependent Update Center with vendor-hosted HTTPS release manifest status.
 - Remove GitHub commit and deployment details from the customer-facing update screen.
