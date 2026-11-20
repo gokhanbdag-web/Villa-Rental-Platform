@@ -28,19 +28,13 @@ INSERT IGNORE INTO settings(setting_key,setting_value,autoload) VALUES
 ('sms.cron_token','',0);
 
 INSERT INTO translations(language_code,translation_key,translation_value) VALUES
-('tr','sms.test.message','VillaCMS SMS bağlantı testi başarılı.'),
 ('en','sms.test.message','VillaCMS SMS connection test successful.'),
-('tr','sms.booking.created','Rezervasyon talebiniz alındı. Kod: :code. Detaylar: :url'),
 ('en','sms.booking.created','Your booking request was received. Reference: :code. Details: :url'),
-('tr','sms.booking.confirmed','Rezervasyonunuz onaylandı. Kod: :code. Giriş: :checkin.'),
 ('en','sms.booking.confirmed','Your booking is confirmed. Reference: :code. Check-in: :checkin.'),
-('tr','sms.booking.cancelled','Rezervasyonunuz iptal edildi. Kod: :code.'),
 ('en','sms.booking.cancelled','Your booking was cancelled. Reference: :code.'),
-('tr','sms.payment.received','Ödemeniz alındı. Rezervasyon kodu: :code.'),
 ('en','sms.payment.received','Your payment was received. Booking reference: :code.')
 ON DUPLICATE KEY UPDATE translation_value=VALUES(translation_value);
 
 INSERT INTO translations(language_code,translation_key,translation_value) VALUES
-('tr','sms.message.received','Rezervasyon görüşmenizde yeni mesajınız var. Mesajlar: :url'),
 ('en','sms.message.received','You have a new booking message. Messages: :url')
 ON DUPLICATE KEY UPDATE translation_value=VALUES(translation_value);
