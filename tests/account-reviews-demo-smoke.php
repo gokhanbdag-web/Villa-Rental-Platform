@@ -14,7 +14,7 @@ $migration=file_get_contents($root.'/database/migrations/038_demo_villa_reviews.
 $checks=[
  'authenticated customer reviews route exists before review form route'=>strpos($routes,"$"."router->get('/account/reviews',")!==false && strpos($routes,"$"."router->get('/account/reviews',")<strpos($routes,"$"."router->get('/account/reviews/{bookingId}'"),
  'my reviews query is scoped to the signed-in customer and excludes demo content'=>str_contains($routes,'r.guest_user_id=?')&&str_contains($routes,'COALESCE(r.is_demo,0)=0'),
- 'my reviews page renders rating, moderation status and property link'=>str_contains($reviewsPage,'/villa/')&&str_contains($reviewsPage,'Onay bekliyor')&&str_contains($reviewsPage,'Yayında')&&str_contains($reviewsPage,'/10'),
+ 'my reviews page renders rating, moderation status and property link'=>str_contains($reviewsPage,'/villa/')&&str_contains($reviewsPage,'Pending approval')&&str_contains($reviewsPage,'Published')&&str_contains($reviewsPage,'/10'),
  'my reviews is present in account navigation'=>str_contains($shell,"['/account/reviews','Yorumlarım']"),
  'mobile account shell prevents horizontal viewport overflow'=>str_contains($accountTheme,'overflow-x:clip')&&str_contains($accountTheme,'.item>*{min-width:0;max-width:100%}')&&str_contains($accountTheme,'overflow-wrap:anywhere'),
  'booking and notification account pages use shared responsive theme'=>str_contains($bookingsPage,'account-theme.php')&&str_contains($notificationsPage,'account-theme.php'),

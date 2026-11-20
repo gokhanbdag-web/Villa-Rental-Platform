@@ -35,8 +35,7 @@ CREATE TABLE IF NOT EXISTS translations (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 INSERT IGNORE INTO languages (code,name,is_default,is_active) VALUES
- ('en','English',1,1),
- ('tr','Türkçe',0,1);
+ ('en','English',1,1);
 
 CREATE TABLE IF NOT EXISTS content_translations (
  id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,

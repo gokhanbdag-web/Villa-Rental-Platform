@@ -47,10 +47,10 @@ final class EmailService
     {
         if (!filter_var($recipient, FILTER_VALIDATE_EMAIL) || trim($subject) === '' || preg_match('/[\r\n]/', $subject)
             || strlen($subject) > 500 || strlen($html) > 1048576 || strlen($text) > 1048576) {
-            throw new \InvalidArgumentException('E-posta kuyruğu için alıcı, konu veya içerik geçersiz.');
+            throw new \InvalidArgumentException('Invalid email queue recipient, subject or content.');
         }
         if ($eventKey !== null && (strlen($eventKey) > 190 || $eventKey === '')) {
-            throw new \InvalidArgumentException('E-posta olay anahtarı geçersiz.');
+            throw new \InvalidArgumentException('Invalid email event key.');
         }
         $stmt = $pdo->prepare("INSERT IGNORE INTO email_queue(recipient_email,subject,html_body,text_body,event_key,status,attempts,available_at,created_at) VALUES(?,?,?,?,?,'pending',0,NOW(),NOW())");
         $stmt->execute([$recipient, $subject, $html, $text, $eventKey]);
@@ -59,7 +59,7 @@ final class EmailService
     public static function sendTest(PDO $pdo, string $recipient): void
     {
         $config = self::smtpConfig($pdo);
-        if (!$config['enabled']) throw new \RuntimeException('SMTP e-posta gönderimi etkin değil.');
+        if (!$config['enabled']) throw new \RuntimeException('SMTP email delivery is disabled.');
         SmtpMailer::send($config, $recipient, Translator::get('email.smtp.test.subject'), Translator::get('email.smtp.test.html'), Translator::get('email.smtp.test.text'));
     }
 

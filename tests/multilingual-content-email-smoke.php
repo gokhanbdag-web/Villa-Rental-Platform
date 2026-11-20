@@ -24,7 +24,7 @@ $checks=[
  'content translator supports villa, category, blog and SEO fields'=>
   str_contains($contentTranslator,"'property' => [")&&str_contains($contentTranslator,"'meta_title'")&&str_contains($contentTranslator,"'property_category'")&&str_contains($contentTranslator,"'blog_post'")&&str_contains($contentTranslator,"'blog_category'")&&str_contains($contentTranslator,"'amenity'")&&str_contains($contentTranslator,"'location'"),
  'content translations are stored in fresh schema and upgrade migration'=>
-  str_contains($schema,'CREATE TABLE IF NOT EXISTS content_translations')&&str_contains($migration,'CREATE TABLE IF NOT EXISTS content_translations')&&str_contains($migration,"INSERT INTO languages(code,name,is_default,is_active) VALUES ('en','English',0,1) ON DUPLICATE KEY UPDATE name=VALUES(name),is_active=1"),
+  str_contains($schema,'CREATE TABLE IF NOT EXISTS content_translations')&&str_contains($migration,'CREATE TABLE IF NOT EXISTS content_translations')&&str_contains($migration,"INSERT INTO languages(code,name,is_default,is_active) VALUES ('en','English',1,1) ON DUPLICATE KEY UPDATE name=VALUES(name),is_active=1"),
  'new language translation editor shows default source keys for missing translations'=>
   str_contains($routes,'COALESCE(target.translation_value,base.translation_value)')&&str_contains($catalogueView,'/admin/content-translations'),
  'content translation editor is role-protected, CSRF-protected and validates entities'=>

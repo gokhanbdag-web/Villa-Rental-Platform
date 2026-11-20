@@ -11,9 +11,9 @@ CREATE TABLE IF NOT EXISTS homepage_sections (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 INSERT IGNORE INTO homepage_sections(section_key,title,subtitle,image_url,is_active,sort_order) VALUES
-('hero','Karşılama alanı','Ana sayfa büyük başlık ve arama alanı','',1,1),
-('destinations','Popüler destinasyonlar','En çok ilan bulunan şehirler','',1,2),
-('featured','En çok tercih edilenler','Öne çıkan tatil konaklamaları','',1,3),
-('styles','Tatil tarzını seç','Farklı tatil deneyimleri','',1,4),
-('gallery','Tatil galerisi','İlham veren tatil fotoğrafları','',1,5),
-('hosts','Ev sahiplerine özel','İlan yayınlama tanıtımı','',1,6);
+('hero','Welcome','Hero heading and property search','',1,1),
+('destinations','Popular destinations','Cities with the most properties','',1,2),
+('featured','Featured stays','Handpicked holiday accommodation','',1,3),
+('styles','Find your holiday style','Explore different travel experiences','',1,4),
+('gallery','Holiday gallery','Inspiring travel photography','',1,5),
+('hosts','For property owners','Learn how to list your property','',1,6);

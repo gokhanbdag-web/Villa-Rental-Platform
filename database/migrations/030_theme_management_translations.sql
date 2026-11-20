@@ -1,12 +1,12 @@
 INSERT INTO translations (language_code, translation_key, translation_value) VALUES
-('tr','admin.themes.title','Tema Yönetimi'),
-('tr','admin.themes.intro','Kurulu temaları görüntüleyin ve sitenin aktif temasını seçin. Default tema zorunlu temel katmandır.'),
-('tr','admin.themes.active','Aktif tema'),
-('tr','admin.themes.base','Zorunlu temel tema'),
-('tr','admin.themes.version','Sürüm'),
-('tr','admin.themes.author','Geliştirici'),
-('tr','admin.themes.activate','Bu temayı etkinleştir'),
-('tr','admin.themes.fallback_note','Aktif temada bulunmayan CSS kuralları, bileşenler ve görsel varlıklar default temadan tamamlanır.'),
-('tr','admin.themes.save_success','Aktif tema başarıyla değiştirildi.'),
-('tr','admin.themes.save_error','Tema etkinleştirilemedi. Lütfen tema dosyalarını ve manifestini kontrol edin.')
+('en','admin.themes.title','Theme Management'),
+('en','admin.themes.intro','Manage installed themes and choose your active design.'),
+('en','admin.themes.active','Active'),
+('en','admin.themes.base','Base theme'),
+('en','admin.themes.version','Version'),
+('en','admin.themes.author','Author'),
+('en','admin.themes.activate','Activate theme'),
+('en','admin.themes.fallback_note','The default theme remains available as a fallback.'),
+('en','admin.themes.save_success','Theme settings saved successfully.'),
+('en','admin.themes.save_error','Theme settings could not be saved.')
 ON DUPLICATE KEY UPDATE translation_value = VALUES(translation_value);

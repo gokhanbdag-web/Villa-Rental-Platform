@@ -22,7 +22,7 @@ $required = [
     '@media(max-width:600px)',
     'body .hero-filter-panel{',
     'order:-1!important',
-    'content:"VİLLANI BUL"',
+    'content:"FIND YOUR VILLA"',
     'grid-template-columns:repeat(2,minmax(0,1fr))!important',
     'body .hero-filter-panel .destination-field,',
     'body .hero-filter-panel .guest-field{',

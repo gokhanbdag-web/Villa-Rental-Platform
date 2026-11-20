@@ -49,5 +49,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 <div class="field"><label>Confirm password</label><input name="admin_password_confirm" type="password" minlength="12" required></div>
 </div></section>
 <section><h2>Business model</h2><div class="field"><label>Platform mode</label><select name="mode" required><option value="single_vendor">Single Vendor - One company</option><option value="multi_vendor">Multi Vendor - Marketplace</option></select></div></section>
+<section><h2>Starter content</h2><label><input type="checkbox" name="install_demo" value="1" checked> Install the English demo homepage</label><p class="muted">Uncheck to start with an empty homepage layout.</p></section>
 <button type="submit">Install now</button></form>
 <?php endif; ?></div></main></body></html>

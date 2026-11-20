@@ -1,9 +1,9 @@
 <?php declare(strict_types=1); ?>
 <!doctype html>
-<html lang="tr">
+<html lang="en">
 <head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Yorumlarım</title>
+<title>My reviews</title>
 <style>
 body{font-family:var(--villa-font-body);background:#f5f7f5;color:var(--villa-text);margin:0}
 .wrap{max-width:1000px;margin:35px auto;padding:0 18px}
@@ -17,23 +17,23 @@ body{font-family:var(--villa-font-body);background:#f5f7f5;color:var(--villa-tex
 <?php require APP_ROOT . '/views/site/partials/account-theme.php'; ?>
 </head>
 <body><main class="wrap">
-<h1>Yorumlarım</h1>
-<p class="muted">Konaklamalarınız için gönderdiğiniz değerlendirmeleri ve yayınlanma durumlarını buradan takip edebilirsiniz.</p>
+<h1>My reviews</h1>
+<p class="muted">Track the reviews you submitted for your stays and their publication status.</p>
 <?php foreach($reviews as $review): ?>
 <article class="review-card">
 <div class="review-main">
 <div class="review-title"><a href="<?= e(app_url('/villa/'.rawurlencode((string)$review['property_slug']))) ?>"><?= e($review['property_title']) ?></a></div>
 <div class="rating">★ <?= (int)$review['rating'] ?>/10</div>
-<?php if(trim((string)($review['body']??''))!==''): ?><p class="review-body"><?= nl2br(e($review['body'])) ?></p><?php else: ?><p class="muted">Yazılı yorum eklemediniz.</p><?php endif; ?>
-<div class="review-meta"><span><?= e(date('d.m.Y',strtotime((string)$review['created_at']))) ?></span><?php if(!empty($review['booking_code'])): ?><span>Rezervasyon: <?= e($review['booking_code']) ?></span><?php endif; ?></div>
+<?php if(trim((string)($review['body']??''))!==''): ?><p class="review-body"><?= nl2br(e($review['body'])) ?></p><?php else: ?><p class="muted">You did not add a written review.</p><?php endif; ?>
+<div class="review-meta"><span><?= e(date('d.m.Y',strtotime((string)$review['created_at']))) ?></span><?php if(!empty($review['booking_code'])): ?><span>Booking: <?= e($review['booking_code']) ?></span><?php endif; ?></div>
 </div>
 <span class="status"><?php
-$statusLabels=['pending'=>'Onay bekliyor','approved'=>'Yayında','rejected'=>'Yayınlanmadı'];
-echo e($statusLabels[(string)$review['status']]??'İnceleniyor');
+$statusLabels=['pending'=>'Pending approval','approved'=>'Published','rejected'=>'Not published'];
+echo e($statusLabels[(string)$review['status']]??'Under review');
 ?></span>
 </article>
 <?php endforeach; ?>
-<?php if(!$reviews): ?><section class="empty"><strong>Henüz yorumunuz bulunmuyor.</strong><p class="muted">Tamamlanan bir konaklamanız varsa rezervasyonlarınızdan değerlendirme gönderebilirsiniz.</p><a href="<?= e(app_url('/account/bookings')) ?>">Rezervasyonlarıma git</a></section><?php endif; ?>
-<p><a href="<?= e(app_url('/account/bookings')) ?>">Rezervasyonlarım</a> · <a href="<?= e(app_url('/')) ?>">Yeni konaklama keşfet</a></p>
+<?php if(!$reviews): ?><section class="empty"><strong>You have no reviews yet.</strong><p class="muted">You can review a completed stay from your bookings.</p><a href="<?= e(app_url('/account/bookings')) ?>">Go to my bookings</a></section><?php endif; ?>
+<p><a href="<?= e(app_url('/account/bookings')) ?>">My bookings</a> · <a href="<?= e(app_url('/')) ?>">Discover properties</a></p>
 <?php require APP_ROOT . '/views/site/partials/logout-button.php'; ?>
 </main></body></html>

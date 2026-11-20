@@ -13,8 +13,8 @@ DELETE parent_item
 FROM navigation_items parent_item
 LEFT JOIN navigation_items child_item ON child_item.parent_id = parent_item.id
 WHERE parent_item.location = 'header'
-  AND parent_item.language_code = 'tr'
-  AND parent_item.label = 'Demolar'
+  AND parent_item.language_code = 'en'
+  AND parent_item.label = 'Demos'
   AND parent_item.url = '#'
   AND child_item.id IS NULL;
 

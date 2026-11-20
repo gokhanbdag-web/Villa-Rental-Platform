@@ -1,22 +1,12 @@
 INSERT INTO translations(language_code,translation_key,translation_value) VALUES
-('tr','account.notifications.empty','Henüz bildiriminiz yok.'),
 ('en','account.notifications.empty','No notifications yet.'),
-('tr','account.notifications.title','Bildirimler'),
 ('en','account.notifications.title','Notifications'),
-('tr','account.common.home','Ana sayfa'),
 ('en','account.common.home','Home'),
-('tr','account.messages.empty','Henüz mesaj yok. İlk mesajınızı gönderebilirsiniz.'),
 ('en','account.messages.empty','No messages yet. You can send the first message.'),
-('tr','account.messages.title','Rezervasyon mesajları'),
 ('en','account.messages.title','Booking messages'),
-('tr','account.messages.heading','Mesajlaşma'),
 ('en','account.messages.heading','Messages'),
-('tr','account.messages.your_message','Mesajınız'),
 ('en','account.messages.your_message','Your message'),
-('tr','account.messages.send','Mesaj gönder'),
 ('en','account.messages.send','Send message'),
-('tr','account.common.back','Geri dön'),
 ('en','account.common.back','Go back'),
-('tr','account.messages.you','Siz'),
 ('en','account.messages.you','You')
 ON DUPLICATE KEY UPDATE translation_value=VALUES(translation_value);

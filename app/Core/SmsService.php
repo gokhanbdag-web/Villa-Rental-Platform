@@ -46,8 +46,8 @@ final class SmsService
         if(!$config['enabled']||!$config['configured'])return false;
         $number=NetgsmApiClient::normalizePhone($phone);
         $message=trim($message);
-        if($message===''||mb_strlen($message)>912)throw new RuntimeException('SMS metni 1-912 karakter arasında olmalıdır.');
-        if($eventKey!==null&&($eventKey===''||strlen($eventKey)>190))throw new RuntimeException('SMS olay anahtarı geçersiz.');
+        if($message===''||mb_strlen($message)>912)throw new RuntimeException('SMS text must be between 1 and 912 characters.');
+        if($eventKey!==null&&($eventKey===''||strlen($eventKey)>190))throw new RuntimeException('Invalid SMS event key.');
         $stmt=$pdo->prepare("INSERT IGNORE INTO sms_queue(recipient_phone,message_body,event_key,status,attempts,available_at,created_at) VALUES(?,?,?,'pending',0,NOW(),NOW())");
         $stmt->execute([$number,$message,$eventKey]);
         return $stmt->rowCount()===1;
@@ -67,7 +67,7 @@ final class SmsService
     public static function sendTest(PDO $pdo,string $recipient):array
     {
         $config=self::config($pdo);
-        if(!$config['enabled']||!$config['configured'])throw new RuntimeException('Önce Netgsm bilgilerini kaydedin ve SMS gönderimini etkinleştirin.');
+        if(!$config['enabled']||!$config['configured'])throw new RuntimeException('Save your Netgsm credentials and enable SMS delivery first.');
         return NetgsmApiClient::send($config,$recipient,Translator::get('sms.test.message'));
     }
 

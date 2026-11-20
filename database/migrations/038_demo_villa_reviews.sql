@@ -7,11 +7,11 @@ ALTER TABLE reviews
 
 INSERT IGNORE INTO users (username,email,password_hash,role,status,created_at)
 VALUES
- ('Demo Misafir 01','demo-reviewer-01@demo.invalid','!DEMO_ACCOUNT_DISABLED!','customer','inactive',NOW()),
- ('Demo Misafir 02','demo-reviewer-02@demo.invalid','!DEMO_ACCOUNT_DISABLED!','customer','inactive',NOW()),
- ('Demo Misafir 03','demo-reviewer-03@demo.invalid','!DEMO_ACCOUNT_DISABLED!','customer','inactive',NOW()),
- ('Demo Misafir 04','demo-reviewer-04@demo.invalid','!DEMO_ACCOUNT_DISABLED!','customer','inactive',NOW()),
- ('Demo Misafir 05','demo-reviewer-05@demo.invalid','!DEMO_ACCOUNT_DISABLED!','customer','inactive',NOW());
+ ('Demo Guest 01','demo-reviewer-01@demo.invalid','!DEMO_ACCOUNT_DISABLED!','customer','inactive',NOW()),
+ ('Demo Guest 02','demo-reviewer-02@demo.invalid','!DEMO_ACCOUNT_DISABLED!','customer','inactive',NOW()),
+ ('Demo Guest 03','demo-reviewer-03@demo.invalid','!DEMO_ACCOUNT_DISABLED!','customer','inactive',NOW()),
+ ('Demo Guest 04','demo-reviewer-04@demo.invalid','!DEMO_ACCOUNT_DISABLED!','customer','inactive',NOW()),
+ ('Demo Guest 05','demo-reviewer-05@demo.invalid','!DEMO_ACCOUNT_DISABLED!','customer','inactive',NOW());
 
 INSERT INTO reviews (booking_id,property_id,guest_user_id,rating,body,status,created_at,is_demo)
 SELECT
@@ -20,11 +20,11 @@ SELECT
  u.id,
  8 + MOD(p.id + samples.slot_no,3),
  CASE samples.slot_no
-   WHEN 1 THEN CONCAT(p.title, ' için örnek değerlendirme: Villa temiz, ferah ve fotoğraflardaki gibiydi. Konaklama öncesi iletişim de oldukça rahattı.')
-   WHEN 2 THEN CONCAT(p.title, ' için örnek değerlendirme: Konumu ve manzarası tatilimizi güzelleştirdi. Ailemizle keyifli ve huzurlu vakit geçirdik.')
-   WHEN 3 THEN CONCAT(p.title, ' için örnek değerlendirme: Mutfak ve yaşam alanları kullanışlıydı. Giriş süreci kolaydı, tekrar tercih edebiliriz.')
-   WHEN 4 THEN CONCAT(p.title, ' için örnek değerlendirme: Havuz ve dış alanlar çok keyifliydi. Genel temizlik ve konfor beklentimizi karşıladı.')
-   ELSE CONCAT(p.title, ' için örnek değerlendirme: Sessiz bir tatil arayanlar için güzel bir seçenek. Küçük detaylar dışında memnun kaldık.')
+   WHEN 1 THEN CONCAT(p.title, ' - The villa was clean, spacious and matched the photos. Communication before arrival was excellent.')
+   WHEN 2 THEN CONCAT(p.title, ' - A beautiful location and wonderful views made our family holiday memorable.')
+   WHEN 3 THEN CONCAT(p.title, ' - The kitchen and living areas were practical, and check-in was straightforward.')
+   WHEN 4 THEN CONCAT(p.title, ' - We enjoyed the pool and outdoor spaces. The comfort and cleanliness met our expectations.')
+   ELSE CONCAT(p.title, ' - A lovely choice for a peaceful getaway. We would happily stay again.')
  END,
  'approved',
  DATE_SUB(NOW(), INTERVAL (samples.slot_no * 13 + MOD(p.id,17)) DAY),

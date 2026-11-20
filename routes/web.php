@@ -585,6 +585,12 @@ $router->get('/', static function (): void {
     $locationCountries=$pdo->query("SELECT id,name FROM locations WHERE location_type='country' AND is_active=1 ORDER BY sort_order,name")->fetchAll();
      $locationCountries=\App\Core\ContentTranslator::apply($pdo,$locationCountries,'location',$locale);
      villa_perf_mark('home:theme_render');
+    $demoHomepageEnabled=(string)($pdo->query("SELECT setting_value FROM settings WHERE setting_key='app.demo_enabled' LIMIT 1")->fetchColumn() ?: '1')!=='0';
+    $pageLayout=null;
+    $layoutStmt=$pdo->prepare('SELECT layout_json FROM cms_page_layouts WHERE page_key=? AND language_code=? LIMIT 1');
+    $layoutStmt->execute(['home',$locale]);
+    $layoutRaw=$layoutStmt->fetchColumn();
+    if(is_string($layoutRaw))$pageLayout=json_decode($layoutRaw,true);
     ThemeManager::render('landing.php', get_defined_vars());
 });
 
@@ -2620,6 +2626,44 @@ $router->get('/admin/pages', static function (): void {
     $pages = $pageQuery->fetchAll(PDO::FETCH_ASSOC);
     ThemeManager::renderTemplate('templates/pages/admin/pages.php', get_defined_vars());
 });
+$router->get('/admin/pages/layout', static function (): void {
+    Auth::requirePermission('admin.pages.edit');
+    $pdo=Database::connection();
+    $key=(string)($_GET['page']??'home');
+    if(!preg_match('/^(home|page:[0-9]+)$/',$key)){http_response_code(422);return;}
+    $locale=(string)($_GET['lang']??'en');
+    $stmt=$pdo->prepare('SELECT layout_json FROM cms_page_layouts WHERE page_key=? AND language_code=?');
+    $stmt->execute([$key,$locale]);
+    $layout=(string)($stmt->fetchColumn()?:'{"rows":[]}');
+    ThemeManager::renderTemplate('templates/pages/admin/page-layout-editor.php',get_defined_vars());
+});
+$router->post('/admin/pages/layout/save', static function (): void {
+    Auth::requirePermission('admin.pages.edit');
+    verify_csrf();
+    $key=(string)($_POST['page_key']??'');
+    $locale=(string)($_POST['language_code']??'en');
+    if(!preg_match('/^(home|page:[0-9]+)$/',$key)){http_response_code(422);exit('Invalid page key.');}
+    $pdo=Database::connection();
+    $language=$pdo->prepare('SELECT code FROM languages WHERE code=? AND is_active=1');
+    $language->execute([$locale]);
+    if(!$language->fetchColumn()){http_response_code(422);exit('Invalid language.');}
+    $raw=(string)($_POST['layout_json']??'');
+    $layout=json_decode($raw,true);
+    if(!is_array($layout)||!isset($layout['rows'])||!is_array($layout['rows'])||count($layout['rows'])>80){http_response_code(422);exit('Invalid layout.');}
+    foreach($layout['rows'] as $row){
+        if(!is_array($row)||!isset($row['columns'])||!is_array($row['columns'])||count($row['columns'])<1||count($row['columns'])>6){http_response_code(422);exit('Invalid columns.');}
+        foreach($row['columns'] as $column){
+            if(!is_array($column)||count($column)>30){http_response_code(422);exit('Invalid widgets.');}
+            foreach($column as $widget){
+                if(!is_array($widget)||!in_array($widget['type']??'', ['heading','text','image','banner','button','spacer'],true)){http_response_code(422);exit('Invalid widget.');}
+            }
+        }
+    }
+    if(strlen($raw)>500000){http_response_code(422);exit('Layout is too large.');}
+    $stmt=$pdo->prepare('INSERT INTO cms_page_layouts(page_key,language_code,layout_json) VALUES(?,?,?) ON DUPLICATE KEY UPDATE layout_json=VALUES(layout_json)');
+    $stmt->execute([$key,$locale,json_encode($layout,JSON_UNESCAPED_UNICODE|JSON_UNESCAPED_SLASHES)]);
+    redirect('/admin/pages/layout?page='.rawurlencode($key).'&lang='.rawurlencode($locale));
+});
 $router->get('/admin/pages/new', static function (): void {
     Auth::requirePermission('admin.pages.edit');
     $pdo = Database::connection();
@@ -2680,6 +2724,11 @@ $router->get('/page/{slug}', static function (array $params): void {
     $destinations=[];$featuredProperties=[];$latestProperties=[];$categories=[];$stylePhotos=[];
     $blogPosts=$pdo->query("SELECT id,title,slug,excerpt,featured_image,published_at FROM blog_posts WHERE status='published' AND (published_at IS NULL OR published_at<=NOW()) ORDER BY COALESCE(published_at,created_at) DESC,id DESC LIMIT 12")->fetchAll(PDO::FETCH_ASSOC);
     $blogPosts=\App\Core\ContentTranslator::apply($pdo,$blogPosts,'blog_post',$locale);
+    $pageLayout=null;
+    $layoutStmt=$pdo->prepare('SELECT layout_json FROM cms_page_layouts WHERE page_key=? AND language_code=? LIMIT 1');
+    $layoutStmt->execute(['page:'.(int)$page['id'],$locale]);
+    $layoutRaw=$layoutStmt->fetchColumn();
+    if(is_string($layoutRaw))$pageLayout=json_decode($layoutRaw,true);
     ThemeManager::render('page.php', get_defined_vars());
 });
 
@@ -3692,6 +3741,44 @@ $router->get('/admin/content', static function (): void {
         'home_title'=>'Ana sayfa ana başlığı',
         'home_subtitle'=>'Ana sayfa açıklaması',
         'home_search_placeholder'=>'Arama alanı ipucu',
+        'home_search_destination_label'=>'Homepage destination label',
+        'home_style_1_title'=>'Holiday style 1 title',
+        'home_style_2_title'=>'Holiday style 2 title',
+        'home_style_3_title'=>'Holiday style 3 title',
+        'home_style_4_title'=>'Holiday style 4 title',
+        'home_style_1_image'=>'Holiday style 1 image URL',
+        'home_style_2_image'=>'Holiday style 2 image URL',
+        'home_style_3_image'=>'Holiday style 3 image URL',
+        'home_style_4_image'=>'Holiday style 4 image URL',
+        'home_style_1_link'=>'Holiday style 1 destination URL',
+        'home_style_2_link'=>'Holiday style 2 destination URL',
+        'home_style_3_link'=>'Holiday style 3 destination URL',
+        'home_style_4_link'=>'Holiday style 4 destination URL',
+        'home_gallery_1_image'=>'Holiday gallery image 1 URL',
+        'home_gallery_2_image'=>'Holiday gallery image 2 URL',
+        'home_gallery_3_image'=>'Holiday gallery image 3 URL',
+        'home_gallery_4_image'=>'Holiday gallery image 4 URL',
+        'home_host_banner_image'=>'Host banner background image URL',
+        'home_search_destination_placeholder'=>'Homepage destination placeholder',
+        'home_search_date_range_label'=>'Homepage date range label',
+        'home_search_checkin_label'=>'Homepage check-in label',
+        'home_search_checkout_label'=>'Homepage check-out label',
+        'home_calendar_previous'=>'Calendar previous month label',
+        'home_calendar_next'=>'Calendar next month label',
+        'home_calendar_choose'=>'Calendar choose dates label',
+        'home_calendar_add_date'=>'Calendar add dates label',
+        'home_calendar_choose_range'=>'Calendar date range hint',
+        'home_calendar_clear'=>'Calendar clear button',
+        'home_calendar_done'=>'Calendar done button',
+        'home_guest_decrease_adults'=>'Decrease adults accessibility label',
+        'home_guest_increase_adults'=>'Increase adults accessibility label',
+        'home_guest_decrease_children'=>'Decrease children accessibility label',
+        'home_guest_increase_children'=>'Increase children accessibility label',
+        'home_guest_decrease_infants'=>'Decrease infants accessibility label',
+        'home_guest_increase_infants'=>'Increase infants accessibility label',
+        'home_mobile_search_button'=>'Mobile search button',
+        'home_destinations_link'=>'All destinations link label',
+        'home_properties_link'=>'All properties link label',
         'featured_title'=>'Öne çıkanlar başlığı',
         'featured_subtitle'=>'Öne çıkanlar açıklaması',
         'empty_properties'=>'Sonuç bulunamadı metni',
@@ -3801,7 +3888,7 @@ $router->get('/admin/content', static function (): void {
 $router->post('/admin/content', static function (): void {
     Auth::requireRole(['super_admin', 'admin']);
     verify_csrf();
-    $allowed = ['site_name','home_eyebrow','home_title','home_subtitle','home_search_placeholder','featured_title','featured_subtitle','empty_properties','search_button','guest_select_label','guest_unit','all_categories','property_about','property_reserve','property_no_images','booking_notice','footer_text','home_latest_title','home_latest_subtitle','home_trust_1_title','home_trust_1_text','home_trust_2_title','home_trust_2_text','home_trust_3_title','home_trust_3_text','home_trust_4_title','home_trust_4_text','home_concepts_title','home_concepts_subtitle','home_collections_title','home_collections_subtitle','home_regions_title','home_regions_subtitle','home_reviews_title','home_reviews_subtitle','home_faq_title','home_faq_subtitle','home_faq_1_question','home_faq_1_answer','home_faq_2_question','home_faq_2_answer','home_faq_3_question','home_faq_3_answer','home_faq_4_question','home_faq_4_answer','home_faq_5_question','home_faq_5_answer','home_support_title','home_support_subtitle','home_support_phone','home_support_whatsapp','home_host_title','home_host_subtitle','home_host_cta','home_latest_eyebrow','home_latest_link','home_concepts_eyebrow','home_concepts_count_label','home_collections_eyebrow','home_collection_count_suffix','home_collection_link','home_regions_eyebrow','home_reviews_eyebrow','home_review_verified_label','home_faq_eyebrow','home_support_eyebrow','home_support_whatsapp_label','home_footer_regions_title','home_footer_categories_title','home_footer_contact_title','home_guest_unit','home_bedroom_unit','home_night_unit','home_empty_photo','explore_hero_eyebrow','explore_hero_title','explore_hero_text','explore_hero_image','explore_hero_cta','explore_hero_link','explore_card_1_title','explore_card_1_text','explore_card_1_image','explore_card_1_link','explore_card_2_title','explore_card_2_text','explore_card_2_image','explore_card_2_link','explore_card_3_title','explore_card_3_text','explore_card_3_image','explore_card_3_link','explore_card_4_title','explore_card_4_text','explore_card_4_image','explore_card_4_link','explore_destination_eyebrow','explore_destination_title','explore_destination_text','explore_destination_image','explore_destination_cta','explore_destination_link','explore_support_title','explore_support_text','explore_support_phone','explore_support_whatsapp','explore_support_cta'];
+    $allowed = ['site_name','home_eyebrow','home_title','home_subtitle','home_search_placeholder','home_style_1_title','home_style_2_title','home_style_3_title','home_style_4_title','home_style_1_image','home_style_2_image','home_style_3_image','home_style_4_image','home_style_1_link','home_style_2_link','home_style_3_link','home_style_4_link','home_gallery_1_image','home_gallery_2_image','home_gallery_3_image','home_gallery_4_image','home_host_banner_image','home_search_destination_label','home_search_destination_placeholder','home_search_date_range_label','home_search_checkin_label','home_search_checkout_label','home_calendar_previous','home_calendar_next','home_calendar_choose','home_calendar_add_date','home_calendar_choose_range','home_calendar_clear','home_calendar_done','home_guest_decrease_adults','home_guest_increase_adults','home_guest_decrease_children','home_guest_increase_children','home_guest_decrease_infants','home_guest_increase_infants','home_mobile_search_button','home_destinations_link','home_properties_link','featured_title','featured_subtitle','empty_properties','search_button','guest_select_label','guest_unit','all_categories','property_about','property_reserve','property_no_images','booking_notice','footer_text','home_latest_title','home_latest_subtitle','home_trust_1_title','home_trust_1_text','home_trust_2_title','home_trust_2_text','home_trust_3_title','home_trust_3_text','home_trust_4_title','home_trust_4_text','home_concepts_title','home_concepts_subtitle','home_collections_title','home_collections_subtitle','home_regions_title','home_regions_subtitle','home_reviews_title','home_reviews_subtitle','home_faq_title','home_faq_subtitle','home_faq_1_question','home_faq_1_answer','home_faq_2_question','home_faq_2_answer','home_faq_3_question','home_faq_3_answer','home_faq_4_question','home_faq_4_answer','home_faq_5_question','home_faq_5_answer','home_support_title','home_support_subtitle','home_support_phone','home_support_whatsapp','home_host_title','home_host_subtitle','home_host_cta','home_latest_eyebrow','home_latest_link','home_concepts_eyebrow','home_concepts_count_label','home_collections_eyebrow','home_collection_count_suffix','home_collection_link','home_regions_eyebrow','home_reviews_eyebrow','home_review_verified_label','home_faq_eyebrow','home_support_eyebrow','home_support_whatsapp_label','home_footer_regions_title','home_footer_categories_title','home_footer_contact_title','home_guest_unit','home_bedroom_unit','home_night_unit','home_empty_photo','explore_hero_eyebrow','explore_hero_title','explore_hero_text','explore_hero_image','explore_hero_cta','explore_hero_link','explore_card_1_title','explore_card_1_text','explore_card_1_image','explore_card_1_link','explore_card_2_title','explore_card_2_text','explore_card_2_image','explore_card_2_link','explore_card_3_title','explore_card_3_text','explore_card_3_image','explore_card_3_link','explore_card_4_title','explore_card_4_text','explore_card_4_image','explore_card_4_link','explore_destination_eyebrow','explore_destination_title','explore_destination_text','explore_destination_image','explore_destination_cta','explore_destination_link','explore_support_title','explore_support_text','explore_support_phone','explore_support_whatsapp','explore_support_cta'];
     $pdo = Database::connection();
     $locale = trim((string)($_POST['lang'] ?? ''));
     $languageCheck = $pdo->prepare('SELECT code FROM languages WHERE code=? AND is_active=1 LIMIT 1');
