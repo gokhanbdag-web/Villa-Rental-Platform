@@ -93,6 +93,8 @@ jobs:
         run: php tests/manual-bank-refund-reference-reuse-smoke.php
       - name: Run stage 2 finance integrity checks
         run: php tests/finance-integrity-smoke.php
+      - name: Run vendor property approval checks
+        run: php tests/vendor-property-approval-smoke.php
       - name: Run villa detail booking flow smoke test
         run: php tests/property-detail-booking-smoke.php
       - name: Run homepage statistic settings smoke test
