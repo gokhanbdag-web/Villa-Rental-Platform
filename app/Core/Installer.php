@@ -133,6 +133,23 @@ final class Installer
                 $pdo->exec('DELETE FROM cms_pages');
                 $pdo->exec('DELETE FROM blog_posts');
                 $pdo->exec('DELETE FROM properties');
+                // A production installation must not have an empty Page Management.
+                // Create editable drafts, never publish placeholder text or replace
+                // the working legacy homepage before the administrator chooses to.
+                $starterPages = [
+                    ['Home', 'home'],
+                    ['About Us', 'about-us'],
+                    ['Contact', 'contact'],
+                    ['Frequently Asked Questions', 'faq'],
+                    ['Privacy Policy', 'privacy-policy'],
+                    ['Terms and Conditions', 'terms-and-conditions'],
+                ];
+                $starterStmt = $pdo->prepare("INSERT INTO cms_pages(language_code,title,slug,content,status,meta_title,meta_description) VALUES('en',?,?,?,'draft',?,?)");
+                $starterLayout = $pdo->prepare('INSERT INTO cms_page_layouts(page_key,language_code,layout_json) VALUES(?,?,?)');
+                foreach ($starterPages as [$title, $slug]) {
+                    $starterStmt->execute([$title, $slug, '', $title, '']);
+                    $starterLayout->execute(['page:'.$pdo->lastInsertId(), 'en', '{"rows":[]}']);
+                }
             } else {
                 $home=$pdo->prepare("SELECT id FROM cms_pages WHERE slug='home' AND language_code='en' LIMIT 1");
                 $home->execute();
