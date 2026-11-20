@@ -50,6 +50,7 @@ try {
         'admin_password' => 'ConcurrencySmokePassword!2026',
         'admin_password_confirm' => 'ConcurrencySmokePassword!2026',
         'mode' => 'multi_vendor',
+        'install_demo' => '1',
     ]);
 
     $pdoA = Installer::connect($db);

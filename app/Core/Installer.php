@@ -125,12 +125,38 @@ final class Installer
                 $pdo->prepare('UPDATE properties SET vendor_id=? WHERE vendor_id IS NULL')->execute([$demoVendorId]);
             }
 
+            // Demo seed migrations run before installer options are known. Remove their
+            // sample content on clean installations, without touching structural tables.
+            if (!$installDemo) {
+                $pdo->exec('DELETE FROM cms_page_layouts');
+                $pdo->exec('DELETE FROM navigation_items');
+                $pdo->exec('DELETE FROM cms_pages');
+                $pdo->exec('DELETE FROM blog_posts');
+                $pdo->exec('DELETE FROM properties');
+            } else {
+                $home=$pdo->prepare("SELECT id FROM cms_pages WHERE slug='home' AND language_code='en' LIMIT 1");
+                $home->execute();
+                $homeId=(int)($home->fetchColumn() ?: 0);
+                if($homeId===0){
+                    $add=$pdo->prepare("INSERT INTO cms_pages(language_code,title,slug,content,status,meta_title,meta_description) VALUES('en','Home','home','','published','Home | VillaStay','Explore private villa rentals')");
+                    $add->execute();
+                    $homeId=(int)$pdo->lastInsertId();
+                }
+                $demoLayout=['rows'=>[
+                    ['columns'=>[[['type'=>'heading','text'=>'Discover your next villa escape'],['type'=>'text','text'=>'Explore exceptional villas and find your ideal stay.']]]],
+                    ['columns'=>[[['type'=>'banner','eyebrow'=>'VILLA COLLECTION','text'=>'Private villas for memorable holidays','description'=>'Discover stays selected for comfort and privacy.','url'=>'https://images.unsplash.com/photo-1613490493576-7fde63acd811?auto=format&fit=crop&w=1800&q=85','button_text'=>'Browse villas','button_url'=>'/konaklamalar']]]]
+                ]];
+                $layoutStmt=$pdo->prepare('INSERT INTO cms_page_layouts(page_key,language_code,layout_json) VALUES(?,?,?) ON DUPLICATE KEY UPDATE layout_json=layout_json');
+                $layoutStmt->execute(['page:'.$homeId,'en',json_encode($demoLayout,JSON_THROW_ON_ERROR|JSON_UNESCAPED_UNICODE)]);
+            }
+
             $pdo->beginTransaction();
             $stmt = $pdo->prepare('INSERT INTO users (username,email,password_hash,role,status,created_at) VALUES (?,?,?,?,?,NOW()) ON DUPLICATE KEY UPDATE username=VALUES(username),email=VALUES(email),password_hash=VALUES(password_hash),role=\'super_admin\',status=\'active\'');
             $stmt->execute([$username, $email, password_hash($password, PASSWORD_DEFAULT), 'super_admin', 'active']);
             $settings = [
                 'app.mode' => $mode,
                 'app.demo_enabled' => $installDemo ? '1' : '0',
+                'cms.homepage_id' => $installDemo ? (string)$homeId : '0',
                 'app.locale' => 'en',
                 'app.timezone' => 'Europe/Istanbul',
                 'app.installed_at' => date(DATE_ATOM),
