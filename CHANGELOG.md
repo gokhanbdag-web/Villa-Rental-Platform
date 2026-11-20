@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.9.2 - 2026-11-20
+- Hide marketplace commission settings from single-vendor administration.
+- Enforce installation-mode checks server-side so single-vendor settings submissions cannot update marketplace commission rates.
+- Preserve commission configuration for multi-vendor installations.
+
 ## 1.9.1 - 2026-11-20
 - Hide vendor management from AJAX account menus on single-vendor installations.
 - Reject vendor account AJAX sessions when the installation is not in multi-vendor mode.
