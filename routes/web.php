@@ -2674,6 +2674,11 @@ $router->get('/admin/pages/layout', static function (): void {
     $key=(string)($_GET['page']??'');
     if(!preg_match('/^page:[1-9][0-9]*$/',$key)){http_response_code(422);return;}
     $locale=(string)($_GET['lang']??'en');
+    $pageId=(int)substr($key,5);
+    $pageStmt=$pdo->prepare('SELECT id,title FROM cms_pages WHERE id=? AND language_code=? LIMIT 1');
+    $pageStmt->execute([$pageId,$locale]);
+    $editorPage=$pageStmt->fetch(PDO::FETCH_ASSOC);
+    if(!$editorPage){http_response_code(404);exit('Page not found.');}
     $stmt=$pdo->prepare('SELECT layout_json FROM cms_page_layouts WHERE page_key=? AND language_code=?');
     $stmt->execute([$key,$locale]);
     $layout=(string)($stmt->fetchColumn()?:'{"rows":[]}');
