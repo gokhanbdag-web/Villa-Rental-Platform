@@ -34,7 +34,9 @@ CREATE TABLE IF NOT EXISTS translations (
  CONSTRAINT fk_translation_language FOREIGN KEY (language_code) REFERENCES languages(code) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
-INSERT IGNORE INTO languages (code,name,is_default,is_active) VALUES ('tr','Türkçe',1,1);
+INSERT IGNORE INTO languages (code,name,is_default,is_active) VALUES
+ ('en','English',1,1),
+ ('tr','Türkçe',0,1);
 
 CREATE TABLE IF NOT EXISTS content_translations (
  id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,

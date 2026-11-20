@@ -12,7 +12,7 @@ $routeSection = static function (string $marker, int $length = 9000) use ($route
 
 $checks = [
     'translator stores the active locale after loading its catalogue' =>
-        str_contains($translator, 'private static string $locale = \'tr\';')
+        str_contains($translator, 'private static string $locale = \'en\';')
         && str_contains($translator, 'self::$locale = $locale;')
         && str_contains($translator, 'public static function locale(): string'),
     'account renderer uses the active locale' =>
