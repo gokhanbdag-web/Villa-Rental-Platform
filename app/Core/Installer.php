@@ -60,17 +60,17 @@ final class Installer
 
     public static function install(array $input): void
     {
-        if (self::isInstalled()) throw new \RuntimeException('Sistem zaten kurulu.');
+        if (self::isInstalled()) throw new \RuntimeException('The application is already installed.');
         $mode = (string)($input['mode'] ?? '');
-        if (!in_array($mode, ['single_vendor', 'multi_vendor'], true)) throw new \InvalidArgumentException('İşletme modeli geçersiz.');
+        if (!in_array($mode, ['single_vendor', 'multi_vendor'], true)) throw new \InvalidArgumentException('Invalid business model.');
         $username = trim((string)($input['admin_username'] ?? ''));
         $email = filter_var(trim((string)($input['admin_email'] ?? '')), FILTER_VALIDATE_EMAIL);
         $password = (string)($input['admin_password'] ?? '');
         if (strlen($username) < 3 || !$email || strlen($password) < 12) {
-            throw new \InvalidArgumentException('Yönetici bilgilerini kontrol edin. Şifre en az 12 karakter olmalıdır.');
+            throw new \InvalidArgumentException('Check the administrator details. Password must be at least 12 characters.');
         }
         if (!hash_equals($password, (string)($input['admin_password_confirm'] ?? ''))) {
-            throw new \InvalidArgumentException('Şifre tekrarı eşleşmiyor.');
+            throw new \InvalidArgumentException('Passwords do not match.');
         }
 
         $db = [
@@ -81,25 +81,25 @@ final class Installer
             'password' => (string)($input['db_password'] ?? ''),
         ];
         if ($db['host'] === '' || !preg_match('/^[A-Za-z0-9._:-]+$/', $db['host']) || $db['name'] === '' || $db['user'] === '' || $db['port'] < 1 || $db['port'] > 65535) {
-            throw new \InvalidArgumentException('Veritabanı bağlantı alanlarını kontrol edin.');
+            throw new \InvalidArgumentException('Check the database connection fields.');
         }
-        if (!preg_match('/^[A-Za-z0-9_]+$/', $db['name'])) throw new \InvalidArgumentException('Veritabanı adı yalnızca harf, rakam ve alt çizgi içerebilir.');
+        if (!preg_match('/^[A-Za-z0-9_]+$/', $db['name'])) throw new \InvalidArgumentException('Database name may contain only letters, digits, and underscores.');
 
         $root = dirname(__DIR__, 2);
         foreach (['config', 'storage'] as $directory) {
             $path = $root . '/' . $directory;
             if (!is_dir($path) && !mkdir($path, 0750, true) && !is_dir($path)) {
-                throw new \RuntimeException($directory . ' dizini oluşturulamadı.');
+                throw new \RuntimeException($directory . ' directory could not be created.');
             }
-            if (!is_writable($path)) throw new \RuntimeException($directory . ' dizini PHP tarafından yazılabilir olmalıdır.');
+            if (!is_writable($path)) throw new \RuntimeException($directory . ' directory must be writable by PHP.');
         }
 
         $pdo = self::connect($db);
         try {
             $schemaFile = $root . '/database/schema.sql';
-            if (!is_file($schemaFile) || !is_readable($schemaFile)) throw new \RuntimeException('Şema dosyası okunamadı.');
+            if (!is_file($schemaFile) || !is_readable($schemaFile)) throw new \RuntimeException('Database schema file could not be read.');
             $schemaSql = file_get_contents($schemaFile);
-            if ($schemaSql === false) throw new \RuntimeException('Şema dosyası okunamadı.');
+            if ($schemaSql === false) throw new \RuntimeException('Database schema file could not be read.');
             foreach (preg_split('/;\\s*(?:\\r?\
 |$)/', trim($schemaSql)) as $statement) {
                 $statement = trim($statement);
@@ -112,7 +112,7 @@ final class Installer
             $stmt->execute([$username, $email, password_hash($password, PASSWORD_DEFAULT), 'super_admin', 'active']);
             $settings = [
                 'app.mode' => $mode,
-                'app.locale' => 'tr',
+                'app.locale' => 'en',
                 'app.timezone' => 'Europe/Istanbul',
                 'app.installed_at' => date(DATE_ATOM),
                 'app.currency' => 'TRY',
@@ -127,11 +127,11 @@ declare(strict_types=1);
 return " . var_export($config, true) . ";
 ";
             if (file_put_contents($root . '/config/config.php', $php, LOCK_EX) === false) {
-                throw new \RuntimeException('Yapılandırma dosyası yazılamadı.');
+                throw new \RuntimeException('Configuration file could not be written.');
             }
             @chmod($root . '/config/config.php', 0640);
             if (file_put_contents($root . '/storage/installed.lock', date(DATE_ATOM), LOCK_EX) === false) {
-                throw new \RuntimeException('Kurulum kilidi oluşturulamadı.');
+                throw new \RuntimeException('Installation lock file could not be created.');
             }
             @chmod($root . '/storage/installed.lock', 0640);
         } catch (Throwable $e) {
