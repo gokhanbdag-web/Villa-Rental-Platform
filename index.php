@@ -26,11 +26,11 @@ try {
 } catch (Throwable $e) {
     error_log('Database migration failed: ' . $e->getMessage());
     http_response_code(503);
-    exit('Veritabanı güncellemesi tamamlanamadı. Lütfen sistem yöneticisine başvurun.');
+    exit('The database update could not be completed. Please contact the system administrator.');
 }
 
 villa_perf_mark('front:locale_settings_begin');
-$locale = 'tr';
+$locale = 'en';
 try {
     $pdo = Database::connection();
     $tzStmt = $pdo->prepare('SELECT setting_value FROM settings WHERE setting_key = ? LIMIT 1');
@@ -40,7 +40,7 @@ try {
 
     $languageRows = $pdo->query('SELECT code,is_default FROM languages WHERE is_active=1 ORDER BY is_default DESC,name')->fetchAll(PDO::FETCH_ASSOC);
     $activeLocales = array_values(array_filter(array_map(static fn(array $row): string => (string)$row['code'], $languageRows)));
-    $defaultLocale = 'tr';
+    $defaultLocale = 'en';
     foreach ($languageRows as $languageRow) {
         if ((int)($languageRow['is_default'] ?? 0) === 1) {
             $defaultLocale = (string)$languageRow['code'];
@@ -48,7 +48,7 @@ try {
         }
     }
     if (!in_array($defaultLocale, $activeLocales, true)) {
-        $defaultLocale = $activeLocales[0] ?? 'tr';
+        $defaultLocale = $activeLocales[0] ?? 'en';
     }
 
     $stmt = $pdo->prepare('SELECT setting_value FROM settings WHERE setting_key = ? LIMIT 1');
@@ -116,7 +116,7 @@ foreach ($pathCandidates as $requestPath) {
         ($requestPath === '/vendor' || str_starts_with($requestPath, '/vendor/') ||
          $requestPath === '/admin/vendors' || str_starts_with($requestPath, '/admin/vendors/'))) {
         http_response_code(404);
-        exit('Bu özellik mevcut platform modelinde etkin değil.');
+        exit('This feature is not enabled for the current platform mode.');
     }
 
     $isAdminPage = $requestPath === '/admin' || str_starts_with($requestPath, '/admin/');
@@ -148,4 +148,4 @@ foreach ($pathCandidates as $requestPath) {
 }
 
 http_response_code(404);
-echo 'Sayfa bulunamadı.';
+echo 'Page not found.';
