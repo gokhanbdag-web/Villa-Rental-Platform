@@ -103,6 +103,8 @@ jobs:
         run: php tests/vendor-media-approval-smoke.php
       - name: Run vendor property atomic validation checks
         run: php tests/vendor-property-atomic-smoke.php
+      - name: Run vendor property access checks
+        run: php tests/vendor-property-access-smoke.php
       - name: Run villa detail booking flow smoke test
         run: php tests/property-detail-booking-smoke.php
       - name: Run homepage statistic settings smoke test
