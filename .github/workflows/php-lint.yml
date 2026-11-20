@@ -99,6 +99,8 @@ jobs:
         run: php tests/vendor-calendar-approval-smoke.php
       - name: Run vendor approval lifecycle checks
         run: php tests/vendor-approval-lifecycle-smoke.php
+      - name: Run vendor media approval checks
+        run: php tests/vendor-media-approval-smoke.php
       - name: Run villa detail booking flow smoke test
         run: php tests/property-detail-booking-smoke.php
       - name: Run homepage statistic settings smoke test
