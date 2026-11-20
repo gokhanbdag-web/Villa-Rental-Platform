@@ -1896,6 +1896,11 @@ $router->post('/login/ajax', static function (): void {
         }
 
         $role = (string)($user['role'] ?? 'customer');
+        $platformMode = (string)(Database::connection()->query("SELECT setting_value FROM settings WHERE setting_key='app.mode' LIMIT 1")->fetchColumn() ?: 'single_vendor');
+        if ($role === 'vendor' && $platformMode !== 'multi_vendor') {
+            $respond(403, ['ok' => false, 'message' => 'Vendor accounts are unavailable in single-vendor mode.']);
+            return;
+        }
         if (in_array($role, ['super_admin', 'admin'], true)) {
             $menus = [
                 ['label'=>'Genel Bakış','url'=>'/admin','icon'=>'⌂'],
@@ -1909,6 +1914,9 @@ $router->post('/login/ajax', static function (): void {
                 ['label'=>'İçerik Yönetimi','url'=>'/admin/content','icon'=>'▤'],
                 ['label'=>'Ayarlar','url'=>'/admin/settings','icon'=>'⚙'],
             ];
+            if ($platformMode !== 'multi_vendor') {
+                $menus = array_values(array_filter($menus, static fn(array $item): bool => $item['url'] !== '/admin/vendors'));
+            }
             if ($role === 'super_admin') $menus[] = ['label'=>'Sistem Tanılama','url'=>'/admin/performance','icon'=>'⌁'];
             $roleLabel = $role === 'super_admin' ? 'Süper Yönetici' : 'Yönetici';
         } elseif ($role === 'editor') {
