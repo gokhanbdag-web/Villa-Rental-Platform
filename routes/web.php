@@ -462,6 +462,34 @@ $router->post('/admin/locations/toggle', static function (): void {
 });
 
 $router->get('/', static function (): void {
+    // Homepage is a selected, published CMS page; never render the legacy static fallback.
+    $homePdo=Database::connection();
+    $homeId=(int)($homePdo->query("SELECT setting_value FROM settings WHERE setting_key='cms.homepage_id' LIMIT 1")->fetchColumn() ?: 0);
+    $homePage=null;
+    if($homeId>0){
+        $homeStmt=$homePdo->prepare("SELECT * FROM cms_pages WHERE id=? AND status='published' LIMIT 1");
+        $homeStmt->execute([$homeId]);
+        $homePage=$homeStmt->fetch(PDO::FETCH_ASSOC) ?: null;
+    }
+    if(!$homePage){http_response_code(404);echo 'No homepage has been selected in Page Management.';return;}
+    $pdo=$homePdo;
+    $page=$homePage;
+    $locale=(string)$page['language_code'];
+    $content=villa_site_content($pdo,$locale);
+    $siteName=$content['site_name']??'VillaStay';
+    $navigation=villa_navigation_tree($pdo,'header',$locale);
+    $footerNavigation=villa_navigation_tree($pdo,'footer',$locale);
+    $mode=(string)($pdo->query("SELECT setting_value FROM settings WHERE setting_key='app.mode' LIMIT 1")->fetchColumn() ?: 'single_vendor');
+    $user=Auth::user();
+    $destinations=[];$featuredProperties=[];$latestProperties=[];$categories=[];$stylePhotos=[];
+    $blogPosts=[];
+    $pageLayout=null;
+    $layoutStmt=$pdo->prepare('SELECT layout_json FROM cms_page_layouts WHERE page_key=? AND language_code=? LIMIT 1');
+    $layoutStmt->execute(['page:'.(int)$page['id'],$locale]);
+    $layoutRaw=$layoutStmt->fetchColumn();
+    if(is_string($layoutRaw))$pageLayout=json_decode($layoutRaw,true);
+    ThemeManager::render('page.php',get_defined_vars());
+    return;
     villa_perf_mark('home:begin');
     $pdo=Database::connection();
     villa_perf_mark('home:database_connected');
@@ -2587,6 +2615,18 @@ $router->post('/admin/navigation/delete', static function (): void {
 });
 
 
+$router->post('/admin/pages/set-home', static function (): void {
+    Auth::requirePermission('admin.pages.edit');
+    verify_csrf();
+    $pdo=Database::connection();
+    $id=(int)($_POST['page_id']??0);
+    $stmt=$pdo->prepare("SELECT id FROM cms_pages WHERE id=? AND status='published' LIMIT 1");
+    $stmt->execute([$id]);
+    if(!$stmt->fetchColumn()){http_response_code(422);exit('Select a published page.');}
+    $stmt=$pdo->prepare("INSERT INTO settings(setting_key,setting_value) VALUES('cms.homepage_id',?) ON DUPLICATE KEY UPDATE setting_value=VALUES(setting_value)");
+    $stmt->execute([(string)$id]);
+    redirect('/admin/pages');
+});
 $router->get('/admin/pages', static function (): void {
     Auth::requirePermission('admin.pages.view');
     $pdo = Database::connection();
@@ -2602,6 +2642,7 @@ $router->get('/admin/pages', static function (): void {
     $pageQuery = $pdo->prepare('SELECT id,title,slug,status FROM cms_pages WHERE language_code=? ORDER BY id DESC');
     $pageQuery->execute([$locale]);
     $pages = $pageQuery->fetchAll(PDO::FETCH_ASSOC);
+    $homepageId=(int)($pdo->query("SELECT setting_value FROM settings WHERE setting_key='cms.homepage_id' LIMIT 1")->fetchColumn() ?: 0);
     ThemeManager::renderTemplate('templates/pages/admin/pages.php', get_defined_vars());
 });
 $router->get('/admin/pages/layout', static function (): void {
