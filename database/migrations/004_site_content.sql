@@ -23,30 +23,29 @@ CREATE TABLE IF NOT EXISTS navigation_items (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 INSERT IGNORE INTO site_content (content_key,language_code,content_value) VALUES
-('site_name','tr','VillaStay'),
-('home_eyebrow','tr','Kendinize ait bir kaçamak'),
-('home_title','tr','Bir sonraki tatilinizin hikâyesi burada başlasın'),
-('home_subtitle','tr','Size özel havuzlu villaları, eşsiz manzaraları ve unutulmaz konaklama deneyimlerini keşfedin.'),
-('home_search_placeholder','tr','Nereye gitmek istersiniz?'),
-('featured_title','tr','Öne çıkan konaklama yerleri'),
-('featured_subtitle','tr','Bir sonraki tatiliniz için özenle seçilmiş villalar'),
-('empty_properties','tr','Aramanıza uygun konaklama yeri bulunamadı.'),
-('footer_text','tr','Hayalinizdeki tatil için doğru konaklama yerini keşfedin.'),
-('currency_symbol','tr','₺'),
-('search_button','tr','Villaları keşfet'),
-('guest_select_label','tr','Misafir sayısı'),
-('guest_unit','tr','misafir'),
-('all_categories','tr','Tüm kategoriler'),
-('property_about','tr','Konaklama hakkında'),
-('property_guests','tr','misafir'),
-('property_bedrooms','tr','yatak odası'),
-('property_beds','tr','yatak'),
-('property_bathrooms','tr','banyo'),
-('property_reserve','tr','Rezervasyon talebi gönder'),
-('property_no_images','tr','Bu konaklama için henüz fotoğraf eklenmemiş.'),
-('booking_notice','tr','Bu aşamada ödeme alınmaz. Ev sahibi / yönetim onayı sonrasında ödeme adımı etkinleştirilecektir.');
+('site_name','en','VillaStay'),
+('home_eyebrow','en','Your private escape'),
+('home_title','en','Your next getaway starts here'),
+('home_subtitle','en','Discover private pool villas, beautiful views and unforgettable stays.'),
+('home_search_placeholder','en','Where would you like to go?'),
+('featured_title','en','Featured places to stay'),
+('featured_subtitle','en','Handpicked villas for your next holiday'),
+('empty_properties','en','No properties match your search.'),
+('footer_text','en','Find the perfect place for your dream holiday.'),
+('currency_symbol','en','₺'),
+('search_button','en','Explore villas'),
+('guest_select_label','en','Guests'),
+('guest_unit','en','guests'),
+('all_categories','en','All categories'),
+('property_about','en','About this property'),
+('property_guests','en','guests'),
+('property_bedrooms','en','bedrooms'),
+('property_beds','en','beds'),
+('property_bathrooms','en','bathrooms'),
+('property_reserve','en','Send booking request'),
+('property_no_images','en','No photos have been added for this property yet.'),
+('booking_notice','en','No payment is collected at this stage. Payment becomes available after host or administrator approval.');
 
 INSERT IGNORE INTO navigation_items (location,language_code,label,url,target,sort_order,is_active) VALUES
-('header','tr','Konaklamalar','/','_self',10,1),
-('header','tr','Giriş Yap','/login','_self',20,1)
-;
+('header','en','Properties','/','_self',10,1),
+('header','en','Log in','/login','_self',20,1);
