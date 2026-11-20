@@ -1,3 +1,7 @@
+## 1.9.7 - 2026-11-20
+- Permit visual-editor-only CMS pages without mandatory legacy text body.
+- Keep CMS page metadata and publishing workflow while preparing unified page management.
+
 ## 1.9.6 - 2026-11-20
 - Redirect legacy homepage administration to the shared page editor and disable legacy save endpoint.
 - Hide old homepage banner, counters and icon controls from theme design navigation.
