@@ -1,3 +1,8 @@
+## 1.9.3 - 2026-11-20
+- Replace GitHub-dependent Update Center with vendor-hosted HTTPS release manifest status.
+- Remove GitHub commit and deployment details from the customer-facing update screen.
+- Keep ZIP installation disabled until package verification and rollback are implemented.
+
 # Changelog
 
 ## 1.9.2 - 2026-11-20
