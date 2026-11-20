@@ -2682,7 +2682,7 @@ $router->post('/admin/pages/save', static function (): void {
     if (!$languageCheck->fetchColumn()) { http_response_code(422); exit('Sayfa dili geçersiz veya devre dışı.'); }
     $title=trim((string)($_POST['title']??''));$slug=strtolower(trim((string)($_POST['slug']??'')));
     $slug=trim(preg_replace('/[^a-z0-9-]+/','-',$slug),'-');$content=trim((string)($_POST['content']??''));$metaTitle=trim((string)($_POST['meta_title']??''));$metaDescription=trim((string)($_POST['meta_description']??''));$focusKeyword=trim((string)($_POST['focus_keyword']??''));$status=($_POST['status']??'')==='published'?'published':'draft';
-    if($title===''||$slug===''||$content===''||mb_strlen($focusKeyword)>120){http_response_code(422);exit('Başlık, URL, odak kelime veya içerik alanlarını kontrol edin.');}
+    if($title===''||$slug===''||mb_strlen($focusKeyword)>120){http_response_code(422);exit('Başlık, URL, odak kelime veya içerik alanlarını kontrol edin.');}
     if($id){$s=$pdo->prepare('UPDATE cms_pages SET title=?,slug=?,content=?,status=?,meta_title=?,meta_description=?,focus_keyword=? WHERE id=? AND language_code=?');$s->execute([$title,$slug,$content,$status,$metaTitle,$metaDescription,$focusKeyword,$id,$locale]);}
     else{$s=$pdo->prepare('INSERT INTO cms_pages(language_code,title,slug,content,status,meta_title,meta_description,focus_keyword) VALUES(?,?,?,?,?,?,?,?)');$s->execute([$locale,$title,$slug,$content,$status,$metaTitle,$metaDescription,$focusKeyword]);}
     redirect('/admin/pages?lang=' . rawurlencode($locale));
