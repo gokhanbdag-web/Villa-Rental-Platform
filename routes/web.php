@@ -585,6 +585,7 @@ $router->get('/', static function (): void {
     $locationCountries=$pdo->query("SELECT id,name FROM locations WHERE location_type='country' AND is_active=1 ORDER BY sort_order,name")->fetchAll();
      $locationCountries=\App\Core\ContentTranslator::apply($pdo,$locationCountries,'location',$locale);
      villa_perf_mark('home:theme_render');
+    $demoHomepageEnabled=(string)($pdo->query("SELECT setting_value FROM settings WHERE setting_key='app.demo_enabled' LIMIT 1")->fetchColumn() ?: '1')!=='0';
     $pageLayout=null;
     $layoutStmt=$pdo->prepare('SELECT layout_json FROM cms_page_layouts WHERE page_key=? AND language_code=? LIMIT 1');
     $layoutStmt->execute(['home',$locale]);
