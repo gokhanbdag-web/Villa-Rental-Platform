@@ -186,48 +186,6 @@ function villa_update_http_get(string $url, bool $json = true): ?array {
     return is_array($decoded)?$decoded:null;
 }
 
-function villa_github_update_info(string $root): array {
-    $cacheDir=$root.'/storage/cache';
-    if(!is_dir($cacheDir)) @mkdir($cacheDir,0750,true);
-    $cacheFile=$cacheDir.'/github-update-check.json';
-    if(is_file($cacheFile) && (time()-(int)filemtime($cacheFile))<300){
-        $cached=json_decode((string)@file_get_contents($cacheFile),true);
-        if(is_array($cached)) return $cached;
-    }
-    $base='https://api.github.com/repos/gokhanbdag-web/Villa-Rental-Platform';
-    $commit=villa_update_http_get($base.'/commits/main');
-    $version=villa_update_http_get('https://raw.githubusercontent.com/gokhanbdag-web/Villa-Rental-Platform/main/VERSION',false);
-    $release=villa_update_http_get($base.'/releases/latest');
-    $info=[
-        'checked_at'=>date(DATE_ATOM),
-        'available'=>false,
-        'connected'=>is_array($commit),
-        'auth_configured'=>trim((string)(getenv('VILLA_GITHUB_TOKEN') ?: '')) !== '',
-        'version'=>is_array($version)?(string)($version['text']??''):'',
-        'commit'=>is_array($commit)?(string)($commit['sha']??''):'',
-        'commit_url'=>is_array($commit)?(string)($commit['html_url']??''):'',
-        'commit_message'=>is_array($commit)?(string)($commit['commit']['message']??''):'',
-        'commit_date'=>is_array($commit)?(string)($commit['commit']['committer']['date']??''):'',
-        'release_name'=>is_array($release)?(string)($release['name']??$release['tag_name']??''):'',
-        'release_notes'=>is_array($release)?(string)($release['body']??''):'',
-        'release_url'=>is_array($release)?(string)($release['html_url']??''):'',
-    ];
-    if($info['commit']!==''){
-        $statusFile=$root.'/storage/deploy-status.json';
-        $deployed=[];
-        if(is_file($statusFile)){$raw=@file_get_contents($statusFile);$parsed=is_string($raw)?json_decode($raw,true):null;if(is_array($parsed))$deployed=$parsed;}
-        $deployedCommit=(string)($deployed['commit'] ?? (getenv('VILLA_DEPLOY_COMMIT') ?: ''));
-        $info['deployed_commit']=$deployedCommit;
-        $info['deployment_status']=(string)($deployed['status']??'unknown');
-        $info['deployment_updated_at']=(string)($deployed['updated_at']??'');
-        $info['deployment_backup']=(string)($deployed['backup']??'');
-        $info['deployment_known']=$deployedCommit!=='';
-        $info['available']=$deployedCommit!=='' ? !hash_equals($deployedCommit,$info['commit']) : false;
-    }
-    if(is_dir($cacheDir)) @file_put_contents($cacheFile,json_encode($info,JSON_UNESCAPED_UNICODE|JSON_UNESCAPED_SLASHES),LOCK_EX);
-    return $info;
-}
-
 $router->post('/language', static function (): void {
     verify_csrf();
     $locale = trim((string)($_POST['locale'] ?? ''));
@@ -248,60 +206,10 @@ $router->post('/language', static function (): void {
 
 $router->get('/admin/updates', static function (): void {
     Auth::requireRole(['super_admin','admin']);
-    $root=dirname(__DIR__);
-    $versionFile=$root.'/VERSION';
-    $installedVersion=is_file($versionFile)?trim((string)file_get_contents($versionFile)):'Sürüm bilgisi yok';
-    $migrationTotal=count(glob($root.'/database/migrations/*.sql')?:[]);
-    $appliedMigrations=0;$migrationError='';
-    try{$appliedMigrations=(int)Database::connection()->query('SELECT COUNT(*) FROM schema_migrations')->fetchColumn();}
-    catch(Throwable $e){$migrationError='Migration kayıt tablosu henüz okunamadı.';}
-    $githubUpdate=villa_github_update_info($root);
-    $logFile=trim((string)(getenv('VILLA_DEPLOY_LOG')?:''));
-    $logReadable=$logFile!==''&&is_file($logFile)&&is_readable($logFile);
-    $logLines=[];$lastSuccess=null;
-    if($logReadable&&($handle=@fopen($logFile,'rb'))){
-        $size=filesize($logFile);
-        if($size!==false){fseek($handle,max(0,$size-16384));$chunk=stream_get_contents($handle);
-            if(is_string($chunk))foreach(preg_split('/\\r?\n/',$chunk)?:[] as $line){$line=trim($line);if($line!==''&&preg_match('/^(=== DEPLOY |BAŞARILI:|SUCCESS:|PHP dosyaları kontrol ediliyor|Canlı kod yedekleniyor|Yeni sürüm aktarılıyor|Canlı PHP kontrolü|ERROR:|HATA:)/iu',$line))$logLines[]=mb_substr($line,0,240);}
-            $logLines=array_slice($logLines,-25);
-            foreach(array_reverse($logLines) as $line)if(str_contains($line,'BAŞARILI:')||str_contains($line,'SUCCESS:')){$lastSuccess=$line;break;}
-        }fclose($handle);
-    }
-    $deploymentHistory=[];
-    $historyFile=$root.'/storage/deploy-history.jsonl';
-    if(is_file($historyFile)&&is_readable($historyFile)){
-        $historyLines=villa_read_file_tail_lines($historyFile,20,131072);
-        foreach(array_slice($historyLines,-20) as $historyLine){
-            $historyItem=json_decode($historyLine,true);
-            if(is_array($historyItem))$deploymentHistory[]=$historyItem;
-        }
-        $deploymentHistory=array_reverse($deploymentHistory);
-    }
-    ThemeManager::renderTemplate('templates/pages/admin/updates.php',get_defined_vars());
-});
-
-$router->get('/admin/updates/status', static function (): void {
-    Auth::requireRole(['super_admin','admin']);
-    header('Content-Type: application/json; charset=utf-8');
-    header('Cache-Control: no-store, private');
     $root = dirname(__DIR__);
-    $status = [];
-    $statusFile = $root . '/storage/deploy-status.json';
-    if (is_file($statusFile) && is_readable($statusFile)) {
-        $decoded = json_decode((string)@file_get_contents($statusFile), true);
-        if (is_array($decoded)) $status = $decoded;
-    }
-    $history = [];
-    $historyFile = $root . '/storage/deploy-history.jsonl';
-    if (is_file($historyFile) && is_readable($historyFile)) {
-        $lines = villa_read_file_tail_lines($historyFile, 20, 131072);
-        foreach (array_slice($lines, -20) as $line) {
-            $event = json_decode($line, true);
-            if (is_array($event)) $history[] = $event;
-        }
-        $history = array_reverse($history);
-    }
-    echo json_encode(['status' => $status, 'history' => $history], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+    $installedVersion = trim((string)@file_get_contents($root.'/VERSION'));
+    $vendorUpdate = \App\Core\VendorUpdateManifest::check($installedVersion);
+    ThemeManager::renderTemplate('templates/pages/admin/updates.php', get_defined_vars());
 });
 
 $router->get('/admin/performance', static function (): void {
