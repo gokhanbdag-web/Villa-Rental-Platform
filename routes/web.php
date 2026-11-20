@@ -325,37 +325,15 @@ $router->post('/admin/performance/cleanup', static function (): void {
 });
 
 $router->get('/admin/homepage', static function (): void {
-    Auth::requireRole(['super_admin','admin']);$pdo=Database::connection();
-    $sections=$pdo->query('SELECT * FROM homepage_sections ORDER BY sort_order,id')->fetchAll();
-    $mode=(string)($pdo->query("SELECT setting_value FROM settings WHERE setting_key='app.mode'")->fetchColumn() ?: 'single_vendor');
-    if($mode!=='multi_vendor')$sections=array_values(array_filter($sections,static fn(array $section):bool=>$section['section_key']!=='hosts'));
-    ThemeManager::renderTemplate('templates/pages/admin/homepage.php', get_defined_vars());
+    Auth::requirePermission('admin.pages.edit');
+    redirect('/admin/pages/layout?page=home&lang=en');
 });
 $router->post('/admin/homepage', static function (): void {
-    Auth::requireRole(['super_admin','admin']);verify_csrf();$pdo=Database::connection();
-    $mode=(string)($pdo->query("SELECT setting_value FROM settings WHERE setting_key='app.mode'")->fetchColumn() ?: 'single_vendor');
-    $allowed=['hero','destinations','featured','styles','gallery'];
-    if($mode==='multi_vendor')$allowed[]='hosts';
-    $stmt=$pdo->prepare('UPDATE homepage_sections SET title=?,subtitle=?,image_url=?,video_url=?,overlay_opacity=?,is_active=?,sort_order=? WHERE section_key=?');
-    foreach($allowed as $key){$row=$_POST['sections'][$key]??null;if(!is_array($row))continue;
-        $title=trim((string)($row['title']??''));$subtitle=trim((string)($row['subtitle']??''));$image=trim((string)($row['image_url']??''));$video=trim((string)($row['video_url']??''));
-        if($image!==''&&!filter_var($image,FILTER_VALIDATE_URL))$image='';
-        if($video!==''&&!filter_var($video,FILTER_VALIDATE_URL))$video='';
-        if($video!==''){
-            $parts=parse_url($video);$host=strtolower((string)($parts['host']??''));$path=(string)($parts['path']??'');$videoId='';
-            if(in_array($host,['youtu.be','www.youtu.be'],true))$videoId=trim($path,'/');
-            elseif(in_array($host,['youtube.com','www.youtube.com','m.youtube.com','youtube-nocookie.com','www.youtube-nocookie.com'],true)){
-                parse_str((string)($parts['query']??''),$query);$videoId=(string)($query['v']??'');
-                if($videoId===''&&preg_match('~^/(?:embed|shorts)/([A-Za-z0-9_-]{11})(?:/|$)~',$path,$match))$videoId=$match[1];
-            }
-            $video=preg_match('/^[A-Za-z0-9_-]{11}$/',$videoId)?'https://www.youtube.com/watch?v='.$videoId:'';
-        }
-        $opacity=max(0,min(100,(int)($row['overlay_opacity']??58)));
-        $stmt->execute([mb_substr($title,0,190),mb_substr($subtitle,0,500),$image,$video,$opacity,isset($row['is_active'])?1:0,max(0,min(99,(int)($row['sort_order']??10))),$key]);
-    }
-    redirect('/admin/homepage');
+    Auth::requirePermission('admin.pages.edit');
+    http_response_code(410);
+    header('Content-Type: text/plain; charset=utf-8');
+    echo 'Legacy homepage settings are retired. Use the page editor.';
 });
-
 
 $router->get('/locations/children', static function (): void {
     header('Content-Type: application/json; charset=utf-8');$parentId=max(0,(int)($_GET['parent_id']??0));
