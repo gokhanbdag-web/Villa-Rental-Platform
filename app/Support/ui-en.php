@@ -1831,4 +1831,7 @@ return [
     "En çok tercih edilen konaklamalar" => "Most popular properties",
     "Misafirlerin keşfetmeyi seveceği özel tatil evleri." => "Unique holiday homes guests will love discovering.",
     "Size en yakın tatil deneyimini seçin." => "Choose the holiday experience that suits you.",
+    "Konaklamaları keşfet" => "Explore properties",
+    "Size uygun tatil villalarını, özel havuzlu evleri ve benzersiz konaklamaları keşfedin." => "Discover holiday villas, private-pool homes and unique stays.",
+    "Konaklamaları göster" => "Show properties",
 ];
