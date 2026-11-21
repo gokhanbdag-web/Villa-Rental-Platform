@@ -67,12 +67,17 @@ $medBlocks = '';
       <?php endforeach; ?></div>
     </div></section>
     <?php endif;
+    if ($homeDesign['banner']['visible'] ?? true):
     $familyBannerAsset = $brandSettings ?? \App\Core\ThemeManager::brandSettings();
     $familyBannerText = \App\Core\ThemeManager::familyBannerTextSettings();
+    foreach (['eyebrow','title','description'] as $field) {
+        if (isset($homeDesign['banner']['banner_'.$field])) $familyBannerText[$field]=$homeDesign['banner']['banner_'.$field];
+    }
+    if (isset($homeDesign['banner']['banner_image'])) $familyBannerAsset['family_banner_url']=$homeDesign['banner']['banner_image'];
     $bannerFontFamilies = array_unique(array_map(static fn(array $row): string => (string)$row['family'], [$familyBannerText['eyebrow_typography'],$familyBannerText['title_typography'],$familyBannerText['description_typography']]));
     $bannerFontQuery = implode('&', array_map(static fn(string $font): string => 'family=' . str_replace('%20','+',rawurlencode($font)) . ':wght@400;500;600;700;800', $bannerFontFamilies));
     ?>
-    <section class="section med-family-banner" style="order:4" aria-label="Ana sayfa banner">
+    <section class="section med-family-banner" style="order:<?= (int)($homeDesign['banner']['order']??4) ?>" aria-label="Ana sayfa banner">
       <?php if($bannerFontQuery!==''): ?><style>@import url('https://fonts.googleapis.com/css2?<?= $bannerFontQuery ?>&display=swap');</style><?php endif; ?>
       <?php if(!empty($familyBannerAsset['family_banner_url'])): ?><img class="med-family-banner-image" src="<?= e($familyBannerAsset['family_banner_url']) ?>" alt="" loading="lazy"><?php endif; ?>
       <?php if(trim((string)$familyBannerText['eyebrow'])!=='' || trim((string)$familyBannerText['title'])!=='' || trim((string)$familyBannerText['description'])!==''): ?>
@@ -84,6 +89,7 @@ $medBlocks = '';
       <?php endif; ?>
     </section>
     <?php
+    endif;
     if ($medSectionActive('reviews') && !empty($homeReviews)): ?>
     <section class="section med-reviews" style="order:<?= $medSectionOrder('reviews',8) ?>"><div class="wrap">
       <div class="section-head"><div><span class="pill villa-eyebrow"><?= e($content['home_reviews_eyebrow'] ?? 'MİSAFİR DENEYİMLERİ') ?></span><h2><?= e($content['home_reviews_title'] ?? 'Misafirlerimizin Deneyimleri') ?></h2><p><?= e($content['home_reviews_subtitle'] ?? '') ?></p></div></div>
@@ -124,7 +130,7 @@ $medBlocks = '';
             1
         ) ?? $destinationSection[0];
         // Keep the moved section last in the flex layout, regardless of its original admin sort order.
-        $destinationMarkup = preg_replace('~style="order:[^"]*"~', 'style="order:2147483647"', $destinationMarkup, 1) ?? $destinationMarkup;
+        $destinationMarkup = preg_replace('~style="order:[^"]*"~', 'style="order:'.(int)($homeDesign['destinations']['order']??2147483647).'"', $destinationMarkup, 1) ?? $destinationMarkup;
         $html = str_replace($destinationSection[0], '', $html);
         // The directory is the final content section, directly before the footer.
         $html = preg_replace('~</main>~i', $destinationMarkup . '</main>', $html, 1) ?? $html;
@@ -142,7 +148,7 @@ if($hostTitle!==''||$hostSubtitle!==''||$hostCta!==''){
 $regionTitle=trim((string)($content['home_regions_title']??''));
 $regionSubtitle=trim((string)($content['home_regions_subtitle']??''));
 $regionEyebrow=trim((string)($content['home_regions_eyebrow']??'KEŞFETMEYE BAŞLA'));
-if($medSectionActive('destinations') && ($regionTitle!==''||$regionSubtitle!==''||$regionEyebrow!=='')){
+if(empty($homeDesign['destinations']) && $medSectionActive('destinations') && ($regionTitle!==''||$regionSubtitle!==''||$regionEyebrow!=='')){
     $html=preg_replace_callback('~(<span class="pill villa-eyebrow">).*?(</span><h2>).*?(</h2><p>).*?(</p>)~s',static function(array $m)use($regionTitle,$regionSubtitle,$regionEyebrow):string{
         return $m[1].e($regionEyebrow).$m[2].e($regionTitle!==''?$regionTitle:'Bölgeleri keşfedin').$m[3].e($regionSubtitle).$m[4];
     },$html,1)??$html;
@@ -410,4 +416,28 @@ require __DIR__ . '/partials/footer.php';
 $footerMarkup = (string) ob_get_clean();
 $html = preg_replace('~</body>~i', $footerMarkup . '</body>', $html, 1) ?? $html;
 
+if (isset($preview)) {
+    $selectSection=<<<'HTML'
+<script>
+document.addEventListener('click',function(event) {
+    const section=event.target.closest('main.home-sections section');
+    if (!section) return;
+    const selectors={
+        hero:'.hero,.mobile-premium-search',trust:'.med-trust',featured:'.home-accommodations',
+        latest:'.med-latest',banner:'.med-family-banner',concepts:'.med-concepts',
+        hosts:'.wrap:has(.host-banner)',reviews:'.med-reviews',support:'.med-support',
+        destinations:'.destination-section,:has(> .wrap > .destination-editorial-grid)'
+    };
+    for (const [key,selector] of Object.entries(selectors)) {
+        if (!section.matches(selector)) continue;
+        event.preventDefault();
+        event.stopImmediatePropagation();
+        window.parent.postMessage({homepageSection:key},window.location.origin);
+        break;
+    }
+},true);
+</script>
+HTML;
+    $html=str_replace('</body>',$selectSection.'</body>',$html);
+}
 echo $html;
