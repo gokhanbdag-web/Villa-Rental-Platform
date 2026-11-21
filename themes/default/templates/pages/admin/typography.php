@@ -14,47 +14,47 @@ $groups = [
     'paragraph_links'=>['Paragraph links','Text links inside paragraphs only; excluding buttons'],
 ];
 ?>
-<!doctype html><html lang="<?= e(\App\Core\Translator::locale()) ?>"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title><?= e('Theme typography') ?></title>
+<!doctype html><html lang="<?= e(\App\Core\Translator::locale()) ?>"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title><?= e(villa_ui('Theme typography')) ?></title>
 <style>
 .typography-settings{max-width:1120px;margin:0 auto;color:#26352e}.typography-settings h1{font-size:25px;margin:0 0 7px}.typography-settings>.intro{color:#738078;font-size:13px;margin:0 0 22px}.type-notice{padding:12px 14px;border-radius:9px;background:#eff7f1;color:#176b50;margin:0 0 16px;font-size:13px}.type-notice.error{background:#fff1f0;color:#a32920;border:1px solid #f0cbc7}.type-panel{background:#fff;border:1px solid #e5ebe7;border-radius:14px;padding:19px;margin:0 0 15px}.type-panel h2{font-size:16px;margin:0 0 5px}.type-panel>p{font-size:12px;color:#78847c;margin:0 0 16px}.type-fields{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px}.type-field label{display:block;font-size:11px;font-weight:750;color:#68766d;margin:0 0 6px}.type-field input,.type-field select{width:100%;height:40px;padding:8px 10px;border:1px solid #dce5dd;border-radius:8px;background:#fff;color:#26352e;font-size:13px;min-width:0}.type-field input[type=color]{padding:4px;height:40px}.type-preview{margin-top:15px;padding:14px 16px;border:1px dashed #dce5dd;border-radius:10px;background:#fbfcfa}.type-preview strong{display:block;font-size:12px;color:#738078;margin-bottom:5px}.type-preview span{font-size:14px;color:#344039}.type-actions{display:flex;align-items:center;gap:12px;flex-wrap:wrap}.type-save{border:0;border-radius:9px;background:#176b50;color:#fff;padding:12px 18px;font-weight:800;cursor:pointer}.type-save:hover{background:#12583f}.type-help{font-size:12px;color:#78847c}.topbar-height{max-width:260px}@media(max-width:850px){.type-fields{grid-template-columns:repeat(2,minmax(0,1fr))}}@media(max-width:560px){.type-fields{grid-template-columns:1fr}.type-panel{padding:14px}}
 </style></head><body><main class="typography-settings">
-<h1><?= e('Theme typography') ?></h1>
-<p class="intro"><?= e('Settings apply to the selected theme. Selected Google Fonts load automatically.') ?></p>
+<h1><?= e(villa_ui('Theme typography')) ?></h1>
+<p class="intro"><?= e(villa_ui('Settings apply to the selected theme. Selected Google Fonts load automatically.')) ?></p>
 <?php if(($typographyMessage??'')!==''): ?><div class="type-notice <?= e((string)($typographyMessageType??'success'))==='error'?'error':'' ?>" role="status"><?= e($typographyMessage) ?></div><?php endif; ?>
 <form method="post" action="<?= e(app_url('/admin/typography')) ?>">
 <?= csrf_field() ?>
 <section class="type-panel">
-<h2><?= e('Shared top bar height') ?></h2>
-<p><?= e('Vertical height of the top bar in pixels.') ?></p>
-<div class="type-field topbar-height"><label for="topbarHeight"><?= e('Minimum height (px)') ?></label><input id="topbarHeight" type="number" name="typography[topbar_height]" min="52" max="100" value="<?= (int)($settings['topbar_height']??64) ?>"></div>
+<h2><?= e(villa_ui('Shared top bar height')) ?></h2>
+<p><?= e(villa_ui('Vertical height of the top bar in pixels.')) ?></p>
+<div class="type-field topbar-height"><label for="topbarHeight"><?= e(villa_ui('Minimum height (px)')) ?></label><input id="topbarHeight" type="number" name="typography[topbar_height]" min="52" max="100" value="<?= (int)($settings['topbar_height']??64) ?>"></div>
 </section>
 <section class="type-panel">
-<h2><?= e('Page eyebrow color') ?></h2>
-<p><?= e('Sets the label color above page and section headings. Hero and banner settings are independent.') ?></p>
+<h2><?= e(villa_ui('Page eyebrow color')) ?></h2>
+<p><?= e(villa_ui('Sets the label color above page and section headings. Hero and banner settings are independent.')) ?></p>
 <div class="type-fields">
-<div class="type-field"><label for="eyebrowColor"><?= e('Text color') ?></label><input id="eyebrowColor" type="color" name="typography[eyebrow_color]" value="<?= e((string)($settings['eyebrow_color']??'#263b31')) ?>"></div>
+<div class="type-field"><label for="eyebrowColor"><?= e(villa_ui('Text color')) ?></label><input id="eyebrowColor" type="color" name="typography[eyebrow_color]" value="<?= e((string)($settings['eyebrow_color']??'#263b31')) ?>"></div>
 </div>
-<div class="type-preview"><strong><?= e('Live preview') ?></strong><span id="eyebrowColorPreview" style="display:inline-block;padding:7px 12px;border-radius:20px;background:#e8eee2;color:<?= e((string)($settings['eyebrow_color']??'#263b31')) ?>;font-size:12px;font-weight:800;letter-spacing:1px"><?= e('PAGE EYEBROW') ?></span></div>
+<div class="type-preview"><strong><?= e(villa_ui('Live preview')) ?></strong><span id="eyebrowColorPreview" style="display:inline-block;padding:7px 12px;border-radius:20px;background:#e8eee2;color:<?= e((string)($settings['eyebrow_color']??'#263b31')) ?>;font-size:12px;font-weight:800;letter-spacing:1px"><?= e(villa_ui('PAGE EYEBROW')) ?></span></div>
 </section>
 <?php foreach($groups as $key=>$meta): $item=$settings[$key]??[]; ?>
 <section class="type-panel">
 <h2><?= e($meta[0]) ?></h2><p><?= e($meta[1]) ?></p>
 <div class="type-fields">
-<div class="type-field"><label for="<?= e($key) ?>Family"><?= e('Google font family') ?></label><select id="<?= e($key) ?>Family" name="typography[<?= e($key) ?>][family]"><?php foreach($fontOptions as $font=>$label): ?><option value="<?= e($font) ?>" <?= ($item['family']??'')===$font?'selected':'' ?>><?= e($label) ?></option><?php endforeach; ?></select></div>
-<div class="type-field"><label for="<?= e($key) ?>Size"><?= e('Font size (px)') ?></label><input id="<?= e($key) ?>Size" type="number" min="10" max="64" name="typography[<?= e($key) ?>][size]" value="<?= (int)($item['size']??16) ?>"></div>
-<div class="type-field"><label for="<?= e($key) ?>Color"><?= e('Text color') ?></label><input id="<?= e($key) ?>Color" type="color" name="typography[<?= e($key) ?>][color]" value="<?= e((string)($item['color']??'#344039')) ?>"></div>
-<div class="type-field"><label for="<?= e($key) ?>Weight"><?= e('Font weight') ?></label><select id="<?= e($key) ?>Weight" name="typography[<?= e($key) ?>][weight]"><?php foreach([300=>'Light',400=>'Normal',500=>'Medium',600=>'Semi Bold',700=>'Bold',800=>'Extra Bold',900=>'Black'] as $weight=>$label): ?><option value="<?= $weight ?>" <?= (int)($item['weight']??400)===$weight?'selected':'' ?>><?= e($label) ?></option><?php endforeach; ?></select></div>
-<div class="type-field"><label for="<?= e($key) ?>Style"><?= e('Font style') ?></label><select id="<?= e($key) ?>Style" name="typography[<?= e($key) ?>][style]"><option value="normal" <?= ($item['style']??'normal')==='normal'?'selected':'' ?>>Normal</option><option value="italic" <?= ($item['style']??'normal')==='italic'?'selected':'' ?>><?= e('Italic') ?></option></select></div>
+<div class="type-field"><label for="<?= e($key) ?>Family"><?= e(villa_ui('Google font family')) ?></label><select id="<?= e($key) ?>Family" name="typography[<?= e($key) ?>][family]"><?php foreach($fontOptions as $font=>$label): ?><option value="<?= e($font) ?>" <?= ($item['family']??'')===$font?'selected':'' ?>><?= e($label) ?></option><?php endforeach; ?></select></div>
+<div class="type-field"><label for="<?= e($key) ?>Size"><?= e(villa_ui('Font size (px)')) ?></label><input id="<?= e($key) ?>Size" type="number" min="10" max="64" name="typography[<?= e($key) ?>][size]" value="<?= (int)($item['size']??16) ?>"></div>
+<div class="type-field"><label for="<?= e($key) ?>Color"><?= e(villa_ui('Text color')) ?></label><input id="<?= e($key) ?>Color" type="color" name="typography[<?= e($key) ?>][color]" value="<?= e((string)($item['color']??'#344039')) ?>"></div>
+<div class="type-field"><label for="<?= e($key) ?>Weight"><?= e(villa_ui('Font weight')) ?></label><select id="<?= e($key) ?>Weight" name="typography[<?= e($key) ?>][weight]"><?php foreach([300=>'Light',400=>'Normal',500=>'Medium',600=>'Semi Bold',700=>'Bold',800=>'Extra Bold',900=>'Black'] as $weight=>$label): ?><option value="<?= $weight ?>" <?= (int)($item['weight']??400)===$weight?'selected':'' ?>><?= e($label) ?></option><?php endforeach; ?></select></div>
+<div class="type-field"><label for="<?= e($key) ?>Style"><?= e(villa_ui('Font style')) ?></label><select id="<?= e($key) ?>Style" name="typography[<?= e($key) ?>][style]"><option value="normal" <?= ($item['style']??'normal')==='normal'?'selected':'' ?>>Normal</option><option value="italic" <?= ($item['style']??'normal')==='italic'?'selected':'' ?>><?= e(villa_ui('Italic')) ?></option></select></div>
 </div>
-<div class="type-preview" data-type-preview="<?= e($key) ?>"><strong><?= e('Live preview') ?></strong>
-<?php if($key==='headings'): ?><h2 class="type-preview-content"><?= e('Enjoy your villa holiday') ?></h2>
-<?php elseif($key==='span'): ?><span class="type-preview-content"><?= e('Sample text — explore special offers.') ?></span>
-<?php elseif($key==='paragraph'): ?><p class="type-preview-content"><?= e('Enjoy an unforgettable holiday in our comfortable villas near the sea.') ?></p>
-<?php else: ?><p><?= e('Explore our villas and') ?> <a class="type-preview-content" href="#preview-link" onclick="return false"><?= e('find your ideal holiday') ?></a>.</p><?php endif; ?>
+<div class="type-preview" data-type-preview="<?= e($key) ?>"><strong><?= e(villa_ui('Live preview')) ?></strong>
+<?php if($key==='headings'): ?><h2 class="type-preview-content"><?= e(villa_ui('Enjoy your villa holiday')) ?></h2>
+<?php elseif($key==='span'): ?><span class="type-preview-content"><?= e(villa_ui('Sample text — explore special offers.')) ?></span>
+<?php elseif($key==='paragraph'): ?><p class="type-preview-content"><?= e(villa_ui('Enjoy an unforgettable holiday in our comfortable villas near the sea.')) ?></p>
+<?php else: ?><p><?= e(villa_ui('Explore our villas and')) ?> <a class="type-preview-content" href="#preview-link" onclick="return false"><?= e(villa_ui('find your ideal holiday')) ?></a>.</p><?php endif; ?>
 </div>
 </section>
 <?php endforeach; ?>
-<div class="type-actions"><button class="type-save" type="submit"><?= e('Save theme typography') ?></button><span class="type-help"><?= e('Saved settings are retained when the page reloads.') ?></span></div>
+<div class="type-actions"><button class="type-save" type="submit"><?= e(villa_ui('Save theme typography')) ?></button><span class="type-help"><?= e(villa_ui('Saved settings are retained when the page reloads.')) ?></span></div>
 </form>
 </main>
 <script>
