@@ -765,7 +765,7 @@ $showBase=static fn(string $key): bool => $homeDesign[$key]['visible'] ?? ($base
 </script><?php endif; ?>
 <div class="hero-inner"><div class="hero-copy" data-villa-overlay-text><span class="eyebrow villa-hero-eyebrow"><?= e($content['home_eyebrow']??'MAKE YOUR HOLIDAY SPECIAL') ?></span><h1><?= e($content['home_title']??'Your dream holiday awaits') ?></h1><p><?= e($content['home_subtitle']??'Sea, nature and relaxation. Discover your ideal holiday home.') ?></p></div></div>
 <div class="hero-filter-panel"><form class="search search-enhanced" action="/konaklamalar" method="get" id="homeSearch">
-<label class="search-field destination-field" data-location-autocomplete><span class="search-label"><span class="search-icon">⌖</span> <?= e($content['home_search_destination_label']??'Where?') ?></span><input type="text" name="city" id="homeDestination" placeholder="<?= e($content['home_search_destination_placeholder']??'Choose a city or area') ?>" aria-label="<?= e(villa_ui('Destinasyon')) ?>" autocomplete="off" aria-autocomplete="list" aria-controls="homeDestinationOptions"><div class="location-suggestions" id="homeDestinationOptions" role="listbox" hidden></div><input type="hidden" name="location_id" id="homeLocationId" value=""></label>
+<label class="search-field destination-field" data-location-autocomplete><span class="search-label"><span class="search-icon">⌖</span> <?= e($content['home_search_destination_label']??'Where?') ?></span><input type="text" name="city" id="homeDestination" placeholder="<?= e($content['home_search_destination_placeholder']??'Choose a city or area') ?>" aria-label="<?= e('Destination') ?>" autocomplete="off" aria-autocomplete="list" aria-controls="homeDestinationOptions"><div class="location-suggestions" id="homeDestinationOptions" role="listbox" hidden></div><input type="hidden" name="location_id" id="homeLocationId" value=""></label>
 <div class="search-field date-field"><span class="search-label"><span class="search-icon">↘</span> Check-in</span><button type="button" class="date-display date-picker-trigger" id="checkInDisplay" aria-haspopup="dialog" aria-controls="homeCalendar" aria-expanded="false"><?= e($content['home_calendar_add_date']??'Add dates') ?></button><input type="hidden" name="check_in" id="homeCheckIn" min="<?= e(date('Y-m-d')) ?>" aria-label="<?= e($content['home_search_checkin_label']??'Check-in date') ?>"></div>
 <div class="search-field date-field"><span class="search-label"><span class="search-icon">↗</span> Check-out</span><button type="button" class="date-display date-picker-trigger" id="checkOutDisplay" aria-haspopup="dialog" aria-controls="homeCalendar" aria-expanded="false"><?= e($content['home_calendar_add_date']??'Add dates') ?></button><input type="hidden" name="check_out" id="homeCheckOut" min="<?= e(date('Y-m-d',strtotime('+1 day'))) ?>" aria-label="<?= e($content['home_search_checkout_label']??'Check-out date') ?>"></div>
 <div class="home-calendar" id="homeCalendar" role="dialog" aria-label="<?= e($content['home_search_date_range_label']??'Check-in and check-out dates') ?>" hidden>
@@ -781,11 +781,11 @@ $showBase=static fn(string $key): bool => $homeDesign[$key]['visible'] ?? ($base
 <button type="submit" class="search-submit"><span>⌕</span> <?= e($content['search_button']??'Search villas') ?></button></form></div></section><?php endif; ?>
 
 <?php if($showBase('hero')): ?>
-<section class="mobile-premium-search" aria-label="Villa arama" style="order:<?= $order('hero',1) ?>">
+<section class="mobile-premium-search" aria-label="Villa search" style="order:<?= $order('hero',1) ?>">
   <form class="mobile-premium-search__form" action="/konaklamalar" method="get">
     <label class="mobile-premium-search__destination" data-location-autocomplete>
       <span>DESTINATION</span>
-      <input type="text" name="city" id="mobileDestination" placeholder="<?= e(villa_ui('Nereye gitmek istersiniz?')) ?>" aria-label="<?= e(villa_ui('Destinasyon')) ?>" autocomplete="off" aria-autocomplete="list" aria-controls="mobileDestinationOptions">
+      <input type="text" name="city" id="mobileDestination" placeholder="<?= e('Where would you like to go?') ?>" aria-label="<?= e(villa_ui('Destinasyon')) ?>" autocomplete="off" aria-autocomplete="list" aria-controls="mobileDestinationOptions">
       <div class="location-suggestions" id="mobileDestinationOptions" role="listbox" hidden></div>
       <input type="hidden" name="location_id" value="">
     </label>
