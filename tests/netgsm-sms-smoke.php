@@ -26,7 +26,7 @@ netgsmAssert(str_contains($service,'INSERT IGNORE INTO sms_queue')&&str_contains
 netgsmAssert(str_contains($service,'PaymentSecretVault::decrypt'),'SMS credentials are not read from encrypted secret storage.');
 netgsmAssert(str_contains($routes,"/tasks/sms/process")&&str_contains($routes,'SmsService::sendTest')&&str_contains($routes,'SmsService::enqueueBookingStatus'),'SMS cron, test send or booking notifications are missing.');
 netgsmAssert(str_contains($routes,'sms.netgsm.password')&&str_contains($routes,'sms.cron_token'),'SMS settings are not persisted securely.');
-netgsmAssert(str_contains($settings,'Gerçek test SMS')&&str_contains($settings,'sms_netgsm_sender')&&str_contains($settings,'smsCronUrl'),'SMS settings and explicit paid test-send UI are missing.');
+netgsmAssert(str_contains($settings,'A test message can incur charges')&&str_contains($settings,'sms_netgsm_sender')&&str_contains($settings,'smsCronUrl'),'SMS settings and explicit paid test-send UI are missing.');
 netgsmAssert(str_contains($migration,'CREATE TABLE IF NOT EXISTS sms_queue')&&str_contains($migration,"('sms.enabled','0',1)")&&str_contains($migration,"'sms.booking.confirmed'"),'SMS queue schema, safe default or localized booking templates are missing.');
 netgsmAssert(str_contains($workflow,'tests/netgsm-sms-smoke.php'),'Netgsm regression smoke test is not registered in CI.');
 echo "Netgsm SMS adapter, phone normalization, secure settings and queue checks passed. No real SMS was sent.\n";
