@@ -62,7 +62,7 @@ pre{white-space:pre-wrap;overflow-wrap:anywhere;max-height:240px;overflow:auto;b
   </div>
   <section class="cards" aria-label="<?= e(villa_ui('Tanılama özeti')) ?>">
     <article class="card"><div class="label"><?= e(villa_ui('Yavaş istek kaydı')) ?></div><div class="value" id="requestCount">—</div><div class="hint"><?= e(villa_ui('Son günlük kayıtları')) ?></div></article>
-    <article class="card"><div class="label"><?= e(villa_ui('Yavaş SQL kaydı')) ?></div><div class="value" id="sqlCount">—</div><div class="hint"><?= e(villa_ui('Son günlük kayıtları')) ?></div></article>
+    <article class="card"><div class="label"><?= e(villa_ui('Yavaş SQL record')) ?></div><div class="value" id="sqlCount">—</div><div class="hint"><?= e(villa_ui('Son günlük kayıtları')) ?></div></article>
     <article class="card"><div class="label"><?= e(villa_ui('En uzun istek')) ?></div><div class="value" id="maxRequest">—</div><div class="hint"><?= e(villa_ui('İstek süresi')) ?></div></article>
     <article class="card"><div class="label"><?= e(villa_ui('En uzun SQL')) ?></div><div class="value" id="maxSql">—</div><div class="hint"><?= e(villa_ui('Sorgu süresi')) ?></div></article>
   </section>
@@ -113,16 +113,16 @@ pre{white-space:pre-wrap;overflow-wrap:anywhere;max-height:240px;overflow:auto;b
     return 0;
   };
   const duration = row => firstNumber(row,['total_ms','duration_ms','elapsed_ms','query_ms','sql_ms','execution_ms']);
-  const details = row => '<details class="detail"><summary>Ham kaydı göster</summary><pre>'+esc(JSON.stringify(row,null,2))+'</pre></details>';
+  const details = row => '<details class="detail"><summary>Show raw record</summary><pre>'+esc(JSON.stringify(row,null,2))+'</pre></details>';
   const table = (rows, kind, query) => {
     const filtered = rows.filter(row => JSON.stringify(row).toLocaleLowerCase('tr').includes(query.toLocaleLowerCase('tr')));
-    if (!filtered.length) return '<div class="empty">'+(rows.length ? 'Aramanızla eşleşen kayıt bulunamadı.' : 'Henüz kayıt bulunmuyor.')+'</div>';
-    if (kind === 'requests') return '<table><thead><tr><th>İstek</th><th>Süre</th><th>HTTP</th><th>Oturum bekleme</th><th>Bellek</th><th>Son aşama</th></tr></thead><tbody>'+filtered.map(row => {
+    if (!filtered.length) return '<div class="empty">'+(rows.length ? 'No records match your search.' : 'No records yet.')+'</div>';
+    if (kind === 'requests') return '<table><thead><tr><th>İstek</th><th>Süre</th><th>HTTP</th><th>Session wait</th><th>Bellek</th><th>Last stage</th></tr></thead><tbody>'+filtered.map(row => {
       const time=duration(row), status=Number(row.http_status||0);
       return '<tr><td class="path">'+esc(row.method||'')+' '+esc(row.path||row.url||'—')+details(row)+'</td><td class="num">'+ms(time)+'</td><td><span class="status '+(status>=500?'bad':status>=400?'warn':'')+'">'+(status||'—')+'</span></td><td class="num">'+ms(row.session_start_ms||0)+'</td><td class="num">'+(row.peak_memory_mb!==undefined?esc(row.peak_memory_mb)+' MB':'—')+'</td><td>'+esc(row.last_stage||row.stage||'—')+'</td></tr>';
     }).join('')+'</tbody></table>';
-    return '<table><thead><tr><th>Sorgu / açıklama</th><th>Süre</th><th>Ek bilgiler</th></tr></thead><tbody>'+filtered.map(row => {
-      const description=row.query||row.sql||row.statement||row.message||row.raw||row.type||'SQL kaydı';
+    return '<table><thead><tr><th>Query / description</th><th>Süre</th><th>Additional details</th></tr></thead><tbody>'+filtered.map(row => {
+      const description=row.query||row.sql||row.statement||row.message||row.raw||row.type||'SQL record';
       const extras=Object.keys(row).filter(key=>!['query','sql','statement','message','raw','type','duration_ms','elapsed_ms','query_ms','sql_ms','execution_ms'].includes(key)).map(key=>key+': '+row[key]).join(' · ');
       return '<tr><td class="path">'+esc(description)+details(row)+'</td><td class="num">'+ms(duration(row))+'</td><td>'+esc(extras||'—')+'</td></tr>';
     }).join('')+'</tbody></table>';
@@ -136,7 +136,7 @@ pre{white-space:pre-wrap;overflow-wrap:anywhere;max-height:240px;overflow:auto;b
     $('sqlTable').innerHTML=table(sqlRows,'sql',$('sqlFilter').value);
   };
   async function load() {
-    const button=$('refresh'); button.disabled=true; button.textContent='Yükleniyor…';
+    const button=$('refresh'); button.disabled=true; button.textContent='Loading…';
     try {
       const response=await fetch(endpoint,{credentials:'same-origin',headers:{'Accept':'application/json','X-Requested-With':'XMLHttpRequest'},cache:'no-store'});
       if(!response.ok) throw new Error('Sunucu '+response.status+' yanıtı verdi. Yetkinizi ve oturumunuzu kontrol edin.');
@@ -146,11 +146,11 @@ pre{white-space:pre-wrap;overflow-wrap:anywhere;max-height:240px;overflow:auto;b
       $('logStorageCount').textContent=(Number(counts.performance||0)+Number(counts.slow_sql||0)).toLocaleString(document.documentElement.lang || 'en')+' kayıt';
       $('diagnosticNote').textContent=data.note||'Performans kayıtları başarıyla yüklendi.';
       render();
-      $('updatedAt').textContent='Son güncelleme: '+new Date().toLocaleString(document.documentElement.lang || 'en');
+      $('updatedAt').textContent='Last updated: '+new Date().toLocaleString(document.documentElement.lang || 'en');
     } catch(error) {
       $('diagnosticNote').textContent='Tanılama verileri alınamadı: '+error.message;
-      $('requestTable').innerHTML='<div class="empty">Veriler yüklenemedi.</div>';
-      $('sqlTable').innerHTML='<div class="empty">Veriler yüklenemedi.</div>';
+      $('requestTable').innerHTML='<div class="empty">Data could not be loaded.</div>';
+      $('sqlTable').innerHTML='<div class="empty">Data could not be loaded.</div>';
     } finally {button.disabled=false;button.textContent='Yenile';}
   }
   $('refresh').addEventListener('click',load);
@@ -164,7 +164,7 @@ pre{white-space:pre-wrap;overflow-wrap:anywhere;max-height:240px;overflow:auto;b
       const body=new URLSearchParams({_csrf:csrfToken,scope,keep_last:String(keep)});
       const response=await fetch(cleanupEndpoint,{method:'POST',credentials:'same-origin',headers:{'Accept':'application/json','X-Requested-With':'XMLHttpRequest','Content-Type':'application/x-www-form-urlencoded;charset=UTF-8'},body});
       const result=await response.json();
-      if(!response.ok||!result.success)throw new Error(result.error||'Temizleme işlemi başarısız oldu.');
+      if(!response.ok||!result.success)throw new Error(result.error||'Cleanup failed.');
       const removed=Object.values(result.results||{}).reduce((sum,item)=>sum+Number(item.removed||0),0);
       $('cleanupResult').textContent=removed.toLocaleString(document.documentElement.lang || 'en')+' eski kayıt silindi. Kalan kayıtlar: '+Object.values(result.results||{}).reduce((sum,item)=>sum+Number(item.remaining||0),0).toLocaleString(document.documentElement.lang || 'en')+'.';
       await load();
