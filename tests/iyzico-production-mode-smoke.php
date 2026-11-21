@@ -13,6 +13,6 @@ iyzicoProductionAssert(str_contains($routes,"'environment'=>\$paymentEnvironment
 iyzicoProductionAssert(str_contains($routes,"\$config['environment']=\$storedEnvironment"),'Callbacks do not retrieve payments from their original environment.');
 iyzicoProductionAssert(!str_contains($routes,"\$config['environment']='sandbox'"),'A callback forcibly switches all transactions to Sandbox.');
 iyzicoProductionAssert(str_contains($client,"return self::post(\$config, '/payment/bin/check'")&&str_contains($client,"], \$environment);"),'Connection test does not use the selected environment.');
-iyzicoProductionAssert(str_contains($settings,'Production API')&&str_contains($settings,'Seçili iyzico ortamı bağlantısını test et'),'Admin settings do not explain the Production connection test.');
+iyzicoProductionAssert(str_contains($settings,'Production API')&&str_contains($settings,'Test the selected iyzico environment'),'Admin settings do not explain the Production connection test.');
 iyzicoProductionAssert(method_exists(\App\Core\IyzicoApiClient::class,'testConnection'),'Environment-aware connection test method missing.');
 echo "iyzico environment-aware checkout smoke tests passed. No payment or live charge was created.\n";
