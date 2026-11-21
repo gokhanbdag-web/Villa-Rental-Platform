@@ -27,7 +27,13 @@ try {
     foreach (['Where to?', 'Select check-in date', 'HANDPICKED FOR YOU', 'Poolside relaxation'] as $label) {
         if (villa_ui($label) !== $label) throw new RuntimeException('Homepage control English fallback missing: ' . $label);
     }
+    foreach (['Done', 'Search villas', 'adults', 'children', 'infants'] as $label) {
+        if (villa_ui($label) !== $label) throw new RuntimeException('Homepage interaction English fallback missing: ' . $label);
+    }
     $locale->setValue(null, 'tr');
+    foreach (['Done' => 'Tamam', 'Search villas' => 'Villa Ara', 'adults' => 'yetişkin', 'children' => 'çocuk', 'infants' => 'bebek'] as $label => $expected) {
+        if (villa_ui($label) !== $expected) throw new RuntimeException('Homepage interaction Turkish fallback missing: ' . $label);
+    }
     foreach (['Where to?' => 'Nereye?', 'Select check-in date' => 'Giriş tarihi seçin', 'HANDPICKED FOR YOU' => 'SİZİN İÇİN SEÇTİK', 'Poolside relaxation' => 'Havuz başında keyif'] as $label => $expected) {
         if (villa_ui($label) !== $expected) throw new RuntimeException('Homepage control Turkish fallback missing: ' . $label);
     }
