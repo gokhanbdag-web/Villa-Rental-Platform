@@ -4,6 +4,7 @@ declare(strict_types=1);
 use App\Core\Auth;
 use App\Core\Database;
 use App\Core\Router;
+use App\Core\HomepageDesign;
 use App\Core\Translator;
 use App\Core\ThemeManager;
 
@@ -461,19 +462,14 @@ $router->post('/admin/locations/toggle', static function (): void {
     Auth::requireRole(['super_admin','admin']);verify_csrf();$s=Database::connection()->prepare('UPDATE locations SET is_active=1-is_active WHERE id=?');$s->execute([(int)($_POST['id']??0)]);redirect('/admin/locations');
 });
 
-$router->get('/', static function (): void {
-    // Homepage is a selected, published CMS page; never render the legacy static fallback.
-    $homePdo=Database::connection();
-    $homeId=(int)($homePdo->query("SELECT setting_value FROM settings WHERE setting_key='cms.homepage_id' LIMIT 1")->fetchColumn() ?: 0);
-    $homePage=null;
-    if($homeId>0){
-        $homeStmt=$homePdo->prepare("SELECT * FROM cms_pages WHERE id=? AND status='published' LIMIT 1");
-        $homeStmt->execute([$homeId]);
-        $homePage=$homeStmt->fetch(PDO::FETCH_ASSOC) ?: null;
-    }
-    // Render the existing functional homepage shell for both legacy and CMS
-    // layouts. This retains live search, listings, navigation and scripts.
-    // The CMS layout is loaded below after the homepage data is prepared.
+function villa_selected_homepage(PDO $pdo): ?array
+{
+    $query = $pdo->query("SELECT p.id,p.slug,p.language_code FROM settings s JOIN cms_pages p ON p.id=CAST(s.setting_value AS UNSIGNED) WHERE s.setting_key='cms.homepage_id' AND p.status='published' LIMIT 1");
+    return $query->fetch(PDO::FETCH_ASSOC) ?: null;
+}
+
+$renderHomepage = static function (?array $preview = null): void {
+    $homePage = villa_selected_homepage(Database::connection());
     villa_perf_mark('home:begin');
     $pdo=Database::connection();
     villa_perf_mark('home:database_connected');
@@ -484,7 +480,7 @@ $router->get('/', static function (): void {
     villa_perf_mark('home:csrf_token_ready');
     if (session_status() === PHP_SESSION_ACTIVE) session_write_close();
     villa_perf_mark('home:session_released_after_csrf');
-    $locale = Translator::locale();
+    $locale = $preview['locale'] ?? Translator::locale();
     villa_perf_mark('home:mode_loaded');
     $mode=(string)($pdo->query("SELECT setting_value FROM settings WHERE setting_key='app.mode' LIMIT 1")->fetchColumn() ?: 'single_vendor');
     $content=villa_site_content($pdo,$locale);
@@ -582,7 +578,45 @@ $router->get('/', static function (): void {
     $layoutStmt->execute([$layoutKey,$locale]);
     $layoutRaw=$layoutStmt->fetchColumn();
     if(is_string($layoutRaw))$pageLayout=json_decode($layoutRaw,true);
+    $homeDesign = $preview['design'] ?? HomepageDesign::read($pdo,HomepageDesign::key($homePage),$locale);
+    foreach ($homeDesign as $sectionKey=>$settings) {
+        if (isset($settings['order'])) $homeSections[$sectionKey]['sort_order']=$settings['order'];
+        if (isset($settings['visible'])) $homeSections[$sectionKey]['is_active']=(int)$settings['visible'];
+        foreach ($settings as $field=>$value) {
+            if (str_starts_with($field,'home_')) $content[$field]=$value;
+        }
+    }
+    foreach (['title','subtitle'] as $field) {
+        if (isset($homeDesign['featured']['featured_'.$field])) $homeSections['featured'][$field]=$homeDesign['featured']['featured_'.$field];
+    }
     ThemeManager::render('landing.php', get_defined_vars());
+};
+$router->get('/', static function () use ($renderHomepage): void { $renderHomepage(); });
+
+$homeEditorRequest = static function (): array {
+    Auth::requirePermission('admin.pages.edit');
+    verify_csrf();
+    $pdo=Database::connection();
+    $locale=(string)($_POST['language_code']??'');
+    $language=$pdo->prepare('SELECT code FROM languages WHERE code=? AND is_active=1');
+    $language->execute([$locale]);
+    if (!$language->fetchColumn()) { http_response_code(422); exit('Geçersiz dil.'); }
+    $key=HomepageDesign::key(villa_selected_homepage($pdo));
+    if ($key!==($_POST['design_key']??null)) { http_response_code(409); exit('Ana sayfa değişti. Editörü yeniden açın.'); }
+    try { $design=HomepageDesign::validate((string)($_POST['design']??'')); }
+    catch (InvalidArgumentException $e) { http_response_code(422); exit('Bölüm ayarlarını ve görsel adreslerini kontrol edin.'); }
+    return compact('locale','key','design');
+};
+$router->post('/homepage-design-preview',static function () use ($homeEditorRequest,$renderHomepage): void {
+    $request=$homeEditorRequest();
+    header('Cache-Control: private, no-store');
+    $renderHomepage($request);
+});
+$router->post('/admin/pages/home-design',static function () use ($homeEditorRequest): void {
+    $request=$homeEditorRequest();
+    $save=Database::connection()->prepare('INSERT INTO cms_page_layouts(page_key,language_code,layout_json) VALUES(?,?,?) ON DUPLICATE KEY UPDATE layout_json=VALUES(layout_json)');
+    $save->execute([$request['key'],$request['locale'],json_encode($request['design'],JSON_THROW_ON_ERROR|JSON_UNESCAPED_UNICODE)]);
+    redirect('/admin/pages/layout?page=home&lang='.rawurlencode($request['locale']).'&saved=1');
 });
 
 $router->get('/konaklamalar', static function (): void {
@@ -2668,16 +2702,38 @@ $router->get('/admin/pages/layout', static function (): void {
     Auth::requirePermission('admin.pages.edit');
     $pdo=Database::connection();
     $key=(string)($_GET['page']??'');
+    $locale=(string)($_GET['lang']??'tr');
+    $selectedHome=villa_selected_homepage($pdo);
+    if ($key==='home') {
+        $language=$pdo->prepare('SELECT code FROM languages WHERE code=? AND is_active=1');
+        $language->execute([$locale]);
+        if (!$language->fetchColumn()) { http_response_code(404); return; }
+        $designKey=HomepageDesign::key($selectedHome);
+        $design=HomepageDesign::read($pdo,$designKey,$locale);
+        $content=villa_site_content($pdo,$locale);
+        $homeSections=array_column($pdo->query('SELECT * FROM homepage_sections')->fetchAll(PDO::FETCH_ASSOC),null,'section_key');
+        $brand=ThemeManager::brandSettings();
+        $banner=ThemeManager::familyBannerTextSettings();
+        $demo=(string)($pdo->query("SELECT setting_value FROM settings WHERE setting_key='app.demo_enabled' LIMIT 1")->fetchColumn() ?: '1')!=='0';
+        $genericLayout=HomepageDesign::read($pdo,$selectedHome?'page:'.(int)$selectedHome['id']:'home',$locale);
+        ThemeManager::renderTemplate('templates/pages/admin/home-design.php',get_defined_vars());
+        return;
+    }
     if(!preg_match('/^page:[1-9][0-9]*$/',$key)){http_response_code(422);return;}
     $locale=(string)($_GET['lang']??'en');
     $pageId=(int)substr($key,5);
-    $pageStmt=$pdo->prepare('SELECT id,title FROM cms_pages WHERE id=? AND language_code=? LIMIT 1');
+    $pageStmt=$pdo->prepare('SELECT id,title,slug FROM cms_pages WHERE id=? AND language_code=? LIMIT 1');
     $pageStmt->execute([$pageId,$locale]);
     $editorPage=$pageStmt->fetch(PDO::FETCH_ASSOC);
     if(!$editorPage){http_response_code(404);exit('Page not found.');}
     $stmt=$pdo->prepare('SELECT layout_json FROM cms_page_layouts WHERE page_key=? AND language_code=?');
     $stmt->execute([$key,$locale]);
     $layout=(string)($stmt->fetchColumn()?:'{"rows":[]}');
+    $isHome=$selectedHome ? (int)$selectedHome['id']===$pageId : $editorPage['slug']==='home';
+    if ($isHome && empty(json_decode($layout,true)['rows']) && !isset($_GET['widgets'])) {
+        redirect('/admin/pages/layout?page=home&lang='.rawurlencode($locale));
+        return;
+    }
     ThemeManager::renderTemplate('templates/pages/admin/page-layout-editor.php',get_defined_vars());
 });
 $router->post('/admin/pages/layout/save', static function (): void {

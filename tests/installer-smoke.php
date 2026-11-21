@@ -47,6 +47,26 @@ try {
     $admin = $pdo->query("SELECT id,role,status FROM users WHERE email='smoke@example.test' LIMIT 1")->fetch(PDO::FETCH_ASSOC);
     assertSmoke(is_array($admin) && $admin['role'] === 'super_admin' && $admin['status'] === 'active', 'Initial administrator was not created correctly.');
 
+    $homeRequest=static function(string $request) use($root): string {
+        $command=escapeshellarg(PHP_BINARY).' '.escapeshellarg($root.'/tests/home-design-request.php').' '.escapeshellarg($request);
+        $output=[];
+        exec($command,$output,$status);
+        assertSmoke($status===0,'Homepage request failed: '.$request);
+        return implode("\n",$output);
+    };
+    $originalHome=$homeRequest('public');
+    assertSmoke(str_contains($homeRequest('editor'),'data-section="hero"'),'Page editor did not expose the native hero.');
+    $preview=$homeRequest('preview');
+    assertSmoke(str_contains($preview,'Villa editor &lt;test&gt;') && str_contains($preview,'id="homeSearch"'),'Preview lost the edited hero or live search.');
+    assertSmoke(!str_contains($homeRequest('public'),'Villa editor &lt;test&gt;'),'Preview modified the public homepage.');
+    $homeRequest('save');
+    $savedHome=$homeRequest('public');
+    assertSmoke(str_contains($savedHome,'Villa editor &lt;test&gt;') && str_contains($savedHome,'class="hero" style="order:12"'),'Saved title/order did not reach the public homepage.');
+    assertSmoke(!str_contains($savedHome,'<section class="section med-family-banner"') && str_contains($savedHome,'id="homeSearch"'),'Section visibility or search regressed.');
+    $homeRequest('reset');
+    $restoredHome=$homeRequest('public');
+    assertSmoke(!str_contains($restoredHome,'Villa editor &lt;test&gt;') && str_contains($restoredHome,'<section class="section med-family-banner"')===str_contains($originalHome,'<section class="section med-family-banner"'),'Reset did not restore the original design.');
+
     $mode = $pdo->query("SELECT setting_value FROM settings WHERE setting_key='app.mode'")->fetchColumn();
     assertSmoke($mode === 'multi_vendor', 'Selected marketplace mode was not saved.');
 
