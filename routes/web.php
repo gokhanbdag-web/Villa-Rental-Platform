@@ -2650,6 +2650,21 @@ $router->post('/admin/pages/set-home', static function (): void {
     $stmt->execute([(string)$id]);
     redirect('/admin/pages');
 });
+$router->post('/admin/pages/import-existing', static function (): void {
+    Auth::requirePermission('admin.pages.edit');
+    verify_csrf();
+    $pdo=Database::connection();
+    $locale=(string)($pdo->query("SELECT code FROM languages WHERE is_default=1 AND is_active=1 LIMIT 1")->fetchColumn() ?: 'tr');
+    // Import a missing homepage record without overwriting an existing page or
+    // switching the live homepage away from its current working design.
+    $existing=$pdo->prepare("SELECT id FROM cms_pages WHERE slug='home' AND language_code=? LIMIT 1");
+    $existing->execute([$locale]);
+    if(!$existing->fetchColumn()){
+        $insert=$pdo->prepare("INSERT INTO cms_pages(language_code,title,slug,content,status,meta_title,meta_description) VALUES(?,'Ana Sayfa','home','','draft','Ana Sayfa','')");
+        $insert->execute([$locale]);
+    }
+    redirect('/admin/pages?lang='.rawurlencode($locale));
+});
 $router->get('/admin/pages', static function (): void {
     Auth::requirePermission('admin.pages.view');
     $pdo = Database::connection();
