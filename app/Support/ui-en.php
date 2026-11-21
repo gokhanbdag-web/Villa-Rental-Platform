@@ -1819,4 +1819,8 @@ return [
     'Güncelleme sunucusuna ulaşılamıyor.' => 'Cannot reach the update server.',
     'Güncelleme kaynağı geçersiz.' => 'Invalid update source.',
     'Güncelleme bildirimi geçersiz.' => 'Invalid update manifest.',
+    'Nereye gitmek istersiniz?' => 'Where would you like to go?',
+    'Destinasyon' => 'Destination',
+    'Popüler destinasyonlar' => 'Popular destinations',
+    'En çok ilan bulunan şehirler' => 'Cities with the most listings',
 ];
