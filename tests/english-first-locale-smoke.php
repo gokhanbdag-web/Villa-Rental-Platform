@@ -21,7 +21,13 @@ try {
     foreach (['Find your ideal stay', 'All countries', 'Show properties'] as $label) {
         if (villa_ui($label) !== $label) throw new RuntimeException('Listing English fallback missing: ' . $label);
     }
+    foreach (['Minimum price', 'Maximum price', 'Previous photo', 'Add to favorites'] as $label) {
+        if (villa_ui($label) !== $label) throw new RuntimeException('Listing accessibility English fallback missing: ' . $label);
+    }
     $locale->setValue(null, 'tr');
+    foreach (['Minimum price' => 'Minimum fiyat', 'Maximum price' => 'Maksimum fiyat', 'Previous photo' => 'Önceki fotoğraf', 'Add to favorites' => 'Favorilere ekle'] as $label => $expected) {
+        if (villa_ui($label) !== $expected) throw new RuntimeException('Listing accessibility Turkish fallback missing: ' . $label);
+    }
     foreach (['Find your ideal stay' => 'Size en uygun konaklamayı bulun', 'All countries' => 'Tüm ülkeler', 'Show properties' => 'Konaklamaları göster'] as $label => $expected) {
         if (villa_ui($label) !== $expected) throw new RuntimeException('Listing Turkish fallback missing: ' . $label);
     }
