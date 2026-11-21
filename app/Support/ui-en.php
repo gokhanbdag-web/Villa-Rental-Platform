@@ -1813,4 +1813,10 @@ return [
     'Sayfanın başına dön' => 'Back to top',
     'Yukarı çık' => 'Back to top',
     'Sitemiz' => 'Our site',
+    'Genel bakış' => 'Overview',
+    '＋ Yeni konaklama' => '＋ Add property',
+    'Kontrol edilemedi' => 'Could not check',
+    'Güncelleme sunucusuna ulaşılamıyor.' => 'Cannot reach the update server.',
+    'Güncelleme kaynağı geçersiz.' => 'Invalid update source.',
+    'Güncelleme bildirimi geçersiz.' => 'Invalid update manifest.',
 ];
