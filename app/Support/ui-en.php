@@ -1823,4 +1823,12 @@ return [
     'Destinasyon' => 'Destination',
     'Popüler destinasyonlar' => 'Popular destinations',
     'En çok ilan bulunan şehirler' => 'Cities with the most listings',
+    "Hayalinizdeki tatil sizi bekliyor" => "Your dream holiday awaits",
+    "Türkiye’nin en güzel tatil villalarını keşfedin." => "Discover beautiful holiday villas across Turkey.",
+    "TATİLİNİZİ GÜZELLEŞTİRİN" => "MAKE YOUR HOLIDAY SPECIAL",
+    "Deniz, doğa ve huzur… Size en uygun tatil evini keşfedin." => "Sea, nature and peace… Discover your ideal holiday home.",
+    "Türkiye’nin en sevilen tatil rotalarında size özel konaklamalar." => "Special stays in popular holiday destinations across Turkey.",
+    "En çok tercih edilen konaklamalar" => "Most popular properties",
+    "Misafirlerin keşfetmeyi seveceği özel tatil evleri." => "Unique holiday homes guests will love discovering.",
+    "Size en yakın tatil deneyimini seçin." => "Choose the holiday experience that suits you.",
 ];
