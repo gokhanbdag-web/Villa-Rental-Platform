@@ -18,7 +18,13 @@ try {
     foreach (['Your dream holiday awaits' => 'Hayalinizdeki tatil sizi bekliyor', 'MAKE YOUR HOLIDAY SPECIAL' => 'TATİLİNİZİ GÜZELLEŞTİRİN', 'Sea, nature and peace… Discover your ideal holiday home.' => 'Deniz, doğa ve huzur… Size en uygun tatil evini keşfedin.'] as $source => $expectedTurkish) {
         if (villa_ui($source) !== $source) throw new RuntimeException('Homepage source is not English-first: ' . $source);
     }
+    foreach (['Find your ideal stay', 'All countries', 'Show properties'] as $label) {
+        if (villa_ui($label) !== $label) throw new RuntimeException('Listing English fallback missing: ' . $label);
+    }
     $locale->setValue(null, 'tr');
+    foreach (['Find your ideal stay' => 'Size en uygun konaklamayı bulun', 'All countries' => 'Tüm ülkeler', 'Show properties' => 'Konaklamaları göster'] as $label => $expected) {
+        if (villa_ui($label) !== $expected) throw new RuntimeException('Listing Turkish fallback missing: ' . $label);
+    }
     foreach (['Your dream holiday awaits' => 'Hayalinizdeki tatil sizi bekliyor', 'MAKE YOUR HOLIDAY SPECIAL' => 'TATİLİNİZİ GÜZELLEŞTİRİN', 'Sea, nature and peace… Discover your ideal holiday home.' => 'Deniz, doğa ve huzur… Size en uygun tatil evini keşfedin.'] as $source => $expectedTurkish) {
         if (villa_ui($source) !== $expectedTurkish) throw new RuntimeException('Homepage Turkish fallback missing: ' . $source);
     }
