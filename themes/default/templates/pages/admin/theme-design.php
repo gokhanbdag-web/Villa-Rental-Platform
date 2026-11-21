@@ -4,7 +4,7 @@ $settings = is_array($themeDesignSettings ?? null) ? $themeDesignSettings : [];
 $iconSettings = is_array($themeIconSettings ?? null) ? $themeIconSettings : ['library'=>'fontawesome','icons'=>['fa-star','fa-house','fa-heart','fa-shield-halved']];
 $homepageStatsSettings = is_array($themeHomepageStatsSettings ?? null) ? $themeHomepageStatsSettings : ['villas'=>null,'destinations'=>null,'customers'=>null,'reviews'=>null];
 $iconLibraries = ['fontawesome'=>'Font Awesome 6 Free','bootstrap'=>'Bootstrap Icons','material'=>'Google Material Symbols Rounded','lucide'=>'Lucide','unicode'=>'Unicode / Emoji'];
-$iconLabels = ['1. Güven avantajı','2. Konaklama avantajı','3. Misafir deneyimi','4. Güvenlik avantajı'];
+$iconLabels = ['1. Trust benefit','2. Accommodation benefit','3. Guest experience','4. Safety benefit'];
 $labels = [
     'primary'=>'Ana renk',
     'accent'=>'Vurgu rengi',
