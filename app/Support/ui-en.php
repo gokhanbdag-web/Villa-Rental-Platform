@@ -1873,4 +1873,9 @@ return [
     "Modern ve lüks villalar" => "Modern luxury villas",
     "Ailece huzurlu tatil" => "Relaxing family holiday",
     "Doğayla baş başa" => "Close to nature",
+    "Tamam" => "Done",
+    "Lütfen açılan önerilerden bir lokasyon seçin." => "Please select a location from the suggestions.",
+    "yetişkin" => "adults",
+    "çocuk" => "children",
+    "bebek" => "infants",
 ];
