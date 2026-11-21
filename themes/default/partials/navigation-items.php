@@ -41,7 +41,7 @@ $renderVillaNav = function (array $entries) use (&$renderVillaNav, &$villaHasAut
 
         if ($hasChildren) {
             echo '<button class="nav-submenu-toggle" type="button" aria-expanded="false" aria-label="'
-                . e($label) . ' alt menüsünü aç">⌄</button>';
+                . e(\App\Core\Translator::locale()==='en' ? 'Open submenu: '.$label : $label.' alt menüsünü aç') . '">⌄</button>';
         }
 
         echo '</div>';

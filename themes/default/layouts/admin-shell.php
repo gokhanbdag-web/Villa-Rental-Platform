@@ -8,7 +8,7 @@ use App\Core\ThemeManager;
 return static function (string $html, string $requestPath, string $platformMode): string {
 
         $user = Auth::user();
-        $username = e((string)($user['username'] ?? 'Yönetici'));
+        $username = e((string)($user['username'] ?? villa_ui('Yönetici')));
         $adminPrimaryColor = e(ThemeManager::designSettings()['primary'] ?? 'var(--villa-admin-primary)');
         $appVersion = trim((string) @file_get_contents(dirname(__DIR__, 3) . '/VERSION'));
         if ($appVersion === '') $appVersion = '—';
@@ -168,12 +168,12 @@ return static function (string $html, string $requestPath, string $platformMode)
 
         $nav = '';
         foreach ($groups as $groupLabel => $groupLinks) {
-            $nav .= '<div class="vr-admin-nav-title">' . e($groupLabel) . '</div>';
+            $nav .= '<div class="vr-admin-nav-title">' . e(villa_ui($groupLabel)) . '</div>';
             foreach ($groupLinks as $url => $label) {
                 $active = ($url === $activeNavUrl);
                 $icon = $icons[$url] ?? '•';
                 $nav .= '<a class="vr-admin-link' . ($active ? ' is-active' : '') . '" href="' . e(app_url($url)) . '" data-admin-link>'
-                    . '<span class="vr-admin-icon" aria-hidden="true">' . e($icon) . '</span><span class="vr-admin-link-label">' . e($label) . '</span></a>';
+                    . '<span class="vr-admin-icon" aria-hidden="true">' . e($icon) . '</span><span class="vr-admin-link-label">' . e(villa_ui($label)) . '</span></a>';
             }
         }
         $adminRootUrl = json_encode(app_url('/admin'), JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_AMP | JSON_HEX_QUOT);
@@ -255,7 +255,7 @@ return static function (string $html, string $requestPath, string $platformMode)
             }
             @media(max-width:900px){.vr-admin-top{height:62px;padding:0 16px}.vr-admin-burger{display:flex}.vr-admin-layout{display:block;min-height:calc(100vh - 62px)}.vr-admin-sidebar{position:fixed;z-index:1004;left:0;top:0;bottom:0;width:278px;max-width:84vw;overflow-y:auto;transform:translateX(-105%);transition:transform .22s ease;box-shadow:12px 0 35px rgba(20,30,40,.12);padding:22px 15px}.vr-admin-layout.menu-open .vr-admin-sidebar{transform:translateX(0)}.vr-admin-layout.menu-open .vr-admin-overlay{display:block;position:fixed;inset:0;background:rgba(15,23,32,.42);z-index:1003}.vr-admin-content{padding:22px 20px}}
             @media(max-width:520px){.vr-admin-brand{font-size:15px}.vr-admin-site-link{min-height:33px;padding:0 9px;font-size:11px}.vr-admin-user{display:none}.vr-admin-content{padding:16px 13px}}
-        </style><header class="vr-admin-top"><button class="vr-admin-burger" type="button" aria-label="Menüyü aç" aria-expanded="false" id="vrAdminBurger">☰</button><a class="vr-admin-brand" href="' . e(app_url('/admin')) . '" data-admin-link>VillaStay <span style="font-weight:500;color:#87918c">/ Yönetim</span></a><a class="vr-admin-site-link" href="' . e(app_url('/')) . '">Siteye dön ↗</a><form method="post" action="' . e(app_url('/logout')) . '" style="margin:0"><input type="hidden" name="_csrf" value="' . e(csrf_token()) . '"><button class="vr-admin-logout" type="submit">Çıkış Yap</button></form><span class="vr-admin-user">' . $username . '</span></header><div class="vr-admin-layout" id="vrAdminLayout"><aside class="vr-admin-sidebar" aria-label="Yönetim menüsü">' . $nav . '<div class="vr-admin-version">Sürüm ' . e($appVersion) . '</div></aside><div class="vr-admin-overlay" id="vrAdminOverlay"></div><main class="vr-admin-content" id="vrAdminContent">' . $bodyContent . '<style id="villa-admin-primary-sync">.vr-admin-content .design-save,.vr-admin-content .theme-tab.is-active,.vr-admin-content .footer-logo-choose-button,.vr-admin-content .theme-file-button{background:var(--villa-admin-primary)!important;border-color:var(--villa-admin-primary)!important;color:#fff!important}.vr-admin-content .footer-widget-tile:hover,.vr-admin-content .theme-file-drop:hover,.vr-admin-content .footer-rich-toolbar button:hover{border-color:var(--villa-admin-primary)!important}</style></main></div>
+        </style><header class="vr-admin-top"><button class="vr-admin-burger" type="button" aria-label="' . e(villa_ui('Menüyü aç')) . '" aria-expanded="false" id="vrAdminBurger">☰</button><a class="vr-admin-brand" href="' . e(app_url('/admin')) . '" data-admin-link>VillaStay <span style="font-weight:500;color:#87918c">' . e(villa_ui('/ Yönetim')) . '</span></a><a class="vr-admin-site-link" href="' . e(app_url('/')) . '">' . e(villa_ui('Siteye dön ↗')) . '</a><form method="post" action="' . e(app_url('/logout')) . '" style="margin:0"><input type="hidden" name="_csrf" value="' . e(csrf_token()) . '"><button class="vr-admin-logout" type="submit">' . e(villa_ui('Çıkış Yap')) . '</button></form><span class="vr-admin-user">' . $username . '</span></header><div class="vr-admin-layout" id="vrAdminLayout"><aside class="vr-admin-sidebar" aria-label="' . e(villa_ui('Yönetim menüsü')) . '">' . $nav . '<div class="vr-admin-version">' . e(villa_ui('Sürüm')) . ' ' . e($appVersion) . '</div></aside><div class="vr-admin-overlay" id="vrAdminOverlay"></div><main class="vr-admin-content" id="vrAdminContent">' . $bodyContent . '<style id="villa-admin-primary-sync">.vr-admin-content .design-save,.vr-admin-content .theme-tab.is-active,.vr-admin-content .footer-logo-choose-button,.vr-admin-content .theme-file-button{background:var(--villa-admin-primary)!important;border-color:var(--villa-admin-primary)!important;color:#fff!important}.vr-admin-content .footer-widget-tile:hover,.vr-admin-content .theme-file-drop:hover,.vr-admin-content .footer-rich-toolbar button:hover{border-color:var(--villa-admin-primary)!important}</style></main></div>
         <script>
         (function(){
             if(window.__villaAdminShellReady)return;window.__villaAdminShellReady=true;
@@ -282,11 +282,11 @@ return static function (string $html, string $requestPath, string $platformMode)
                     const toolbar=document.createElement("div");
                     toolbar.className="vr-admin-rich-color-toolbar";
                     toolbar.setAttribute("role","group");
-                    toolbar.setAttribute("aria-label","Metin biçimlendirme");
+                    toolbar.setAttribute("aria-label",' . json_encode(villa_ui('Metin biçimlendirme'),JSON_HEX_TAG|JSON_HEX_QUOT|JSON_HEX_APOS|JSON_HEX_AMP) . ');
                     const label=document.createElement("label");
-                    label.appendChild(document.createTextNode("Yazı rengi"));
+                    label.appendChild(document.createTextNode(' . json_encode(villa_ui('Yazı rengi'),JSON_HEX_TAG|JSON_HEX_QUOT|JSON_HEX_APOS|JSON_HEX_AMP) . '));
                     const picker=document.createElement("input");
-                    picker.type="color";picker.value="#26352e";picker.setAttribute("aria-label","Seçili metnin yazı rengi");
+                    picker.type="color";picker.value="#26352e";picker.setAttribute("aria-label",' . json_encode(villa_ui('Seçili metnin yazı rengi'),JSON_HEX_TAG|JSON_HEX_QUOT|JSON_HEX_APOS|JSON_HEX_AMP) . ');
                     label.appendChild(picker);
                     const apply=document.createElement("button");
                     apply.type="button";apply.textContent="Rengi uygula";
@@ -298,10 +298,10 @@ return static function (string $html, string $requestPath, string $platformMode)
                     picker.addEventListener("mousedown",function(event){event.preventDefault();});
                     apply.addEventListener("mousedown",function(event){event.preventDefault();});
                     apply.addEventListener("click",function(){
-                        if(!savedRange||!editor.contains(savedRange.commonAncestorContainer)){window.alert("Önce rengini değiştirmek istediğiniz metni seçin.");return;}
+                        if(!savedRange||!editor.contains(savedRange.commonAncestorContainer)){window.alert(' . json_encode(villa_ui('Önce rengini değiştirmek istediğiniz metni seçin.'),JSON_HEX_TAG|JSON_HEX_QUOT|JSON_HEX_APOS|JSON_HEX_AMP) . ');return;}
                         const selection=window.getSelection();if(!selection)return;
                         selection.removeAllRanges();selection.addRange(savedRange);
-                        if(selection.isCollapsed){window.alert("Önce rengini değiştirmek istediğiniz metni seçin.");return;}
+                        if(selection.isCollapsed){window.alert(' . json_encode(villa_ui('Önce rengini değiştirmek istediğiniz metni seçin.'),JSON_HEX_TAG|JSON_HEX_QUOT|JSON_HEX_APOS|JSON_HEX_AMP) . ');return;}
                         const range=selection.getRangeAt(0),span=document.createElement("span");
                         span.style.color=/^#[0-9a-f]{6}$/i.test(picker.value)?picker.value:"#26352e";
                         span.appendChild(range.extractContents());range.insertNode(span);
@@ -333,7 +333,7 @@ return static function (string $html, string $requestPath, string $platformMode)
                             const media=document.createElement(type.indexOf("video/")===0?"video":"img");
                             media.src=objectUrl;
                             if(media.tagName==="VIDEO"){media.controls=true;media.muted=true;media.playsInline=true;media.preload="metadata"}
-                            else media.alt="Seçilen görselin önizlemesi";
+                            else media.alt=' . json_encode(villa_ui('Seçilen görselin önizlemesi'),JSON_HEX_TAG|JSON_HEX_QUOT|JSON_HEX_APOS|JSON_HEX_AMP) . ';
                             preview.appendChild(media);
                         }
                         const copy=document.createElement("div");
@@ -397,7 +397,7 @@ return static function (string $html, string $requestPath, string $platformMode)
                 closeMenu();content.style.opacity=".58";
                 try{
                     const response=await fetch(url,{method:"GET",credentials:"same-origin",cache:"no-store",headers:{"X-Requested-With":"XMLHttpRequest","Accept":"text/html"}});
-                    if(!response.ok)throw new Error("Sunucu yanıtı: HTTP "+response.status);
+                    if(!response.ok)throw new Error(' . json_encode(villa_ui('Sunucu yanıtı: HTTP '),JSON_HEX_TAG|JSON_HEX_QUOT|JSON_HEX_APOS|JSON_HEX_AMP) . '+response.status);
                     const source=await response.text();
                     const doc=new DOMParser().parseFromString(source,"text/html");
                     let next=doc.querySelector("#vrAdminContent");
@@ -410,7 +410,7 @@ return static function (string $html, string $requestPath, string $platformMode)
                         holder.querySelectorAll("header,nav,aside").forEach(el=>el.remove());
                         next=holder;
                     }
-                    if(!next||!next.innerHTML.trim())throw new Error("Sayfa içeriği alınamadı. Oturum veya sunucu yanıtını kontrol edin.");
+                    if(!next||!next.innerHTML.trim())throw new Error(' . json_encode(villa_ui('Sayfa içeriği alınamadı. Oturum veya sunucu yanıtını kontrol edin.'),JSON_HEX_TAG|JSON_HEX_QUOT|JSON_HEX_APOS|JSON_HEX_AMP) . ');
                     content.innerHTML=mapAdminGreenMarkup(next.innerHTML);
                     enhanceResponsiveTables(content);
                     enhanceRichTextColors(content);
@@ -424,7 +424,7 @@ return static function (string $html, string $requestPath, string $platformMode)
                     console.error("Admin AJAX navigation failed:",error);
                     let notice=content.querySelector(".vr-admin-navigation-error");
                     if(!notice){notice=document.createElement("div");notice.className="vr-admin-navigation-error";notice.style.cssText="margin:0 0 18px;padding:13px 15px;border:1px solid #f0c8c3;border-radius:10px;background:#fff5f4;color:#963d35;font:13px/1.5 system-ui";content.prepend(notice)}
-                    notice.textContent="Sayfa yenilenmeden açılamadı: "+error.message+" — Lütfen tekrar deneyin.";
+                    notice.textContent=' . json_encode(villa_ui('Sayfa yenilenmeden açılamadı: '),JSON_HEX_TAG|JSON_HEX_QUOT|JSON_HEX_APOS|JSON_HEX_AMP) . '+error.message+' . json_encode(villa_ui(' — Lütfen tekrar deneyin.'),JSON_HEX_TAG|JSON_HEX_QUOT|JSON_HEX_APOS|JSON_HEX_AMP) . ';
                 }finally{content.style.opacity="1"}
             }
             // Intercept every internal admin link, including dashboard quick actions,
@@ -456,5 +456,5 @@ return static function (string $html, string $requestPath, string $platformMode)
         }
 
         // The original page was a fragment, so create a valid document around it.
-        return '<!doctype html><html lang="tr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Yönetim Paneli</title></head><body>' . $shell . '</body></html>';
+        return '<!doctype html><html lang="' . e(Translator::locale()) . '"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>' . e(villa_ui('Yönetim Paneli')) . '</title></head><body>' . $shell . '</body></html>';
 };

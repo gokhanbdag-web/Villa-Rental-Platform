@@ -13,8 +13,8 @@ $comparePageUrl = app_url('/karsilastir');
 @media(max-width:560px){.villa-compare-bar{bottom:calc(82px + env(safe-area-inset-bottom,0px) + 12px);padding:10px 11px 10px 14px;border-radius:15px}.villa-compare-bar-copy strong{font-size:13px}.villa-compare-bar-copy span{font-size:11px}.villa-compare-open{min-height:40px;padding:0 12px;font-size:12px}.villa-compare-clear{width:35px;height:35px}}
 </style>
 <aside class="villa-compare-bar" data-villa-compare-bar data-compare-url="<?= e($comparePageUrl) ?>" hidden aria-live="polite">
- <div class="villa-compare-bar-copy"><strong><span data-compare-count>0</span> villa seçildi</strong><span data-compare-hint>Karşılaştırmak için en az 2 villa seçin. En fazla 4 villa ekleyebilirsiniz.</span></div>
- <div class="villa-compare-bar-actions"><button class="villa-compare-clear" type="button" data-compare-clear aria-label="Karşılaştırma listesini temizle" title="Temizle">×</button><a class="villa-compare-open" data-compare-open href="<?= e($comparePageUrl) ?>" aria-disabled="true">Karşılaştır</a></div>
+ <div class="villa-compare-bar-copy"><strong><span data-compare-count>0</span> <?= e(villa_ui('villa seçildi')) ?></strong><span data-compare-hint><?= e(villa_ui('Karşılaştırmak için en az 2 villa seçin. En fazla 4 villa ekleyebilirsiniz.')) ?></span></div>
+ <div class="villa-compare-bar-actions"><button class="villa-compare-clear" type="button" data-compare-clear aria-label="<?= e(villa_ui('Karşılaştırma listesini temizle')) ?>" title="<?= e(villa_ui('Temizle')) ?>">×</button><a class="villa-compare-open" data-compare-open href="<?= e($comparePageUrl) ?>" aria-disabled="true"><?= e(villa_ui('Karşılaştır')) ?></a></div>
 </aside>
 <script>
 (function(){
@@ -23,21 +23,21 @@ $comparePageUrl = app_url('/karsilastir');
  function read(){try{var v=JSON.parse(localStorage.getItem(key)||'[]');return Array.isArray(v)?v.filter(function(x){return x&&Number(x.id)>0}).slice(0,4):[]}catch(e){return []}}
  function write(items){try{localStorage.setItem(key,JSON.stringify(items))}catch(e){}}
  function url(items){return (bar?bar.dataset.compareUrl:'/karsilastir')+(items.length?'?ids='+items.map(function(x){return Number(x.id)}).join(','):'')}
- function sync(){var items=read(),ids=items.map(function(x){return String(x.id)});document.querySelectorAll('[data-compare-property]').forEach(function(button){var active=ids.indexOf(String(button.dataset.propertyId))!==-1;button.classList.toggle('is-active',active);button.setAttribute('aria-pressed',active?'true':'false');if(button.classList.contains('card-compare-button'))button.title=active?'Karşılaştırmadan çıkar':'Karşılaştırmaya ekle';else button.textContent=active?'✓ Karşılaştırmada':'⇄ Karşılaştırmaya ekle'});if(bar){bar.hidden=items.length===0;count.textContent=String(items.length);hint.textContent=items.length<2?'Karşılaştırmak için en az 2 villa seçin. En fazla 4 villa ekleyebilirsiniz.':'Villaları yan yana incelemeye hazırsınız.';open.href=url(items);open.setAttribute('aria-disabled',items.length>=2?'false':'true')}}
+ function sync(){var items=read(),ids=items.map(function(x){return String(x.id)});document.querySelectorAll('[data-compare-property]').forEach(function(button){var active=ids.indexOf(String(button.dataset.propertyId))!==-1;button.classList.toggle('is-active',active);button.setAttribute('aria-pressed',active?'true':'false');if(button.classList.contains('card-compare-button'))button.title=active?'Karşılaştırmadan çıkar':<?= json_encode(villa_ui('Karşılaştırmaya ekle'),JSON_HEX_TAG|JSON_HEX_AMP|JSON_HEX_APOS|JSON_HEX_QUOT) ?>;else button.textContent=active?'✓ Karşılaştırmada':<?= json_encode(villa_ui('⇄ Karşılaştırmaya ekle'),JSON_HEX_TAG|JSON_HEX_AMP|JSON_HEX_APOS|JSON_HEX_QUOT) ?>});if(bar){bar.hidden=items.length===0;count.textContent=String(items.length);hint.textContent=items.length<2?'Karşılaştırmak için en az 2 villa seçin. En fazla 4 villa ekleyebilirsiniz.':<?= json_encode(villa_ui('Villaları yan yana incelemeye hazırsınız.'),JSON_HEX_TAG|JSON_HEX_AMP|JSON_HEX_APOS|JSON_HEX_QUOT) ?>;open.href=url(items);open.setAttribute('aria-disabled',items.length>=2?'false':'true')}}
  function toast(message){var el=document.querySelector('.villa-compare-toast');if(!el){el=document.createElement('div');el.className='villa-compare-toast';el.setAttribute('role','status');document.body.appendChild(el)}el.textContent=message;el.hidden=false;clearTimeout(el._timer);el._timer=setTimeout(function(){el.hidden=true},2200)}
  document.addEventListener('click',function(event){
   var button=event.target.closest('[data-compare-property]');
   if(button){event.preventDefault();var items=read(),id=Number(button.dataset.propertyId),index=items.findIndex(function(x){return Number(x.id)===id});
-   if(index>=0){items.splice(index,1);write(items);sync();toast('Villa karşılaştırma listenizden çıkarıldı.');return}
-   if(items.length>=4){toast('En fazla 4 villa karşılaştırabilirsiniz.');return}
+   if(index>=0){items.splice(index,1);write(items);sync();toast(<?= json_encode(villa_ui('Villa karşılaştırma listenizden çıkarıldı.'),JSON_HEX_TAG|JSON_HEX_AMP|JSON_HEX_APOS|JSON_HEX_QUOT) ?>);return}
+   if(items.length>=4){toast(<?= json_encode(villa_ui('En fazla 4 villa karşılaştırabilirsiniz.'),JSON_HEX_TAG|JSON_HEX_AMP|JSON_HEX_APOS|JSON_HEX_QUOT) ?>);return}
    items.push({id:id,title:button.dataset.propertyTitle||'',url:button.dataset.propertyUrl||'',image:button.dataset.propertyImage||'',price:button.dataset.propertyPrice||'',currency:button.dataset.propertyCurrency||'TRY',location:button.dataset.propertyLocation||'',guests:button.dataset.propertyGuests||''});
-   write(items);sync();toast('Villa karşılaştırma listenize eklendi.');return;
+   write(items);sync();toast(<?= json_encode(villa_ui('Villa karşılaştırma listenize eklendi.'),JSON_HEX_TAG|JSON_HEX_AMP|JSON_HEX_APOS|JSON_HEX_QUOT) ?>);return;
   }
-  if(event.target.closest('[data-compare-clear]')){write([]);sync();if(bar&&window.location.pathname===new URL(bar.dataset.compareUrl,window.location.origin).pathname){window.location.href=url([]);return}toast('Karşılaştırma listeniz temizlendi.');}
+  if(event.target.closest('[data-compare-clear]')){write([]);sync();if(bar&&window.location.pathname===new URL(bar.dataset.compareUrl,window.location.origin).pathname){window.location.href=url([]);return}toast(<?= json_encode(villa_ui('Karşılaştırma listeniz temizlendi.'),JSON_HEX_TAG|JSON_HEX_AMP|JSON_HEX_APOS|JSON_HEX_QUOT) ?>);}
   var remove=event.target.closest('[data-compare-remove-id]');
   if(remove){var rid=Number(remove.dataset.compareRemoveId),next=read().filter(function(x){return Number(x.id)!==rid});write(next);window.location.href=url(next)}
  });
- if(open)open.addEventListener('click',function(event){if(read().length<2){event.preventDefault();toast('Karşılaştırmak için en az 2 villa seçin.')}});
+ if(open)open.addEventListener('click',function(event){if(read().length<2){event.preventDefault();toast(<?= json_encode(villa_ui('Karşılaştırmak için en az 2 villa seçin.'),JSON_HEX_TAG|JSON_HEX_AMP|JSON_HEX_APOS|JSON_HEX_QUOT) ?>)}});
  window.addEventListener('storage',sync);sync();
 })();
 </script>

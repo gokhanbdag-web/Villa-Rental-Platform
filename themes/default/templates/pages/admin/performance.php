@@ -1,10 +1,10 @@
 <?php declare(strict_types=1); ?>
 <!doctype html>
-<html lang="tr">
+<html lang="<?= e(\App\Core\Translator::locale()) ?>">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Sistem tanılama</title>
+<title><?= e(villa_ui('Sistem tanılama')) ?></title>
 <style>
 *{box-sizing:border-box}
 body{margin:0;background:#f3f6f4;color:#20332c;font-family:Inter,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
@@ -57,33 +57,33 @@ pre{white-space:pre-wrap;overflow-wrap:anywhere;max-height:240px;overflow:auto;b
 <body>
 <main class="wrap">
   <div class="head">
-    <div><h1>Sistem tanılama</h1><div class="sub">Yavaş istekleri ve SQL sorgularını okunabilir şekilde inceleyin. Kayıtlar sunucudaki son günlük satırlarından alınır.</div></div>
-    <div class="actions"><button class="btn" type="button" id="refresh">Yenile</button><a class="btn" href="<?= e(app_url('/admin')) ?>">Yönetim paneline dön</a></div>
+    <div><h1><?= e(villa_ui('Sistem tanılama')) ?></h1><div class="sub"><?= e(villa_ui('Yavaş istekleri ve SQL sorgularını okunabilir şekilde inceleyin. Kayıtlar sunucudaki son günlük satırlarından alınır.')) ?></div></div>
+    <div class="actions"><button class="btn" type="button" id="refresh"><?= e(villa_ui('Yenile')) ?></button><a class="btn" href="<?= e(app_url('/admin')) ?>"><?= e(villa_ui('Yönetim paneline dön')) ?></a></div>
   </div>
-  <section class="cards" aria-label="Tanılama özeti">
-    <article class="card"><div class="label">Yavaş istek kaydı</div><div class="value" id="requestCount">—</div><div class="hint">Son günlük kayıtları</div></article>
-    <article class="card"><div class="label">Yavaş SQL kaydı</div><div class="value" id="sqlCount">—</div><div class="hint">Son günlük kayıtları</div></article>
-    <article class="card"><div class="label">En uzun istek</div><div class="value" id="maxRequest">—</div><div class="hint">İstek süresi</div></article>
-    <article class="card"><div class="label">En uzun SQL</div><div class="value" id="maxSql">—</div><div class="hint">Sorgu süresi</div></article>
+  <section class="cards" aria-label="<?= e(villa_ui('Tanılama özeti')) ?>">
+    <article class="card"><div class="label"><?= e(villa_ui('Yavaş istek kaydı')) ?></div><div class="value" id="requestCount">—</div><div class="hint"><?= e(villa_ui('Son günlük kayıtları')) ?></div></article>
+    <article class="card"><div class="label"><?= e(villa_ui('Yavaş SQL kaydı')) ?></div><div class="value" id="sqlCount">—</div><div class="hint"><?= e(villa_ui('Son günlük kayıtları')) ?></div></article>
+    <article class="card"><div class="label"><?= e(villa_ui('En uzun istek')) ?></div><div class="value" id="maxRequest">—</div><div class="hint"><?= e(villa_ui('İstek süresi')) ?></div></article>
+    <article class="card"><div class="label"><?= e(villa_ui('En uzun SQL')) ?></div><div class="value" id="maxSql">—</div><div class="hint"><?= e(villa_ui('Sorgu süresi')) ?></div></article>
   </section>
-  <div class="note" id="diagnosticNote">Tanılama kayıtları yükleniyor…</div>
+  <div class="note" id="diagnosticNote"><?= e(villa_ui('Tanılama kayıtları yükleniyor…')) ?></div>
   <section class="panel" aria-labelledby="cleanupTitle">
-    <div class="panel-head"><div><h2 id="cleanupTitle">Eski kayıtları temizle</h2><p>Yalnızca performans günlükleri etkilenir; rezervasyonlar ve site verileri silinmez.</p></div><span class="pill" id="logStorageCount">— kayıt</span></div>
+    <div class="panel-head"><div><h2 id="cleanupTitle"><?= e(villa_ui('Eski kayıtları temizle')) ?></h2><p><?= e(villa_ui('Yalnızca performans günlükleri etkilenir; rezervasyonlar ve site verileri silinmez.')) ?></p></div><span class="pill" id="logStorageCount"><?= e(villa_ui('— kayıt')) ?></span></div>
     <div class="cleanup-grid">
-      <div class="field"><label for="cleanupScope">Temizlenecek kayıt türü</label><select id="cleanupScope"><option value="performance">Yavaş HTTP istekleri</option><option value="slow_sql">Yavaş SQL sorguları</option><option value="all">Tüm tanılama kayıtları</option></select></div>
-      <div class="field"><label for="cleanupKeep">İşlemden sonra saklanacak son kayıt</label><select id="cleanupKeep"><option value="20">Son 20 kaydı sakla</option><option value="50">Son 50 kaydı sakla</option><option value="100">Son 100 kaydı sakla</option><option value="0">Tümünü sil</option></select></div>
-      <button class="btn primary" type="button" id="cleanupButton">Eski kayıtları temizle</button>
+      <div class="field"><label for="cleanupScope"><?= e(villa_ui('Temizlenecek kayıt türü')) ?></label><select id="cleanupScope"><option value="performance"><?= e(villa_ui('Yavaş HTTP istekleri')) ?></option><option value="slow_sql"><?= e(villa_ui('Yavaş SQL sorguları')) ?></option><option value="all"><?= e(villa_ui('Tüm tanılama kayıtları')) ?></option></select></div>
+      <div class="field"><label for="cleanupKeep"><?= e(villa_ui('İşlemden sonra saklanacak son kayıt')) ?></label><select id="cleanupKeep"><option value="20"><?= e(villa_ui('Son 20 kaydı sakla')) ?></option><option value="50"><?= e(villa_ui('Son 50 kaydı sakla')) ?></option><option value="100"><?= e(villa_ui('Son 100 kaydı sakla')) ?></option><option value="0"><?= e(villa_ui('Tümünü sil')) ?></option></select></div>
+      <button class="btn primary" type="button" id="cleanupButton"><?= e(villa_ui('Eski kayıtları temizle')) ?></button>
     </div>
-    <div class="cleanup-help">Kayıtlar tarih damgası içermeyen eski günlük formatıyla da uyumlu olacak şekilde, en yeni satırlar korunarak temizlenir. İşlem geri alınamaz.</div>
+    <div class="cleanup-help"><?= e(villa_ui('Kayıtlar tarih damgası içermeyen eski günlük formatıyla da uyumlu olacak şekilde, en yeni satırlar korunarak temizlenir. İşlem geri alınamaz.')) ?></div>
     <div class="cleanup-result" id="cleanupResult" role="status" aria-live="polite"></div>
   </section>
   <section class="panel">
-    <div class="panel-head"><div><h2>Yavaş HTTP istekleri</h2><p>İstek yolu, süre, HTTP durumu, bellek ve son ölçülen aşama</p></div><input class="filter" id="requestFilter" type="search" placeholder="İstek yolu veya aşama ara…"></div>
-    <div class="table-wrap" id="requestTable"><div class="loading">Kayıtlar yükleniyor…</div></div>
+    <div class="panel-head"><div><h2><?= e(villa_ui('Yavaş HTTP istekleri')) ?></h2><p><?= e(villa_ui('İstek yolu, süre, HTTP durumu, bellek ve son ölçülen aşama')) ?></p></div><input class="filter" id="requestFilter" type="search" placeholder="<?= e(villa_ui('İstek yolu veya aşama ara…')) ?>"></div>
+    <div class="table-wrap" id="requestTable"><div class="loading"><?= e(villa_ui('Kayıtlar yükleniyor…')) ?></div></div>
   </section>
   <section class="panel">
-    <div class="panel-head"><div><h2>Yavaş SQL sorguları</h2><p>Veritabanı sorgu performansı kayıtları</p></div><input class="filter" id="sqlFilter" type="search" placeholder="Sorgu veya tablo ara…"></div>
-    <div class="table-wrap" id="sqlTable"><div class="loading">Kayıtlar yükleniyor…</div></div>
+    <div class="panel-head"><div><h2><?= e(villa_ui('Yavaş SQL sorguları')) ?></h2><p><?= e(villa_ui('Veritabanı sorgu performansı kayıtları')) ?></p></div><input class="filter" id="sqlFilter" type="search" placeholder="Sorgu veya tablo ara…"></div>
+    <div class="table-wrap" id="sqlTable"><div class="loading"><?= e(villa_ui('Kayıtlar yükleniyor…')) ?></div></div>
   </section>
   <div class="sub" id="updatedAt"></div>
 </main>
@@ -143,10 +143,10 @@ pre{white-space:pre-wrap;overflow-wrap:anywhere;max-height:240px;overflow:auto;b
       const data=await response.json();
       requests=parseRows(data.performance); sqlRows=parseRows(data.slow_sql);
       const counts=data.log_counts||{};
-      $('logStorageCount').textContent=(Number(counts.performance||0)+Number(counts.slow_sql||0)).toLocaleString('tr-TR')+' kayıt';
+      $('logStorageCount').textContent=(Number(counts.performance||0)+Number(counts.slow_sql||0)).toLocaleString(document.documentElement.lang || 'en')+' kayıt';
       $('diagnosticNote').textContent=data.note||'Performans kayıtları başarıyla yüklendi.';
       render();
-      $('updatedAt').textContent='Son güncelleme: '+new Date().toLocaleString('tr-TR');
+      $('updatedAt').textContent='Son güncelleme: '+new Date().toLocaleString(document.documentElement.lang || 'en');
     } catch(error) {
       $('diagnosticNote').textContent='Tanılama verileri alınamadı: '+error.message;
       $('requestTable').innerHTML='<div class="empty">Veriler yüklenemedi.</div>';
@@ -166,7 +166,7 @@ pre{white-space:pre-wrap;overflow-wrap:anywhere;max-height:240px;overflow:auto;b
       const result=await response.json();
       if(!response.ok||!result.success)throw new Error(result.error||'Temizleme işlemi başarısız oldu.');
       const removed=Object.values(result.results||{}).reduce((sum,item)=>sum+Number(item.removed||0),0);
-      $('cleanupResult').textContent=removed.toLocaleString('tr-TR')+' eski kayıt silindi. Kalan kayıtlar: '+Object.values(result.results||{}).reduce((sum,item)=>sum+Number(item.remaining||0),0).toLocaleString('tr-TR')+'.';
+      $('cleanupResult').textContent=removed.toLocaleString(document.documentElement.lang || 'en')+' eski kayıt silindi. Kalan kayıtlar: '+Object.values(result.results||{}).reduce((sum,item)=>sum+Number(item.remaining||0),0).toLocaleString(document.documentElement.lang || 'en')+'.';
       await load();
     }catch(error){$('cleanupResult').textContent='Temizleme hatası: '+error.message;}
     finally{button.disabled=false;button.textContent='Eski kayıtları temizle';}

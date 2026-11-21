@@ -56,6 +56,10 @@ try {
     $configuredLocale = (string)($stmt->fetchColumn() ?: $defaultLocale);
     $locale = in_array($configuredLocale, $activeLocales, true) ? $configuredLocale : $defaultLocale;
 
+    // Legacy Turkish sessions predate the English-default upgrade. A fresh selection persists normally.
+    if ($configuredLocale === 'en' && ($_SESSION['villa_locale'] ?? '') === 'tr' && empty($_SESSION['villa_language_preference_version'])) {
+        unset($_SESSION['villa_locale']);
+    }
     $sessionLocale = trim((string)($_SESSION['villa_locale'] ?? ''));
     if ($sessionLocale !== '' && in_array($sessionLocale, $activeLocales, true)) {
         $locale = $sessionLocale;

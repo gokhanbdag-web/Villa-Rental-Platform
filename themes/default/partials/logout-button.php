@@ -5,6 +5,6 @@ if ($logoutUser):
 ?>
 <form class="villa-account-logout" method="post" action="<?= e(app_url('/logout')) ?>">
 <input type="hidden" name="_csrf" value="<?= e(csrf_token()) ?>">
-<button type="submit" class="villa-logout-button">Çıkış Yap</button>
+<button type="submit" class="villa-logout-button"><?= e(villa_ui('Çıkış Yap')) ?></button>
 </form>
 <?php endif; ?>
