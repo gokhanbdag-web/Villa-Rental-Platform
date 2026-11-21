@@ -1,5 +1,5 @@
 <?php declare(strict_types=1); ?>
-<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>My favorites</title>
+<!doctype html><html lang="<?= e(\App\Core\Translator::locale()) ?>"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>My favorites</title>
 <style>
 .favorites-page{max-width:1120px;margin:26px auto 60px;padding:0 18px}
 .favorites-heading{display:flex;justify-content:space-between;align-items:end;gap:16px;margin-bottom:22px}
@@ -27,8 +27,8 @@
 <article class="favorite-card">
 <a href="<?= e(app_url('/villa/'.rawurlencode((string)$p['slug']))) ?>" aria-label="<?= e($p['title']) ?>"><?php if($imageUrl!==''): ?><img class="favorite-card-image" src="<?= e($imageUrl) ?>" alt="<?= e($p['title']) ?>" loading="lazy"><?php else: ?><div class="favorite-card-image"></div><?php endif; ?></a>
 <div class="favorite-card-body"><a class="favorite-card-title" href="<?= e(app_url('/villa/'.rawurlencode((string)$p['slug']))) ?>"><?= e($p['title']) ?></a>
-<p class="favorite-card-meta"><?= e(trim((string)($p['district']??'').', '.(string)($p['city']??''),', ')) ?> · <?= (int)$p['max_guests'] ?> misafir</p>
-<div class="favorite-card-price"><?= e(number_format((float)$p['base_nightly_price'],0,',','.')) ?> <?= e($p['currency']) ?> / gece</div>
+<p class="favorite-card-meta"><?= e(trim((string)($p['district']??'').', '.(string)($p['city']??''),', ')) ?> · <?= (int)$p['max_guests'] ?> <?= e(villa_ui('misafir')) ?></p>
+<div class="favorite-card-price"><?= e(number_format((float)$p['base_nightly_price'],0,',','.')) ?> <?= e($p['currency']) ?> <?= e(villa_ui('/ gece')) ?></div>
 <div class="favorite-card-actions"><a href="<?= e(app_url('/villa/'.rawurlencode((string)$p['slug']))) ?>">View property</a>
 <form method="post" action="<?= e(app_url('/favorites/toggle')) ?>" class="favorite-remove-form"><?= csrf_field() ?><input type="hidden" name="property_id" value="<?= (int)$p['id'] ?>"><input type="hidden" name="return_to" value="<?= e(app_url('/favorites')) ?>"><button class="favorite-remove" type="submit">♥ Remove from favorites</button></form></div></div></article>
 <?php endforeach; ?></div><?php else: ?><div class="favorites-empty"><strong>No favorite properties yet</strong><p>Tap the heart on a property to save it here.</p><a href="<?= e(app_url('/konaklamalar')) ?>">Explore properties</a></div><?php endif; ?>

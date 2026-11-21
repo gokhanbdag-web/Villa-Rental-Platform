@@ -6,7 +6,7 @@ $navigation = is_array($navigation ?? null) ? $navigation : [];
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Ödeme ve rezervasyon · <?= e($booking['booking_code']) ?></title>
+<title><?= e(villa_ui('Ödeme ve rezervasyon ·')) ?> <?= e($booking['booking_code']) ?></title>
 <style>
 .checkout-page{background:var(--villa-background,#f7f8f6);color:var(--villa-text,#20332c);min-height:65vh;padding:clamp(28px,5vw,64px) 0 72px}
 .checkout-container{width:min(1160px,calc(100% - 40px));margin:0 auto}
@@ -74,38 +74,38 @@ $navigation = is_array($navigation ?? null) ? $navigation : [];
 <?php \App\Core\ThemeManager::renderPartial('partials/header.php', get_defined_vars()); ?>
 <main class="checkout-page">
 <div class="checkout-container">
-<nav class="checkout-breadcrumb" aria-label="Sayfa konumu"><a href="<?= e(app_url('/')) ?>">Ana sayfa</a><span>›</span><span>Güvenli ödeme</span></nav>
+<nav class="checkout-breadcrumb" aria-label="Sayfa konumu"><a href="<?= e(app_url('/')) ?>"><?= e(villa_ui('Ana sayfa')) ?></a><span>›</span><span><?= e(villa_ui('Güvenli ödeme')) ?></span></nav>
 <header class="checkout-heading">
-<span class="checkout-kicker">Rezervasyonunuz hazır</span>
-<h1>Konaklamanızı tamamlayın</h1>
-<p>Rezervasyon bilgilerinizi kontrol edin ve güvenli ödeme adımını tamamlayın. Ödeme tamamlandığında kullanabileceğiniz ödeme yöntemlerini ve rezervasyon durumunuzu burada görüntüleyebilirsiniz.</p>
+<span class="checkout-kicker"><?= e(villa_ui('Rezervasyonunuz hazır')) ?></span>
+<h1><?= e(villa_ui('Konaklamanızı tamamlayın')) ?></h1>
+<p><?= e(villa_ui('Rezervasyon bilgilerinizi kontrol edin ve güvenli ödeme adımını tamamlayın. Ödeme tamamlandığında kullanabileceğiniz ödeme yöntemlerini ve rezervasyon durumunuzu burada görüntüleyebilirsiniz.')) ?></p>
 </header>
 <div class="checkout-layout">
 <section class="checkout-main">
-<div class="checkout-section-title"><span class="checkout-step">1</span><div><h2>Rezervasyon bilgileri</h2></div></div>
-<p class="checkout-description">Ödeme öncesinde konaklama detaylarınızı ve toplam tutarı kontrol edin.</p>
+<div class="checkout-section-title"><span class="checkout-step">1</span><div><h2><?= e(villa_ui('Rezervasyon bilgileri')) ?></h2></div></div>
+<p class="checkout-description"><?= e(villa_ui('Ödeme öncesinde konaklama detaylarınızı ve toplam tutarı kontrol edin.')) ?></p>
 <div class="checkout-booking-grid">
-<div class="checkout-data"><span>Konaklama yeri</span><strong><?= e($booking['property_title']) ?></strong></div>
-<div class="checkout-data"><span>Rezervasyon kodu</span><strong><?= e($booking['booking_code']) ?></strong></div>
-<div class="checkout-data"><span>Giriş tarihi</span><strong><?= e(date('d.m.Y',strtotime($booking['check_in']))) ?></strong></div>
-<div class="checkout-data"><span>Çıkış tarihi</span><strong><?= e(date('d.m.Y',strtotime($booking['check_out']))) ?></strong></div>
-<?php if(!empty($booking['early_checkin_requested'])): ?><div class="checkout-data"><span>Ek hizmet</span><strong>Erken giriş · <?= e(number_format((float)$booking['early_checkin_fee'],2,',','.')) ?> <?= e($booking['currency']) ?></strong></div><?php endif; ?>
-<?php if(!empty($booking['late_checkout_requested'])): ?><div class="checkout-data"><span>Ek hizmet</span><strong>Geç çıkış · <?= e(number_format((float)$booking['late_checkout_fee'],2,',','.')) ?> <?= e($booking['currency']) ?></strong></div><?php endif; ?>
-<div class="checkout-data"><span>Misafir sayısı</span><strong><?= (int)$booking['guests'] ?> kişi</strong></div>
-<div class="checkout-data"><span>Rezervasyon durumu</span><strong><?= e($booking['status']==='pending'?'Ödeme bekleniyor':$booking['status']) ?></strong></div>
-<div class="checkout-total"><span>Ödenecek toplam</span><strong><?= e(number_format((float)$booking['total'],2,',','.')) ?> <?= e($booking['currency']) ?></strong></div>
+<div class="checkout-data"><span><?= e(villa_ui('Konaklama yeri')) ?></span><strong><?= e($booking['property_title']) ?></strong></div>
+<div class="checkout-data"><span><?= e(villa_ui('Rezervasyon kodu')) ?></span><strong><?= e($booking['booking_code']) ?></strong></div>
+<div class="checkout-data"><span><?= e(villa_ui('Giriş tarihi')) ?></span><strong><?= e(date('d.m.Y',strtotime($booking['check_in']))) ?></strong></div>
+<div class="checkout-data"><span><?= e(villa_ui('Çıkış tarihi')) ?></span><strong><?= e(date('d.m.Y',strtotime($booking['check_out']))) ?></strong></div>
+<?php if(!empty($booking['early_checkin_requested'])): ?><div class="checkout-data"><span><?= e(villa_ui('Ek hizmet')) ?></span><strong><?= e(villa_ui('Erken giriş ·')) ?> <?= e(number_format((float)$booking['early_checkin_fee'],2,',','.')) ?> <?= e($booking['currency']) ?></strong></div><?php endif; ?>
+<?php if(!empty($booking['late_checkout_requested'])): ?><div class="checkout-data"><span><?= e(villa_ui('Ek hizmet')) ?></span><strong><?= e(villa_ui('Geç çıkış ·')) ?> <?= e(number_format((float)$booking['late_checkout_fee'],2,',','.')) ?> <?= e($booking['currency']) ?></strong></div><?php endif; ?>
+<div class="checkout-data"><span><?= e(villa_ui('Misafir sayısı')) ?></span><strong><?= (int)$booking['guests'] ?> <?= e(villa_ui('kişi')) ?></strong></div>
+<div class="checkout-data"><span><?= e(villa_ui('Rezervasyon durumu')) ?></span><strong><?= e($booking['status']==='pending'?villa_ui('Ödeme bekleniyor'):$booking['status']) ?></strong></div>
+<div class="checkout-total"><span><?= e(villa_ui('Ödenecek toplam')) ?></span><strong><?= e(number_format((float)$booking['total'],2,',','.')) ?> <?= e($booking['currency']) ?></strong></div>
 </div>
 <?php if(($paymentStatus??'')==='paid'||$booking['status']==='confirmed'): ?>
-<div class="checkout-notice success"><span class="checkout-notice-icon">✓</span><div><strong>Ödemeniz doğrulandı</strong>Rezervasyonunuz onaylandı. Rezervasyon kodunuz: <?= e($booking['booking_code']) ?></div></div>
+<div class="checkout-notice success"><span class="checkout-notice-icon">✓</span><div><strong><?= e(villa_ui('Ödemeniz doğrulandı')) ?></strong><?= e(villa_ui('Rezervasyonunuz onaylandı. Rezervasyon kodunuz:')) ?> <?= e($booking['booking_code']) ?></div></div>
 <?php elseif(($paymentStatus??'')==='review'): ?>
-<div class="checkout-notice"><span class="checkout-notice-icon">◷</span><div><strong>Ödeme güvenlik incelemesinde</strong>Ödeme sonucu alındı ve rezervasyon durumu kontrol ediliyor. Gerekli durumlarda yönetici incelemesi tamamlanmadan rezervasyon onaylanmaz.</div></div>
+<div class="checkout-notice"><span class="checkout-notice-icon">◷</span><div><strong><?= e(villa_ui('Ödeme güvenlik incelemesinde')) ?></strong><?= e(villa_ui('Ödeme sonucu alındı ve rezervasyon durumu kontrol ediliyor. Gerekli durumlarda yönetici incelemesi tamamlanmadan rezervasyon onaylanmaz.')) ?></div></div>
 <?php elseif(in_array(($paymentStatus??''),['failed','verify_error','init_error'],true)): ?>
-<div class="checkout-notice error"><span class="checkout-notice-icon">!</span><div><strong>Ödeme formu başlatılamadı</strong>Rezervasyonunuz beklemede kaldı. Lütfen tekrar deneyin.<?php if(!empty($iyzicoInitializationError)): ?><small style="display:block;margin-top:8px">Teknik açıklama: <?= e($iyzicoInitializationError) ?></small><?php endif; ?></div></div>
+<div class="checkout-notice error"><span class="checkout-notice-icon">!</span><div><strong><?= e(villa_ui('Ödeme formu başlatılamadı')) ?></strong><?= e(villa_ui('Rezervasyonunuz beklemede kaldı. Lütfen tekrar deneyin.')) ?><?php if(!empty($iyzicoInitializationError)): ?><small style="display:block;margin-top:8px"><?= e(villa_ui('Teknik açıklama:')) ?> <?= e($iyzicoInitializationError) ?></small><?php endif; ?></div></div>
 <?php endif; ?>
 <?php if(!empty($paytrIframeUrl)): ?>
 <section class="checkout-payment">
-<div class="checkout-section-title"><span class="checkout-step">2</span><div><h2>PayTR güvenli ödeme</h2></div></div>
-<p class="checkout-payment-copy">Kart bilgilerinizi PayTR'nin güvenli ödeme alanına girin. Kart bilgileriniz VillaCMS sunucusuna kaydedilmez.</p>
+<div class="checkout-section-title"><span class="checkout-step">2</span><div><h2><?= e(villa_ui('PayTR güvenli ödeme')) ?></h2></div></div>
+<p class="checkout-payment-copy"><?= e(villa_ui('Kart bilgilerinizi PayTR\'nin güvenli ödeme alanına girin. Kart bilgileriniz VillaCMS sunucusuna kaydedilmez.')) ?></p>
 <div style="width:100%;min-height:650px;overflow:hidden;border:1px solid var(--villa-border);border-radius:14px;background:#fff">
 <iframe src="<?= e($paytrIframeUrl) ?>" id="paytr-iframe" frameborder="0" scrolling="no" style="width:100%;min-height:650px;border:0" title="PayTR güvenli ödeme formu" allow="payment *"></iframe>
 </div>
@@ -114,78 +114,78 @@ $navigation = is_array($navigation ?? null) ? $navigation : [];
 </section>
 <?php elseif(!empty($paytrPaymentAvailable)&&$booking['status']==='pending'&&($paymentStatus??'')!=='review'): ?>
 <section class="checkout-payment">
-<div class="checkout-section-title"><span class="checkout-step"><?= !empty($iyzicoPaymentAvailable)?3:2 ?></span><div><h2>PayTR ile güvenli ödeme</h2></div></div>
-<p class="checkout-payment-copy">PayTR'nin barındırılan güvenli ödeme formu açılır. Ödeme sonucu doğrulanmadan rezervasyon onaylanmaz.</p>
+<div class="checkout-section-title"><span class="checkout-step"><?= !empty($iyzicoPaymentAvailable)?3:2 ?></span><div><h2><?= e(villa_ui('PayTR ile güvenli ödeme')) ?></h2></div></div>
+<p class="checkout-payment-copy"><?= e(villa_ui('PayTR\'nin barındırılan güvenli ödeme formu açılır. Ödeme sonucu doğrulanmadan rezervasyon onaylanmaz.')) ?></p>
 <form method="post" action="<?= e(app_url('/checkout/'.rawurlencode((string)$booking['booking_code']).'/paytr/start')) ?>">
 <?= csrf_field() ?>
-<button class="checkout-pay-button" type="submit">PayTR ile ödeme yap</button>
+<button class="checkout-pay-button" type="submit"><?= e(villa_ui('PayTR ile ödeme yap')) ?></button>
 </form>
 </section>
 <?php endif; ?>
 <?php if(!empty($iyzicoPaymentAvailable)&&$booking['status']==='pending'&&($paymentStatus??'')!=='review'): ?>
 <section class="checkout-payment">
-<div class="checkout-section-title"><span class="checkout-step">2</span><div><h2>iyzico ile güvenli ödeme</h2></div></div>
-<p class="checkout-payment-copy">Devam ettiğinizde iyzico'nun güvenli ödeme sayfasına yönlendirileceksiniz. Kart bilgileriniz Villa CMS sunucusuna aktarılmaz.</p>
+<div class="checkout-section-title"><span class="checkout-step">2</span><div><h2><?= e(villa_ui('iyzico ile güvenli ödeme')) ?></h2></div></div>
+<p class="checkout-payment-copy"><?= e(villa_ui('Devam ettiğinizde iyzico\'nun güvenli ödeme sayfasına yönlendirileceksiniz. Kart bilgileriniz Villa CMS sunucusuna aktarılmaz.')) ?></p>
 <form method="post" action="<?= e(app_url('/checkout/'.rawurlencode((string)$booking['booking_code']).'/iyzico/start')) ?>">
 <?= csrf_field() ?>
 <div class="checkout-fields">
-<label class="checkout-field">T.C. kimlik numarası<input name="identity_number" inputmode="numeric" autocomplete="off" pattern="[0-9]{11}" minlength="11" maxlength="11" required placeholder="11 haneli numara" value="<?= e((string)($iyzicoAutoStartData['identity_number']??'')) ?>"></label>
-<label class="checkout-field">Şehir<input name="billing_city" autocomplete="address-level2" maxlength="100" required placeholder="Örn. Antalya" value="<?= e((string)($iyzicoAutoStartData['billing_city']??'')) ?>"></label>
-<label class="checkout-field full">Fatura adresi<input name="billing_address" autocomplete="street-address" maxlength="500" required placeholder="Mahalle, cadde, sokak ve kapı numarası" value="<?= e((string)($iyzicoAutoStartData['billing_address']??'')) ?>"></label>
+<label class="checkout-field"><?= e(villa_ui('T.C. kimlik numarası')) ?><input name="identity_number" inputmode="numeric" autocomplete="off" pattern="[0-9]{11}" minlength="11" maxlength="11" required placeholder="11 haneli numara" value="<?= e((string)($iyzicoAutoStartData['identity_number']??'')) ?>"></label>
+<label class="checkout-field"><?= e(villa_ui('Şehir')) ?><input name="billing_city" autocomplete="address-level2" maxlength="100" required placeholder="<?= e(villa_ui('Örn. Antalya')) ?>" value="<?= e((string)($iyzicoAutoStartData['billing_city']??'')) ?>"></label>
+<label class="checkout-field full"><?= e(villa_ui('Fatura adresi')) ?><input name="billing_address" autocomplete="street-address" maxlength="500" required placeholder="<?= e(villa_ui('Mahalle, cadde, sokak ve kapı numarası')) ?>" value="<?= e((string)($iyzicoAutoStartData['billing_address']??'')) ?>"></label>
 </div>
-<p class="checkout-summary-location">Fatura bilgileriniz iyzico'ya aktarılır. Kart numarası ve güvenlik kodu uygulamamızın sunucusundan geçmez.</p>
-<button class="checkout-pay-button" type="submit">iyzico güvenli ödeme sayfasına git</button>
+<p class="checkout-summary-location"><?= e(villa_ui('Fatura bilgileriniz iyzico\'ya aktarılır. Kart numarası ve güvenlik kodu uygulamamızın sunucusundan geçmez.')) ?></p>
+<button class="checkout-pay-button" type="submit"><?= e(villa_ui('iyzico güvenli ödeme sayfasına git')) ?></button>
 </form>
 </section>
 <?php else: ?>
-<div class="checkout-notice"><span class="checkout-notice-icon">i</span><div><strong>Ödeme bilgisi</strong><?php if(!empty($manualPaymentAvailable)): ?>Kartla ödeme şu anda kullanılamıyor. Banka havalesi / EFT seçeneğini aşağıda kullanabilirsiniz.<?php else: ?>Ödeme yöntemi şu anda etkin değil veya rezervasyonunuzun ödeme durumu güncelleniyor.<?php endif; ?></div></div>
+<div class="checkout-notice"><span class="checkout-notice-icon">i</span><div><strong><?= e(villa_ui('Ödeme bilgisi')) ?></strong><?php if(!empty($manualPaymentAvailable)): ?><?= e(villa_ui('Kartla ödeme şu anda kullanılamıyor. Banka havalesi / EFT seçeneğini aşağıda kullanabilirsiniz.')) ?><?php else: ?><?= e(villa_ui('Ödeme yöntemi şu anda etkin değil veya rezervasyonunuzun ödeme durumu güncelleniyor.')) ?><?php endif; ?></div></div>
 <?php endif; ?>
 <?php if(!empty($manualPaymentAvailable)&&$booking['status']==='pending'&&($manualReportStatus??'')!=='approved'): ?>
 <section class="checkout-payment">
-<div class="checkout-section-title"><span class="checkout-step"><?= !empty($iyzicoPaymentAvailable)?3:2 ?></span><div><h2>Banka havalesi / EFT</h2></div></div>
-<p class="checkout-payment-copy">Aşağıdaki hesaba rezervasyon tutarını gönderin. Açıklama alanında rezervasyon kodunuzu kullanın. Ödeme, banka hareketi yönetici tarafından doğrulandıktan sonra onaylanır.</p>
+<div class="checkout-section-title"><span class="checkout-step"><?= !empty($iyzicoPaymentAvailable)?3:2 ?></span><div><h2><?= e(villa_ui('Banka havalesi / EFT')) ?></h2></div></div>
+<p class="checkout-payment-copy"><?= e(villa_ui('Aşağıdaki hesaba rezervasyon tutarını gönderin. Açıklama alanında rezervasyon kodunuzu kullanın. Ödeme, banka hareketi yönetici tarafından doğrulandıktan sonra onaylanır.')) ?></p>
 <div class="checkout-booking-grid">
-<div class="checkout-data"><span>Banka</span><strong><?= e($manualBankDetails['bank_name']??'') ?></strong></div>
-<div class="checkout-data"><span>Hesap sahibi</span><strong><?= e($manualBankDetails['account_holder']??'') ?></strong></div>
+<div class="checkout-data"><span><?= e(villa_ui('Banka')) ?></span><strong><?= e($manualBankDetails['bank_name']??'') ?></strong></div>
+<div class="checkout-data"><span><?= e(villa_ui('Hesap sahibi')) ?></span><strong><?= e($manualBankDetails['account_holder']??'') ?></strong></div>
 <div class="checkout-data" style="grid-column:1/-1"><span>IBAN</span><strong><?= e($manualBankDetails['iban']??'') ?></strong></div>
-<div class="checkout-data"><span>Transfer açıklaması</span><strong><?= e(($manualBankDetails['reference_prefix']??'VILLA').'-'.$booking['booking_code']) ?></strong></div>
-<div class="checkout-data"><span>Gönderilecek tutar</span><strong><?= e(number_format((float)$booking['total'],2,',','.')) ?> <?= e($booking['currency']) ?></strong></div>
-<?php if(!empty($manualBankDetails['instructions'])): ?><div class="checkout-data" style="grid-column:1/-1"><span>Ödeme talimatı</span><strong><?= nl2br(e($manualBankDetails['instructions'])) ?></strong></div><?php endif; ?>
+<div class="checkout-data"><span><?= e(villa_ui('Transfer açıklaması')) ?></span><strong><?= e(($manualBankDetails['reference_prefix']??'VILLA').'-'.$booking['booking_code']) ?></strong></div>
+<div class="checkout-data"><span><?= e(villa_ui('Gönderilecek tutar')) ?></span><strong><?= e(number_format((float)$booking['total'],2,',','.')) ?> <?= e($booking['currency']) ?></strong></div>
+<?php if(!empty($manualBankDetails['instructions'])): ?><div class="checkout-data" style="grid-column:1/-1"><span><?= e(villa_ui('Ödeme talimatı')) ?></span><strong><?= nl2br(e($manualBankDetails['instructions'])) ?></strong></div><?php endif; ?>
 </div>
 <?php if(($manualReportStatus??'')==='pending'): ?>
-<div class="checkout-notice"><span class="checkout-notice-icon">◷</span><div><strong>Havale bildiriminiz incelemede</strong>Transfer bildiriminiz yöneticiye ulaştı. Banka hareketi doğrulanana kadar rezervasyonunuz beklemede kalır.</div></div>
+<div class="checkout-notice"><span class="checkout-notice-icon">◷</span><div><strong><?= e(villa_ui('Havale bildiriminiz incelemede')) ?></strong><?= e(villa_ui('Transfer bildiriminiz yöneticiye ulaştı. Banka hareketi doğrulanana kadar rezervasyonunuz beklemede kalır.')) ?></div></div>
 <?php else: ?>
-<?php if(($manualReportStatus??'')==='rejected'): ?><div class="checkout-notice error"><span class="checkout-notice-icon">!</span><div><strong>Önceki bildiriminiz onaylanmadı</strong><?= e($latestManualReportRow['review_note']??'Transfer bilgilerinizi kontrol edip yeniden bildirim gönderebilirsiniz.') ?></div></div><?php endif; ?>
+<?php if(($manualReportStatus??'')==='rejected'): ?><div class="checkout-notice error"><span class="checkout-notice-icon">!</span><div><strong><?= e(villa_ui('Önceki bildiriminiz onaylanmadı')) ?></strong><?= e($latestManualReportRow['review_note']??'Transfer bilgilerinizi kontrol edip yeniden bildirim gönderebilirsiniz.') ?></div></div><?php endif; ?>
 <form method="post" action="<?= e(app_url('/checkout/'.rawurlencode((string)$booking['booking_code']).'/manual/notify')) ?>">
 <?= csrf_field() ?>
 <div class="checkout-fields">
-<label class="checkout-field">Gönderen adı soyadı<input name="sender_name" maxlength="190" autocomplete="name" required placeholder="Havale yapan kişi / şirket"></label>
-<label class="checkout-field">Gönderen banka<input name="sender_bank" maxlength="120" placeholder="Banka adı"></label>
-<label class="checkout-field full">Banka işlem / dekont referansı<input name="transfer_reference" maxlength="120" required placeholder="Bankadaki işlem referansı"></label>
-<label class="checkout-field full">Ek açıklama (isteğe bağlı)<input name="note" maxlength="1000" placeholder="Ödeme tarihi veya ek bilgi"></label>
+<label class="checkout-field"><?= e(villa_ui('Gönderen adı soyadı')) ?><input name="sender_name" maxlength="190" autocomplete="name" required placeholder="<?= e(villa_ui('Havale yapan kişi / şirket')) ?>"></label>
+<label class="checkout-field"><?= e(villa_ui('Gönderen banka')) ?><input name="sender_bank" maxlength="120" placeholder="<?= e(villa_ui('Banka adı')) ?>"></label>
+<label class="checkout-field full"><?= e(villa_ui('Banka işlem / dekont referansı')) ?><input name="transfer_reference" maxlength="120" required placeholder="<?= e(villa_ui('Bankadaki işlem referansı')) ?>"></label>
+<label class="checkout-field full"><?= e(villa_ui('Ek açıklama (isteğe bağlı)')) ?><input name="note" maxlength="1000" placeholder="<?= e(villa_ui('Ödeme tarihi veya ek bilgi')) ?>"></label>
 </div>
-<button class="checkout-pay-button" type="submit">Havale yaptım, bildirimi gönder</button>
+<button class="checkout-pay-button" type="submit"><?= e(villa_ui('Havale yaptım, bildirimi gönder')) ?></button>
 </form>
 <?php endif; ?>
 </section>
 <?php endif; ?>
-<div class="checkout-actions"><a class="checkout-action" href="<?= e(app_url('/account/bookings')) ?>">Rezervasyonlarım</a><a class="checkout-action" href="<?= e(app_url('/villa/'.rawurlencode((string)$booking['property_slug']))) ?>">Villaya dön</a></div>
+<div class="checkout-actions"><a class="checkout-action" href="<?= e(app_url('/account/bookings')) ?>"><?= e(villa_ui('Rezervasyonlarım')) ?></a><a class="checkout-action" href="<?= e(app_url('/villa/'.rawurlencode((string)$booking['property_slug']))) ?>"><?= e(villa_ui('Villaya dön')) ?></a></div>
 </section>
 <aside class="checkout-summary">
-<p class="checkout-summary-label">Rezervasyon özeti</p>
+<p class="checkout-summary-label"><?= e(villa_ui('Rezervasyon özeti')) ?></p>
 <h2><?= e($booking['property_title']) ?></h2>
-<p class="checkout-summary-location">Konaklama detaylarınız</p>
-<div class="checkout-summary-code"><span>Rezervasyon kodu</span><strong><?= e($booking['booking_code']) ?></strong></div>
+<p class="checkout-summary-location"><?= e(villa_ui('Konaklama detaylarınız')) ?></p>
+<div class="checkout-summary-code"><span><?= e(villa_ui('Rezervasyon kodu')) ?></span><strong><?= e($booking['booking_code']) ?></strong></div>
 <div class="checkout-summary-details">
-<div class="checkout-summary-detail"><span>Giriş</span><strong><?= e(date('d.m.Y',strtotime($booking['check_in']))) ?></strong></div>
-<div class="checkout-summary-detail"><span>Çıkış</span><strong><?= e(date('d.m.Y',strtotime($booking['check_out']))) ?></strong></div>
-<?php if(!empty($booking['early_checkin_requested'])): ?><div class="checkout-summary-detail"><span>Ek hizmet</span><strong>Erken giriş · <?= e(number_format((float)$booking['early_checkin_fee'],2,',','.')) ?> <?= e($booking['currency']) ?></strong></div><?php endif; ?>
-<?php if(!empty($booking['late_checkout_requested'])): ?><div class="checkout-summary-detail"><span>Ek hizmet</span><strong>Geç çıkış · <?= e(number_format((float)$booking['late_checkout_fee'],2,',','.')) ?> <?= e($booking['currency']) ?></strong></div><?php endif; ?>
-<div class="checkout-summary-detail"><span>Misafir</span><strong><?= (int)$booking['guests'] ?> kişi</strong></div>
-<div class="checkout-summary-detail"><span>Durum</span><strong><?= e($booking['status']==='pending'?'Ödeme bekleniyor':$booking['status']) ?></strong></div>
+<div class="checkout-summary-detail"><span><?= e(villa_ui('Giriş')) ?></span><strong><?= e(date('d.m.Y',strtotime($booking['check_in']))) ?></strong></div>
+<div class="checkout-summary-detail"><span><?= e(villa_ui('Çıkış')) ?></span><strong><?= e(date('d.m.Y',strtotime($booking['check_out']))) ?></strong></div>
+<?php if(!empty($booking['early_checkin_requested'])): ?><div class="checkout-summary-detail"><span><?= e(villa_ui('Ek hizmet')) ?></span><strong><?= e(villa_ui('Erken giriş ·')) ?> <?= e(number_format((float)$booking['early_checkin_fee'],2,',','.')) ?> <?= e($booking['currency']) ?></strong></div><?php endif; ?>
+<?php if(!empty($booking['late_checkout_requested'])): ?><div class="checkout-summary-detail"><span><?= e(villa_ui('Ek hizmet')) ?></span><strong><?= e(villa_ui('Geç çıkış ·')) ?> <?= e(number_format((float)$booking['late_checkout_fee'],2,',','.')) ?> <?= e($booking['currency']) ?></strong></div><?php endif; ?>
+<div class="checkout-summary-detail"><span><?= e(villa_ui('Misafir')) ?></span><strong><?= (int)$booking['guests'] ?> <?= e(villa_ui('kişi')) ?></strong></div>
+<div class="checkout-summary-detail"><span><?= e(villa_ui('Durum')) ?></span><strong><?= e($booking['status']==='pending'?villa_ui('Ödeme bekleniyor'):$booking['status']) ?></strong></div>
 </div>
-<div class="checkout-summary-amount"><span>Toplam tutar</span><strong><?= e(number_format((float)$booking['total'],2,',','.')) ?> <?= e($booking['currency']) ?></strong></div>
-<div class="checkout-secure"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M6 10V7a6 6 0 0 1 12 0v3M5 10h14v11H5z" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/><path d="M12 14v3" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg><span>Ödeme işlemi iyzico'nun güvenli altyapısı üzerinden gerçekleştirilir.</span></div>
+<div class="checkout-summary-amount"><span><?= e(villa_ui('Toplam tutar')) ?></span><strong><?= e(number_format((float)$booking['total'],2,',','.')) ?> <?= e($booking['currency']) ?></strong></div>
+<div class="checkout-secure"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M6 10V7a6 6 0 0 1 12 0v3M5 10h14v11H5z" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/><path d="M12 14v3" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg><span><?= e(villa_ui('Ödeme işlemi iyzico\'nun güvenli altyapısı üzerinden gerçekleştirilir.')) ?></span></div>
 </aside>
 </div>
 </div>
@@ -195,7 +195,7 @@ $navigation = is_array($navigation ?? null) ? $navigation : [];
 <script>
 document.addEventListener('DOMContentLoaded',function(){
  const paymentForm=document.querySelector('.checkout-payment form');
- if(paymentForm){const button=paymentForm.querySelector('button[type="submit"]');if(button){button.disabled=true;button.textContent='iyzico güvenli ödeme sayfasına yönlendiriliyorsunuz…';}paymentForm.submit();}
+ if(paymentForm){const button=paymentForm.querySelector('button[type="submit"]');if(button){button.disabled=true;button.textContent=<?= json_encode(villa_ui('iyzico güvenli ödeme sayfasına yönlendiriliyorsunuz…'),JSON_HEX_TAG|JSON_HEX_AMP|JSON_HEX_APOS|JSON_HEX_QUOT) ?>;}paymentForm.submit();}
 });
 </script>
 <?php endif; ?>

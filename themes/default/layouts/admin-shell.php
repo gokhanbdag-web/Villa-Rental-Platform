@@ -8,7 +8,7 @@ use App\Core\ThemeManager;
 return static function (string $html, string $requestPath, string $platformMode): string {
 
         $user = Auth::user();
-        $username = e((string)($user['username'] ?? 'Yönetici'));
+        $username = e((string)($user['username'] ?? villa_ui('Yönetici')));
         $adminPrimaryColor = e(ThemeManager::designSettings()['primary'] ?? 'var(--villa-admin-primary)');
         $appVersion = trim((string) @file_get_contents(dirname(__DIR__, 3) . '/VERSION'));
         if ($appVersion === '') $appVersion = '—';
@@ -168,12 +168,12 @@ return static function (string $html, string $requestPath, string $platformMode)
 
         $nav = '';
         foreach ($groups as $groupLabel => $groupLinks) {
-            $nav .= '<div class="vr-admin-nav-title">' . e($groupLabel) . '</div>';
+            $nav .= '<div class="vr-admin-nav-title">' . e(villa_ui($groupLabel)) . '</div>';
             foreach ($groupLinks as $url => $label) {
                 $active = ($url === $activeNavUrl);
                 $icon = $icons[$url] ?? '•';
                 $nav .= '<a class="vr-admin-link' . ($active ? ' is-active' : '') . '" href="' . e(app_url($url)) . '" data-admin-link>'
-                    . '<span class="vr-admin-icon" aria-hidden="true">' . e($icon) . '</span><span class="vr-admin-link-label">' . e($label) . '</span></a>';
+                    . '<span class="vr-admin-icon" aria-hidden="true">' . e($icon) . '</span><span class="vr-admin-link-label">' . e(villa_ui($label)) . '</span></a>';
             }
         }
         $adminRootUrl = json_encode(app_url('/admin'), JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_AMP | JSON_HEX_QUOT);
@@ -255,7 +255,7 @@ return static function (string $html, string $requestPath, string $platformMode)
             }
             @media(max-width:900px){.vr-admin-top{height:62px;padding:0 16px}.vr-admin-burger{display:flex}.vr-admin-layout{display:block;min-height:calc(100vh - 62px)}.vr-admin-sidebar{position:fixed;z-index:1004;left:0;top:0;bottom:0;width:278px;max-width:84vw;overflow-y:auto;transform:translateX(-105%);transition:transform .22s ease;box-shadow:12px 0 35px rgba(20,30,40,.12);padding:22px 15px}.vr-admin-layout.menu-open .vr-admin-sidebar{transform:translateX(0)}.vr-admin-layout.menu-open .vr-admin-overlay{display:block;position:fixed;inset:0;background:rgba(15,23,32,.42);z-index:1003}.vr-admin-content{padding:22px 20px}}
             @media(max-width:520px){.vr-admin-brand{font-size:15px}.vr-admin-site-link{min-height:33px;padding:0 9px;font-size:11px}.vr-admin-user{display:none}.vr-admin-content{padding:16px 13px}}
-        </style><header class="vr-admin-top"><button class="vr-admin-burger" type="button" aria-label="Menüyü aç" aria-expanded="false" id="vrAdminBurger">☰</button><a class="vr-admin-brand" href="' . e(app_url('/admin')) . '" data-admin-link>VillaStay <span style="font-weight:500;color:#87918c">/ Yönetim</span></a><a class="vr-admin-site-link" href="' . e(app_url('/')) . '">Siteye dön ↗</a><form method="post" action="' . e(app_url('/logout')) . '" style="margin:0"><input type="hidden" name="_csrf" value="' . e(csrf_token()) . '"><button class="vr-admin-logout" type="submit">Çıkış Yap</button></form><span class="vr-admin-user">' . $username . '</span></header><div class="vr-admin-layout" id="vrAdminLayout"><aside class="vr-admin-sidebar" aria-label="Yönetim menüsü">' . $nav . '<div class="vr-admin-version">Sürüm ' . e($appVersion) . '</div></aside><div class="vr-admin-overlay" id="vrAdminOverlay"></div><main class="vr-admin-content" id="vrAdminContent">' . $bodyContent . '<style id="villa-admin-primary-sync">.vr-admin-content .design-save,.vr-admin-content .theme-tab.is-active,.vr-admin-content .footer-logo-choose-button,.vr-admin-content .theme-file-button{background:var(--villa-admin-primary)!important;border-color:var(--villa-admin-primary)!important;color:#fff!important}.vr-admin-content .footer-widget-tile:hover,.vr-admin-content .theme-file-drop:hover,.vr-admin-content .footer-rich-toolbar button:hover{border-color:var(--villa-admin-primary)!important}</style></main></div>
+        </style><header class="vr-admin-top"><button class="vr-admin-burger" type="button" aria-label="' . e(villa_ui('Menüyü aç')) . '" aria-expanded="false" id="vrAdminBurger">☰</button><a class="vr-admin-brand" href="' . e(app_url('/admin')) . '" data-admin-link>VillaStay <span style="font-weight:500;color:#87918c">' . e(villa_ui('/ Yönetim')) . '</span></a><a class="vr-admin-site-link" href="' . e(app_url('/')) . '">' . e(villa_ui('Siteye dön ↗')) . '</a><form method="post" action="' . e(app_url('/logout')) . '" style="margin:0"><input type="hidden" name="_csrf" value="' . e(csrf_token()) . '"><button class="vr-admin-logout" type="submit">' . e(villa_ui('Çıkış Yap')) . '</button></form><span class="vr-admin-user">' . $username . '</span></header><div class="vr-admin-layout" id="vrAdminLayout"><aside class="vr-admin-sidebar" aria-label="' . e(villa_ui('Yönetim menüsü')) . '">' . $nav . '<div class="vr-admin-version">' . e(villa_ui('Sürüm')) . ' ' . e($appVersion) . '</div></aside><div class="vr-admin-overlay" id="vrAdminOverlay"></div><main class="vr-admin-content" id="vrAdminContent">' . $bodyContent . '<style id="villa-admin-primary-sync">.vr-admin-content .design-save,.vr-admin-content .theme-tab.is-active,.vr-admin-content .footer-logo-choose-button,.vr-admin-content .theme-file-button{background:var(--villa-admin-primary)!important;border-color:var(--villa-admin-primary)!important;color:#fff!important}.vr-admin-content .footer-widget-tile:hover,.vr-admin-content .theme-file-drop:hover,.vr-admin-content .footer-rich-toolbar button:hover{border-color:var(--villa-admin-primary)!important}</style></main></div>
         <script>
         (function(){
             if(window.__villaAdminShellReady)return;window.__villaAdminShellReady=true;
@@ -456,5 +456,5 @@ return static function (string $html, string $requestPath, string $platformMode)
         }
 
         // The original page was a fragment, so create a valid document around it.
-        return '<!doctype html><html lang="tr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Yönetim Paneli</title></head><body>' . $shell . '</body></html>';
+        return '<!doctype html><html lang="' . e(Translator::locale()) . '"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>' . e(villa_ui('Yönetim Paneli')) . '</title></head><body>' . $shell . '</body></html>';
 };

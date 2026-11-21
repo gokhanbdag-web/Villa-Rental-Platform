@@ -192,15 +192,16 @@ $router->post('/language', static function (): void {
     $locale = trim((string)($_POST['locale'] ?? ''));
     if ($locale === '' || !preg_match('/^[A-Za-z0-9_-]{2,12}$/', $locale)) {
         http_response_code(422);
-        exit('Geçerli bir dil seçin.');
+        exit(villa_ui('Geçerli bir dil seçin.'));
     }
     $language = Database::connection()->prepare('SELECT code FROM languages WHERE code=? AND is_active=1 LIMIT 1');
     $language->execute([$locale]);
     if (!$language->fetchColumn()) {
         http_response_code(422);
-        exit('Seçilen dil kullanılamıyor.');
+        exit(villa_ui('Seçilen dil kullanılamıyor.'));
     }
     $_SESSION['villa_locale'] = $locale;
+    $_SESSION['villa_language_preference_version'] = 1;
     $returnTo = villa_safe_return_url((string)($_POST['return_to'] ?? '/'));
     redirect($returnTo);
 });
@@ -269,7 +270,7 @@ $router->post('/admin/performance/cleanup', static function (): void {
     $keepLast = (int)($_POST['keep_last'] ?? -1);
     if (!in_array($scope, ['performance', 'slow_sql', 'all'], true) || !in_array($keepLast, [0, 20, 50, 100], true)) {
         http_response_code(422);
-        exit('Temizleme seçenekleri geçersiz.');
+        exit(villa_ui('Temizleme seçenekleri geçersiz.'));
     }
     $root = dirname(__DIR__);
     $targets = [];
@@ -280,13 +281,13 @@ $router->post('/admin/performance/cleanup', static function (): void {
         if (!file_exists($file)) { $results[$name] = ['removed' => 0, 'remaining' => 0]; continue; }
         if (!is_file($file) || is_link($file) || !is_readable($file) || !is_writable($file)) {
             http_response_code(500);
-            exit('Tanılama günlük dosyası güvenli biçimde açılamadı: ' . $name);
+            exit(villa_ui('Tanılama günlük dosyası güvenli biçimde açılamadı: ') . $name);
         }
         $handle = @fopen($file, 'c+b');
         if (!is_resource($handle) || !flock($handle, LOCK_EX)) {
             if (is_resource($handle)) fclose($handle);
             http_response_code(500);
-            exit('Tanılama günlük dosyası kilitlenemedi: ' . $name);
+            exit(villa_ui('Tanılama günlük dosyası kilitlenemedi: ') . $name);
         }
         $tail = [];
         $total = 0;
@@ -305,14 +306,14 @@ $router->post('/admin/performance/cleanup', static function (): void {
         if (!ftruncate($handle, 0)) {
             flock($handle, LOCK_UN); fclose($handle);
             http_response_code(500);
-            exit('Tanılama günlük dosyası temizlenemedi: ' . $name);
+            exit(villa_ui('Tanılama günlük dosyası temizlenemedi: ') . $name);
         }
         if ($remaining > 0) {
             $payload = implode(PHP_EOL, $tail) . PHP_EOL;
             if (fwrite($handle, $payload) !== strlen($payload)) {
                 flock($handle, LOCK_UN); fclose($handle);
                 http_response_code(500);
-                exit('Tanılama günlük dosyası yeniden yazılamadı: ' . $name);
+                exit(villa_ui('Tanılama günlük dosyası yeniden yazılamadı: ') . $name);
             }
         }
         fflush($handle);
@@ -392,10 +393,10 @@ $router->get('/admin/locations/template', static function (): void {
 $router->post('/admin/locations/import', static function (): void {
     Auth::requireRole(['super_admin','admin']);verify_csrf();
     $file=$_FILES['locations_csv']??null;
-    if(!is_array($file)||($file['error']??UPLOAD_ERR_NO_FILE)!==UPLOAD_ERR_OK){http_response_code(422);exit('CSV dosyası yüklenemedi. Dosyayı seçip tekrar deneyin.');}
-    if(($file['size']??0)<1||$file['size']>5*1024*1024){http_response_code(422);exit('CSV dosyası boş veya 5 MB sınırından büyük.');}
+    if(!is_array($file)||($file['error']??UPLOAD_ERR_NO_FILE)!==UPLOAD_ERR_OK){http_response_code(422);exit(villa_ui('CSV dosyası yüklenemedi. Dosyayı seçip tekrar deneyin.'));}
+    if(($file['size']??0)<1||$file['size']>5*1024*1024){http_response_code(422);exit(villa_ui('CSV dosyası boş veya 5 MB sınırından büyük.'));}
     $handle=fopen((string)$file['tmp_name'],'rb');
-    if(!$handle){http_response_code(422);exit('CSV dosyası okunamadı.');}
+    if(!$handle){http_response_code(422);exit(villa_ui('CSV dosyası okunamadı.'));}
     $first=(string)fgets($handle);rewind($handle);
     $counts=['inserted'=>0,'existing'=>0,'errors'=>0,'rows'=>0];$errorRows=[];
     $delimiter=';';
@@ -403,12 +404,12 @@ $router->post('/admin/locations/import', static function (): void {
     $best=-1;
     foreach($candidates as $candidate){$n=count(str_getcsv($first,$candidate,'"','\\'));if($n>$best){$best=$n;$delimiter=$candidate;}}
     $header=fgetcsv($handle,0,$delimiter,'"','\\');
-    if(!is_array($header)){fclose($handle);http_response_code(422);exit('CSV başlık satırı okunamadı.');}
+    if(!is_array($header)){fclose($handle);http_response_code(422);exit(villa_ui('CSV başlık satırı okunamadı.'));}
     $header[0]=preg_replace('/^\xEF\xBB\xBF/','',(string)$header[0]);
     $aliases=['country'=>['country','ulke','ülke'],'city'=>['city','sehir','şehir','il'],'district'=>['district','ilce','ilçe'],'neighborhood'=>['neighborhood','semt','mahalle','semt_mahalle']];
     $columns=[];
     foreach($header as $index=>$name){$key=mb_strtolower(trim((string)$name));foreach($aliases as $field=>$names){if(in_array($key,$names,true))$columns[$field]=$index;}}
-    if(!isset($columns['country'])){fclose($handle);http_response_code(422);exit('CSV başlığında country (ülke) sütunu bulunamadı. Şablonu indirip kullanabilirsiniz.');}
+    if(!isset($columns['country'])){fclose($handle);http_response_code(422);exit(villa_ui('CSV başlığında country (ülke) sütunu bulunamadı. Şablonu indirip kullanabilirsiniz.'));}
     $pdo=Database::connection();
     $find=$pdo->prepare('SELECT id FROM locations WHERE parent_id <=> ? AND location_type=? AND name=? LIMIT 1');
     $insert=$pdo->prepare('INSERT INTO locations(parent_id,location_type,name,sort_order,is_active) VALUES(?,?,?,10,1)');
@@ -424,7 +425,7 @@ $router->post('/admin/locations/import', static function (): void {
         $line++;if($row===[null]||$row===[])continue;
         $values=[];foreach(['country','city','district','neighborhood'] as $field){$idx=$columns[$field]??null;$values[$field]=$idx!==null?trim((string)($row[$idx]??'')):'';}
         if($values['country']===''&&$values['city']===''&&$values['district']===''&&$values['neighborhood']==='')continue;
-        if($counts['rows']>=20000){$counts['errors']++;$errorRows[]=['line'=>$line,'message'=>'20.000 satır sınırına ulaşıldı.'];break;}
+        if($counts['rows']>=20000){$counts['errors']++;$errorRows[]=['line'=>$line,'message'=>villa_ui('20.000 satır sınırına ulaşıldı.')];break;}
         $counts['rows']++;
         $rowInserted=0;$rowExisting=0;
         try{
@@ -453,9 +454,9 @@ $router->post('/admin/locations/import', static function (): void {
 $router->post('/admin/locations/save', static function (): void {
     Auth::requireRole(['super_admin','admin']);verify_csrf();$pdo=Database::connection();$type=(string)($_POST['location_type']??'');$name=trim((string)($_POST['name']??''));$parent=(int)($_POST['parent_id']??0);
     $allowed=['country'=>null,'city'=>'country','district'=>'city','neighborhood'=>'district'];
-    if(!array_key_exists($type,$allowed)||$name===''||mb_strlen($name)>190){http_response_code(422);exit('Konum türünü ve adını kontrol edin.');}
-    if($type==='country')$parent=null;else{$s=$pdo->prepare('SELECT id FROM locations WHERE id=? AND location_type=? AND is_active=1');$s->execute([$parent,$allowed[$type]]);if(!$s->fetchColumn()){http_response_code(422);exit('Seçilen üst konum geçersiz.');}}
-    try{$s=$pdo->prepare('INSERT INTO locations(parent_id,location_type,name,sort_order,is_active) VALUES(?,?,?,?,1)');$s->execute([$parent,$type,$name,(int)($_POST['sort_order']??10)]);}catch(PDOException $e){http_response_code(409);exit('Bu üst konum altında aynı isimde kayıt zaten var.');}
+    if(!array_key_exists($type,$allowed)||$name===''||mb_strlen($name)>190){http_response_code(422);exit(villa_ui('Konum türünü ve adını kontrol edin.'));}
+    if($type==='country')$parent=null;else{$s=$pdo->prepare('SELECT id FROM locations WHERE id=? AND location_type=? AND is_active=1');$s->execute([$parent,$allowed[$type]]);if(!$s->fetchColumn()){http_response_code(422);exit(villa_ui('Seçilen üst konum geçersiz.'));}}
+    try{$s=$pdo->prepare('INSERT INTO locations(parent_id,location_type,name,sort_order,is_active) VALUES(?,?,?,?,1)');$s->execute([$parent,$type,$name,(int)($_POST['sort_order']??10)]);}catch(PDOException $e){http_response_code(409);exit(villa_ui('Bu üst konum altında aynı isimde kayıt zaten var.'));}
     redirect('/admin/locations');
 });
 $router->post('/admin/locations/toggle', static function (): void {
@@ -602,11 +603,11 @@ $homeEditorRequest = static function (): array {
     $locale=(string)($_POST['language_code']??'');
     $language=$pdo->prepare('SELECT code FROM languages WHERE code=? AND is_active=1');
     $language->execute([$locale]);
-    if (!$language->fetchColumn()) { http_response_code(422); exit('Geçersiz dil.'); }
+    if (!$language->fetchColumn()) { http_response_code(422); exit(villa_ui('Geçersiz dil.')); }
     $key=HomepageDesign::key(villa_selected_homepage($pdo));
-    if ($key!==($_POST['design_key']??null)) { http_response_code(409); exit('Ana sayfa değişti. Editörü yeniden açın.'); }
+    if ($key!==($_POST['design_key']??null)) { http_response_code(409); exit(villa_ui('Ana sayfa değişti. Editörü yeniden açın.')); }
     try { $design=HomepageDesign::validate((string)($_POST['design']??'')); }
-    catch (InvalidArgumentException $e) { http_response_code(422); exit('Bölüm ayarlarını ve görsel adreslerini kontrol edin.'); }
+    catch (InvalidArgumentException $e) { http_response_code(422); exit(villa_ui('Bölüm ayarlarını ve görsel adreslerini kontrol edin.')); }
     return compact('locale','key','design');
 };
 $router->post('/homepage-design-preview',static function () use ($homeEditorRequest): void {
@@ -802,7 +803,7 @@ $router->post('/register', static function (): void {
     $email = filter_var(trim((string)($_POST['email'] ?? '')), FILTER_VALIDATE_EMAIL);
     $password = (string)($_POST['password'] ?? '');
     if (strlen($username) < 3 || !$email || strlen($password) < 10 || !hash_equals($password,(string)($_POST['password_confirm'] ?? ''))) {
-        $error = 'Bilgileri kontrol edin. Şifre en az 10 karakter olmalı ve tekrar alanıyla eşleşmelidir.';
+        $error = villa_ui('Bilgileri kontrol edin. Şifre en az 10 karakter olmalı ve tekrar alanıyla eşleşmelidir.');
         ThemeManager::renderTemplate('templates/pages/auth/register.php', get_defined_vars());
         return;
     }
@@ -824,9 +825,9 @@ $router->get('/villa/{slug}/calendar', static function (array $params): void {
     $s=$pdo->prepare("SELECT id,base_nightly_price,weekend_nightly_price,currency FROM properties WHERE slug=? AND status='published' LIMIT 1");
     $s->execute([$params['slug']??'']);$property=$s->fetch(PDO::FETCH_ASSOC);
     $propertyId=(int)($property['id']??0);
-    if(!$propertyId){http_response_code(404);echo json_encode(['ok'=>false,'message'=>'Konaklama bulunamadı.']);return;}
+    if(!$propertyId){http_response_code(404);echo json_encode(['ok'=>false,'message'=>villa_ui('Konaklama bulunamadı.')]);return;}
     $month=(string)($_GET['month']??date('Y-m'));
-    if(!preg_match('/^\d{4}-(0[1-9]|1[0-2])$/',$month)){http_response_code(422);echo json_encode(['ok'=>false,'message'=>'Ay bilgisi geçersiz.']);return;}
+    if(!preg_match('/^\d{4}-(0[1-9]|1[0-2])$/',$month)){http_response_code(422);echo json_encode(['ok'=>false,'message'=>villa_ui('Ay bilgisi geçersiz.')]);return;}
     $start=$month.'-01';$from=(new DateTimeImmutable($start))->modify('first day of this month')->format('Y-m-d');$to=(new DateTimeImmutable($from))->modify('first day of next month')->format('Y-m-d');
     $b=$pdo->prepare("SELECT check_in,check_out,status FROM bookings WHERE property_id=? AND status='confirmed' AND check_in < ? AND check_out > ? ORDER BY check_in");
     $b->execute([$propertyId,$to,$from]);
@@ -896,7 +897,7 @@ $router->get('/villa/{slug}/availability', static function (array $params): void
         'early_checkin_requested'=>$extras['early_checkin_requested'],'early_checkin_fee'=>$extras['early_checkin_fee'],
         'late_checkout_requested'=>$extras['late_checkout_requested'],'late_checkout_fee'=>$extras['late_checkout_fee'],
         'total'=>round($subtotal+$fees,2),'currency'=>(string)$property['currency'],
-        'message'=>'Seçtiğiniz tarihler müsait görünüyor. Ek hizmet talepleri rezervasyon gönderilirken yeniden doğrulanır.'
+        'message'=>villa_ui('Seçtiğiniz tarihler müsait görünüyor. Ek hizmet talepleri rezervasyon gönderilirken yeniden doğrulanır.')
     ], JSON_UNESCAPED_UNICODE|JSON_THROW_ON_ERROR);
     } catch (Throwable $e) {
         error_log('Villa availability check failed: '.$e->getMessage());
@@ -914,7 +915,7 @@ $router->post('/villa/{slug}/reserve', static function (array $params): void {
     $pdo=Database::connection();
     $propertyStmt=$pdo->prepare("SELECT * FROM properties WHERE slug=? AND status='published' LIMIT 1");
     $propertyStmt->execute([$params['slug']??'']);$property=$propertyStmt->fetch();
-    if(!$property){http_response_code(404);exit('Konaklama bulunamadı.');}
+    if(!$property){http_response_code(404);exit(villa_ui('Konaklama bulunamadı.'));}
     $first=trim((string)($_POST['first_name']??''));$last=trim((string)($_POST['last_name']??''));
     $email=strtolower(trim((string)($_POST['email']??'')));$phone=trim((string)($_POST['phone']??''));$password=(string)($_POST['password']??'');
     $identityNumber=preg_replace('/\\D+/','',(string)($_POST['identity_number']??''))??'';
@@ -926,7 +927,7 @@ $router->post('/villa/{slug}/reserve', static function (array $params): void {
     $checkIn=DateTimeImmutable::createFromFormat('!Y-m-d',$inRaw);$checkOut=DateTimeImmutable::createFromFormat('!Y-m-d',$outRaw);
     $guests=(int)($_POST['guests']??0);$fullName=trim($first.' '.$last);
     if($first===''||$last===''||mb_strlen($first)>90||mb_strlen($last)>90||!filter_var($email,FILTER_VALIDATE_EMAIL)||strlen($email)>190||$phone===''||strlen($phone)>40||strlen($password)<10||strlen($password)>128||!$checkIn||!$checkOut||$checkIn->format('Y-m-d')!==$inRaw||$checkOut->format('Y-m-d')!==$outRaw||$checkIn<new DateTimeImmutable('today')||$checkOut<=$checkIn||(int)$checkIn->diff($checkOut)->days>365||$guests<1||$guests>(int)$property['max_guests']||($autoStartIyzico&&(!preg_match('/^[0-9]{11}$/',$identityNumber)||$billingAddress===''||mb_strlen($billingAddress)>500||$billingCity===''||mb_strlen($billingCity)>100))){
-        http_response_code(422);exit('Lütfen tüm bilgileri ve rezervasyon tarihlerini kontrol edin. Şifre en az 10 karakter olmalıdır.');
+        http_response_code(422);exit(villa_ui('Lütfen tüm bilgileri ve rezervasyon tarihlerini kontrol edin. Şifre en az 10 karakter olmalıdır.'));
     }
     try {
         \App\Core\IyzicoPaymentReconciler::reconcileExpiredForProperty($pdo,(int)$property['id'],3);
@@ -936,13 +937,13 @@ $router->post('/villa/{slug}/reserve', static function (array $params): void {
     $currentUser=Auth::user();$userId=0;$createNewAccount=false;$newUsername='';
     $existing=$pdo->prepare('SELECT id,username,email,password_hash,role,status FROM users WHERE email=? LIMIT 1');$existing->execute([$email]);$account=$existing->fetch();
     if($currentUser){
-        if((int)$currentUser['id']!==(int)($account['id']??0)||strtolower((string)$currentUser['email'])!==$email){http_response_code(409);exit('Oturumunuzdaki hesap ile rezervasyon e-posta adresi aynı olmalıdır.');}
-        if(!password_verify($password,(string)$account['password_hash'])){http_response_code(422);exit('Mevcut hesabınızın şifresini doğru girin.');}
+        if((int)$currentUser['id']!==(int)($account['id']??0)||strtolower((string)$currentUser['email'])!==$email){http_response_code(409);exit(villa_ui('Oturumunuzdaki hesap ile rezervasyon e-posta adresi aynı olmalıdır.'));}
+        if(!password_verify($password,(string)$account['password_hash'])){http_response_code(422);exit(villa_ui('Mevcut hesabınızın şifresini doğru girin.'));}
         $userId=(int)$currentUser['id'];
     }elseif($account){
-        if($account['role']!=='customer'||$account['status']!=='active'||!password_verify($password,(string)$account['password_hash'])){http_response_code(422);exit('Bu e-posta adresiyle kayıtlı hesabın şifresini doğrulayamadık. Giriş bilgilerinizi kontrol edin.');}
+        if($account['role']!=='customer'||$account['status']!=='active'||!password_verify($password,(string)$account['password_hash'])){http_response_code(422);exit(villa_ui('Bu e-posta adresiyle kayıtlı hesabın şifresini doğrulayamadık. Giriş bilgilerinizi kontrol edin.'));}
         $userId=(int)$account['id'];
-        if(!Auth::attempt($email,$password)){http_response_code(429);exit('Giriş doğrulaması şu anda yapılamıyor. Lütfen biraz sonra tekrar deneyin.');}
+        if(!Auth::attempt($email,$password)){http_response_code(429);exit(villa_ui('Giriş doğrulaması şu anda yapılamıyor. Lütfen biraz sonra tekrar deneyin.'));}
     }else{
         $base=mb_strtolower($first.' '.$last,'UTF-8');
         $base=strtr($base,['ı'=>'i','ğ'=>'g','ü'=>'u','ş'=>'s','ö'=>'o','ç'=>'c']);
@@ -956,8 +957,8 @@ $router->post('/villa/{slug}/reserve', static function (array $params): void {
         $pdo->beginTransaction();
         $lock=$pdo->prepare('SELECT id,base_nightly_price,weekend_nightly_price,cleaning_fee,early_checkin_enabled,early_checkin_fee,late_checkout_enabled,late_checkout_fee,currency,max_guests FROM properties WHERE id=? AND status=\'published\' FOR UPDATE');
         $lock->execute([(int)$property['id']]);$current=$lock->fetch();
-        if(!$current){$pdo->rollBack();http_response_code(404);exit('Konaklama artık yayında değil.');}
-        if($guests<1||$guests>(int)$current['max_guests']){$pdo->rollBack();http_response_code(422);exit('Misafir sayısı konaklamanın güncel kapasitesini aşıyor.');}
+        if(!$current){$pdo->rollBack();http_response_code(404);exit(villa_ui('Konaklama artık yayında değil.'));}
+        if($guests<1||$guests>(int)$current['max_guests']){$pdo->rollBack();http_response_code(422);exit(villa_ui('Misafir sayısı konaklamanın güncel kapasitesini aşıyor.'));}
         // Release only due holds with no unresolved payment or bank-transfer report.
         // The property lock is already held, preserving the global lock order.
         \App\Core\BookingHoldExpiryService::expireSafePendingForProperty($pdo,(int)$property['id']);
@@ -969,7 +970,7 @@ $router->post('/villa/{slug}/reserve', static function (array $params): void {
         foreach($rules as $rule){if($rule['status']!=='available'){$unavailable=true;break;}}
         $seasonStmt=$pdo->prepare('SELECT name,date_from,date_to,nightly_price,min_nights,checkin_weekdays,checkout_weekdays FROM property_seasonal_prices WHERE property_id=? AND date_from < ? AND date_to > ? ORDER BY date_from');
         $seasonStmt->execute([(int)$property['id'],$outRaw,$inRaw]);$seasons=$seasonStmt->fetchAll(PDO::FETCH_ASSOC);
-        if($conflict->fetchColumn()||$unavailable){$pdo->rollBack();http_response_code(409);exit('Seçtiğiniz tarihler artık müsait değil. Lütfen yeni tarih seçin.');}
+        if($conflict->fetchColumn()||$unavailable){$pdo->rollBack();http_response_code(409);exit(villa_ui('Seçtiğiniz tarihler artık müsait değil. Lütfen yeni tarih seçin.'));}
         try{\App\Core\BookingStayRules::validate($checkIn,$checkOut,$seasons);}catch(InvalidArgumentException $e){$pdo->rollBack();http_response_code(422);exit($e->getMessage());}
         $subtotal=\App\Core\BookingRateCalculator::staySubtotal($current,$checkIn,$checkOut,$seasons,$rules);
         try{$extras=\App\Core\BookingExtras::calculate($current,$earlyRequested,$lateRequested);}catch(InvalidArgumentException $e){$pdo->rollBack();http_response_code(422);exit($e->getMessage());}
@@ -1000,14 +1001,14 @@ $router->post('/villa/{slug}/reserve', static function (array $params): void {
             redirect('/checkout/'.rawurlencode($code).'?start_iyzico=1');
         }
         redirect('/checkout/'.rawurlencode($code));
-    }catch(Throwable $e){if($pdo->inTransaction())$pdo->rollBack();error_log('Booking creation failed: '.$e->getMessage());http_response_code(500);exit('Rezervasyon kaydedilemedi. Lütfen tekrar deneyin.');}
+    }catch(Throwable $e){if($pdo->inTransaction())$pdo->rollBack();error_log('Booking creation failed: '.$e->getMessage());http_response_code(500);exit(villa_ui('Rezervasyon kaydedilemedi. Lütfen tekrar deneyin.'));}
 });
 
 $router->get('/checkout/{bookingCode}', static function(array $params):void {
     $user=Auth::user();if(!$user)redirect('/login');
     $pdo=Database::connection();$stmt=$pdo->prepare("SELECT b.*,p.title AS property_title,p.slug AS property_slug FROM bookings b JOIN properties p ON p.id=b.property_id WHERE b.booking_code=? AND b.guest_user_id=? LIMIT 1");
     $stmt->execute([$params['bookingCode']??'',(int)$user['id']]);$booking=$stmt->fetch();
-    if(!$booking){http_response_code(404);exit('Rezervasyon bulunamadı.');}
+    if(!$booking){http_response_code(404);exit(villa_ui('Rezervasyon bulunamadı.'));}
     $manualConfig=\App\Core\PaymentGatewayConfig::forProvider('manual');
     $manualPaymentAvailable=!empty($manualConfig['enabled'])&&!empty($manualConfig['configured']);
     $manualBankDetails=(array)($manualConfig['bank_details']??[]);
@@ -1070,22 +1071,22 @@ $router->get('/checkout/{bookingCode}', static function(array $params):void {
 $router->post('/checkout/{bookingCode}/manual/notify', static function (array $params): void {
     $user=Auth::user();if(!$user)redirect('/login');verify_csrf();
     $config=\App\Core\PaymentGatewayConfig::forProvider('manual');
-    if(empty($config['enabled'])||empty($config['configured'])){http_response_code(409);exit('Manuel havale yöntemi şu anda kullanılamıyor.');}
+    if(empty($config['enabled'])||empty($config['configured'])){http_response_code(409);exit(villa_ui('Manuel havale yöntemi şu anda kullanılamıyor.'));}
     $sender=trim((string)($_POST['sender_name']??''));
     $bank=trim((string)($_POST['sender_bank']??''));
     $reference=trim((string)($_POST['transfer_reference']??''));
     $note=trim((string)($_POST['note']??''));
-    if($sender===''||strlen($sender)>190||strlen($bank)>120||$reference===''||strlen($reference)>120||strlen($note)>1000){http_response_code(422);exit('Gönderen adı, banka ve transfer referansı bilgilerini kontrol edin.');}
+    if($sender===''||strlen($sender)>190||strlen($bank)>120||$reference===''||strlen($reference)>120||strlen($note)>1000){http_response_code(422);exit(villa_ui('Gönderen adı, banka ve transfer referansı bilgilerini kontrol edin.'));}
     $pdo=Database::connection();
     try{
         $pdo->beginTransaction();
         $lookup=$pdo->prepare('SELECT id,guest_user_id,total,currency,status,booking_code FROM bookings WHERE booking_code=? AND guest_user_id=? LIMIT 1 FOR UPDATE');
         $lookup->execute([(string)($params['bookingCode']??''),(int)$user['id']]);$booking=$lookup->fetch(PDO::FETCH_ASSOC);
-        if(!$booking){$pdo->rollBack();http_response_code(404);exit('Rezervasyon bulunamadı.');}
-        if((string)$booking['status']!=='pending'){$pdo->rollBack();http_response_code(409);exit('Yalnızca ödeme bekleyen rezervasyonlar için havale bildirimi gönderilebilir.');}
+        if(!$booking){$pdo->rollBack();http_response_code(404);exit(villa_ui('Rezervasyon bulunamadı.'));}
+        if((string)$booking['status']!=='pending'){$pdo->rollBack();http_response_code(409);exit(villa_ui('Yalnızca ödeme bekleyen rezervasyonlar için havale bildirimi gönderilebilir.'));}
         $paid=$pdo->prepare("SELECT id FROM payment_transactions WHERE booking_id=? AND status='paid' LIMIT 1");
         $paid->execute([(int)$booking['id']]);
-        if($paid->fetchColumn()){$pdo->rollBack();http_response_code(409);exit('Bu rezervasyon için ödeme zaten doğrulanmış.');}
+        if($paid->fetchColumn()){$pdo->rollBack();http_response_code(409);exit(villa_ui('Bu rezervasyon için ödeme zaten doğrulanmış.'));}
         $insert=$pdo->prepare("INSERT INTO manual_payment_reports(booking_id,guest_user_id,amount,currency,sender_name,sender_bank,transfer_reference,note,status,submitted_at,created_at) VALUES(?,?,?,?,?,?,?,?,'pending',NOW(),NOW())");
         $insert->execute([(int)$booking['id'],(int)$user['id'],(float)$booking['total'],(string)$booking['currency'],$sender,$bank?:null,$reference,$note?:null]);
         $reportId=(int)$pdo->lastInsertId();
@@ -1096,8 +1097,8 @@ $router->post('/checkout/{bookingCode}/manual/notify', static function (array $p
         $pdo->commit();redirect('/checkout/'.rawurlencode((string)$booking['booking_code']));
     }catch(Throwable $e){
         if($pdo->inTransaction())$pdo->rollBack();
-        if($e instanceof PDOException && (string)$e->getCode()==='23000'){http_response_code(409);exit('Bu rezervasyon için zaten incelemede bir havale bildirimi var.');}
-        error_log('Manual payment report submission failed: '.$e->getMessage());http_response_code(500);exit('Havale bildirimi kaydedilemedi. Lütfen tekrar deneyin.');
+        if($e instanceof PDOException && (string)$e->getCode()==='23000'){http_response_code(409);exit(villa_ui('Bu rezervasyon için zaten incelemede bir havale bildirimi var.'));}
+        error_log('Manual payment report submission failed: '.$e->getMessage());http_response_code(500);exit(villa_ui('Havale bildirimi kaydedilemedi. Lütfen tekrar deneyin.'));
     }
 });
 
@@ -1105,43 +1106,43 @@ $router->post('/checkout/{bookingCode}/paytr/start', static function (array $par
     verify_csrf();
     $user=Auth::user();if(!$user)redirect('/login');
     $config=\App\Core\PaymentGatewayConfig::forProvider('paytr');
-    if(empty($config['enabled'])||empty($config['configured'])){http_response_code(409);exit('PayTR ödeme altyapısı etkin değil veya mağaza bilgileri eksik.');}
+    if(empty($config['enabled'])||empty($config['configured'])){http_response_code(409);exit(villa_ui('PayTR ödeme altyapısı etkin değil veya mağaza bilgileri eksik.'));}
     $pdo=Database::connection();
     $stmt=$pdo->prepare("SELECT b.*,p.title AS property_title,u.email AS account_email FROM bookings b JOIN properties p ON p.id=b.property_id JOIN users u ON u.id=b.guest_user_id WHERE b.booking_code=? AND b.guest_user_id=? LIMIT 1");
     $stmt->execute([(string)($params['bookingCode']??''),(int)$user['id']]);$booking=$stmt->fetch(PDO::FETCH_ASSOC);
-    if(!$booking){http_response_code(404);exit('Rezervasyon bulunamadı.');}
-    if((string)$booking['status']!=='pending'){http_response_code(409);exit('Yalnızca ödeme bekleyen rezervasyonlar için ödeme başlatılabilir.');}
+    if(!$booking){http_response_code(404);exit(villa_ui('Rezervasyon bulunamadı.'));}
+    if((string)$booking['status']!=='pending'){http_response_code(409);exit(villa_ui('Yalnızca ödeme bekleyen rezervasyonlar için ödeme başlatılabilir.'));}
     $currency=strtoupper((string)$booking['currency']);if($currency==='TRY'||$currency==='TL')$paytrCurrency='TL';else $paytrCurrency=$currency;
     if(!in_array($paytrCurrency,['TL','USD','EUR','GBP'],true)){http_response_code(422);exit('PayTR bu rezervasyonun para birimini desteklemiyor.');}
     $amount=number_format((float)$booking['total'],2,'.','');
-    if((float)$amount<=0){http_response_code(422);exit('Ödeme tutarı geçersiz.');}
+    if((float)$amount<=0){http_response_code(422);exit(villa_ui('Ödeme tutarı geçersiz.'));}
     $email=trim((string)($booking['guest_email']??$booking['account_email']??''));
-    if(!filter_var($email,FILTER_VALIDATE_EMAIL)){http_response_code(422);exit('Ödeme için geçerli bir e-posta adresi gereklidir.');}
+    if(!filter_var($email,FILTER_VALIDATE_EMAIL)){http_response_code(422);exit(villa_ui('Ödeme için geçerli bir e-posta adresi gereklidir.'));}
     $phone=preg_replace('/[^0-9+]/','',(string)($booking['guest_phone']??''))??'';
-    if(strlen(preg_replace('/\D/','',$phone)??'')<10){http_response_code(422);exit('Ödeme için geçerli telefon numarası gereklidir.');}
+    if(strlen(preg_replace('/\D/','',$phone)??'')<10){http_response_code(422);exit(villa_ui('Ödeme için geçerli telefon numarası gereklidir.'));}
     $oid='VR'.(int)$booking['id'].strtoupper(bin2hex(random_bytes(10)));
     $cents=(string)(int)round((float)$amount*100);
     $basket=base64_encode(json_encode([[mb_substr((string)$booking['property_title'],0,100),$amount,1]],JSON_UNESCAPED_UNICODE|JSON_THROW_ON_ERROR));
     try{
         $okUrl=app_absolute_url('/checkout/'.rawurlencode((string)$booking['booking_code']).'?paytr=1');
         $failUrl=app_absolute_url('/checkout/'.rawurlencode((string)$booking['booking_code']).'?payment=failed');
-    }catch(Throwable $e){http_response_code(503);exit('PayTR yönlendirmesi için geçerli HTTPS site adresi gereklidir.');}
+    }catch(Throwable $e){http_response_code(503);exit(villa_ui('PayTR yönlendirmesi için geçerli HTTPS site adresi gereklidir.'));}
     $testMode=($config['environment']??'sandbox')==='sandbox'?'1':'0';
     $request=['merchant_oid'=>$oid,'user_ip'=>(string)($_SERVER['REMOTE_ADDR']??''),'email'=>$email,'payment_amount'=>$cents,'user_basket'=>$basket,'no_installment'=>'1','max_installment'=>'0','currency'=>$paytrCurrency,'test_mode'=>$testMode];
-    if(!filter_var($request['user_ip'],FILTER_VALIDATE_IP)){http_response_code(422);exit('Ödeme istemcisi IP adresi doğrulanamadı.');}
+    if(!filter_var($request['user_ip'],FILTER_VALIDATE_IP)){http_response_code(422);exit(villa_ui('Ödeme istemcisi IP adresi doğrulanamadı.'));}
     $reservation=\App\Core\PaymentCheckoutGuard::reservePaytr($pdo,(int)$booking['id'],$oid,$amount,$currency,['merchant_oid'=>$oid,'environment'=>$config['environment']??'sandbox']);
     $result=(string)($reservation['result']??'');
-    if($result==='already_paid'){http_response_code(409);exit('Bu rezervasyon için ödeme zaten doğrulanmış.');}
-    if($result==='booking_not_found'){http_response_code(404);exit('Rezervasyon bulunamadı.');}
-    if($result==='booking_not_pending'){http_response_code(409);exit('Rezervasyon artık ödeme beklemiyor.');}
-    if($result==='processing'||$result==='verification_required'){http_response_code(409);exit('Önceki PayTR oturumunun sonucu kesinleşmedi. Çift tahsilatı önlemek için yeni ödeme başlatılmadı.');}
-    if($result==='initializing'){http_response_code(409);exit('Ödeme oturumu hazırlanıyor. Birkaç saniye sonra tekrar deneyin.');}
+    if($result==='already_paid'){http_response_code(409);exit(villa_ui('Bu rezervasyon için ödeme zaten doğrulanmış.'));}
+    if($result==='booking_not_found'){http_response_code(404);exit(villa_ui('Rezervasyon bulunamadı.'));}
+    if($result==='booking_not_pending'){http_response_code(409);exit(villa_ui('Rezervasyon artık ödeme beklemiyor.'));}
+    if($result==='processing'||$result==='verification_required'){http_response_code(409);exit(villa_ui('Önceki PayTR oturumunun sonucu kesinleşmedi. Çift tahsilatı önlemek için yeni ödeme başlatılmadı.'));}
+    if($result==='initializing'){http_response_code(409);exit(villa_ui('Ödeme oturumu hazırlanıyor. Birkaç saniye sonra tekrar deneyin.'));}
     if($result==='existing'){
         $old=json_decode((string)($reservation['payment']['response_payload']??''),true);
         if(is_array($old)&&str_starts_with((string)($old['iframe_url']??''),'https://www.paytr.com/odeme/guvenli/'))redirect('/checkout/'.rawurlencode((string)$booking['booking_code']).'?paytr=1');
-        http_response_code(409);exit('Mevcut PayTR ödeme oturumu doğrulanamadı.');
+        http_response_code(409);exit(villa_ui('Mevcut PayTR ödeme oturumu doğrulanamadı.'));
     }
-    if($result!=='reserved'){http_response_code(409);exit('PayTR ödeme oturumu güvenli şekilde başlatılamadı.');}
+    if($result!=='reserved'){http_response_code(409);exit(villa_ui('PayTR ödeme oturumu güvenli şekilde başlatılamadı.'));}
     $transactionId=(int)$reservation['transaction_id'];
     try{
         $payload=$request+['user_name'=>mb_substr((string)$booking['guest_name'],0,60),'user_address'=>mb_substr(trim((string)($booking['guest_address']??'Türkiye')),0,400),'user_phone'=>$phone,'merchant_ok_url'=>$okUrl,'merchant_fail_url'=>$failUrl,'timeout_limit'=>'30','debug_on'=>$testMode,'lang'=>'tr'];
@@ -1165,24 +1166,24 @@ $router->post('/checkout/{bookingCode}/iyzico/start', static function (array $pa
     $user=Auth::user();if(!$user)redirect('/login');
     $config=\App\Core\PaymentGatewayConfig::forProvider('iyzico');
     $paymentEnvironment=(string)($config['environment']??'sandbox');
-    if(!in_array($paymentEnvironment,['sandbox','production'],true)){http_response_code(409);exit('iyzico ödeme ortamı geçersiz.');}
-    if(!$config['enabled']||!$config['configured']){http_response_code(409);exit('iyzico ödeme altyapısı etkin değil veya API bilgileri eksik.');}
+    if(!in_array($paymentEnvironment,['sandbox','production'],true)){http_response_code(409);exit(villa_ui('iyzico ödeme ortamı geçersiz.'));}
+    if(!$config['enabled']||!$config['configured']){http_response_code(409);exit(villa_ui('iyzico ödeme altyapısı etkin değil veya API bilgileri eksik.'));}
     $pdo=Database::connection();
     $stmt=$pdo->prepare("SELECT b.*,p.title AS property_title,p.slug AS property_slug,u.username,u.email AS account_email,u.created_at AS account_created FROM bookings b JOIN properties p ON p.id=b.property_id JOIN users u ON u.id=b.guest_user_id WHERE b.booking_code=? AND b.guest_user_id=? LIMIT 1");
     $stmt->execute([$params['bookingCode']??'',(int)$user['id']]);$booking=$stmt->fetch();
-    if(!$booking){http_response_code(404);exit('Rezervasyon bulunamadı.');}
-    if(!in_array((string)$booking['status'],['pending'],true)){http_response_code(409);exit('Yalnızca ödeme bekleyen rezervasyonlar için ödeme başlatılabilir.');}
+    if(!$booking){http_response_code(404);exit(villa_ui('Rezervasyon bulunamadı.'));}
+    if(!in_array((string)$booking['status'],['pending'],true)){http_response_code(409);exit(villa_ui('Yalnızca ödeme bekleyen rezervasyonlar için ödeme başlatılabilir.'));}
     $identityNumber=preg_replace('/\D+/','',(string)($_POST['identity_number']??''))??'';
     $address=trim((string)($_POST['billing_address']??''));
     $city=trim((string)($_POST['billing_city']??''));
     if(!preg_match('/^[0-9]{11}$/',$identityNumber)||$address===''||mb_strlen($address)>500||$city===''||mb_strlen($city)>100){
-        http_response_code(422);exit('Fatura adresi, şehir ve 11 haneli T.C. kimlik numarası alanlarını kontrol edin.');
+        http_response_code(422);exit(villa_ui('Fatura adresi, şehir ve 11 haneli T.C. kimlik numarası alanlarını kontrol edin.'));
     }
     $currency=strtoupper((string)$booking['currency']);
     if($currency==='TL')$currency='TRY';
     if(!in_array($currency,['TRY','USD','EUR','GBP','NOK','CHF'],true)){http_response_code(422);exit('iyzico bu rezervasyonun para birimini desteklemiyor.');}
     $amount=number_format((float)$booking['total'],2,'.','');
-    if((float)$amount<=0){http_response_code(422);exit('Ödeme tutarı geçersiz.');}
+    if((float)$amount<=0){http_response_code(422);exit(villa_ui('Ödeme tutarı geçersiz.'));}
 
     $nameParts=preg_split('/\s+/u',trim((string)$booking['guest_name']),2)?:[];
     $firstName=trim((string)($nameParts[0]??'Misafir'));
@@ -1191,12 +1192,12 @@ $router->post('/checkout/{bookingCode}/iyzico/start', static function (array $pa
     if(strlen($phoneDigits)===11&&str_starts_with($phoneDigits,'0'))$phone='+90'.substr($phoneDigits,1);
     elseif(strlen($phoneDigits)===12&&str_starts_with($phoneDigits,'90'))$phone='+'.$phoneDigits;
     elseif(strlen($phoneDigits)===10)$phone='+90'.$phoneDigits;
-    else{http_response_code(422);exit('Telefon numarası iyzico formatına uygun değil. Lütfen hesap telefon bilginizi güncelleyin.');}
+    else{http_response_code(422);exit(villa_ui('Telefon numarası iyzico formatına uygun değil. Lütfen hesap telefon bilginizi güncelleyin.'));}
     $now=date('Y-m-d H:i:s');
     $ip=(string)($_SERVER['REMOTE_ADDR']??'127.0.0.1');
     $conversationId='VR'.$booking['id'].'-'.bin2hex(random_bytes(8));
     try{$callbackUrl=app_absolute_url('/payments/iyzico/callback');}
-    catch(Throwable $e){http_response_code(503);exit('iyzico ödeme bildirimi için geçerli HTTPS site adresi gereklidir.');}
+    catch(Throwable $e){http_response_code(503);exit(villa_ui('iyzico ödeme bildirimi için geçerli HTTPS site adresi gereklidir.'));}
     $payload=[
         'locale'=>'tr','conversationId'=>$conversationId,'price'=>$amount,'paidPrice'=>$amount,
         'currency'=>$currency,'basketId'=>(string)$booking['booking_code'],'paymentGroup'=>'PRODUCT',
@@ -1225,9 +1226,9 @@ $router->post('/checkout/{bookingCode}/iyzico/start', static function (array $pa
             ['conversationId'=>$conversationId,'basketId'=>$booking['booking_code'],'environment'=>$paymentEnvironment]
         );
         $reservationResult=(string)($reservation['result']??'');
-        if($reservationResult==='already_paid'){http_response_code(409);exit('Bu rezervasyon için ödeme zaten doğrulanmış.');}
-        if($reservationResult==='booking_not_found'){http_response_code(404);exit('Rezervasyon bulunamadı.');}
-        if($reservationResult==='booking_not_pending'){http_response_code(409);exit('Yalnızca ödeme bekleyen rezervasyonlar için ödeme başlatılabilir.');}
+        if($reservationResult==='already_paid'){http_response_code(409);exit(villa_ui('Bu rezervasyon için ödeme zaten doğrulanmış.'));}
+        if($reservationResult==='booking_not_found'){http_response_code(404);exit(villa_ui('Rezervasyon bulunamadı.'));}
+        if($reservationResult==='booking_not_pending'){http_response_code(409);exit(villa_ui('Yalnızca ödeme bekleyen rezervasyonlar için ödeme başlatılabilir.'));}
         if($reservationResult==='processing')redirect('/checkout/'.rawurlencode((string)$booking['booking_code']).'?payment=review');
         if($reservationResult==='verification_required'){
             try{
@@ -1235,7 +1236,7 @@ $router->post('/checkout/{bookingCode}/iyzico/start', static function (array $pa
             }catch(Throwable $reconcileError){
                 error_log('iyzico expired checkout reconciliation failed; retry was blocked.');
                 http_response_code(409);
-                exit('Önceki ödeme oturumunun sonucu iyzico üzerinden doğrulanamadı. Çift tahsilat riskini önlemek için yeni ödeme başlatılmadı. Lütfen biraz sonra tekrar deneyin.');
+                exit(villa_ui('Önceki ödeme oturumunun sonucu iyzico üzerinden doğrulanamadı. Çift tahsilat riskini önlemek için yeni ödeme başlatılmadı. Lütfen biraz sonra tekrar deneyin.'));
             }
             $reconciledStatus=(string)($reconciled['payment_status']??'');
             $reconciledResult=(string)($reconciled['result']??'');
@@ -1260,21 +1261,21 @@ $router->post('/checkout/{bookingCode}/iyzico/start', static function (array $pa
                 );
                 $reservationResult=(string)($reservation['result']??'');
                 if($reservationResult==='processing') redirect('/checkout/'.rawurlencode((string)$booking['booking_code']).'?payment=review');
-                if($reservationResult==='booking_not_pending') { http_response_code(409); exit('Rezervasyon süresi doldu veya artık ödeme beklemiyor. Lütfen yeni bir rezervasyon oluşturun.'); }
-                if($reservationResult==='verification_required') { http_response_code(409); exit('Başka bir ödeme oturumunun sonucu doğrulanmadan yeni ödeme başlatılamaz.'); }
+                if($reservationResult==='booking_not_pending') { http_response_code(409); exit(villa_ui('Rezervasyon süresi doldu veya artık ödeme beklemiyor. Lütfen yeni bir rezervasyon oluşturun.')); }
+                if($reservationResult==='verification_required') { http_response_code(409); exit(villa_ui('Başka bir ödeme oturumunun sonucu doğrulanmadan yeni ödeme başlatılamaz.')); }
             }else{
                 http_response_code(409);
-                exit('Önceki ödeme oturumunun sonucu kesinleşmedi. Yeni ödeme başlatılmadı; ödeme durumu inceleniyor.');
+                exit(villa_ui('Önceki ödeme oturumunun sonucu kesinleşmedi. Yeni ödeme başlatılmadı; ödeme durumu inceleniyor.'));
             }
         }
-        if($reservationResult==='initializing'){http_response_code(409);exit('Ödeme oturumu hazırlanıyor. Lütfen birkaç saniye sonra tekrar deneyin.');}
+        if($reservationResult==='initializing'){http_response_code(409);exit(villa_ui('Ödeme oturumu hazırlanıyor. Lütfen birkaç saniye sonra tekrar deneyin.'));}
         if($reservationResult==='existing'){
             $existingPayload=json_decode((string)($reservation['payment']['response_payload']??''),true);
             $existingUrl=is_array($existingPayload)?villa_iyzico_checkout_redirect_url((string)($existingPayload['paymentPageUrl']??'')):null;
             if($existingUrl!==null)redirect($existingUrl);
-            http_response_code(409);exit('Mevcut ödeme oturumu doğrulanamadı. Lütfen birkaç saniye sonra tekrar deneyin.');
+            http_response_code(409);exit(villa_ui('Mevcut ödeme oturumu doğrulanamadı. Lütfen birkaç saniye sonra tekrar deneyin.'));
         }
-        if($reservationResult!=='reserved'){http_response_code(409);exit('Ödeme oturumu güvenli şekilde başlatılamadı.');}
+        if($reservationResult!=='reserved'){http_response_code(409);exit(villa_ui('Ödeme oturumu güvenli şekilde başlatılamadı.'));}
         $transactionId=(int)$reservation['transaction_id'];
         $response=\App\Core\IyzicoApiClient::initializeCheckoutForm($config,$payload);
         $token=trim((string)($response['token']??''));
@@ -1357,11 +1358,11 @@ $router->post('/payments/paytr/callback', static function (): void {
 
 $router->post('/payments/iyzico/callback', static function (): void {
     $token=trim((string)($_POST['token']??''));
-    if($token===''||strlen($token)>128){http_response_code(400);exit('Ödeme bildirimi geçersiz.');}
+    if($token===''||strlen($token)>128){http_response_code(400);exit(villa_ui('Ödeme bildirimi geçersiz.'));}
     $pdo=Database::connection();
     $find=$pdo->prepare("SELECT pt.id,pt.booking_id,pt.amount,pt.currency,pt.status,pt.request_payload,pt.response_payload,b.booking_code FROM payment_transactions pt JOIN bookings b ON b.id=pt.booking_id WHERE pt.provider='iyzico' AND pt.provider_reference=? LIMIT 1");
     $find->execute([$token]);$transaction=$find->fetch();
-    if(!$transaction){http_response_code(404);exit('Ödeme işlemi bulunamadı.');}
+    if(!$transaction){http_response_code(404);exit(villa_ui('Ödeme işlemi bulunamadı.'));}
     try{
         $config=\App\Core\PaymentGatewayConfig::forProvider('iyzico');
         $requestData=json_decode((string)$transaction['request_payload'],true);
@@ -1412,11 +1413,11 @@ $currentPayment=$pdo->prepare('SELECT pt.status,pt.response_payload,b.status AS 
 foreach(['success','failed','review'] as $paymentResultType){
     $router->get('/payment/'.$paymentResultType.'/{paymentToken}', static function(array $params) use($paymentResultType):void {
         $token=trim((string)($params['paymentToken']??''));
-        if($token===''||strlen($token)>128){http_response_code(404);exit('Ödeme sonucu bulunamadı.');}
+        if($token===''||strlen($token)>128){http_response_code(404);exit(villa_ui('Ödeme sonucu bulunamadı.'));}
         $pdo=Database::connection();
         $stmt=$pdo->prepare("SELECT b.*,p.title AS property_title,p.slug AS property_slug,pt.status AS payment_status,pt.provider_reference,pt.updated_at AS payment_updated_at FROM payment_transactions pt JOIN bookings b ON b.id=pt.booking_id JOIN properties p ON p.id=b.property_id WHERE pt.provider='iyzico' AND pt.provider_reference=? LIMIT 1");
         $stmt->execute([$token]);$row=$stmt->fetch(PDO::FETCH_ASSOC);
-        if(!$row){http_response_code(404);exit('Ödeme sonucu bulunamadı.');}
+        if(!$row){http_response_code(404);exit(villa_ui('Ödeme sonucu bulunamadı.'));}
         $payment=['status'=>(string)$row['payment_status'],'provider_reference'=>(string)$row['provider_reference'],'updated_at'=>$row['payment_updated_at']];
         $booking=$row;$actualStatus=(string)$payment['status'];
         if($paymentResultType==='success'&&$actualStatus!=='paid')redirect('/payment/review/'.rawurlencode($token));
@@ -1507,7 +1508,7 @@ $router->get('/account/messages/{bookingId}', static function (array $params): v
 });
 $router->post('/account/messages/send', static function (): void {
     $user=Auth::user();if(!$user)redirect('/login');verify_csrf();$pdo=Database::connection();$bookingId=(int)($_POST['booking_id']??0);$body=trim((string)($_POST['body']??''));
-    if($body===''||strlen($body)>5000){http_response_code(422);exit('Mesaj 1 ile 5000 karakter arasında olmalıdır.');}
+    if($body===''||strlen($body)>5000){http_response_code(422);exit(villa_ui('Mesaj 1 ile 5000 karakter arasında olmalıdır.'));}
     $s=$pdo->prepare('SELECT b.*,p.vendor_id,v.user_id AS vendor_user_id FROM bookings b JOIN properties p ON p.id=b.property_id LEFT JOIN vendors v ON v.id=p.vendor_id WHERE b.id=?');$s->execute([$bookingId]);$booking=$s->fetch();if(!$booking){http_response_code(404);return;}
     $vendorUserId=(int)($booking['vendor_user_id']??0);if(!$vendorUserId)$vendorUserId=(int)$pdo->query("SELECT id FROM users WHERE role='super_admin' ORDER BY id LIMIT 1")->fetchColumn();
     $guestId=(int)$booking['guest_user_id'];$currentId=(int)$user['id'];if($currentId!==$guestId&&$currentId!==$vendorUserId){http_response_code(403);return;}
@@ -1564,14 +1565,14 @@ $router->post('/favorites/toggle', static function (): void {
     $isAjax=str_contains((string)($_SERVER['HTTP_ACCEPT']??''),'application/json') || (string)($_SERVER['HTTP_X_REQUESTED_WITH']??'')==='XMLHttpRequest';
     $user=Auth::user();
     if(!$user || ($user['role']??'')!=='customer'){
-        if($isAjax){http_response_code(401);header('Content-Type: application/json; charset=utf-8');echo json_encode(['ok'=>false,'message'=>'Favorilerinizi yönetmek için müşteri hesabınızla giriş yapın.'],JSON_UNESCAPED_UNICODE);return;}
+        if($isAjax){http_response_code(401);header('Content-Type: application/json; charset=utf-8');echo json_encode(['ok'=>false,'message'=>villa_ui('Favorilerinizi yönetmek için müşteri hesabınızla giriş yapın.')],JSON_UNESCAPED_UNICODE);return;}
         if(!$user)redirect('/login');redirect('/admin');
     }
     verify_csrf();
     $pdo=Database::connection();$pid=(int)($_POST['property_id']??0);
     $check=$pdo->prepare("SELECT id FROM properties WHERE id=? AND status='published'");$check->execute([$pid]);
     if(!$check->fetchColumn()){
-        if($isAjax){http_response_code(404);header('Content-Type: application/json; charset=utf-8');echo json_encode(['ok'=>false,'message'=>'Konaklama artık yayında değil.'],JSON_UNESCAPED_UNICODE);return;}
+        if($isAjax){http_response_code(404);header('Content-Type: application/json; charset=utf-8');echo json_encode(['ok'=>false,'message'=>villa_ui('Konaklama artık yayında değil.')],JSON_UNESCAPED_UNICODE);return;}
         http_response_code(404);return;
     }
     $exists=$pdo->prepare('SELECT 1 FROM favorites WHERE user_id=? AND property_id=?');$exists->execute([(int)$user['id'],$pid]);
@@ -1596,17 +1597,17 @@ $router->get('/account/reviews/{bookingId}', static function (array $params): vo
     $user=Auth::user();if(!$user||($user['role']??'')!=='customer')redirect('/login');
     $s=Database::connection()->prepare("SELECT b.id,p.title FROM bookings b JOIN properties p ON p.id=b.property_id WHERE b.id=? AND b.guest_user_id=? AND b.status='completed'");
     $s->execute([(int)$params['bookingId'],(int)$user['id']]);$booking=$s->fetch();if(!$booking){http_response_code(404);return;}
-    $exists=Database::connection()->prepare('SELECT id FROM reviews WHERE booking_id=?');$exists->execute([(int)$booking['id']]);if($exists->fetchColumn()){http_response_code(409);exit('Bu rezervasyon için zaten değerlendirme gönderdiniz.');}
+    $exists=Database::connection()->prepare('SELECT id FROM reviews WHERE booking_id=?');$exists->execute([(int)$booking['id']]);if($exists->fetchColumn()){http_response_code(409);exit(villa_ui('Bu rezervasyon için zaten değerlendirme gönderdiniz.'));}
     villa_render_account_view('review-form.php', get_defined_vars());
 });
 $router->post('/account/reviews', static function (): void {
     $user=Auth::user();if(!$user||($user['role']??'')!=='customer')redirect('/login');verify_csrf();
     $bookingId=(int)($_POST['booking_id']??0);$rating=filter_var($_POST['rating']??null,FILTER_VALIDATE_INT);$body=trim((string)($_POST['body']??''));
-    if($rating===false||$rating===null||$rating<1||$rating>10){http_response_code(422);exit('Puan 1 ile 10 arasında olmalıdır.');}
-    if(mb_strlen($body)>3000){http_response_code(422);exit('Değerlendirme metni en fazla 3000 karakter olabilir.');}
-    $pdo=Database::connection();$s=$pdo->prepare("SELECT property_id FROM bookings WHERE id=? AND guest_user_id=? AND status='completed'");$s->execute([$bookingId,(int)$user['id']]);$propertyId=(int)$s->fetchColumn();if(!$propertyId){http_response_code(403);exit('Yalnızca tamamlanan konaklamalar değerlendirilebilir.');}
+    if($rating===false||$rating===null||$rating<1||$rating>10){http_response_code(422);exit(villa_ui('Puan 1 ile 10 arasında olmalıdır.'));}
+    if(mb_strlen($body)>3000){http_response_code(422);exit(villa_ui('Değerlendirme metni en fazla 3000 karakter olabilir.'));}
+    $pdo=Database::connection();$s=$pdo->prepare("SELECT property_id FROM bookings WHERE id=? AND guest_user_id=? AND status='completed'");$s->execute([$bookingId,(int)$user['id']]);$propertyId=(int)$s->fetchColumn();if(!$propertyId){http_response_code(403);exit(villa_ui('Yalnızca tamamlanan konaklamalar değerlendirilebilir.'));}
     try{$save=$pdo->prepare("INSERT INTO reviews(booking_id,property_id,guest_user_id,rating,body,status,created_at) VALUES(?,?,?,?,?,'pending',NOW())");$save->execute([$bookingId,$propertyId,(int)$user['id'],$rating,$body]);redirect('/account/bookings');}
-    catch(PDOException $e){http_response_code(409);exit('Bu rezervasyon için değerlendirme zaten mevcut.');}
+    catch(PDOException $e){http_response_code(409);exit(villa_ui('Bu rezervasyon için değerlendirme zaten mevcut.'));}
 });
 $router->get('/admin/reviews', static function (): void {
     Auth::requireRole(['super_admin','admin']);$reviews=Database::connection()->query('SELECT r.*,p.title,u.username FROM reviews r JOIN properties p ON p.id=r.property_id JOIN users u ON u.id=r.guest_user_id ORDER BY r.created_at DESC LIMIT 250')->fetchAll();ThemeManager::renderTemplate('templates/pages/admin/reviews.php', get_defined_vars());
@@ -1652,9 +1653,9 @@ $router->get('/account/bookings', static function (): void {
 });
 $router->post('/account/bookings/cancel-request', static function (): void {
     $user=Auth::user();if(!$user)redirect('/login');
-    if(($user['role']??'')!=='customer'){http_response_code(403);exit('Bu işlem yalnızca müşteri hesabından yapılabilir.');}
+    if(($user['role']??'')!=='customer'){http_response_code(403);exit(villa_ui('Bu işlem yalnızca müşteri hesabından yapılabilir.'));}
     verify_csrf();$bookingId=(int)($_POST['booking_id']??0);$reason=trim((string)($_POST['reason']??''));
-    if($bookingId<1||mb_strlen($reason)>1000){http_response_code(422);exit('İptal talebi bilgileri geçersiz.');}
+    if($bookingId<1||mb_strlen($reason)>1000){http_response_code(422);exit(villa_ui('İptal talebi bilgileri geçersiz.'));}
     $pdo=Database::connection();
     try{
         $pdo->beginTransaction();
@@ -1668,7 +1669,7 @@ $router->post('/account/bookings/cancel-request', static function (): void {
         $insert=$pdo->prepare("INSERT INTO booking_cancellation_requests(booking_id,requested_by,reason,status,days_before_checkin,policy_days_snapshot,refund_percent_snapshot,refund_amount,currency,created_at) VALUES(?,?,?,'pending',?,?,?,?,?,NOW())");
         $insert->execute([$bookingId,(int)$user['id'],$reason,$estimate['days_before_checkin'],(int)($policy['booking.cancellation.free_days']??7),$estimate['refund_percent'],$estimate['refund_amount'],(string)$booking['currency']]);
         $pdo->commit();redirect('/account/bookings');
-    }catch(PDOException $e){if($pdo->inTransaction())$pdo->rollBack();if((string)$e->getCode()==='23000'){http_response_code(409);exit('Bu rezervasyon için zaten bekleyen bir iptal talebi var.');}error_log('Cancellation request failed: '.$e->getMessage());http_response_code(500);exit('İptal talebi kaydedilemedi.');}
+    }catch(PDOException $e){if($pdo->inTransaction())$pdo->rollBack();if((string)$e->getCode()==='23000'){http_response_code(409);exit(villa_ui('Bu rezervasyon için zaten bekleyen bir iptal talebi var.'));}error_log('Cancellation request failed: '.$e->getMessage());http_response_code(500);exit(villa_ui('İptal talebi kaydedilemedi.'));}
     catch(Throwable $e){if($pdo->inTransaction())$pdo->rollBack();http_response_code(422);exit($e->getMessage());}
 });
 
@@ -1707,7 +1708,7 @@ $router->post('/account/profile', static function (): void {
 });
 $router->get('/account/email/verify', static function (): void {
     $token=(string)($_GET['token']??'');
-    if(!preg_match('/^[a-f0-9]{64}$/',$token)){http_response_code(400);exit('Doğrulama bağlantısı geçersiz veya süresi dolmuş.');}
+    if(!preg_match('/^[a-f0-9]{64}$/',$token)){http_response_code(400);exit(villa_ui('Doğrulama bağlantısı geçersiz veya süresi dolmuş.'));}
     $pdo=Database::connection();
     try{
         $pdo->beginTransaction();
@@ -1763,14 +1764,14 @@ $router->post('/forgot-password', static function (): void {
 });
 $router->get('/reset-password', static function (): void {
     header('Cache-Control: no-store');$token=(string)($_GET['token']??'');
-    if(!preg_match('/^[a-f0-9]{64}$/',$token)){http_response_code(400);exit('Şifre yenileme bağlantısı geçersiz veya süresi dolmuş.');}
+    if(!preg_match('/^[a-f0-9]{64}$/',$token)){http_response_code(400);exit(villa_ui('Şifre yenileme bağlantısı geçersiz veya süresi dolmuş.'));}
     $stmt=Database::connection()->prepare("SELECT id FROM account_security_tokens WHERE purpose='password_reset' AND token_hash=? AND used_at IS NULL AND expires_at>NOW() LIMIT 1");
-    $stmt->execute([hash('sha256',$token)]);if(!$stmt->fetchColumn()){http_response_code(400);exit('Şifre yenileme bağlantısı geçersiz veya süresi dolmuş.');}
+    $stmt->execute([hash('sha256',$token)]);if(!$stmt->fetchColumn()){http_response_code(400);exit(villa_ui('Şifre yenileme bağlantısı geçersiz veya süresi dolmuş.'));}
     $error='';ThemeManager::renderTemplate('templates/pages/auth/reset-password.php',get_defined_vars());
 });
 $router->post('/reset-password', static function (): void {
     verify_csrf();$token=(string)($_POST['token']??'');$password=(string)($_POST['password']??'');$confirm=(string)($_POST['password_confirm']??'');
-    if(!preg_match('/^[a-f0-9]{64}$/',$token)||strlen($password)<12||strlen($password)>4096||!hash_equals($password,$confirm)){http_response_code(422);$error='Bağlantıyı ve şifre alanlarını kontrol edin. Şifre en az 12 karakter olmalıdır.';ThemeManager::renderTemplate('templates/pages/auth/reset-password.php',get_defined_vars());return;}
+    if(!preg_match('/^[a-f0-9]{64}$/',$token)||strlen($password)<12||strlen($password)>4096||!hash_equals($password,$confirm)){http_response_code(422);$error=villa_ui('Bağlantıyı ve şifre alanlarını kontrol edin. Şifre en az 12 karakter olmalıdır.');ThemeManager::renderTemplate('templates/pages/auth/reset-password.php',get_defined_vars());return;}
     $pdo=Database::connection();
     try{
         $pdo->beginTransaction();$find=$pdo->prepare("SELECT id,user_id FROM account_security_tokens WHERE purpose='password_reset' AND token_hash=? AND used_at IS NULL AND expires_at>NOW() LIMIT 1 FOR UPDATE");$find->execute([hash('sha256',$token)]);$record=$find->fetch(PDO::FETCH_ASSOC);
@@ -1779,7 +1780,7 @@ $router->post('/reset-password', static function (): void {
         if($update->rowCount()!==1)throw new RuntimeException('Hesap güncellenemedi.');
         $pdo->prepare("UPDATE account_security_tokens SET used_at=NOW() WHERE user_id=? AND used_at IS NULL")->execute([(int)$record['user_id']]);$pdo->commit();
         Auth::logout();redirect('/login');
-    }catch(Throwable $e){if($pdo->inTransaction())$pdo->rollBack();http_response_code(400);$token='';$error='Şifre yenileme bağlantısı geçersiz veya süresi dolmuş. Yeni bir bağlantı isteyin.';ThemeManager::renderTemplate('templates/pages/auth/reset-password.php',get_defined_vars());}
+    }catch(Throwable $e){if($pdo->inTransaction())$pdo->rollBack();http_response_code(400);$token='';$error=villa_ui('Şifre yenileme bağlantısı geçersiz veya süresi dolmuş. Yeni bir bağlantı isteyin.');ThemeManager::renderTemplate('templates/pages/auth/reset-password.php',get_defined_vars());}
 });
 
 $router->get('/login', static function (): void {
@@ -1814,12 +1815,12 @@ $router->post('/login/ajax', static function (): void {
         $identity = trim((string)($_POST['identity'] ?? ''));
         $password = (string)($_POST['password'] ?? '');
         if ($identity === '' || $password === '' || !Auth::attempt($identity, $password)) {
-            $respond(401, ['ok' => false, 'message' => 'E-posta/kullanıcı adı veya şifre hatalı.']);
+            $respond(401, ['ok' => false, 'message' => villa_ui('E-posta/kullanıcı adı veya şifre hatalı.')]);
         }
 
         $user = Auth::user();
         if (!$user) {
-            $respond(401, ['ok' => false, 'message' => 'Oturum doğrulanamadı. Lütfen tekrar deneyin.']);
+            $respond(401, ['ok' => false, 'message' => villa_ui('Oturum doğrulanamadı. Lütfen tekrar deneyin.')]);
         }
 
         $favoritePropertyId = (int)($_POST['favorite_property_id'] ?? 0);
@@ -1908,7 +1909,7 @@ $router->post('/login/ajax', static function (): void {
         ]);
     } catch (Throwable $error) {
         error_log('AJAX login failed: ' . $error->getMessage());
-        $respond(500, ['ok'=>false, 'message'=>'Giriş sırasında bir sunucu hatası oluştu. Lütfen tekrar deneyin.']);
+        $respond(500, ['ok'=>false, 'message'=>villa_ui('Giriş sırasında bir sunucu hatası oluştu. Lütfen tekrar deneyin.')]);
     }
 });
 
@@ -1978,9 +1979,9 @@ $router->post('/vendor/register', static function (): void {
     $business=trim((string)($_POST['business_name']??'')); $username=trim((string)($_POST['username']??''));
     $email=filter_var(trim((string)($_POST['email']??'')),FILTER_VALIDATE_EMAIL); $phone=trim((string)($_POST['phone']??''));
     $password=(string)($_POST['password']??'');
-    if($business===''||strlen($username)<3||!$email||strlen($password)<10){$error='Bilgileri kontrol edin. Şifre en az 10 karakter olmalıdır.';ThemeManager::renderTemplate('templates/pages/vendor/register.php', get_defined_vars());return;}
+    if($business===''||strlen($username)<3||!$email||strlen($password)<10){$error=villa_ui('Bilgileri kontrol edin. Şifre en az 10 karakter olmalıdır.');ThemeManager::renderTemplate('templates/pages/vendor/register.php', get_defined_vars());return;}
     try{$pdo->beginTransaction();$u=$pdo->prepare("INSERT INTO users(username,email,password_hash,role,status,created_at) VALUES(?,?,?,'vendor','active',NOW())");$u->execute([$username,$email,password_hash($password,PASSWORD_DEFAULT)]);$v=$pdo->prepare("INSERT INTO vendors(user_id,business_name,phone,status,created_at) VALUES(?,?,?,'pending',NOW())");$v->execute([(int)$pdo->lastInsertId(),$business,$phone]);$pdo->commit();Auth::attempt($email,$password);redirect('/vendor');}
-    catch(PDOException $e){if($pdo->inTransaction())$pdo->rollBack();$error='Bu kullanıcı adı veya e-posta kullanılıyor ya da başvuru kaydedilemedi.';ThemeManager::renderTemplate('templates/pages/vendor/register.php', get_defined_vars());}
+    catch(PDOException $e){if($pdo->inTransaction())$pdo->rollBack();$error=villa_ui('Bu kullanıcı adı veya e-posta kullanılıyor ya da başvuru kaydedilemedi.');ThemeManager::renderTemplate('templates/pages/vendor/register.php', get_defined_vars());}
 });
 $router->get('/vendor', static function (): void {
     Auth::requireRole(['vendor']);$pdo=Database::connection();
@@ -2018,7 +2019,7 @@ $router->post('/vendor/payouts/request', static function (): void {
     if((string)$pdo->query("SELECT setting_value FROM settings WHERE setting_key='app.mode'")->fetchColumn()!=='multi_vendor'){http_response_code(404);return;}
     $user=Auth::user();
     $vendorStmt=$pdo->prepare('SELECT id,status FROM vendors WHERE user_id=? LIMIT 1');$vendorStmt->execute([(int)$user['id']]);$vendor=$vendorStmt->fetch();
-    if(!$vendor||!Auth::canManageVendorBookings((string)$vendor['status'])){http_response_code(403);exit('Ödeme talebi için onaylı ev sahibi hesabı gereklidir.');}
+    if(!$vendor||!Auth::canManageVendorBookings((string)$vendor['status'])){http_response_code(403);exit(villa_ui('Ödeme talebi için onaylı ev sahibi hesabı gereklidir.'));}
     try{
         $result=\App\Core\VendorPayoutService::request($pdo,(int)$user['id'],(string)($_POST['currency']??''));
         $notice=$pdo->prepare("INSERT INTO notifications(user_id,notification_type,title,body,created_at) VALUES(?,'payout.requested','Ödeme talebiniz alındı',?,NOW())");
@@ -2037,7 +2038,7 @@ $router->get('/vendor/bookings', static function (): void {
     if((string)$pdo->query("SELECT setting_value FROM settings WHERE setting_key='app.mode'")->fetchColumn()!=='multi_vendor'){http_response_code(404);return;}
     $v=$pdo->prepare('SELECT id,status FROM vendors WHERE user_id=?');$v->execute([(int)Auth::user()['id']]);$vendor=$v->fetch();
     if(!$vendor){http_response_code(403);return;}
-    if(!Auth::canManageVendorBookings((string)$vendor['status'])){http_response_code(403);exit('Rezervasyonlara erişmek için işletme hesabınızın onaylanması gerekiyor.');}
+    if(!Auth::canManageVendorBookings((string)$vendor['status'])){http_response_code(403);exit(villa_ui('Rezervasyonlara erişmek için işletme hesabınızın onaylanması gerekiyor.'));}
     $vendorId=(int)$vendor['id'];
     $status=(string)($_GET['status']??'');$allowed=['pending','confirmed','cancelled','completed'];
     $sql="SELECT b.*,p.title,COALESCE(NULLIF(b.guest_name,''),u.username,'Misafir') AS guest_name,COALESCE(NULLIF(b.guest_email,''),u.email,'') AS guest_email,COALESCE(b.guest_phone,'') AS guest_phone FROM bookings b JOIN properties p ON p.id=b.property_id LEFT JOIN users u ON u.id=b.guest_user_id WHERE p.vendor_id=?";
@@ -2052,44 +2053,44 @@ $router->post('/vendor/bookings/status', static function (): void {
     if((string)$pdo->query("SELECT setting_value FROM settings WHERE setting_key='app.mode'")->fetchColumn()!=='multi_vendor'){http_response_code(404);return;}
     $vendor=$pdo->prepare('SELECT id,status FROM vendors WHERE user_id=? LIMIT 1');$vendor->execute([(int)Auth::user()['id']]);$vendorRow=$vendor->fetch(PDO::FETCH_ASSOC);
     if(!$vendorRow){http_response_code(403);return;}
-    if(!Auth::canManageVendorBookings((string)$vendorRow['status'])){http_response_code(403);exit('Rezervasyonları yönetmek için işletme hesabınızın onaylanması gerekiyor.');}
+    if(!Auth::canManageVendorBookings((string)$vendorRow['status'])){http_response_code(403);exit(villa_ui('Rezervasyonları yönetmek için işletme hesabınızın onaylanması gerekiyor.'));}
     $vendorId=(int)$vendorRow['id'];
     $id=(int)($_POST['id']??0);$status=(string)($_POST['status']??'');
-    if($id<1||!in_array($status,['confirmed','cancelled','completed'],true)){http_response_code(422);exit('Rezervasyon durumu geçersiz.');}
+    if($id<1||!in_array($status,['confirmed','cancelled','completed'],true)){http_response_code(422);exit(villa_ui('Rezervasyon durumu geçersiz.'));}
     try{
         $pdo->beginTransaction();
         // Match the global lock order: property first, then all related bookings.
         $lookup=$pdo->prepare('SELECT b.property_id FROM bookings b JOIN properties p ON p.id=b.property_id WHERE b.id=? AND p.vendor_id=? LIMIT 1');
         $lookup->execute([$id,$vendorId]);$propertyId=(int)($lookup->fetchColumn()?:0);
-        if($propertyId<1){$pdo->rollBack();http_response_code(404);exit('Rezervasyon bulunamadı.');}
+        if($propertyId<1){$pdo->rollBack();http_response_code(404);exit(villa_ui('Rezervasyon bulunamadı.'));}
         $propertyLock=$pdo->prepare('SELECT id FROM properties WHERE id=? AND vendor_id=? LIMIT 1 FOR UPDATE');
         $propertyLock->execute([$propertyId,$vendorId]);
-        if(!$propertyLock->fetchColumn()){$pdo->rollBack();http_response_code(404);exit('Rezervasyon bulunamadı.');}
+        if(!$propertyLock->fetchColumn()){$pdo->rollBack();http_response_code(404);exit(villa_ui('Rezervasyon bulunamadı.'));}
         \App\Core\BookingHoldExpiryService::expireSafePendingForProperty($pdo,$propertyId);
         $s=$pdo->prepare('SELECT b.id,b.property_id,b.booking_code,b.guest_phone,b.guest_user_id,b.check_in,b.check_out,b.status FROM bookings b JOIN properties p ON p.id=b.property_id WHERE b.id=? AND b.property_id=? AND p.vendor_id=? LIMIT 1 FOR UPDATE');
         $s->execute([$id,$propertyId,$vendorId]);$booking=$s->fetch(PDO::FETCH_ASSOC);
-        if(!$booking){$pdo->rollBack();http_response_code(404);exit('Rezervasyon bulunamadı.');}
+        if(!$booking){$pdo->rollBack();http_response_code(404);exit(villa_ui('Rezervasyon bulunamadı.'));}
         if(!\App\Core\BookingStatusPolicy::canVendorTransition((string)$booking['status'],$status)){
-            $pdo->rollBack();http_response_code(409);exit('Bu rezervasyon durumundan seçilen işleme geçişe izin verilmiyor.');
+            $pdo->rollBack();http_response_code(409);exit(villa_ui('Bu rezervasyon durumundan seçilen işleme geçişe izin verilmiyor.'));
         }
         if((string)$booking['status']===$status){$pdo->commit();redirect('/vendor/bookings');}
         if($status==='completed' && (string)$booking['check_out'] > (new DateTimeImmutable('today'))->format('Y-m-d')){
-            $pdo->rollBack();http_response_code(409);exit('Çıkış tarihi gelmeden rezervasyon tamamlandı olarak işaretlenemez.');
+            $pdo->rollBack();http_response_code(409);exit(villa_ui('Çıkış tarihi gelmeden rezervasyon tamamlandı olarak işaretlenemez.'));
         }
         if($status==='confirmed'){
             $conflict=$pdo->prepare("SELECT id FROM bookings WHERE property_id=? AND id<>? AND status IN ('pending','confirmed') AND check_in < ? AND check_out > ? LIMIT 1 FOR UPDATE");
             $conflict->execute([$propertyId,$id,$booking['check_out'],$booking['check_in']]);
-            if($conflict->fetchColumn()){$pdo->rollBack();http_response_code(409);exit('Bu tarihlerde bekleyen veya onaylanmış başka bir rezervasyon var.');}
+            if($conflict->fetchColumn()){$pdo->rollBack();http_response_code(409);exit(villa_ui('Bu tarihlerde bekleyen veya onaylanmış başka bir rezervasyon var.'));}
             $blocked=$pdo->prepare("SELECT id FROM availability WHERE property_id=? AND status<>'available' AND date_from < ? AND date_to > ? LIMIT 1 FOR UPDATE");
             $blocked->execute([$propertyId,$booking['check_out'],$booking['check_in']]);
-            if($blocked->fetchColumn()){$pdo->rollBack();http_response_code(409);exit('Bu rezervasyon tarihleri takvimde kapatılmış.');}
+            if($blocked->fetchColumn()){$pdo->rollBack();http_response_code(409);exit(villa_ui('Bu rezervasyon tarihleri takvimde kapatılmış.'));}
             $seasonStmt=$pdo->prepare('SELECT date_from,date_to,min_nights,checkin_weekdays,checkout_weekdays FROM property_seasonal_prices WHERE property_id=? AND date_from < ? AND date_to > ? ORDER BY date_from');
             $seasonStmt->execute([$propertyId,$booking['check_out'],$booking['check_in']]);$staySeasons=$seasonStmt->fetchAll(PDO::FETCH_ASSOC);
             try{\App\Core\BookingStayRules::validate(new DateTimeImmutable($booking['check_in']),new DateTimeImmutable($booking['check_out']),$staySeasons);}catch(InvalidArgumentException $e){$pdo->rollBack();http_response_code(409);exit($e->getMessage());}
         }
         $u=$pdo->prepare('UPDATE bookings SET status=? WHERE id=? AND status=?');
         $u->execute([$status,$id,(string)$booking['status']]);
-        if($u->rowCount()!==1){$pdo->rollBack();http_response_code(409);exit('Rezervasyon durumu eşzamanlı olarak değişti. Lütfen tekrar deneyin.');}
+        if($u->rowCount()!==1){$pdo->rollBack();http_response_code(409);exit(villa_ui('Rezervasyon durumu eşzamanlı olarak değişti. Lütfen tekrar deneyin.'));}
         $titles=['confirmed'=>'Rezervasyonunuz onaylandı','cancelled'=>'Rezervasyonunuz iptal edildi','completed'=>'Konaklamanız tamamlandı'];
         if(!empty($booking['guest_user_id'])){
             $n=$pdo->prepare('INSERT INTO notifications(user_id,notification_type,title,body,created_at) VALUES(?,?,?,?,NOW())');
@@ -2098,7 +2099,7 @@ $router->post('/vendor/bookings/status', static function (): void {
         $log=$pdo->prepare('INSERT INTO audit_logs(user_id,action,entity_type,entity_id,ip_address,details,created_at) VALUES(?,?,?,?,?,?,NOW())');
         $log->execute([(int)Auth::user()['id'],'booking.status_changed','booking',$id,$_SERVER['REMOTE_ADDR']??null,json_encode(['from'=>$booking['status'],'to'=>$status],JSON_UNESCAPED_UNICODE)]);
         $pdo->commit();try{\App\Core\SmsService::enqueueBookingStatus($pdo,$booking,$status);}catch(Throwable $smsError){error_log('Vendor booking SMS enqueue failed: '.$smsError->getMessage());}redirect('/vendor/bookings');
-    }catch(Throwable $e){if($pdo->inTransaction())$pdo->rollBack();error_log('Vendor booking status update failed: '.$e->getMessage());http_response_code(500);exit('Rezervasyon güncellenemedi.');}
+    }catch(Throwable $e){if($pdo->inTransaction())$pdo->rollBack();error_log('Vendor booking status update failed: '.$e->getMessage());http_response_code(500);exit(villa_ui('Rezervasyon güncellenemedi.'));}
 });
 
 $router->get('/vendor/properties', static function (): void {
@@ -2117,21 +2118,21 @@ $router->get('/vendor/properties/{id}', static function (array $params): void {
 $router->post('/vendor/properties/save', static function (): void {
     Auth::requireRole(['vendor']);verify_csrf();$pdo=Database::connection();
     $s=$pdo->prepare('SELECT id,status FROM vendors WHERE user_id=?');$s->execute([(int)Auth::user()['id']]);$vendor=$s->fetch();if(!$vendor){http_response_code(403);return;}
-    if((string)$vendor['status']!=='approved'){http_response_code(403);exit('Villa ekleme ve düzenleme için ev sahibi hesabınızın onaylanması gerekiyor.');}
-    $title=trim((string)($_POST['title']??''));if($title===''){http_response_code(422);exit('İlan başlığı zorunludur.');}
+    if((string)$vendor['status']!=='approved'){http_response_code(403);exit(villa_ui('Villa ekleme ve düzenleme için ev sahibi hesabınızın onaylanması gerekiyor.'));}
+    $title=trim((string)($_POST['title']??''));if($title===''){http_response_code(422);exit(villa_ui('İlan başlığı zorunludur.'));}
     $slug=trim((string)($_POST['slug']??''));if($slug===''){$a=iconv('UTF-8','ASCII//TRANSLIT//IGNORE',$title);$slug=strtolower(trim(preg_replace('/[^a-zA-Z0-9]+/','-',$a!==false?$a:$title),'-'));}
     $slug=trim(strtolower(preg_replace('/[^a-z0-9-]+/','-',$slug)),'-');if($slug==='')$slug='villa-'.bin2hex(random_bytes(4));
     $id=(int)($_POST['id']??0);$status=$vendor['status']==='approved'&&($_POST['status']??'')==='published'?'published':'draft';
     $data=[$title,$slug,trim((string)($_POST['summary']??'')),trim((string)($_POST['description']??'')),trim((string)($_POST['country']??'Türkiye')),trim((string)($_POST['city']??'')),trim((string)($_POST['district']??'')),trim((string)($_POST['address']??'')),max(1,(int)($_POST['max_guests']??1)),max(0,(int)($_POST['bedrooms']??0)),max(0,(int)($_POST['beds']??0)),max(0,(float)($_POST['bathrooms']??1)),max(0,(float)($_POST['base_nightly_price']??0)),max(0,(float)($_POST['weekend_nightly_price']??0)),max(0,(float)($_POST['cleaning_fee']??0)),strtoupper(substr(preg_replace('/[^A-Za-z]/','',(string)($_POST['currency']??'TRY')),0,3))?:'TRY',$status,($_POST['booking_type']??'')==='instant'?'instant':'request',((int)($_POST['category_id']??0)>0?(int)$_POST['category_id']:null)];
-    $metaTitle=trim((string)($_POST['meta_title']??''));$metaDescription=trim((string)($_POST['meta_description']??''));if(mb_strlen($metaTitle)>220||mb_strlen($metaDescription)>320){http_response_code(422);exit('SEO alanları çok uzun.');}$data[]=$metaTitle!==''?$metaTitle:null;$data[]=$metaDescription!==''?$metaDescription:null;
+    $metaTitle=trim((string)($_POST['meta_title']??''));$metaDescription=trim((string)($_POST['meta_description']??''));if(mb_strlen($metaTitle)>220||mb_strlen($metaDescription)>320){http_response_code(422);exit(villa_ui('SEO alanları çok uzun.'));}$data[]=$metaTitle!==''?$metaTitle:null;$data[]=$metaDescription!==''?$metaDescription:null;
     $latitudeRaw=trim((string)($_POST['latitude']??''));$longitudeRaw=trim((string)($_POST['longitude']??''));
-    if(($latitudeRaw==='')!==($longitudeRaw==='')){http_response_code(422);exit('Harita için enlem ve boylam birlikte girilmelidir.');}
+    if(($latitudeRaw==='')!==($longitudeRaw==='')){http_response_code(422);exit(villa_ui('Harita için enlem ve boylam birlikte girilmelidir.'));}
     $latitude=$latitudeRaw===''?null:(is_numeric($latitudeRaw)?(float)$latitudeRaw:null);$longitude=$longitudeRaw===''?null:(is_numeric($longitudeRaw)?(float)$longitudeRaw:null);
-    if(($latitudeRaw!==''&&($latitude===null||$latitude < -90||$latitude > 90))||($longitudeRaw!==''&&($longitude===null||$longitude < -180||$longitude > 180))){http_response_code(422);exit('Enlem veya boylam değeri geçersiz.');}
+    if(($latitudeRaw!==''&&($latitude===null||$latitude < -90||$latitude > 90))||($longitudeRaw!==''&&($longitude===null||$longitude < -180||$longitude > 180))){http_response_code(422);exit(villa_ui('Enlem veya boylam değeri geçersiz.'));}
     $location=villa_resolve_location($pdo);
     $pdo->beginTransaction();
     try {
-    if($id){$owned=$pdo->prepare('SELECT id FROM properties WHERE id=? AND vendor_id=?');$owned->execute([$id,(int)$vendor['id']]);if(!$owned->fetchColumn()){http_response_code(404);exit('İlan bulunamadı.');}$s=$pdo->prepare('UPDATE properties SET title=?,slug=?,summary=?,description=?,country=?,city=?,district=?,address=?,max_guests=?,bedrooms=?,beds=?,bathrooms=?,base_nightly_price=?,weekend_nightly_price=?,cleaning_fee=?,currency=?,status=?,booking_type=?,category_id=?,meta_title=?,meta_description=?,updated_at=NOW() WHERE id=? AND vendor_id=?');$s->execute([...$data,$id,(int)$vendor['id']]);}    else{$s=$pdo->prepare('INSERT INTO properties(vendor_id,title,slug,summary,description,country,city,district,address,max_guests,bedrooms,beds,bathrooms,base_nightly_price,weekend_nightly_price,cleaning_fee,currency,status,booking_type,category_id,meta_title,meta_description,created_at) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,NOW())');$s->execute([(int)$vendor['id'],...$data]);$id=(int)$pdo->lastInsertId();}
+    if($id){$owned=$pdo->prepare('SELECT id FROM properties WHERE id=? AND vendor_id=?');$owned->execute([$id,(int)$vendor['id']]);if(!$owned->fetchColumn()){http_response_code(404);exit(villa_ui('İlan bulunamadı.'));}$s=$pdo->prepare('UPDATE properties SET title=?,slug=?,summary=?,description=?,country=?,city=?,district=?,address=?,max_guests=?,bedrooms=?,beds=?,bathrooms=?,base_nightly_price=?,weekend_nightly_price=?,cleaning_fee=?,currency=?,status=?,booking_type=?,category_id=?,meta_title=?,meta_description=?,updated_at=NOW() WHERE id=? AND vendor_id=?');$s->execute([...$data,$id,(int)$vendor['id']]);}    else{$s=$pdo->prepare('INSERT INTO properties(vendor_id,title,slug,summary,description,country,city,district,address,max_guests,bedrooms,beds,bathrooms,base_nightly_price,weekend_nightly_price,cleaning_fee,currency,status,booking_type,category_id,meta_title,meta_description,created_at) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,NOW())');$s->execute([(int)$vendor['id'],...$data]);$id=(int)$pdo->lastInsertId();}
     $coordSave=$pdo->prepare('UPDATE properties SET latitude=?,longitude=? WHERE id=? AND vendor_id=?');$coordSave->execute([$latitude,$longitude,$id,(int)$vendor['id']]);
     $locSave=$pdo->prepare('UPDATE properties SET location_country_id=?,location_city_id=?,location_district_id=?,location_neighborhood_id=?,country=?,city=?,district=?,neighborhood=? WHERE id=? AND vendor_id=?');
     $locSave->execute([$location['location_country_id'],$location['location_city_id'],$location['location_district_id'],$location['location_neighborhood_id'],$location['country'],$location['city'],$location['district'],$location['neighborhood'],$id,(int)$vendor['id']]);
@@ -2151,7 +2152,7 @@ $router->post('/admin/vendors/commission', static function (): void {
     if((string)$pdo->query("SELECT setting_value FROM settings WHERE setting_key='app.mode'")->fetchColumn()!=='multi_vendor')redirect('/admin');
     verify_csrf();
     $raw=trim((string)($_POST['commission_rate']??''));$rate=$raw===''?null:(float)$raw;
-    if($rate!==null&&($rate<0||$rate>50)){http_response_code(422);exit('Komisyon oranı 0 ile 50 arasında olmalıdır.');}
+    if($rate!==null&&($rate<0||$rate>50)){http_response_code(422);exit(villa_ui('Komisyon oranı 0 ile 50 arasında olmalıdır.'));}
     $s=Database::connection()->prepare('UPDATE vendors SET commission_rate=? WHERE id=?');$s->execute([$rate,(int)($_POST['id']??0)]);redirect('/admin/vendors');
 });
 
@@ -2263,8 +2264,8 @@ $router->post('/admin/properties/calendar-feed/delete', static function (): void
 
 $router->post('/admin/properties/availability/save', static function (): void {
     Auth::requireRole(['super_admin','admin']);verify_csrf();$pdo=Database::connection();$pid=(int)($_POST['property_id']??0);$ruleId=(int)($_POST['id']??0);$from=(string)($_POST['date_from']??'');$to=(string)($_POST['date_to']??'');$status=($_POST['status']??'')==='available'?'available':'blocked';$price=trim((string)($_POST['nightly_price']??''));$a=DateTimeImmutable::createFromFormat('!Y-m-d',$from);$b=DateTimeImmutable::createFromFormat('!Y-m-d',$to);
-    if(!$a||!$b||$a->format('Y-m-d')!==$from||$b->format('Y-m-d')!==$to||$a<new DateTimeImmutable('today')||$b<=$a){http_response_code(422);exit('Tarih aralığı geçersiz.');}
-    $over=$pdo->prepare('SELECT id FROM availability WHERE property_id=? AND id<>? AND date_from < ? AND date_to > ? LIMIT 1');$over->execute([$pid,$ruleId,$to,$from]);if($over->fetchColumn()){http_response_code(409);exit('Bu tarih aralığı mevcut bir takvim kuralıyla çakışıyor.');}
+    if(!$a||!$b||$a->format('Y-m-d')!==$from||$b->format('Y-m-d')!==$to||$a<new DateTimeImmutable('today')||$b<=$a){http_response_code(422);exit(villa_ui('Tarih aralığı geçersiz.'));}
+    $over=$pdo->prepare('SELECT id FROM availability WHERE property_id=? AND id<>? AND date_from < ? AND date_to > ? LIMIT 1');$over->execute([$pid,$ruleId,$to,$from]);if($over->fetchColumn()){http_response_code(409);exit(villa_ui('Bu tarih aralığı mevcut bir takvim kuralıyla çakışıyor.'));}
     $amount=$price===''?null:max(0,(float)$price);
     if($ruleId>0){$s=$pdo->prepare('UPDATE availability SET date_from=?,date_to=?,status=?,nightly_price=? WHERE id=? AND property_id=?');$s->execute([$from,$to,$status,$amount,$ruleId,$pid]);}
     else{$s=$pdo->prepare('INSERT INTO availability(property_id,date_from,date_to,status,nightly_price) VALUES(?,?,?,?,?)');$s->execute([$pid,$from,$to,$status,$amount]);}
@@ -2274,7 +2275,7 @@ $router->post('/admin/properties/availability/delete', static function (): void 
     Auth::requireRole(['super_admin','admin']);verify_csrf();$pid=(int)($_POST['property_id']??0);$s=Database::connection()->prepare('DELETE FROM availability WHERE id=? AND property_id=?');$s->execute([(int)($_POST['id']??0),$pid]);redirect('/admin/properties/'.$pid.'/availability');
 });
 $router->get('/vendor/properties/{id}/availability', static function (array $params): void {
-    Auth::requireRole(['vendor']);$pdo=Database::connection();$v=$pdo->prepare('SELECT id,status FROM vendors WHERE user_id=?');$v->execute([(int)Auth::user()['id']]);$vendor=$v->fetch();if(!$vendor){http_response_code(403);return;}if(!Auth::canManageVendorBookings((string)$vendor['status'])){http_response_code(403);exit('Rezervasyon takvimine erişmek için işletme hesabınızın onaylanması gerekiyor.');}$vid=(int)$vendor['id'];$s=$pdo->prepare('SELECT * FROM properties WHERE id=? AND vendor_id=?');$s->execute([(int)$params['id'],$vid]);$property=$s->fetch();
+    Auth::requireRole(['vendor']);$pdo=Database::connection();$v=$pdo->prepare('SELECT id,status FROM vendors WHERE user_id=?');$v->execute([(int)Auth::user()['id']]);$vendor=$v->fetch();if(!$vendor){http_response_code(403);return;}if(!Auth::canManageVendorBookings((string)$vendor['status'])){http_response_code(403);exit(villa_ui('Rezervasyon takvimine erişmek için işletme hesabınızın onaylanması gerekiyor.'));}$vid=(int)$vendor['id'];$s=$pdo->prepare('SELECT * FROM properties WHERE id=? AND vendor_id=?');$s->execute([(int)$params['id'],$vid]);$property=$s->fetch();
     if(!$property){http_response_code(404);return;}
     $monthInput=(string)($_GET['month']??date('Y-m'));$monthDate=DateTimeImmutable::createFromFormat('!Y-m-d',$monthInput.'-01');
     if(!$monthDate||$monthDate->format('Y-m')!==$monthInput)$monthDate=new DateTimeImmutable('first day of this month');
@@ -2379,20 +2380,20 @@ $router->post('/vendor/properties/calendar-feed/delete', static function (): voi
 $router->post('/vendor/properties/availability/save', static function (): void {
     Auth::requireRole(['vendor']);verify_csrf();$pdo=Database::connection();$v=$pdo->prepare('SELECT id,status FROM vendors WHERE user_id=?');$v->execute([(int)Auth::user()['id']]);$vendor=$v->fetch(PDO::FETCH_ASSOC);if(!$vendor||!Auth::canManageVendorBookings((string)$vendor['status'])){http_response_code(403);return;}$vid=(int)$vendor['id'];$pid=(int)($_POST['property_id']??0);$own=$pdo->prepare('SELECT id FROM properties WHERE id=? AND vendor_id=?');$own->execute([$pid,$vid]);if(!$own->fetchColumn()){http_response_code(404);return;}
     $ruleId=(int)($_POST['id']??0);$from=(string)($_POST['date_from']??'');$to=(string)($_POST['date_to']??'');$status=($_POST['status']??'')==='available'?'available':'blocked';$price=trim((string)($_POST['nightly_price']??''));$a=DateTimeImmutable::createFromFormat('!Y-m-d',$from);$b=DateTimeImmutable::createFromFormat('!Y-m-d',$to);
-    if(!$a||!$b||$a->format('Y-m-d')!==$from||$b->format('Y-m-d')!==$to||$a<new DateTimeImmutable('today')||$b<=$a){http_response_code(422);exit('Tarih aralığı geçersiz.');}
+    if(!$a||!$b||$a->format('Y-m-d')!==$from||$b->format('Y-m-d')!==$to||$a<new DateTimeImmutable('today')||$b<=$a){http_response_code(422);exit(villa_ui('Tarih aralığı geçersiz.'));}
     $pdo->beginTransaction();
     try{
         // Booking transitions lock the property before checking availability.
         $propertyLock=$pdo->prepare('SELECT id FROM properties WHERE id=? AND vendor_id=? FOR UPDATE');
         $propertyLock->execute([$pid,$vid]);
         if(!$propertyLock->fetchColumn()){ $pdo->rollBack();http_response_code(404);return; }
-    $over=$pdo->prepare('SELECT id FROM availability WHERE property_id=? AND id<>? AND date_from < ? AND date_to > ? LIMIT 1');$over->execute([$pid,$ruleId,$to,$from]);if($over->fetchColumn()){$pdo->rollBack();http_response_code(409);exit('Bu tarih aralığı mevcut bir takvim kuralıyla çakışıyor.');}
+    $over=$pdo->prepare('SELECT id FROM availability WHERE property_id=? AND id<>? AND date_from < ? AND date_to > ? LIMIT 1');$over->execute([$pid,$ruleId,$to,$from]);if($over->fetchColumn()){$pdo->rollBack();http_response_code(409);exit(villa_ui('Bu tarih aralığı mevcut bir takvim kuralıyla çakışıyor.'));}
     if($status==='blocked'){
         $booked=$pdo->prepare("SELECT id FROM bookings WHERE property_id=? AND status='confirmed' AND check_in < ? AND check_out > ? LIMIT 1");
         $booked->execute([$pid,$to,$from]);
-        if($booked->fetchColumn()){$pdo->rollBack();http_response_code(409);exit('Onaylanmış rezervasyon bulunan tarihler kapatılamaz.');}
+        if($booked->fetchColumn()){$pdo->rollBack();http_response_code(409);exit(villa_ui('Onaylanmış rezervasyon bulunan tarihler kapatılamaz.'));}
     }
-    if($price!==''&&(!is_numeric($price)||!is_finite((float)$price)||(float)$price<0)){$pdo->rollBack();http_response_code(422);exit('Gecelik fiyat geçersiz.');}
+    if($price!==''&&(!is_numeric($price)||!is_finite((float)$price)||(float)$price<0)){$pdo->rollBack();http_response_code(422);exit(villa_ui('Gecelik fiyat geçersiz.'));}
     $amount=$price===''?null:max(0,(float)$price);
     if($ruleId>0){$s=$pdo->prepare('UPDATE availability SET date_from=?,date_to=?,status=?,nightly_price=? WHERE id=? AND property_id=?');$s->execute([$from,$to,$status,$amount,$ruleId,$pid]);}
     else{$s=$pdo->prepare('INSERT INTO availability(property_id,date_from,date_to,status,nightly_price) VALUES(?,?,?,?,?)');$s->execute([$pid,$from,$to,$status,$amount]);}
@@ -2436,33 +2437,33 @@ $router->post('/vendor/properties/delete', static function (): void {
     Auth::requireRole(['vendor']);verify_csrf();$pdo=Database::connection();
     $v=$pdo->prepare('SELECT id,status FROM vendors WHERE user_id=?');$v->execute([(int)Auth::user()['id']]);$vendor=$v->fetch(PDO::FETCH_ASSOC);if(!$vendor||!Auth::canManageVendorBookings((string)$vendor['status'])){http_response_code(403);return;}$vendorId=(int)$vendor['id'];$id=(int)($_POST['id']??0);
     $check=$pdo->prepare('SELECT id FROM properties WHERE id=? AND vendor_id=?');$check->execute([$id,$vendorId]);
-    if(!$check->fetchColumn()){http_response_code(404);exit('İlan bulunamadı.');}
+    if(!$check->fetchColumn()){http_response_code(404);exit(villa_ui('İlan bulunamadı.'));}
     $b=$pdo->prepare('SELECT COUNT(*) FROM bookings WHERE property_id=?');$b->execute([$id]);if((int)$b->fetchColumn()>0){$archive=$pdo->prepare("UPDATE properties SET status='archived',updated_at=NOW() WHERE id=? AND vendor_id=?");$archive->execute([$id,$vendorId]);}else{delete_property_uploads($pdo,$id);$del=$pdo->prepare('DELETE FROM properties WHERE id=? AND vendor_id=?');$del->execute([$id,$vendorId]);}redirect('/vendor/properties');
 });
 
 $router->post('/admin/properties/media/manage', static function (): void {
     Auth::requireRole(['super_admin','admin']); verify_csrf();
     $pdo=Database::connection(); $pid=(int)($_POST['property_id']??0); $action=(string)($_POST['action']??'');
-    $check=$pdo->prepare('SELECT id FROM properties WHERE id=?'); $check->execute([$pid]); if(!$check->fetchColumn()){http_response_code(404);exit('Konaklama bulunamadı.');}
+    $check=$pdo->prepare('SELECT id FROM properties WHERE id=?'); $check->execute([$pid]); if(!$check->fetchColumn()){http_response_code(404);exit(villa_ui('Konaklama bulunamadı.'));}
     if($action==='cover'){
-        $mid=(int)($_POST['media_id']??0);$valid=$pdo->prepare('SELECT id FROM property_media WHERE id=? AND property_id=?');$valid->execute([$mid,$pid]);if(!$valid->fetchColumn()){http_response_code(404);exit('Fotoğraf bulunamadı.');}
+        $mid=(int)($_POST['media_id']??0);$valid=$pdo->prepare('SELECT id FROM property_media WHERE id=? AND property_id=?');$valid->execute([$mid,$pid]);if(!$valid->fetchColumn()){http_response_code(404);exit(villa_ui('Fotoğraf bulunamadı.'));}
         $pdo->beginTransaction();try{$pdo->prepare('UPDATE property_media SET is_cover=0 WHERE property_id=?')->execute([$pid]);$pdo->prepare('UPDATE property_media SET is_cover=1 WHERE id=? AND property_id=?')->execute([$mid,$pid]);$pdo->commit();}catch(Throwable $e){$pdo->rollBack();throw $e;}
     }elseif($action==='sort'){
         $ids=array_values(array_unique(array_filter(array_map('intval',(array)($_POST['media_ids']??[])),static fn($v)=>$v>0)));
         $all=$pdo->prepare('SELECT id FROM property_media WHERE property_id=?');$all->execute([$pid]);$known=array_map('intval',$all->fetchAll(PDO::FETCH_COLUMN));
-        if(count($ids)!==count($known)||array_diff($ids,$known)){http_response_code(422);exit('Fotoğraf sıralaması doğrulanamadı.');}
+        if(count($ids)!==count($known)||array_diff($ids,$known)){http_response_code(422);exit(villa_ui('Fotoğraf sıralaması doğrulanamadı.'));}
         $pdo->beginTransaction();try{$u=$pdo->prepare('UPDATE property_media SET sort_order=? WHERE id=? AND property_id=?');foreach($ids as $i=>$mid)$u->execute([$i,$mid,$pid]);$pdo->commit();}catch(Throwable $e){$pdo->rollBack();throw $e;}
-    }else{http_response_code(422);exit('Geçersiz işlem.');}
+    }else{http_response_code(422);exit(villa_ui('Geçersiz işlem.'));}
     header('Content-Type: application/json; charset=utf-8');echo json_encode(['ok'=>true],JSON_THROW_ON_ERROR);
 });
 $router->post('/vendor/properties/media/manage', static function (): void {
     Auth::requireRole(['vendor']); verify_csrf();$pdo=Database::connection();
     $v=$pdo->prepare('SELECT id,status FROM vendors WHERE user_id=?');$v->execute([(int)Auth::user()['id']]);$vendor=$v->fetch(PDO::FETCH_ASSOC);if(!$vendor||!Auth::canManageVendorBookings((string)$vendor['status'])){http_response_code(403);return;}$vid=(int)$vendor['id'];$pid=(int)($_POST['property_id']??0);
-    $own=$pdo->prepare('SELECT id FROM properties WHERE id=? AND vendor_id=?');$own->execute([$pid,$vid]);if(!$own->fetchColumn()){http_response_code(404);exit('Konaklama bulunamadı.');}
+    $own=$pdo->prepare('SELECT id FROM properties WHERE id=? AND vendor_id=?');$own->execute([$pid,$vid]);if(!$own->fetchColumn()){http_response_code(404);exit(villa_ui('Konaklama bulunamadı.'));}
     $action=(string)($_POST['action']??'');
-    if($action==='cover'){$mid=(int)($_POST['media_id']??0);$valid=$pdo->prepare('SELECT id FROM property_media WHERE id=? AND property_id=?');$valid->execute([$mid,$pid]);if(!$valid->fetchColumn()){http_response_code(404);exit('Fotoğraf bulunamadı.');}$pdo->beginTransaction();try{$pdo->prepare('UPDATE property_media SET is_cover=0 WHERE property_id=?')->execute([$pid]);$pdo->prepare('UPDATE property_media SET is_cover=1 WHERE id=? AND property_id=?')->execute([$mid,$pid]);$pdo->commit();}catch(Throwable $e){$pdo->rollBack();throw $e;}}
-    elseif($action==='sort'){$ids=array_values(array_unique(array_filter(array_map('intval',(array)($_POST['media_ids']??[])),static fn($v)=>$v>0)));$all=$pdo->prepare('SELECT id FROM property_media WHERE property_id=?');$all->execute([$pid]);$known=array_map('intval',$all->fetchAll(PDO::FETCH_COLUMN));if(count($ids)!==count($known)||array_diff($ids,$known)){http_response_code(422);exit('Fotoğraf sıralaması doğrulanamadı.');}$pdo->beginTransaction();try{$u=$pdo->prepare('UPDATE property_media SET sort_order=? WHERE id=? AND property_id=?');foreach($ids as $i=>$mid)$u->execute([$i,$mid,$pid]);$pdo->commit();}catch(Throwable $e){$pdo->rollBack();throw $e;}}
-    else{http_response_code(422);exit('Geçersiz işlem.');}
+    if($action==='cover'){$mid=(int)($_POST['media_id']??0);$valid=$pdo->prepare('SELECT id FROM property_media WHERE id=? AND property_id=?');$valid->execute([$mid,$pid]);if(!$valid->fetchColumn()){http_response_code(404);exit(villa_ui('Fotoğraf bulunamadı.'));}$pdo->beginTransaction();try{$pdo->prepare('UPDATE property_media SET is_cover=0 WHERE property_id=?')->execute([$pid]);$pdo->prepare('UPDATE property_media SET is_cover=1 WHERE id=? AND property_id=?')->execute([$mid,$pid]);$pdo->commit();}catch(Throwable $e){$pdo->rollBack();throw $e;}}
+    elseif($action==='sort'){$ids=array_values(array_unique(array_filter(array_map('intval',(array)($_POST['media_ids']??[])),static fn($v)=>$v>0)));$all=$pdo->prepare('SELECT id FROM property_media WHERE property_id=?');$all->execute([$pid]);$known=array_map('intval',$all->fetchAll(PDO::FETCH_COLUMN));if(count($ids)!==count($known)||array_diff($ids,$known)){http_response_code(422);exit(villa_ui('Fotoğraf sıralaması doğrulanamadı.'));}$pdo->beginTransaction();try{$u=$pdo->prepare('UPDATE property_media SET sort_order=? WHERE id=? AND property_id=?');foreach($ids as $i=>$mid)$u->execute([$i,$mid,$pid]);$pdo->commit();}catch(Throwable $e){$pdo->rollBack();throw $e;}}
+    else{http_response_code(422);exit(villa_ui('Geçersiz işlem.'));}
     header('Content-Type: application/json; charset=utf-8');echo json_encode(['ok'=>true],JSON_THROW_ON_ERROR);
 });
 $router->post('/admin/properties/media/delete', static function (): void {
@@ -2482,7 +2483,7 @@ $router->post('/admin/properties/save', static function (): void {
     verify_csrf();
     $pdo = Database::connection();
     $title = trim((string)($_POST['title'] ?? ''));
-    if ($title === '') { http_response_code(422); exit('İlan başlığı zorunludur.'); }
+    if ($title === '') { http_response_code(422); exit(villa_ui('İlan başlığı zorunludur.')); }
     $slug = trim((string)($_POST['slug'] ?? ''));
     if ($slug === '') {
         $ascii = iconv('UTF-8', 'ASCII//TRANSLIT//IGNORE', $title);
@@ -2491,7 +2492,7 @@ $router->post('/admin/properties/save', static function (): void {
     $slug = trim(strtolower(preg_replace('/[^a-z0-9-]+/', '-', $slug)), '-');
     if ($slug === '') $slug = 'villa-' . bin2hex(random_bytes(4));
     $metaTitle=trim((string)($_POST['meta_title']??''));$metaDescription=trim((string)($_POST['meta_description']??''));
-    if(mb_strlen($metaTitle)>220||mb_strlen($metaDescription)>320){http_response_code(422);exit('SEO başlığı veya açıklaması izin verilen uzunluğu aşıyor.');}
+    if(mb_strlen($metaTitle)>220||mb_strlen($metaDescription)>320){http_response_code(422);exit(villa_ui('SEO başlığı veya açıklaması izin verilen uzunluğu aşıyor.'));}
     $id = (int)($_POST['id'] ?? 0);
     $status = in_array($_POST['status'] ?? '', ['draft','published','archived'], true) ? $_POST['status'] : 'draft';
     $bookingType = ($_POST['booking_type'] ?? '') === 'instant' ? 'instant' : 'request';
@@ -2520,9 +2521,9 @@ $router->post('/admin/properties/save', static function (): void {
         $id = (int)$pdo->lastInsertId();
     }
     $latitudeRaw=trim((string)($_POST['latitude']??''));$longitudeRaw=trim((string)($_POST['longitude']??''));
-    if(($latitudeRaw==='')!==($longitudeRaw==='')){http_response_code(422);exit('Harita için enlem ve boylam birlikte girilmelidir.');}
+    if(($latitudeRaw==='')!==($longitudeRaw==='')){http_response_code(422);exit(villa_ui('Harita için enlem ve boylam birlikte girilmelidir.'));}
     $latitude=$latitudeRaw===''?null:(is_numeric($latitudeRaw)?(float)$latitudeRaw:null);$longitude=$longitudeRaw===''?null:(is_numeric($longitudeRaw)?(float)$longitudeRaw:null);
-    if(($latitudeRaw!==''&&($latitude===null||$latitude < -90||$latitude > 90))||($longitudeRaw!==''&&($longitude===null||$longitude < -180||$longitude > 180))){http_response_code(422);exit('Enlem veya boylam değeri geçersiz.');}
+    if(($latitudeRaw!==''&&($latitude===null||$latitude < -90||$latitude > 90))||($longitudeRaw!==''&&($longitude===null||$longitude < -180||$longitude > 180))){http_response_code(422);exit(villa_ui('Enlem veya boylam değeri geçersiz.'));}
     $coordSave=$pdo->prepare('UPDATE properties SET latitude=?,longitude=? WHERE id=?');$coordSave->execute([$latitude,$longitude,$id]);
     $location=villa_resolve_location($pdo);
     $locSave=$pdo->prepare('UPDATE properties SET location_country_id=?,location_city_id=?,location_district_id=?,location_neighborhood_id=?,country=?,city=?,district=?,neighborhood=? WHERE id=?');
@@ -2538,7 +2539,7 @@ $router->get('/admin/amenities', static function (): void {
     Auth::requireRole(['super_admin','admin']);$amenities=Database::connection()->query('SELECT * FROM amenities ORDER BY sort_order,name')->fetchAll();ThemeManager::renderTemplate('templates/pages/admin/amenities.php', get_defined_vars());
 });
 $router->post('/admin/amenities/save', static function (): void {
-    Auth::requireRole(['super_admin','admin']);verify_csrf();$name=trim((string)($_POST['name']??''));$icon=trim((string)($_POST['icon']??''));if($name===''){http_response_code(422);exit('Özellik adı zorunludur.');}
+    Auth::requireRole(['super_admin','admin']);verify_csrf();$name=trim((string)($_POST['name']??''));$icon=trim((string)($_POST['icon']??''));if($name===''){http_response_code(422);exit(villa_ui('Özellik adı zorunludur.'));}
     $s=Database::connection()->prepare('INSERT INTO amenities(name,icon,is_active,sort_order) VALUES(?,?,1,?)');$s->execute([$name,$icon,(int)($_POST['sort_order']??10)]);redirect('/admin/amenities');
 });
 $router->post('/admin/amenities/delete', static function (): void {
@@ -2550,7 +2551,7 @@ $router->get('/admin/categories', static function (): void {
 });
 $router->post('/admin/categories/save', static function (): void {
     Auth::requireRole(['super_admin','admin']);verify_csrf();$name=trim((string)($_POST['name']??''));$slug=strtolower(trim((string)($_POST['slug']??'')));$slug=trim(preg_replace('/[^a-z0-9-]+/','-',$slug),'-');
-    if($name===''||$slug===''){http_response_code(422);exit('Kategori adı ve URL kısa adı zorunludur.');}
+    if($name===''||$slug===''){http_response_code(422);exit(villa_ui('Kategori adı ve URL kısa adı zorunludur.'));}
     $s=Database::connection()->prepare('INSERT INTO property_categories(name,slug,description,is_active,sort_order) VALUES(?,?,?,1,?)');$s->execute([$name,$slug,trim((string)($_POST['description']??'')),(int)($_POST['sort_order']??10)]);redirect('/admin/categories');
 });
 $router->post('/admin/categories/delete', static function (): void {
@@ -2583,9 +2584,9 @@ $router->post('/admin/navigation/save', static function (): void {
     $location=in_array($_POST['location']??'', ['header','footer'],true)?$_POST['location']:'header';
     $target=($_POST['target']??'')==='_blank'?'_blank':'_self';
     $sort=max(0,min(9999,(int)($_POST['sort_order']??10)));$active=isset($_POST['is_active'])?1:0;$parentId=max(0,(int)($_POST['parent_id']??0));
-    if($id>0){$current=$pdo->prepare('SELECT location,parent_id FROM navigation_items WHERE id=? LIMIT 1');$current->execute([$id]);$currentRow=$current->fetch();if($currentRow&&(int)($currentRow['parent_id']??0)===0&&(string)$currentRow['location']!==$location){$has=$pdo->prepare('SELECT 1 FROM navigation_items WHERE parent_id=? LIMIT 1');$has->execute([$id]);if($has->fetchColumn()){http_response_code(422);exit('Alt menüleri bulunan ana öğenin konumunu değiştirmeden önce alt öğelerini taşıyın.');}}}if($parentId>0){$p=$pdo->prepare('SELECT id,parent_id,location FROM navigation_items WHERE id=? LIMIT 1');$p->execute([$parentId]);$parent=$p->fetch();if(!$parent||(int)$parent['id']===$id||(string)$parent['location']!==$location||(int)($parent['parent_id']??0)>0){http_response_code(422);exit('Alt menü yalnızca aynı konumdaki bir ana menüye bağlanabilir.');}$hasChildren=$pdo->prepare('SELECT 1 FROM navigation_items WHERE parent_id=? LIMIT 1');$hasChildren->execute([$id]);if($id>0&&$hasChildren->fetchColumn()){http_response_code(422);exit('Alt menüsü bulunan bir öğeyi başka bir öğenin altına taşıyamazsınız. Önce alt öğelerini taşıyın.');}}
+    if($id>0){$current=$pdo->prepare('SELECT location,parent_id FROM navigation_items WHERE id=? LIMIT 1');$current->execute([$id]);$currentRow=$current->fetch();if($currentRow&&(int)($currentRow['parent_id']??0)===0&&(string)$currentRow['location']!==$location){$has=$pdo->prepare('SELECT 1 FROM navigation_items WHERE parent_id=? LIMIT 1');$has->execute([$id]);if($has->fetchColumn()){http_response_code(422);exit(villa_ui('Alt menüleri bulunan ana öğenin konumunu değiştirmeden önce alt öğelerini taşıyın.'));}}}if($parentId>0){$p=$pdo->prepare('SELECT id,parent_id,location FROM navigation_items WHERE id=? LIMIT 1');$p->execute([$parentId]);$parent=$p->fetch();if(!$parent||(int)$parent['id']===$id||(string)$parent['location']!==$location||(int)($parent['parent_id']??0)>0){http_response_code(422);exit(villa_ui('Alt menü yalnızca aynı konumdaki bir ana menüye bağlanabilir.'));}$hasChildren=$pdo->prepare('SELECT 1 FROM navigation_items WHERE parent_id=? LIMIT 1');$hasChildren->execute([$id]);if($id>0&&$hasChildren->fetchColumn()){http_response_code(422);exit(villa_ui('Alt menüsü bulunan bir öğeyi başka bir öğenin altına taşıyamazsınız. Önce alt öğelerini taşıyın.'));}}
     $validUrl=$url!==''&&!preg_match('/[\r\n\\x00-\\x1F]/',$url)&&!str_starts_with($url,'//')&&(str_starts_with($url,'/')||preg_match('#^https?://#i',$url));
-    if($label===''||mb_strlen($label)>120||!$validUrl){http_response_code(422);exit('Menü adı veya bağlantı adresi geçersiz.');}
+    if($label===''||mb_strlen($label)>120||!$validUrl){http_response_code(422);exit(villa_ui('Menü adı veya bağlantı adresi geçersiz.'));}
     // A navigation URL may exist only once per location and language. Detect it
     // before writing so the admin receives a useful message instead of a PDO fatal.
     $duplicate=$pdo->prepare('SELECT id,label FROM navigation_items WHERE location=? AND language_code=? AND url=? AND id<>? LIMIT 1');
@@ -2614,7 +2615,7 @@ $router->post('/admin/navigation/save', static function (): void {
 $router->post('/admin/navigation/reorder', static function (): void {
     Auth::requireRole(['super_admin','admin']);verify_csrf();header('Content-Type: application/json; charset=utf-8');
     $payload=json_decode((string)($_POST['tree']??''),true);
-    if(!is_array($payload)){http_response_code(422);echo json_encode(['ok'=>false,'message'=>'Sıralama verisi geçersiz.']);return;}
+    if(!is_array($payload)){http_response_code(422);echo json_encode(['ok'=>false,'message'=>villa_ui('Sıralama verisi geçersiz.')]);return;}
     $pdo=Database::connection();$all=$pdo->query('SELECT id,location,parent_id FROM navigation_items')->fetchAll(PDO::FETCH_ASSOC);$known=[];foreach($all as $row)$known[(int)$row['id']]=$row;
     $seen=[];$updates=[];
     foreach(['header','footer'] as $location){
@@ -2624,7 +2625,7 @@ $router->post('/admin/navigation/reorder', static function (): void {
         }
     }
     try{$pdo->beginTransaction();$up=$pdo->prepare('UPDATE navigation_items SET sort_order=?,parent_id=? WHERE id=?');foreach($updates as [$sort,$id,$parent])$up->execute([$sort,$parent,$id]);$pdo->commit();echo json_encode(['ok'=>true]);}
-    catch(Throwable $e){if($pdo->inTransaction())$pdo->rollBack();http_response_code(500);echo json_encode(['ok'=>false,'message'=>'Sıralama kaydedilemedi.']);}
+    catch(Throwable $e){if($pdo->inTransaction())$pdo->rollBack();http_response_code(500);echo json_encode(['ok'=>false,'message'=>villa_ui('Sıralama kaydedilemedi.')]);}
 });
 $router->post('/admin/navigation/toggle', static function (): void {
     Auth::requireRole(['super_admin','admin']);verify_csrf();
@@ -2809,10 +2810,10 @@ $router->post('/admin/pages/save', static function (): void {
     $locale = trim((string)($_POST['language_code'] ?? ''));
     $languageCheck = $pdo->prepare('SELECT code FROM languages WHERE code=? AND is_active=1 LIMIT 1');
     $languageCheck->execute([$locale]);
-    if (!$languageCheck->fetchColumn()) { http_response_code(422); exit('Sayfa dili geçersiz veya devre dışı.'); }
+    if (!$languageCheck->fetchColumn()) { http_response_code(422); exit(villa_ui('Sayfa dili geçersiz veya devre dışı.')); }
     $title=trim((string)($_POST['title']??''));$slug=strtolower(trim((string)($_POST['slug']??'')));
     $slug=trim(preg_replace('/[^a-z0-9-]+/','-',$slug),'-');$content=trim((string)($_POST['content']??''));$metaTitle=trim((string)($_POST['meta_title']??''));$metaDescription=trim((string)($_POST['meta_description']??''));$focusKeyword=trim((string)($_POST['focus_keyword']??''));$status=($_POST['status']??'')==='published'?'published':'draft';
-    if($title===''||$slug===''||mb_strlen($focusKeyword)>120){http_response_code(422);exit('Başlık, URL, odak kelime veya içerik alanlarını kontrol edin.');}
+    if($title===''||$slug===''||mb_strlen($focusKeyword)>120){http_response_code(422);exit(villa_ui('Başlık, URL, odak kelime veya içerik alanlarını kontrol edin.'));}
     if($id){$s=$pdo->prepare('UPDATE cms_pages SET title=?,slug=?,content=?,status=?,meta_title=?,meta_description=?,focus_keyword=? WHERE id=? AND language_code=?');$s->execute([$title,$slug,$content,$status,$metaTitle,$metaDescription,$focusKeyword,$id,$locale]);}
     else{$s=$pdo->prepare('INSERT INTO cms_pages(language_code,title,slug,content,status,meta_title,meta_description,focus_keyword) VALUES(?,?,?,?,?,?,?,?)');$s->execute([$locale,$title,$slug,$content,$status,$metaTitle,$metaDescription,$focusKeyword]);}
     redirect('/admin/pages?lang=' . rawurlencode($locale));
@@ -2959,7 +2960,7 @@ $router->get('/admin/blog/new', static function (): void {
     Auth::requirePermission('admin.blog.edit');$pdo=Database::connection();$posts=[];$post=[];$categories=$pdo->query('SELECT * FROM blog_categories ORDER BY sort_order,name')->fetchAll(PDO::FETCH_ASSOC);$postCategories=[];$postTags=[];ThemeManager::renderTemplate('templates/pages/admin/blog.php',get_defined_vars());
 });
 $router->get('/admin/blog/{id}', static function (array $params): void {
-    Auth::requirePermission('admin.blog.edit');$pdo=Database::connection();$posts=[];$s=$pdo->prepare('SELECT * FROM blog_posts WHERE id=?');$s->execute([(int)$params['id']]);$post=$s->fetch(PDO::FETCH_ASSOC);if(!$post){http_response_code(404);exit('Blog yazısı bulunamadı.');}
+    Auth::requirePermission('admin.blog.edit');$pdo=Database::connection();$posts=[];$s=$pdo->prepare('SELECT * FROM blog_posts WHERE id=?');$s->execute([(int)$params['id']]);$post=$s->fetch(PDO::FETCH_ASSOC);if(!$post){http_response_code(404);exit(villa_ui('Blog yazısı bulunamadı.'));}
     $categories=$pdo->query('SELECT * FROM blog_categories ORDER BY sort_order,name')->fetchAll(PDO::FETCH_ASSOC);$c=$pdo->prepare('SELECT category_id FROM blog_post_category WHERE post_id=?');$c->execute([(int)$post['id']]);$postCategories=array_map('intval',$c->fetchAll(PDO::FETCH_COLUMN));$t=$pdo->prepare('SELECT t.name FROM blog_tags t JOIN blog_post_tag pt ON pt.tag_id=t.id WHERE pt.post_id=? ORDER BY t.name');$t->execute([(int)$post['id']]);$postTags=array_column($t->fetchAll(PDO::FETCH_ASSOC),'name');ThemeManager::renderTemplate('templates/pages/admin/blog.php',get_defined_vars());
 });
 $router->post('/admin/blog/save', static function (): void {
@@ -2969,7 +2970,7 @@ $router->post('/admin/blog/save', static function (): void {
     $publishedRaw=trim((string)($_POST['published_at']??''));$publishedAt=$publishedRaw!==''?str_replace('T',' ',$publishedRaw).(strlen($publishedRaw)===16?':00':''):null;
     $metaTitle=trim((string)($_POST['meta_title']??''));$metaDescription=trim((string)($_POST['meta_description']??''));$focusKeyword=trim((string)($_POST['focus_keyword']??''));$author=trim((string)($_POST['author_name']??'Yayın Editörü'))?:'Yayın Editörü';$readingTime=max(1,min(60,(int)($_POST['reading_time']??5)));$featured=!empty($_POST['is_featured'])?1:0;
     $categoryIds=array_values(array_unique(array_filter(array_map('intval',(array)($_POST['categories']??[])),static fn($v)=>$v>0)));$tagNames=array_values(array_unique(array_filter(array_map('trim',explode(',',(string)($_POST['tags']??''))))));
-    if($title===''||$slug===''||$content===''||mb_strlen($title)>220||mb_strlen($slug)>190||mb_strlen($excerpt)>3000||mb_strlen($image)>500||mb_strlen($imageAlt)>255||mb_strlen($metaTitle)>220||mb_strlen($metaDescription)>320||mb_strlen($focusKeyword)>120||mb_strlen($author)>120||($image!==''&&!preg_match('~^(https?://|/)~i',$image))||($publishedAt!==null&&!preg_match('/^\\d{4}-\\d{2}-\\d{2} \\d{2}:\\d{2}(?::\\d{2})?$/',$publishedAt))){http_response_code(422);exit('Blog alanlarını kontrol edin.');}
+    if($title===''||$slug===''||$content===''||mb_strlen($title)>220||mb_strlen($slug)>190||mb_strlen($excerpt)>3000||mb_strlen($image)>500||mb_strlen($imageAlt)>255||mb_strlen($metaTitle)>220||mb_strlen($metaDescription)>320||mb_strlen($focusKeyword)>120||mb_strlen($author)>120||($image!==''&&!preg_match('~^(https?://|/)~i',$image))||($publishedAt!==null&&!preg_match('/^\\d{4}-\\d{2}-\\d{2} \\d{2}:\\d{2}(?::\\d{2})?$/',$publishedAt))){http_response_code(422);exit(villa_ui('Blog alanlarını kontrol edin.'));}
     $pdo->beginTransaction();
     try {
         if($id){$s=$pdo->prepare("UPDATE blog_posts SET title=?,slug=?,excerpt=?,content=?,featured_image=?,featured_image_alt=?,status=?,published_at=?,meta_title=?,meta_description=?,focus_keyword=?,author_name=?,reading_time=?,is_featured=? WHERE id=?");$s->execute([$title,$slug,$excerpt,$content,$image,$imageAlt,$status,$publishedAt,$metaTitle,$metaDescription,$focusKeyword,$author,$readingTime,$featured,$id]);}
@@ -2979,7 +2980,7 @@ $router->post('/admin/blog/save', static function (): void {
         $tagInsert=$pdo->prepare('INSERT INTO blog_tags(name,slug) VALUES(?,?) ON DUPLICATE KEY UPDATE id=LAST_INSERT_ID(id)');$tagLink=$pdo->prepare('INSERT IGNORE INTO blog_post_tag(post_id,tag_id) VALUES(?,?)');
         foreach($tagNames as $tagName){$tagSlug=trim(preg_replace('/[^a-z0-9]+/','-',strtolower(iconv('UTF-8','ASCII//TRANSLIT//IGNORE',$tagName)?:$tagName)),'-');if($tagSlug==='')continue;$tagInsert->execute([mb_substr($tagName,0,100),mb_substr($tagSlug,0,120)]);$tagLink->execute([$id,(int)$pdo->lastInsertId()]);}
         $pdo->commit();
-    } catch(PDOException $e){if($pdo->inTransaction())$pdo->rollBack();http_response_code(409);exit('Yazı kaydedilemedi. URL veya etiket benzersizliğini kontrol edin.');}
+    } catch(PDOException $e){if($pdo->inTransaction())$pdo->rollBack();http_response_code(409);exit(villa_ui('Yazı kaydedilemedi. URL veya etiket benzersizliğini kontrol edin.'));}
     redirect('/admin/blog');
 });
 $router->post('/admin/blog/delete', static function (): void {
@@ -2991,7 +2992,7 @@ $router->get('/admin/blog/categories', static function (): void {
 $router->post('/admin/blog/categories/save', static function (): void {
     Auth::requirePermission('admin.blog.edit');verify_csrf();$pdo=Database::connection();$id=(int)($_POST['id']??0);$name=trim((string)($_POST['name']??''));$slug=strtolower(trim((string)($_POST['slug']??'')));$slug=trim(preg_replace('/[^a-z0-9-]+/','-',iconv('UTF-8','ASCII//TRANSLIT//IGNORE',$slug)?:$slug),'-');$description=trim((string)($_POST['description']??''));$sort=max(0,(int)($_POST['sort_order']??0));
     if($name===''||$slug===''||mb_strlen($name)>120||mb_strlen($slug)>140||mb_strlen($description)>500){http_response_code(422);exit('Kategori bilgilerini kontrol edin.');}
-    try{if($id){$s=$pdo->prepare('UPDATE blog_categories SET name=?,slug=?,description=?,sort_order=? WHERE id=?');$s->execute([$name,$slug,$description,$sort,$id]);}else{$s=$pdo->prepare('INSERT INTO blog_categories(name,slug,description,sort_order) VALUES(?,?,?,?)');$s->execute([$name,$slug,$description,$sort]);}}catch(PDOException $e){http_response_code(409);exit('Bu kategori adı veya bağlantısı zaten kullanılıyor.');}
+    try{if($id){$s=$pdo->prepare('UPDATE blog_categories SET name=?,slug=?,description=?,sort_order=? WHERE id=?');$s->execute([$name,$slug,$description,$sort,$id]);}else{$s=$pdo->prepare('INSERT INTO blog_categories(name,slug,description,sort_order) VALUES(?,?,?,?)');$s->execute([$name,$slug,$description,$sort]);}}catch(PDOException $e){http_response_code(409);exit(villa_ui('Bu kategori adı veya bağlantısı zaten kullanılıyor.'));}
     redirect('/admin/blog/categories');
 });
 $router->post('/admin/blog/categories/delete', static function (): void {
@@ -3058,12 +3059,12 @@ $router->post('/admin/content-translations', static function (): void {
     $pdo=Database::connection();
     $type=(string)($_POST['type']??'');$entityId=(int)($_POST['entity_id']??0);$locale=(string)($_POST['lang']??'');
     $maps=['property'=>['table'=>'properties'],'property_category'=>['table'=>'property_categories'],'blog_post'=>['table'=>'blog_posts'],'blog_category'=>['table'=>'blog_categories'],'blog_tag'=>['table'=>'blog_tags'],'amenity'=>['table'=>'amenities'],'location'=>['table'=>'locations']];
-    if(!isset($maps[$type])||$entityId<1){http_response_code(422);exit('Çeviri kaydı geçersiz.');}
+    if(!isset($maps[$type])||$entityId<1){http_response_code(422);exit(villa_ui('Çeviri kaydı geçersiz.'));}
     $language=$pdo->prepare('SELECT code,is_default FROM languages WHERE code=? AND is_active=1 LIMIT 1');$language->execute([$locale]);$languageRow=$language->fetch(PDO::FETCH_ASSOC);
-    if(!$languageRow||(int)$languageRow['is_default']===1){http_response_code(422);exit('Varsayılan dilin içeriği ana kayıt üzerinden düzenlenmelidir.');}
+    if(!$languageRow||(int)$languageRow['is_default']===1){http_response_code(422);exit(villa_ui('Varsayılan dilin içeriği ana kayıt üzerinden düzenlenmelidir.'));}
     $fields=\App\Core\ContentTranslator::fields($type);
     $entity=$pdo->prepare('SELECT id FROM '.$maps[$type]['table'].' WHERE id=? LIMIT 1');$entity->execute([$entityId]);
-    if(!$entity->fetchColumn()){http_response_code(404);exit('Çevrilecek içerik bulunamadı.');}
+    if(!$entity->fetchColumn()){http_response_code(404);exit(villa_ui('Çevrilecek içerik bulunamadı.'));}
     $limits=['title'=>220,'summary'=>500,'description'=>100000,'name'=>190,'excerpt'=>3000,'content'=>1000000,'meta_title'=>220,'meta_description'=>320,'featured_image_alt'=>255];
     $pdo->beginTransaction();
     try{
@@ -3087,7 +3088,7 @@ $router->post('/admin/languages/default', static function (): void {
     $pdo = Database::connection();
     $check = $pdo->prepare('SELECT code FROM languages WHERE code=? AND is_active=1 LIMIT 1');
     $check->execute([$locale]);
-    if (!$check->fetchColumn()) { http_response_code(422); exit('Aktif bir dil seçin.'); }
+    if (!$check->fetchColumn()) { http_response_code(422); exit(villa_ui('Aktif bir dil seçin.')); }
     $pdo->beginTransaction();
     try {
         $pdo->exec('UPDATE languages SET is_default=0');
@@ -3096,6 +3097,7 @@ $router->post('/admin/languages/default', static function (): void {
         $setting = $pdo->prepare('INSERT INTO settings(setting_key,setting_value,autoload) VALUES(?,?,1) ON DUPLICATE KEY UPDATE setting_value=VALUES(setting_value),autoload=1');
         $setting->execute(['app.locale',$locale]);
         $pdo->commit();
+        unset($_SESSION['villa_locale']);
     } catch (Throwable $e) { if ($pdo->inTransaction()) $pdo->rollBack(); throw $e; }
     redirect('/admin/translations?lang='.rawurlencode($locale));
 });
@@ -3108,7 +3110,7 @@ $router->post('/admin/languages/save', static function (): void {
     $makeDefault = !empty($_POST['is_default']);
     if (!preg_match('/^[a-z]{2}(?:-[A-Z]{2})?$/', $code) || $name === '' || mb_strlen($name) > 80) {
         http_response_code(422);
-        exit('Dil kodu (ör. en veya pt-BR) ve dil adını kontrol edin.');
+        exit(villa_ui('Dil kodu (ör. en veya pt-BR) ve dil adını kontrol edin.'));
     }
 
     $pdo = Database::connection();
@@ -3116,7 +3118,7 @@ $router->post('/admin/languages/save', static function (): void {
     $exists->execute([$code]);
     if ($exists->fetchColumn()) {
         http_response_code(409);
-        exit('Bu dil kodu zaten kayıtlı.');
+        exit(villa_ui('Bu dil kodu zaten kayıtlı.'));
     }
 
     $pdo->beginTransaction();
@@ -3151,7 +3153,7 @@ $router->post('/admin/users/role', static function (): void {
     $allowedRoles = ['admin', 'editor', 'support', 'customer', 'vendor'];
     if ($id < 1 || $id === (int)$actor['id'] || !in_array($role, $allowedRoles, true)) {
         http_response_code(422);
-        exit('Rol güncelleme bilgileri geçersiz.');
+        exit(villa_ui('Rol güncelleme bilgileri geçersiz.'));
     }
 
     $pdo = Database::connection();
@@ -3163,7 +3165,7 @@ $router->post('/admin/users/role', static function (): void {
         if (!is_string($targetRole) || !Auth::canManageUserRole('super_admin', $targetRole)) {
             $pdo->rollBack();
             http_response_code(403);
-            exit('Bu hesabın rolü değiştirilemez.');
+            exit(villa_ui('Bu hesabın rolü değiştirilemez.'));
         }
 
         $update = $pdo->prepare('UPDATE users SET role=?,session_version=session_version+1,updated_at=NOW() WHERE id=?');
@@ -3174,7 +3176,7 @@ $router->post('/admin/users/role', static function (): void {
         if ($pdo->inTransaction()) $pdo->rollBack();
         error_log('Admin user role update failed: ' . $e->getMessage());
         http_response_code(409);
-        exit('Kullanıcı rolü güvenli şekilde güncellenemedi.');
+        exit(villa_ui('Kullanıcı rolü güvenli şekilde güncellenemedi.'));
     }
 });
 
@@ -3187,7 +3189,7 @@ $router->post('/admin/users/status', static function (): void {
     $status = (string)($_POST['status'] ?? '');
     if ($id < 1 || $id === (int)$actor['id'] || !in_array($status, ['active', 'disabled'], true)) {
         http_response_code(422);
-        exit('Kullanıcı işlemi için gönderilen bilgiler geçersiz.');
+        exit(villa_ui('Kullanıcı işlemi için gönderilen bilgiler geçersiz.'));
     }
 
     $pdo = Database::connection();
@@ -3199,12 +3201,12 @@ $router->post('/admin/users/status', static function (): void {
         if (!is_string($targetRole)) {
             $pdo->rollBack();
             http_response_code(404);
-            exit('Kullanıcı bulunamadı.');
+            exit(villa_ui('Kullanıcı bulunamadı.'));
         }
         if (!Auth::canManageUserRole((string)$actor['role'], $targetRole)) {
             $pdo->rollBack();
             http_response_code(403);
-            exit('Bu kullanıcı hesabını yönetme yetkiniz yok.');
+            exit(villa_ui('Bu kullanıcı hesabını yönetme yetkiniz yok.'));
         }
 
         // Invalidate every existing session as soon as an account is disabled or re-enabled.
@@ -3216,7 +3218,7 @@ $router->post('/admin/users/status', static function (): void {
         if ($pdo->inTransaction()) $pdo->rollBack();
         error_log('Admin user status update failed: ' . $e->getMessage());
         http_response_code(409);
-        exit('Kullanıcı durumu güvenli şekilde güncellenemedi.');
+        exit(villa_ui('Kullanıcı durumu güvenli şekilde güncellenemedi.'));
     }
 });
 
@@ -3227,7 +3229,7 @@ $router->post('/admin/users/delete', static function (): void {
     $currentUser=Auth::user();
     if($id<1||$id===(int)$currentUser['id']){
         http_response_code(422);
-        exit('Geçersiz işlem: kendi hesabınızı silemezsiniz.');
+        exit(villa_ui('Geçersiz işlem: kendi hesabınızı silemezsiniz.'));
     }
     $pdo=Database::connection();
     try{
@@ -3239,7 +3241,7 @@ $router->post('/admin/users/delete', static function (): void {
             ||!in_array((string)$target['role'],['customer','vendor'],true)){
             $pdo->rollBack();
             http_response_code(422);
-            exit('Yalnızca yetkiniz kapsamındaki müşteri hesapları silinebilir. Yönetici ve ev sahibi hesapları korunur.');
+            exit(villa_ui('Yalnızca yetkiniz kapsamındaki müşteri hesapları silinebilir. Yönetici ve ev sahibi hesapları korunur.'));
         }
 
         // Vendor deletion cascades into payout history and detaches owned properties.
@@ -3250,7 +3252,7 @@ $router->post('/admin/users/delete', static function (): void {
             if($vendor->fetchColumn()){
                 $pdo->rollBack();
                 http_response_code(409);
-                exit('İşletme ve ödeme geçmişi korunmalıdır. Ev sahibi hesabını silmek yerine devre dışı bırakın.');
+                exit(villa_ui('İşletme ve ödeme geçmişi korunmalıdır. Ev sahibi hesabını silmek yerine devre dışı bırakın.'));
             }
         }
 
@@ -3260,7 +3262,7 @@ $router->post('/admin/users/delete', static function (): void {
         if($booking->fetchColumn()){
             $pdo->rollBack();
             http_response_code(409);
-            exit('Rezervasyon geçmişi bulunan üyeler silinemez. Kayıtları korumak için hesabı devre dışı bırakın.');
+            exit(villa_ui('Rezervasyon geçmişi bulunan üyeler silinemez. Kayıtları korumak için hesabı devre dışı bırakın.'));
         }
 
         $delete=$pdo->prepare("DELETE FROM users WHERE id=? AND role='customer'");
@@ -3274,7 +3276,7 @@ $router->post('/admin/users/delete', static function (): void {
         if($pdo->inTransaction())$pdo->rollBack();
         error_log('Admin member deletion failed: '.$e->getMessage());
         http_response_code(409);
-        exit('Üye silinemedi. İlişkili kayıtlar korunarak işlem güvenli şekilde durduruldu.');
+        exit(villa_ui('Üye silinemedi. İlişkili kayıtlar korunarak işlem güvenli şekilde durduruldu.'));
     }
 });
 
@@ -3784,7 +3786,7 @@ $router->post('/admin/settings', static function (): void {
     }
     $commission=$platformMode==='multi_vendor' ? (float)($_POST['commission']??12) : 0.0;$currency=strtoupper(trim((string)($_POST['currency']??'TRY')));$timezone=trim((string)($_POST['timezone']??'Europe/Istanbul'));
     $iyzicoEnvironment=(string)($_POST['iyzico_environment']??'sandbox');$paytrEnvironment=(string)($_POST['paytr_environment']??'sandbox');
-    if($commission<0||$commission>50||!preg_match('/^[A-Z]{3}$/',$currency)||!in_array($timezone,DateTimeZone::listIdentifiers(),true)||!in_array($iyzicoEnvironment,['sandbox','production'],true)||!in_array($paytrEnvironment,['sandbox','production'],true)){http_response_code(422);exit('Ayar değerlerini kontrol edin.');}
+    if($commission<0||$commission>50||!preg_match('/^[A-Z]{3}$/',$currency)||!in_array($timezone,DateTimeZone::listIdentifiers(),true)||!in_array($iyzicoEnvironment,['sandbox','production'],true)||!in_array($paytrEnvironment,['sandbox','production'],true)){http_response_code(422);exit(villa_ui('Ayar değerlerini kontrol edin.'));}
     $pdo=Database::connection();$save=$pdo->prepare('INSERT INTO settings(setting_key,setting_value,autoload) VALUES(?,?,1) ON DUPLICATE KEY UPDATE setting_value=VALUES(setting_value),autoload=1');
     $iyzicoEnabled=!empty($_POST['iyzico_enabled'])&&$_POST['iyzico_enabled']==='1';
     $paytrEnabled=!empty($_POST['paytr_enabled'])&&$_POST['paytr_enabled']==='1';
@@ -3805,12 +3807,12 @@ $router->post('/admin/settings', static function (): void {
     $smsUsername=trim((string)($_POST['sms_netgsm_username']??''));$smsSender=strtoupper(trim((string)($_POST['sms_netgsm_sender']??'')));
     $smsEncoding=(string)($_POST['sms_netgsm_encoding']??'TR');$smsIys=(string)($_POST['sms_netgsm_iys_filter']??'0');$smsPassword=trim((string)($_POST['sms_netgsm_password']??''));
     $storedSmsPasswordStmt=$pdo->prepare("SELECT setting_value FROM settings WHERE setting_key='sms.netgsm.password' LIMIT 1");$storedSmsPasswordStmt->execute();$storedSmsPassword=(string)($storedSmsPasswordStmt->fetchColumn()?:'');
-    if(($smsUsername!==''&&!preg_match('/^[0-9]{6,20}$/',$smsUsername))||($smsSender!==''&&!preg_match('/^[A-Z0-9]{3,11}$/',$smsSender))||!in_array($smsEncoding,['TR','UTF-8','UNICODE'],true)||!in_array($smsIys,['0','11','12'],true)||strlen($smsPassword)>512||($smsEnabled&&($smsUsername===''||$smsSender===''||($smsPassword===''&&($storedSmsPassword===''||!empty($_POST['sms_clear_password'])))))||($smsUsername===''&&$smsPassword!=='')){http_response_code(422);exit('Netgsm kullanıcı numarası, parola, gönderici başlığı ve SMS ayarlarını kontrol edin.');}
+    if(($smsUsername!==''&&!preg_match('/^[0-9]{6,20}$/',$smsUsername))||($smsSender!==''&&!preg_match('/^[A-Z0-9]{3,11}$/',$smsSender))||!in_array($smsEncoding,['TR','UTF-8','UNICODE'],true)||!in_array($smsIys,['0','11','12'],true)||strlen($smsPassword)>512||($smsEnabled&&($smsUsername===''||$smsSender===''||($smsPassword===''&&($storedSmsPassword===''||!empty($_POST['sms_clear_password'])))))||($smsUsername===''&&$smsPassword!=='')){http_response_code(422);exit(villa_ui('Netgsm kullanıcı numarası, parola, gönderici başlığı ve SMS ayarlarını kontrol edin.'));}
     $mailPassword=trim((string)($_POST['mail_smtp_password']??''));
     $storedMailPasswordStmt=$pdo->prepare("SELECT setting_value FROM settings WHERE setting_key='mail.smtp.password' LIMIT 1");$storedMailPasswordStmt->execute();
     $storedMailPassword=(string)($storedMailPasswordStmt->fetchColumn()?:'');
-    if($mailPort<1||$mailPort>65535||!in_array($mailEncryption,['tls','ssl','none'],true)||strlen($mailHost)>253||preg_match('/[\s\r\n]/',$mailHost)===1||str_contains($mailHost,'/')||str_contains($mailHost,'\\')||strlen($mailUsername)>190||($mailFrom!==''&&!filter_var($mailFrom,FILTER_VALIDATE_EMAIL))||strlen($mailFromName)>120||preg_match('/[\r\n]/',$mailFromName)||strlen($mailPassword)>512||($mailEnabled&&($mailHost===''||!filter_var($mailFrom,FILTER_VALIDATE_EMAIL)))||($mailUsername===''&&($mailPassword!==''||($storedMailPassword!==''&&empty($_POST['mail_clear_password']))))||($mailEnabled&&$mailUsername!==''&&$mailPassword===''&&($storedMailPassword===''||!empty($_POST['mail_clear_password'])))){http_response_code(422);exit('SMTP sunucu, port, şifreleme, kullanıcı adı/parola ve gönderen bilgilerini kontrol edin.');}
-    if($manualEnabled&&($manualBank===''||mb_strlen($manualBank)>120||$manualHolder===''||mb_strlen($manualHolder)>190||!preg_match('/^[A-Z]{2}[0-9A-Z]{13,32}$/',$manualIban)||mb_strlen($manualInstructions)>2000||!preg_match('/^[A-Z0-9_-]{2,16}$/i',$manualPrefix))){http_response_code(422);exit('Manuel havale için banka adı, hesap sahibi ve geçerli IBAN girilmelidir.');}
+    if($mailPort<1||$mailPort>65535||!in_array($mailEncryption,['tls','ssl','none'],true)||strlen($mailHost)>253||preg_match('/[\s\r\n]/',$mailHost)===1||str_contains($mailHost,'/')||str_contains($mailHost,'\\')||strlen($mailUsername)>190||($mailFrom!==''&&!filter_var($mailFrom,FILTER_VALIDATE_EMAIL))||strlen($mailFromName)>120||preg_match('/[\r\n]/',$mailFromName)||strlen($mailPassword)>512||($mailEnabled&&($mailHost===''||!filter_var($mailFrom,FILTER_VALIDATE_EMAIL)))||($mailUsername===''&&($mailPassword!==''||($storedMailPassword!==''&&empty($_POST['mail_clear_password']))))||($mailEnabled&&$mailUsername!==''&&$mailPassword===''&&($storedMailPassword===''||!empty($_POST['mail_clear_password'])))){http_response_code(422);exit(villa_ui('SMTP sunucu, port, şifreleme, kullanıcı adı/parola ve gönderen bilgilerini kontrol edin.'));}
+    if($manualEnabled&&($manualBank===''||mb_strlen($manualBank)>120||$manualHolder===''||mb_strlen($manualHolder)>190||!preg_match('/^[A-Z]{2}[0-9A-Z]{13,32}$/',$manualIban)||mb_strlen($manualInstructions)>2000||!preg_match('/^[A-Z0-9_-]{2,16}$/i',$manualPrefix))){http_response_code(422);exit(villa_ui('Manuel havale için banka adı, hesap sahibi ve geçerli IBAN girilmelidir.'));}
     $anyPaymentEnabled=$iyzicoEnabled||$paytrEnabled||$manualEnabled;
     foreach([...($platformMode==='multi_vendor' ? ['platform.commission_percent'=>(string)$commission] : []),'app.currency'=>$currency,'app.timezone'=>$timezone,'payments.iyzico.environment'=>$iyzicoEnvironment,'payments.paytr.environment'=>$paytrEnvironment,'payments.iyzico.enabled'=>$iyzicoEnabled?'1':'0','payments.paytr.enabled'=>$paytrEnabled?'1':'0','payments.manual.enabled'=>$manualEnabled?'1':'0','payments.manual.bank_name'=>$manualBank,'payments.manual.account_holder'=>$manualHolder,'payments.manual.iban'=>$manualIban,'payments.manual.instructions'=>$manualInstructions,'payments.manual.reference_prefix'=>$manualPrefix,'payments.enabled'=>$anyPaymentEnabled?'1':'0','payments.provider'=>$anyPaymentEnabled?'multiple':'none','mail.enabled'=>$mailEnabled?'1':'0','mail.smtp.host'=>$mailHost,'mail.smtp.port'=>(string)$mailPort,'mail.smtp.encryption'=>$mailEncryption,'mail.smtp.username'=>$mailUsername,'mail.from_email'=>$mailFrom,'mail.from_name'=>$mailFromName,'sms.enabled'=>$smsEnabled?'1':'0','sms.provider'=>'netgsm','sms.netgsm.username'=>$smsUsername,'sms.netgsm.sender'=>$smsSender,'sms.netgsm.encoding'=>$smsEncoding,'sms.netgsm.iys_filter'=>$smsIys] as $key=>$value)$save->execute([$key,$value]);
     if($mailPassword!=='')$save->execute(['mail.smtp.password',\App\Core\PaymentSecretVault::encrypt($mailPassword)]);
@@ -4003,7 +4005,7 @@ $router->post('/admin/content', static function (): void {
     $languageCheck->execute([$locale]);
     if (!$languageCheck->fetchColumn()) {
         http_response_code(422);
-        exit('İçerik dili geçersiz veya devre dışı.');
+        exit(villa_ui('İçerik dili geçersiz veya devre dışı.'));
     }
     $stmt = $pdo->prepare('INSERT INTO site_content (content_key,language_code,content_value,updated_at) VALUES (?,?,?,NOW()) ON DUPLICATE KEY UPDATE content_value=VALUES(content_value),updated_at=NOW()');
     foreach ((array)($_POST['content'] ?? []) as $key=>$value) {
@@ -4037,15 +4039,15 @@ $router->post('/admin/bookings/manual', static function (): void {
         $pdo->beginTransaction();
         $lock=$pdo->prepare("SELECT id,base_nightly_price,weekend_nightly_price,cleaning_fee,early_checkin_enabled,early_checkin_fee,late_checkout_enabled,late_checkout_fee,currency,max_guests FROM properties WHERE id=? AND status<>'archived' FOR UPDATE");
         $lock->execute([$propertyId]);$property=$lock->fetch();
-        if(!$property||$guests<1||$guests>(int)$property['max_guests']){$pdo->rollBack();http_response_code(422);exit('Konaklama veya misafir kapasitesi geçersiz.');}
+        if(!$property||$guests<1||$guests>(int)$property['max_guests']){$pdo->rollBack();http_response_code(422);exit(villa_ui('Konaklama veya misafir kapasitesi geçersiz.'));}
         // Hold the property lock while expiring only payment-safe holds and checking all active reservations.
         \App\Core\BookingHoldExpiryService::expireSafePendingForProperty($pdo,$propertyId);
         $conflict=$pdo->prepare("SELECT id FROM bookings WHERE property_id=? AND status IN ('pending','confirmed') AND check_in < ? AND check_out > ? LIMIT 1 FOR UPDATE");
         $conflict->execute([$propertyId,$outRaw,$inRaw]);
-        if($conflict->fetchColumn()){$pdo->rollBack();http_response_code(409);exit('Bu tarihlerde başka bir rezervasyon bulunuyor.');}
+        if($conflict->fetchColumn()){$pdo->rollBack();http_response_code(409);exit(villa_ui('Bu tarihlerde başka bir rezervasyon bulunuyor.'));}
         $calendar=$pdo->prepare("SELECT date_from,date_to,status,nightly_price FROM availability WHERE property_id=? AND date_from < ? AND date_to > ?");
         $calendar->execute([$propertyId,$outRaw,$inRaw]);$rules=$calendar->fetchAll();
-        foreach($rules as $rule){if($rule['status']!=='available'){$pdo->rollBack();http_response_code(409);exit('Seçilen tarihlerden biri takvimde kapalı.');}}
+        foreach($rules as $rule){if($rule['status']!=='available'){$pdo->rollBack();http_response_code(409);exit(villa_ui('Seçilen tarihlerden biri takvimde kapalı.'));}}
         $seasonStmt=$pdo->prepare('SELECT name,date_from,date_to,nightly_price,min_nights,checkin_weekdays,checkout_weekdays FROM property_seasonal_prices WHERE property_id=? AND date_from < ? AND date_to > ? ORDER BY date_from');
         $seasonStmt->execute([$propertyId,$outRaw,$inRaw]);$seasons=$seasonStmt->fetchAll(PDO::FETCH_ASSOC);
         try{\App\Core\BookingStayRules::validate($checkIn,$checkOut,$seasons);}catch(InvalidArgumentException $e){$pdo->rollBack();http_response_code(422);exit($e->getMessage());}
@@ -4053,7 +4055,7 @@ $router->post('/admin/bookings/manual', static function (): void {
         try{$extras=\App\Core\BookingExtras::calculate($property,$earlyRequested,$lateRequested);}catch(InvalidArgumentException $e){$pdo->rollBack();http_response_code(422);exit($e->getMessage());}
         $fees=round((float)$property['cleaning_fee']+(float)$extras['fees'],2);$calculated=round($subtotal+$fees,2);
         $entered=$totalInput;$total=$entered===''?$calculated:(float)$entered;
-        if($total<0||!is_finite($total)){$pdo->rollBack();http_response_code(422);exit('Toplam tutar geçersiz.');}
+        if($total<0||!is_finite($total)){$pdo->rollBack();http_response_code(422);exit(villa_ui('Toplam tutar geçersiz.'));}
         $code='VRM'.date('ymd').strtoupper(bin2hex(random_bytes(3)));
         $save=$pdo->prepare("INSERT INTO bookings (booking_code,property_id,guest_user_id,guest_name,guest_email,guest_phone,booking_source,check_in,check_out,guests,subtotal,fees,early_checkin_requested,early_checkin_fee,late_checkout_requested,late_checkout_fee,total,currency,status,created_at) VALUES(?,?,NULL,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,'confirmed',NOW())");
         $save->execute([$code,$propertyId,$guestName,$guestEmail?:null,$guestPhone?:null,$source,$inRaw,$outRaw,$guests,$subtotal,$fees,$extras['early_checkin_requested'],$extras['early_checkin_fee'],$extras['late_checkout_requested'],$extras['late_checkout_fee'],$total,$property['currency']]);
@@ -4068,7 +4070,7 @@ $router->post('/admin/bookings/manual', static function (): void {
 $router->post('/admin/bookings/status', static function (): void {
     Auth::requireRole(['super_admin','admin']);verify_csrf();
     $pdo=Database::connection();$id=(int)($_POST['id']??0);$status=(string)($_POST['status']??'');
-    if($id<1||!in_array($status,['pending','confirmed','cancelled','completed'],true)){http_response_code(422);exit('Rezervasyon durumu geçersiz.');}
+    if($id<1||!in_array($status,['pending','confirmed','cancelled','completed'],true)){http_response_code(422);exit(villa_ui('Rezervasyon durumu geçersiz.'));}
     try{
         $pdo->beginTransaction();
 
@@ -4077,37 +4079,37 @@ $router->post('/admin/bookings/status', static function (): void {
         // avoids booking-row/property-row lock inversions between admin actions.
         $lookup=$pdo->prepare('SELECT property_id FROM bookings WHERE id=?');
         $lookup->execute([$id]);$propertyId=(int)($lookup->fetchColumn()?:0);
-        if($propertyId<1){$pdo->rollBack();http_response_code(404);exit('Rezervasyon bulunamadı.');}
+        if($propertyId<1){$pdo->rollBack();http_response_code(404);exit(villa_ui('Rezervasyon bulunamadı.'));}
 
         $propertyLock=$pdo->prepare('SELECT id FROM properties WHERE id=? FOR UPDATE');
         $propertyLock->execute([$propertyId]);
-        if(!$propertyLock->fetchColumn()){$pdo->rollBack();http_response_code(404);exit('Konaklama bulunamadı.');}
+        if(!$propertyLock->fetchColumn()){$pdo->rollBack();http_response_code(404);exit(villa_ui('Konaklama bulunamadı.'));}
 
         // Apply the same payment-safe hold expiry used by customer and vendor booking paths.
         \App\Core\BookingHoldExpiryService::expireSafePendingForProperty($pdo,$propertyId);
         $s=$pdo->prepare('SELECT id,property_id,booking_code,guest_phone,guest_user_id,check_in,check_out,status FROM bookings WHERE id=? FOR UPDATE');
         $s->execute([$id]);$booking=$s->fetch();
-        if(!$booking){$pdo->rollBack();http_response_code(404);exit('Rezervasyon bulunamadı.');}
-        if((int)$booking['property_id']!==$propertyId){$pdo->rollBack();http_response_code(409);exit('Rezervasyon kaydı işlem sırasında değişti. Lütfen tekrar deneyin.');}
+        if(!$booking){$pdo->rollBack();http_response_code(404);exit(villa_ui('Rezervasyon bulunamadı.'));}
+        if((int)$booking['property_id']!==$propertyId){$pdo->rollBack();http_response_code(409);exit(villa_ui('Rezervasyon kaydı işlem sırasında değişti. Lütfen tekrar deneyin.'));}
 
         // Closed bookings cannot be reopened: a new reservation must pass the
         // normal availability, stay-rule and payment validation paths.
         if(in_array((string)$booking['status'],['cancelled','completed'],true) && $status!==(string)$booking['status']){
-            $pdo->rollBack();http_response_code(409);exit('Kapanmış rezervasyon yeniden açılamaz. Yeni rezervasyon oluşturun.');
+            $pdo->rollBack();http_response_code(409);exit(villa_ui('Kapanmış rezervasyon yeniden açılamaz. Yeni rezervasyon oluşturun.'));
         }
         if($status==='pending' && (string)$booking['status']!=='pending'){
-            $pdo->rollBack();http_response_code(409);exit('Onaylanmış rezervasyon beklemeye alınamaz.');
+            $pdo->rollBack();http_response_code(409);exit(villa_ui('Onaylanmış rezervasyon beklemeye alınamaz.'));
         }
         if($status==='confirmed'){
             // Locking reads see the latest committed rows after waiting for the
             // property lock; a snapshot read could otherwise miss a concurrent change.
             $conflict=$pdo->prepare("SELECT id FROM bookings WHERE property_id=? AND id<>? AND status IN ('pending','confirmed') AND check_in < ? AND check_out > ? LIMIT 1 FOR UPDATE");
             $conflict->execute([$propertyId,$id,$booking['check_out'],$booking['check_in']]);
-            if($conflict->fetchColumn()){$pdo->rollBack();http_response_code(409);exit('Bu tarihlerde bekleyen veya onaylanmış başka bir rezervasyon var.');}
+            if($conflict->fetchColumn()){$pdo->rollBack();http_response_code(409);exit(villa_ui('Bu tarihlerde bekleyen veya onaylanmış başka bir rezervasyon var.'));}
 
             $blocked=$pdo->prepare("SELECT id FROM availability WHERE property_id=? AND status<>'available' AND date_from < ? AND date_to > ? LIMIT 1 FOR UPDATE");
             $blocked->execute([$propertyId,$booking['check_out'],$booking['check_in']]);
-            if($blocked->fetchColumn()){$pdo->rollBack();http_response_code(409);exit('Bu rezervasyon tarihleri takvimde kapatılmış.');}
+            if($blocked->fetchColumn()){$pdo->rollBack();http_response_code(409);exit(villa_ui('Bu rezervasyon tarihleri takvimde kapatılmış.'));}
             $seasonStmt=$pdo->prepare('SELECT date_from,date_to,min_nights,checkin_weekdays,checkout_weekdays FROM property_seasonal_prices WHERE property_id=? AND date_from < ? AND date_to > ? ORDER BY date_from');
             $seasonStmt->execute([$propertyId,$booking['check_out'],$booking['check_in']]);$staySeasons=$seasonStmt->fetchAll(PDO::FETCH_ASSOC);
             try{\App\Core\BookingStayRules::validate(new DateTimeImmutable($booking['check_in']),new DateTimeImmutable($booking['check_out']),$staySeasons);}catch(InvalidArgumentException $e){$pdo->rollBack();http_response_code(409);exit($e->getMessage());}
@@ -4122,7 +4124,7 @@ $router->post('/admin/bookings/status', static function (): void {
         $log=$pdo->prepare('INSERT INTO audit_logs(user_id,action,entity_type,entity_id,ip_address,details,created_at) VALUES(?,?,?,?,?,?,NOW())');
         $log->execute([(int)Auth::user()['id'],'booking.status_changed','booking',$id,$_SERVER['REMOTE_ADDR']??null,json_encode(['from'=>$booking['status'],'to'=>$status],JSON_UNESCAPED_UNICODE)]);
         $pdo->commit();try{\App\Core\SmsService::enqueueBookingStatus($pdo,$booking,$status);}catch(Throwable $smsError){error_log('Admin booking SMS enqueue failed: '.$smsError->getMessage());}redirect('/admin/bookings');
-    }catch(Throwable $e){if($pdo->inTransaction())$pdo->rollBack();error_log('Booking status update failed: '.$e->getMessage());http_response_code(500);exit('Rezervasyon güncellenemedi.');}
+    }catch(Throwable $e){if($pdo->inTransaction())$pdo->rollBack();error_log('Booking status update failed: '.$e->getMessage());http_response_code(500);exit(villa_ui('Rezervasyon güncellenemedi.'));}
 });
 
 $router->get('/admin/cancellations', static function (): void {
@@ -4135,7 +4137,7 @@ $router->get('/admin/cancellations', static function (): void {
 $router->post('/admin/cancellations/policy', static function (): void {
     Auth::requireRole(['super_admin','admin']);verify_csrf();
     $days=(int)($_POST['free_days']??7);$early=(int)($_POST['early_percent']??100);$late=(int)($_POST['late_percent']??0);
-    if($days<0||$days>365||$early<0||$early>100||$late<0||$late>100){http_response_code(422);exit('İptal politikası değerleri geçersiz.');}
+    if($days<0||$days>365||$early<0||$early>100||$late<0||$late>100){http_response_code(422);exit(villa_ui('İptal politikası değerleri geçersiz.'));}
     $save=Database::connection()->prepare('INSERT INTO settings(setting_key,setting_value,autoload) VALUES(?,?,1) ON DUPLICATE KEY UPDATE setting_value=VALUES(setting_value),autoload=1');
     foreach(['booking.cancellation.free_days'=>(string)$days,'booking.cancellation.early_refund_percent'=>(string)$early,'booking.cancellation.late_refund_percent'=>(string)$late] as $key=>$value)$save->execute([$key,$value]);
     redirect('/admin/cancellations');
@@ -4143,7 +4145,7 @@ $router->post('/admin/cancellations/policy', static function (): void {
 $router->post('/admin/cancellations/review', static function (): void {
     Auth::requireRole(['super_admin','admin']);verify_csrf();
     $requestId=(int)($_POST['request_id']??0);$decision=(string)($_POST['decision']??'');$note=trim((string)($_POST['decision_note']??''));
-    if($requestId<1||!in_array($decision,['approved','rejected'],true)||mb_strlen($note)>1000){http_response_code(422);exit('İptal kararı bilgileri geçersiz.');}
+    if($requestId<1||!in_array($decision,['approved','rejected'],true)||mb_strlen($note)>1000){http_response_code(422);exit(villa_ui('İptal kararı bilgileri geçersiz.'));}
     $pdo=Database::connection();
     try{
         $pdo->beginTransaction();
@@ -4190,7 +4192,7 @@ $router->post('/admin/payments/manual/refunds/settle', static function (): void 
     $reference=trim((string)($_POST['bank_reference']??''));
     $confirmed=(string)($_POST['bank_transfer_verified']??'')==='1';
     if(!$actor||!$refundId||$refundId<1||$reference===''||mb_strlen($reference)>190||!$confirmed){
-        http_response_code(422);exit('Banka dekontu doğrulanmadan iade sonuçlandırılamaz.');
+        http_response_code(422);exit(villa_ui('Banka dekontu doğrulanmadan iade sonuçlandırılamaz.'));
     }
     try{
         \App\Core\ManualBankRefundService::settleVerified(Database::connection(),(int)$actor['id'],$refundId,$reference);
@@ -4206,7 +4208,7 @@ $router->post('/admin/payments/manual/refunds/review', static function (): void 
     $decision=trim((string)($_POST['decision']??''));
     $bankReference=trim((string)($_POST['bank_reference']??''));
     if(!$actor||!$refundId||$refundId<1||!in_array($decision,['processing','failed','cancelled'],true)||mb_strlen($bankReference)>190){
-        http_response_code(422);exit('Banka iadesi inceleme bilgileri geçersiz.');
+        http_response_code(422);exit(villa_ui('Banka iadesi inceleme bilgileri geçersiz.'));
     }
     try{
         \App\Core\ManualBankRefundService::review(Database::connection(),(int)$actor['id'],$refundId,$decision,$bankReference);
@@ -4221,7 +4223,7 @@ $router->post('/admin/payments/manual/refunds/create', static function (): void 
     $paymentId=filter_var($_POST['payment_id']??null,FILTER_VALIDATE_INT);
     $amount=trim((string)($_POST['amount']??''));
     $reason=trim((string)($_POST['reason']??''));
-    if(!$actor||!$paymentId||$paymentId<1||mb_strlen($reason)>500){http_response_code(422);exit('İade talebi geçersiz.');}
+    if(!$actor||!$paymentId||$paymentId<1||mb_strlen($reason)>500){http_response_code(422);exit(villa_ui('İade talebi geçersiz.'));}
     try{
         \App\Core\ManualBankRefundService::request(Database::connection(),(int)$actor['id'],$paymentId,$amount,$reason);
     }catch(\InvalidArgumentException|\RuntimeException $e){
@@ -4232,34 +4234,34 @@ $router->post('/admin/payments/manual/refunds/create', static function (): void 
 $router->post('/admin/payments/manual/review', static function (): void {
     Auth::requireRole(['super_admin','admin']);verify_csrf();
     $reportId=(int)($_POST['report_id']??0);$decision=(string)($_POST['decision']??'');$reviewNote=trim((string)($_POST['review_note']??''));
-    if($reportId<1||!in_array($decision,['approved','rejected'],true)||strlen($reviewNote)>1000){http_response_code(422);exit('İnceleme bilgileri geçersiz.');}
+    if($reportId<1||!in_array($decision,['approved','rejected'],true)||strlen($reviewNote)>1000){http_response_code(422);exit(villa_ui('İnceleme bilgileri geçersiz.'));}
     $pdo=Database::connection();
     try{
         $pdo->beginTransaction();
         $lookup=$pdo->prepare('SELECT booking_id FROM manual_payment_reports WHERE id=?');$lookup->execute([$reportId]);$bookingId=(int)($lookup->fetchColumn()?:0);
-        if($bookingId<1){$pdo->rollBack();http_response_code(404);exit('Havale bildirimi bulunamadı.');}
+        if($bookingId<1){$pdo->rollBack();http_response_code(404);exit(villa_ui('Havale bildirimi bulunamadı.'));}
         $propertyLookup=$pdo->prepare('SELECT property_id FROM bookings WHERE id=?');$propertyLookup->execute([$bookingId]);$propertyId=(int)($propertyLookup->fetchColumn()?:0);
-        if($propertyId<1){$pdo->rollBack();http_response_code(404);exit('Rezervasyon bulunamadı.');}
+        if($propertyId<1){$pdo->rollBack();http_response_code(404);exit(villa_ui('Rezervasyon bulunamadı.'));}
         $propertyLock=$pdo->prepare('SELECT id FROM properties WHERE id=? FOR UPDATE');$propertyLock->execute([$propertyId]);
-        if(!$propertyLock->fetchColumn()){$pdo->rollBack();http_response_code(404);exit('Villa bulunamadı.');}
+        if(!$propertyLock->fetchColumn()){$pdo->rollBack();http_response_code(404);exit(villa_ui('Villa bulunamadı.'));}
         \App\Core\BookingHoldExpiryService::expireSafePendingForProperty($pdo,$propertyId);
         $reportStmt=$pdo->prepare('SELECT * FROM manual_payment_reports WHERE id=? FOR UPDATE');$reportStmt->execute([$reportId]);$report=$reportStmt->fetch(PDO::FETCH_ASSOC);
-        if(!$report){$pdo->rollBack();http_response_code(404);exit('Havale bildirimi bulunamadı.');}
-        if((string)$report['status']!=='pending'){$pdo->rollBack();http_response_code(409);exit('Bu bildirim daha önce incelenmiş.');}
+        if(!$report){$pdo->rollBack();http_response_code(404);exit(villa_ui('Havale bildirimi bulunamadı.'));}
+        if((string)$report['status']!=='pending'){$pdo->rollBack();http_response_code(409);exit(villa_ui('Bu bildirim daha önce incelenmiş.'));}
         $bookingStmt=$pdo->prepare('SELECT id,guest_user_id,guest_phone,check_in,check_out,status,total,currency,booking_code FROM bookings WHERE id=? FOR UPDATE');$bookingStmt->execute([$bookingId]);$booking=$bookingStmt->fetch(PDO::FETCH_ASSOC);
-        if(!$booking){$pdo->rollBack();http_response_code(404);exit('Rezervasyon bulunamadı.');}
+        if(!$booking){$pdo->rollBack();http_response_code(404);exit(villa_ui('Rezervasyon bulunamadı.'));}
         if($decision==='approved'){
-            if(!in_array((string)$booking['status'],['pending','confirmed'],true)){$pdo->rollBack();http_response_code(409);exit('İptal edilmiş veya tamamlanmış rezervasyonun ödemesi onaylanamaz.');}
-            if(abs((float)$booking['total']-(float)$report['amount'])>0.009||strtoupper((string)$booking['currency'])!==strtoupper((string)$report['currency'])){$pdo->rollBack();http_response_code(409);exit('Rezervasyon tutarı bildirimden sonra değişmiş. Ödeme onaylanmadı.');}
+            if(!in_array((string)$booking['status'],['pending','confirmed'],true)){$pdo->rollBack();http_response_code(409);exit(villa_ui('İptal edilmiş veya tamamlanmış rezervasyonun ödemesi onaylanamaz.'));}
+            if(abs((float)$booking['total']-(float)$report['amount'])>0.009||strtoupper((string)$booking['currency'])!==strtoupper((string)$report['currency'])){$pdo->rollBack();http_response_code(409);exit(villa_ui('Rezervasyon tutarı bildirimden sonra değişmiş. Ödeme onaylanmadı.'));}
             $alreadyPaid=$pdo->prepare("SELECT id FROM payment_transactions WHERE booking_id=? AND status='paid' LIMIT 1 FOR UPDATE");$alreadyPaid->execute([$bookingId]);
-            if($alreadyPaid->fetchColumn()){$pdo->rollBack();http_response_code(409);exit('Bu rezervasyon için başka bir ödeme zaten doğrulanmış.');}
+            if($alreadyPaid->fetchColumn()){$pdo->rollBack();http_response_code(409);exit(villa_ui('Bu rezervasyon için başka bir ödeme zaten doğrulanmış.'));}
             if((string)$booking['status']==='pending'){
                 $conflict=$pdo->prepare("SELECT id FROM bookings WHERE property_id=? AND id<>? AND status IN ('pending','confirmed') AND check_in < ? AND check_out > ? LIMIT 1 FOR UPDATE");
                 $conflict->execute([$propertyId,$bookingId,$booking['check_out'],$booking['check_in']]);
-                if($conflict->fetchColumn()){$pdo->rollBack();http_response_code(409);exit('Bu tarihlerde başka bir onaylı rezervasyon bulunuyor. Ödeme onaylanmadı.');}
+                if($conflict->fetchColumn()){$pdo->rollBack();http_response_code(409);exit(villa_ui('Bu tarihlerde başka bir onaylı rezervasyon bulunuyor. Ödeme onaylanmadı.'));}
                 $blocked=$pdo->prepare("SELECT id FROM availability WHERE property_id=? AND status<>'available' AND date_from < ? AND date_to > ? LIMIT 1 FOR UPDATE");
                 $blocked->execute([$propertyId,$booking['check_out'],$booking['check_in']]);
-                if($blocked->fetchColumn()){$pdo->rollBack();http_response_code(409);exit('Rezervasyon tarihleri takvimde kapatılmış. Ödeme onaylanmadı.');}
+                if($blocked->fetchColumn()){$pdo->rollBack();http_response_code(409);exit(villa_ui('Rezervasyon tarihleri takvimde kapatılmış. Ödeme onaylanmadı.'));}
             }
             $providerReference='MANUAL-REPORT-'.$reportId;$idempotencyKey=hash('sha256','manual-payment-report:'.$reportId);
             $requestPayload=json_encode(['sender_name'=>$report['sender_name'],'sender_bank'=>$report['sender_bank'],'transfer_reference'=>$report['transfer_reference'],'note'=>$report['note']],JSON_UNESCAPED_UNICODE|JSON_UNESCAPED_SLASHES);
@@ -4281,7 +4283,7 @@ $router->post('/admin/payments/manual/review', static function (): void {
         $pdo->commit();if($decision==='approved'){try{\App\Core\SmsService::enqueueBookingStatus($pdo,$booking,'confirmed');}catch(Throwable $smsError){error_log('Manual payment SMS enqueue failed: '.$smsError->getMessage());}}redirect('/admin/payments/manual?status='.$decision);
     }catch(Throwable $e){
         if($pdo->inTransaction())$pdo->rollBack();
-        error_log('Manual payment review failed: '.$e->getMessage());http_response_code(500);exit('Havale bildirimi işlenemedi. İşlem geri alındı.');
+        error_log('Manual payment review failed: '.$e->getMessage());http_response_code(500);exit(villa_ui('Havale bildirimi işlenemedi. İşlem geri alındı.'));
     }
 });
 
@@ -4304,7 +4306,7 @@ $router->post('/admin/payment-tests', static function (): void {
 
 $router->post('/admin/finance/refund/iyzico', static function (): void {
     Auth::requireRole(['super_admin','admin']);verify_csrf();
-    if(empty($_POST['confirm_real_refund'])){http_response_code(422);exit('Gerçek iade işlemi için açık onay gereklidir.');}
+    if(empty($_POST['confirm_real_refund'])){http_response_code(422);exit(villa_ui('Gerçek iade işlemi için açık onay gereklidir.'));}
     $pdo=Database::connection();
     try{
         $result=\App\Core\PaymentRefundService::refundIyzico($pdo,(int)Auth::user()['id'],(int)($_POST['payment_transaction_id']??0),(string)($_POST['amount']??''),(string)($_POST['reason']??''));

@@ -54,6 +54,12 @@ try {
         assertSmoke($status===0,'Homepage request failed: '.$request);
         return implode("\n",$output);
     };
+    $englishAdmin=$homeRequest('english-admin');
+    assertSmoke(str_contains($englishAdmin,'Edit homepage design') && str_contains($englishAdmin,'Menu management') && !str_contains($englishAdmin,'>Menü Yönetimi<'),'English admin page or shared navigation rendered Turkish labels.');
+    $turkishAdmin=$homeRequest('turkish-admin');
+    assertSmoke(str_contains($turkishAdmin,'Ana sayfa tasarımını düzenle') && str_contains($turkishAdmin,'Menü Yönetimi'),'Explicit Turkish language selection was not respected.');
+    $englishListing=$homeRequest('english-listing');
+    assertSmoke(str_contains($englishListing,'Find your ideal stay') && !str_contains($englishListing,'>Size en uygun konaklamayı bulun<'),'English storefront did not render listing labels in English.');
     $originalHome=$homeRequest('public');
     assertSmoke(str_contains($homeRequest('editor'),'data-section="hero"'),'Page editor did not expose the native hero.');
     $preview=$homeRequest('preview');

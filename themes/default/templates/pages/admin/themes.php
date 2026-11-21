@@ -50,7 +50,7 @@ $themeList = is_array($themes ?? null) ? $themes : [];
             <h1><?= e($translate('admin.themes.title')) ?></h1>
             <p><?= e($translate('admin.themes.intro')) ?></p>
         </div>
-        <span class="theme-manager-count"><?= count($themeList) ?> kurulu tema</span>
+        <span class="theme-manager-count"><?= count($themeList) ?> <?= e(villa_ui('kurulu tema')) ?></span>
     </div>
     <?php if (($themeMessage ?? '') !== ''): ?>
         <div role="status" class="theme-manager-alert <?= ($themeMessageType ?? '') === 'error' ? 'error' : '' ?>"><?= e((string)$themeMessage) ?></div>
@@ -67,7 +67,7 @@ $themeList = is_array($themes ?? null) ? $themes : [];
                         <h2><?= e((string)($theme['name'] ?? $slug)) ?></h2>
                         <div class="theme-manager-badges">
                             <?php if ($slug === 'default'): ?><span class="theme-manager-badge"><?= e($translate('admin.themes.base')) ?></span><?php endif; ?>
-                            <?php if ($isActive): ?><span class="theme-manager-badge active">ŞU ANDA AKTİF</span><?php endif; ?>
+                            <?php if ($isActive): ?><span class="theme-manager-badge active"><?= e(villa_ui('ŞU ANDA AKTİF')) ?></span><?php endif; ?>
                         </div>
                     </div>
                 </div>
@@ -81,13 +81,13 @@ $themeList = is_array($themes ?? null) ? $themes : [];
                         <?php if ($isActive): ?>
                             <div class="theme-manager-current" aria-label="Bu tema zaten aktif">
                                 <svg viewBox="0 0 20 20" fill="none" aria-hidden="true"><path d="m4 10 4 4 8-8" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
-                                Bu tema şu anda kullanımda
+                                <?= e(villa_ui('Bu tema şu anda kullanımda')) ?>
                             </div>
                         <?php else: ?>
                             <form method="post" action="<?= e(app_url('/admin/themes/activate')) ?>">
                                 <?= csrf_field() ?>
                                 <input type="hidden" name="theme_slug" value="<?= e($slug) ?>">
-                                <button class="theme-manager-activate" type="submit">Bu temayı etkinleştir <span aria-hidden="true">→</span></button>
+                                <button class="theme-manager-activate" type="submit"><?= e(villa_ui('Bu temayı etkinleştir')) ?> <span aria-hidden="true">→</span></button>
                             </form>
                         <?php endif; ?>
                     </div>
@@ -95,5 +95,5 @@ $themeList = is_array($themes ?? null) ? $themes : [];
             </article>
         <?php endforeach; ?>
     </div>
-    <div class="theme-manager-note"><span aria-hidden="true">ⓘ</span><span><strong>Tema yedekleme ve geri dönüş:</strong> Aktif temayı değiştirmek site içeriğinizi silmez. Her tema kendi görünümünü kullanır; eksik şablon ve bileşenler varsayılan temadan tamamlanır.</span></div>
+    <div class="theme-manager-note"><span aria-hidden="true">ⓘ</span><span><strong><?= e(villa_ui('Tema yedekleme ve geri dönüş:')) ?></strong> <?= e(villa_ui('Aktif temayı değiştirmek site içeriğinizi silmez. Her tema kendi görünümünü kullanır; eksik şablon ve bileşenler varsayılan temadan tamamlanır.')) ?></span></div>
 </section>

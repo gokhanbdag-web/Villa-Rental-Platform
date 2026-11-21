@@ -45,7 +45,7 @@ $medBlocks = '';
     <?php endif;
     if ($medSectionActive('latest') && !empty($latestProperties)): ?>
     <section class="section med-latest" style="order:<?= $medSectionOrder('latest',3) ?>"><div class="wrap">
-      <div class="section-head"><div><span class="pill villa-eyebrow"><?= e($content['home_latest_eyebrow'] ?? 'YENİ EKLENENLER') ?></span><h2><?= e($content['home_latest_title'] ?? 'Son Eklenen Villalar') ?></h2><p><?= e($content['home_latest_subtitle'] ?? '') ?></p></div><a class="more" href="<?= e(app_url('/konaklamalar?sort=newest')) ?>"><?= e($content['home_latest_link'] ?? 'Tüm villaları gör ↗') ?></a></div>
+      <div class="section-head"><div><span class="pill villa-eyebrow"><?= e($content['home_latest_eyebrow'] ?? villa_ui('YENİ EKLENENLER')) ?></span><h2><?= e($content['home_latest_title'] ?? villa_ui('Son Eklenen Villalar')) ?></h2><p><?= e($content['home_latest_subtitle'] ?? '') ?></p></div><a class="more" href="<?= e(app_url('/konaklamalar?sort=newest')) ?>"><?= e($content['home_latest_link'] ?? villa_ui('Tüm villaları gör ↗')) ?></a></div>
       <div class="med-property-grid">
       <?php foreach ($latestProperties as $p):
             $cardImages=$homeCardImages[(int)$p['id']]??[];
@@ -61,9 +61,9 @@ $medBlocks = '';
     <?php
     if ($medSectionActive('concepts') && !empty($categories)): ?>
     <section class="section med-concepts" style="order:<?= $medSectionOrder('concepts',5) ?>"><div class="wrap">
-      <div class="section-head"><div><span class="pill villa-eyebrow"><?= e($content['home_concepts_eyebrow'] ?? 'TATİLİNİZİ KEŞFEDİN') ?></span><h2><?= e($content['home_concepts_title'] ?? 'Size Uygun Tatil Konseptini Seçin') ?></h2><p><?= e($content['home_concepts_subtitle'] ?? '') ?></p></div></div>
+      <div class="section-head"><div><span class="pill villa-eyebrow"><?= e($content['home_concepts_eyebrow'] ?? villa_ui('TATİLİNİZİ KEŞFEDİN')) ?></span><h2><?= e($content['home_concepts_title'] ?? villa_ui('Size Uygun Tatil Konseptini Seçin')) ?></h2><p><?= e($content['home_concepts_subtitle'] ?? '') ?></p></div></div>
       <div class="med-concept-grid"><?php foreach (array_slice($categories, 0, 4) as $i=>$category): $img=$medImage($category); if($img==='')$img=$stylePhotos[$i%count($stylePhotos)]??''; ?>
-        <a class="med-concept-card" href="<?= e(app_url('/konaklamalar?category='.(int)$category['id'])) ?>"><?php if($img): ?><img src="<?= e($img) ?>" alt="<?= e($category['name']) ?>" loading="lazy"><?php endif; ?><span class="med-concept-overlay"></span><span class="med-concept-copy" data-villa-overlay-text><strong><?= e($category['name']) ?></strong><small><?= (int)($category['property_count'] ?? 0) ?> <?= e($content['home_concepts_count_label'] ?? 'villa seçeneği') ?></small></span></a>
+        <a class="med-concept-card" href="<?= e(app_url('/konaklamalar?category='.(int)$category['id'])) ?>"><?php if($img): ?><img src="<?= e($img) ?>" alt="<?= e($category['name']) ?>" loading="lazy"><?php endif; ?><span class="med-concept-overlay"></span><span class="med-concept-copy" data-villa-overlay-text><strong><?= e($category['name']) ?></strong><small><?= (int)($category['property_count'] ?? 0) ?> <?= e($content['home_concepts_count_label'] ?? villa_ui('villa seçeneği')) ?></small></span></a>
       <?php endforeach; ?></div>
     </div></section>
     <?php endif;
@@ -92,19 +92,19 @@ $medBlocks = '';
     endif;
     if ($medSectionActive('reviews') && !empty($homeReviews)): ?>
     <section class="section med-reviews" style="order:<?= $medSectionOrder('reviews',8) ?>"><div class="wrap">
-      <div class="section-head"><div><span class="pill villa-eyebrow"><?= e($content['home_reviews_eyebrow'] ?? 'MİSAFİR DENEYİMLERİ') ?></span><h2><?= e($content['home_reviews_title'] ?? 'Misafirlerimizin Deneyimleri') ?></h2><p><?= e($content['home_reviews_subtitle'] ?? '') ?></p></div></div>
-      <div class="med-review-grid"><?php foreach ($homeReviews as $review): ?><article class="med-review-card"><div class="med-review-stars" aria-label="<?= (int)$review['rating'] ?> üzerinden 10 puan">★★★★★</div><p><?= e((string)$review['body']) ?></p><div class="med-review-author"><strong><?= e($review['username']) ?></strong><span><?= e($review['property_title']) ?></span><small><?= e($content['home_review_verified_label'] ?? 'Doğrulanmış konaklama yorumu') ?> · <?= number_format((float)$review['rating'],1,',','.') ?>/10</small></div></article><?php endforeach; ?></div>
+      <div class="section-head"><div><span class="pill villa-eyebrow"><?= e($content['home_reviews_eyebrow'] ?? villa_ui('MİSAFİR DENEYİMLERİ')) ?></span><h2><?= e($content['home_reviews_title'] ?? villa_ui('Misafirlerimizin Deneyimleri')) ?></h2><p><?= e($content['home_reviews_subtitle'] ?? '') ?></p></div></div>
+      <div class="med-review-grid"><?php foreach ($homeReviews as $review): ?><article class="med-review-card"><div class="med-review-stars" aria-label="<?= (int)$review['rating'] ?> üzerinden 10 puan">★★★★★</div><p><?= e((string)$review['body']) ?></p><div class="med-review-author"><strong><?= e($review['username']) ?></strong><span><?= e($review['property_title']) ?></span><small><?= e($content['home_review_verified_label'] ?? villa_ui('Doğrulanmış konaklama yorumu')) ?> · <?= number_format((float)$review['rating'],1,',','.') ?>/10</small></div></article><?php endforeach; ?></div>
     </div></section>
     <?php endif;
     if ($medSectionActive('support')): $phone=trim((string)($content['home_support_phone']??''));$wa=trim((string)($content['home_support_whatsapp']??$phone));$phoneDigits=preg_replace('/\D+/','',$phone);$waDigits=preg_replace('/\D+/','',$wa); ?>
     <section class="section med-support" style="order:<?= $medSectionOrder('support',10) ?>">
       <div class="wrap">
         <div class="med-home-stats-heading">
-          <span><?= e($content['home_stats_eyebrow'] ?? 'RAKAMLARLA BİZ') ?></span>
-          <h2><?= e($content['home_stats_title'] ?? 'Tatiliniz için güven veren deneyim') ?></h2>
-          <p><?= e($content['home_stats_subtitle'] ?? 'Villa seçeneklerimizi, destinasyonlarımızı ve misafir deneyimimizi keşfedin.') ?></p>
+          <span><?= e($content['home_stats_eyebrow'] ?? villa_ui('RAKAMLARLA BİZ')) ?></span>
+          <h2><?= e($content['home_stats_title'] ?? villa_ui('Tatiliniz için güven veren deneyim')) ?></h2>
+          <p><?= e($content['home_stats_subtitle'] ?? villa_ui('Villa seçeneklerimizi, destinasyonlarımızı ve misafir deneyimimizi keşfedin.')) ?></p>
         </div>
-        <?php $homeStatLabels=['villas'=>'Yayındaki villa','destinations'=>'Destinasyon','customers'=>'Müşteri','reviews'=>'Onaylı yorum']; $homeStatIcons=['villas'=>'<svg viewBox="0 0 24 24" aria-hidden="true"><path d="m3 10 9-7 9 7v10a1 1 0 0 1-1 1h-6v-7h-4v7H4a1 1 0 0 1-1-1z"/></svg>','destinations'=>'<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 10c0 5-8 12-8 12S4 15 4 10a8 8 0 1 1 16 0Z"/><circle cx="12" cy="10" r="2.5"/></svg>','customers'=>'<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M16 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="10" cy="7" r="4"/><path d="M20 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/></svg>','reviews'=>'<svg viewBox="0 0 24 24" aria-hidden="true"><path d="m12 3 2.8 5.7 6.2.9-4.5 4.4 1.1 6.2-5.6-3-5.6 3 1.1-6.2L3 9.6l6.2-.9z"/></svg>']; ?>
+        <?php $homeStatLabels=['villas'=>villa_ui('Yayındaki villa'),'destinations'=>'Destinasyon','customers'=>villa_ui('Müşteri'),'reviews'=>villa_ui('Onaylı yorum')]; $homeStatIcons=['villas'=>'<svg viewBox="0 0 24 24" aria-hidden="true"><path d="m3 10 9-7 9 7v10a1 1 0 0 1-1 1h-6v-7h-4v7H4a1 1 0 0 1-1-1z"/></svg>','destinations'=>'<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 10c0 5-8 12-8 12S4 15 4 10a8 8 0 1 1 16 0Z"/><circle cx="12" cy="10" r="2.5"/></svg>','customers'=>'<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M16 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="10" cy="7" r="4"/><path d="M20 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/></svg>','reviews'=>'<svg viewBox="0 0 24 24" aria-hidden="true"><path d="m12 3 2.8 5.7 6.2.9-4.5 4.4 1.1 6.2-5.6-3-5.6 3 1.1-6.2L3 9.6l6.2-.9z"/></svg>']; ?>
         <div class="med-home-stats" aria-label="Villa platformu istatistikleri">
           <?php foreach($homeStatLabels as $statKey=>$statLabel): $statCount=max(0,(int)($homepageStats[$statKey]??0)); ?>
             <div class="med-home-stat">

@@ -308,3 +308,12 @@ function delete_property_media(PDO $pdo, int $propertyId, int $mediaId): void {
         if ($nextId) { $set = $pdo->prepare('UPDATE property_media SET is_cover=1 WHERE id=?'); $set->execute([(int)$nextId]); }
     }
 }
+
+/** Translate application-owned interface labels before escaping for their output context. */
+function villa_ui(string $label): string
+{
+    if (\App\Core\Translator::locale() !== 'en') return $label;
+    static $english;
+    $english ??= require __DIR__ . '/ui-en.php';
+    return $english[$label] ?? $label;
+}

@@ -41,7 +41,7 @@ $exploreMode = (string)($mode ?? $appMode ?? '');
   <div class="villa-explore-scroll">
     <div class="villa-explore-head">
       <div><span class="villa-explore-kicker"><?= e($exploreText('explore_hero_eyebrow','VILLACMS · TATİLİ KEŞFET')) ?></span><h2 id="villaExploreTitle"><?= e($exploreText('explore_hero_title','Bir sonraki kaçamağınız burada başlıyor.')) ?></h2><p><?= e($exploreText('explore_hero_text','Akdeniz’in en özel köşelerinde, size ait bir tatil deneyimi keşfedin.')) ?></p></div>
-      <button type="button" class="villa-explore-close" id="villaExploreClose" aria-label="Keşfet menüsünü kapat">×</button>
+      <button type="button" class="villa-explore-close" id="villaExploreClose" aria-label="<?= e(villa_ui('Keşfet menüsünü kapat')) ?>">×</button>
     </div>
 
     <a class="villa-explore-hero" href="<?= e($exploreLink('explore_hero_link','/konaklamalar')) ?>">
@@ -51,7 +51,7 @@ $exploreMode = (string)($mode ?? $appMode ?? '');
     </a>
 
     <section class="villa-explore-section" aria-labelledby="villaExploreConceptTitle">
-      <div class="villa-explore-section-heading"><div><span>ÖZEL OLARAK SİZİN İÇİN</span><h3 id="villaExploreConceptTitle">Nasıl bir tatil hayal ediyorsunuz?</h3></div></div>
+      <div class="villa-explore-section-heading"><div><span><?= e(villa_ui('ÖZEL OLARAK SİZİN İÇİN')) ?></span><h3 id="villaExploreConceptTitle"><?= e(villa_ui('Nasıl bir tatil hayal ediyorsunuz?')) ?></h3></div></div>
       <div class="villa-explore-cards">
         <?php foreach ($exploreCards as $card): ?>
         <a class="villa-explore-card" href="<?= e($card['url']) ?>">
@@ -62,21 +62,21 @@ $exploreMode = (string)($mode ?? $appMode ?? '');
       </div>
     </section>
 
-    <section class="villa-explore-destination" aria-label="Destinasyon keşfi">
+    <section class="villa-explore-destination" aria-label="<?= e(villa_ui('Destinasyon keşfi')) ?>">
       <?php if ($exploreDestinationImage !== ''): ?><img src="<?= e($exploreDestinationImage) ?>" alt="" loading="lazy" decoding="async"><?php endif; ?>
       <div class="villa-explore-destination-copy" data-villa-overlay-text><span><?= e($exploreText('explore_destination_eyebrow','AKDENİZ’İN GİZLİ GÜZELLİKLERİ')) ?></span><h3><?= e($exploreText('explore_destination_title','Yeni bir rota, bambaşka bir hikâye.')) ?></h3><p><?= e($exploreText('explore_destination_text','Kıyı kasabalarını, gün batımını ve size iyi gelecek tatil duraklarını keşfedin.')) ?></p><a href="<?= e($exploreLink('explore_destination_link','/destinasyonlar')) ?>"><?= e($exploreText('explore_destination_cta','Destinasyonları keşfet')) ?> <b aria-hidden="true">→</b></a></div>
     </section>
 
-    <section class="villa-explore-support" aria-label="Yardım ve rezervasyon">
+    <section class="villa-explore-support" aria-label="<?= e(villa_ui('Yardım ve rezervasyon')) ?>">
       <span class="villa-explore-support-icon" aria-hidden="true">✳</span>
-      <div class="villa-explore-support-copy"><span>YANINIZDAYIZ</span><strong><?= e($exploreText('explore_support_title','Tatilinizi birlikte planlayalım.')) ?></strong><p><?= e($exploreText('explore_support_text','Aklınızdaki villa veya rezervasyon hakkında ekibimizden destek alın.')) ?></p></div>
+      <div class="villa-explore-support-copy"><span><?= e(villa_ui('YANINIZDAYIZ')) ?></span><strong><?= e($exploreText('explore_support_title','Tatilinizi birlikte planlayalım.')) ?></strong><p><?= e($exploreText('explore_support_text','Aklınızdaki villa veya rezervasyon hakkında ekibimizden destek alın.')) ?></p></div>
       <div class="villa-explore-support-actions">
-        <?php if ($explorePhone !== ''): ?><a href="tel:<?= e($explorePhone) ?>" aria-label="Telefonla arayın">☎</a><?php endif; ?>
+        <?php if ($explorePhone !== ''): ?><a href="tel:<?= e($explorePhone) ?>" aria-label="<?= e(villa_ui('Telefonla arayın')) ?>">☎</a><?php endif; ?>
         <?php if ($exploreWhatsapp !== ''): ?><a class="villa-explore-whatsapp" href="https://wa.me/<?= e($exploreWhatsapp) ?>" target="_blank" rel="noopener noreferrer"><?= e($exploreText('explore_support_cta','WhatsApp’tan yazın')) ?> <b aria-hidden="true">↗</b></a><?php endif; ?>
       </div>
     </section>
-    <?php if ($exploreMode === 'multi_vendor'): ?><a class="villa-explore-host-link" href="<?= e(app_url('/vendor/register')) ?>">Villa sahibi misiniz? <strong>İlanınızı yayınlayın ↗</strong></a><?php endif; ?>
-    <div class="villa-explore-footer-note">VILLACMS <span>·</span> Bir sonraki güzel anınız için.</div>
+    <?php if ($exploreMode === 'multi_vendor'): ?><a class="villa-explore-host-link" href="<?= e(app_url('/vendor/register')) ?>"><?= e(villa_ui('Villa sahibi misiniz?')) ?> <strong><?= e(villa_ui('İlanınızı yayınlayın ↗')) ?></strong></a><?php endif; ?>
+    <div class="villa-explore-footer-note">VILLACMS <span>·</span> <?= e(villa_ui('Bir sonraki güzel anınız için.')) ?></div>
   </div>
 </aside>
 <style>

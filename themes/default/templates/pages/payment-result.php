@@ -64,11 +64,11 @@ $paymentActiveCss = $paymentThemeSlug !== 'default' ? \App\Core\ThemeManager::re
 <div class="payment-result-icon <?= $isSuccess ? 'success' : ($isFailed ? 'failed' : 'review') ?>"><?= $isSuccess ? '✓' : ($isFailed ? '!' : '…') ?></div>
 <h1><?= e($title) ?></h1>
 <p><?= e($description) ?></p>
-<div class="payment-result-code"><span>Rezervasyon kodunuz</span><strong><?= e($booking['booking_code']) ?></strong><div class="payment-result-meta"><?= e($booking['property_title']) ?> · <?= e(number_format((float)$booking['total'],2,',','.')) ?> <?= e($booking['currency']) ?></div></div>
+<div class="payment-result-code"><span><?= e(villa_ui('Rezervasyon kodunuz')) ?></span><strong><?= e($booking['booking_code']) ?></strong><div class="payment-result-meta"><?= e($booking['property_title']) ?> · <?= e(number_format((float)$booking['total'],2,',','.')) ?> <?= e($booking['currency']) ?></div></div>
 <nav class="payment-result-actions">
-<?php if($isFailed): ?><a class="primary" href="<?= e(app_url('/checkout/'.rawurlencode((string)$booking['booking_code']))) ?>">Tekrar ödeme yap</a><?php endif; ?>
-<a class="<?= $isSuccess ? 'primary' : '' ?>" href="<?= e(app_url('/account/bookings')) ?>">Rezervasyonlarım</a>
-<a href="<?= e(app_url('/')) ?>">Ana sayfa</a>
+<?php if($isFailed): ?><a class="primary" href="<?= e(app_url('/checkout/'.rawurlencode((string)$booking['booking_code']))) ?>"><?= e(villa_ui('Tekrar ödeme yap')) ?></a><?php endif; ?>
+<a class="<?= $isSuccess ? 'primary' : '' ?>" href="<?= e(app_url('/account/bookings')) ?>"><?= e(villa_ui('Rezervasyonlarım')) ?></a>
+<a href="<?= e(app_url('/')) ?>"><?= e(villa_ui('Ana sayfa')) ?></a>
 </nav>
 </section>
 </div>

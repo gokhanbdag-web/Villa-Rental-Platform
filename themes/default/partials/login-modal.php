@@ -21,30 +21,30 @@ $drawerMenus = [];
 if ($drawerUser !== null) {
     if (in_array($drawerRole, ['super_admin', 'admin'], true)) {
         $drawerMenus = [
-            ['label'=>'Genel Bakış','url'=>'/admin','icon'=>'⌂'],
-            ['label'=>'Rezervasyonlar','url'=>'/admin/bookings','icon'=>'▣'],
+            ['label'=>villa_ui('Genel Bakış'),'url'=>'/admin','icon'=>'⌂'],
+            ['label'=>villa_ui('Rezervasyonlar'),'url'=>'/admin/bookings','icon'=>'▣'],
             ['label'=>'Villalar','url'=>'/admin/properties','icon'=>'⌂'],
-            ['label'=>'Ev Sahipleri','url'=>'/admin/vendors','icon'=>'♧'],
-            ['label'=>'Kullanıcılar','url'=>'/admin/users','icon'=>'♙'],
+            ['label'=>villa_ui('Ev Sahipleri'),'url'=>'/admin/vendors','icon'=>'♧'],
+            ['label'=>villa_ui('Kullanıcılar'),'url'=>'/admin/users','icon'=>'♙'],
             ['label'=>'Mesajlar','url'=>'/admin/messages','icon'=>'✉'],
-            ['label'=>'İçerik Yönetimi','url'=>'/admin/content','icon'=>'▤'],
-            ['label'=>'Ayarlar','url'=>'/admin/settings','icon'=>'⚙'],
+            ['label'=>villa_ui('İçerik Yönetimi'),'url'=>'/admin/content','icon'=>'▤'],
+            ['label'=>villa_ui('Ayarlar'),'url'=>'/admin/settings','icon'=>'⚙'],
         ];
-        if ($drawerRole === 'super_admin') $drawerMenus[] = ['label'=>'Sistem Tanılama','url'=>'/admin/performance/diagnostics','icon'=>'⌁'];
+        if ($drawerRole === 'super_admin') $drawerMenus[] = ['label'=>villa_ui('Sistem Tanılama'),'url'=>'/admin/performance/diagnostics','icon'=>'⌁'];
     } elseif ($drawerRole === 'vendor') {
         $drawerMenus = [
             ['label'=>'Ev Sahibi Paneli','url'=>'/vendor','icon'=>'⌂'],
-            ['label'=>'Rezervasyonlarım','url'=>'/vendor/bookings','icon'=>'▣'],
-            ['label'=>'Villalarım','url'=>'/vendor/properties','icon'=>'⌂'],
+            ['label'=>villa_ui('Rezervasyonlarım'),'url'=>'/vendor/bookings','icon'=>'▣'],
+            ['label'=>villa_ui('Villalarım'),'url'=>'/vendor/properties','icon'=>'⌂'],
             ['label'=>'Yeni Villa Ekle','url'=>'/vendor/properties/new','icon'=>'+'],
         ];
     } else {
         $drawerMenus = [
-            ['label'=>'Hesabım','url'=>'/account/bookings','icon'=>'♙'],
-            ['label'=>'Rezervasyonlarım','url'=>'/account/bookings','icon'=>'▣'],
-            ['label'=>'Favorilerim','url'=>'/favorites','icon'=>'♡'],
+            ['label'=>villa_ui('Hesabım'),'url'=>'/account/bookings','icon'=>'♙'],
+            ['label'=>villa_ui('Rezervasyonlarım'),'url'=>'/account/bookings','icon'=>'▣'],
+            ['label'=>villa_ui('Favorilerim'),'url'=>'/favorites','icon'=>'♡'],
             ['label'=>'Bildirimler','url'=>'/account/notifications','icon'=>'♧'],
-            ['label'=>'Yorumlarım','url'=>'/account/reviews','icon'=>'☆'],
+            ['label'=>villa_ui('Yorumlarım'),'url'=>'/account/reviews','icon'=>'☆'],
         ];
     }
 }
@@ -53,25 +53,25 @@ if ($drawerUser !== null) {
 <aside class="villa-account-drawer" id="villaAccountDrawer" role="dialog" aria-modal="true" aria-labelledby="villaAccountDrawerTitle" aria-hidden="true" hidden>
   <div class="villa-account-drawer-head">
     <div class="villa-account-drawer-heading">
-      <span class="villa-account-drawer-kicker"><?= $drawerUser !== null ? 'HESAP MENÜSÜ' : 'VILLACMS HESAP' ?></span>
-      <h2 id="villaAccountDrawerTitle"><?= $drawerUser !== null ? 'Hoş geldiniz' : 'Tekrar hoş geldiniz' ?></h2>
-      <p><?= $drawerUser !== null ? e($drawerName !== '' ? $drawerName : 'Hesabınız') : 'Hesabınıza giriş yapın.' ?></p>
+      <span class="villa-account-drawer-kicker"><?= $drawerUser !== null ? villa_ui('HESAP MENÜSÜ') : 'VILLACMS HESAP' ?></span>
+      <h2 id="villaAccountDrawerTitle"><?= $drawerUser !== null ? villa_ui('Hoş geldiniz') : villa_ui('Tekrar hoş geldiniz') ?></h2>
+      <p><?= $drawerUser !== null ? e($drawerName !== '' ? $drawerName : villa_ui('Hesabınız')) : 'Hesabınıza giriş yapın.' ?></p>
     </div>
-    <button type="button" class="villa-account-drawer-close" id="villaAccountDrawerClose" aria-label="Kapat">×</button>
+    <button type="button" class="villa-account-drawer-close" id="villaAccountDrawerClose" aria-label="<?= e(villa_ui('Kapat')) ?>">×</button>
   </div>
 
   <?php if ($drawerUser !== null): ?>
-    <div class="villa-account-drawer-role"><?= e(match($drawerRole) {'super_admin'=>'Süper Yönetici','admin'=>'Yönetici','vendor'=>'Ev Sahibi',default=>'Misafir'}) ?></div>
-    <nav class="villa-account-drawer-menu" aria-label="Hesap menüsü">
+    <div class="villa-account-drawer-role"><?= e(match($drawerRole) {'super_admin'=>villa_ui('Süper Yönetici'),'admin'=>villa_ui('Yönetici'),'vendor'=>'Ev Sahibi',default=>villa_ui('Misafir')}) ?></div>
+    <nav class="villa-account-drawer-menu" aria-label="<?= e(villa_ui('Hesap menüsü')) ?>">
       <?php foreach ($drawerMenus as $item): ?>
         <a href="<?= e(app_url($item['url'])) ?>"><span class="villa-account-drawer-icon" aria-hidden="true"><?= e($item['icon']) ?></span><span><?= e($item['label']) ?></span><span class="villa-account-drawer-arrow" aria-hidden="true">›</span></a>
       <?php endforeach; ?>
     </nav>
     <div class="villa-account-drawer-footer">
-      <a class="villa-account-drawer-home" href="<?= e(app_url('/')) ?>">Siteyi görüntüle <span aria-hidden="true">↗</span></a>
+      <a class="villa-account-drawer-home" href="<?= e(app_url('/')) ?>"><?= e(villa_ui('Siteyi görüntüle')) ?> <span aria-hidden="true">↗</span></a>
       <form method="post" action="<?= e(app_url('/logout')) ?>" class="villa-account-drawer-logout">
         <input type="hidden" name="_csrf" value="<?= e(csrf_token()) ?>">
-        <button type="submit"><span aria-hidden="true">↪</span> Güvenli Çıkış Yap</button>
+        <button type="submit"><span aria-hidden="true">↪</span> <?= e(villa_ui('Güvenli Çıkış Yap')) ?></button>
       </form>
     </div>
   <?php else: ?>
@@ -80,13 +80,13 @@ if ($drawerUser !== null) {
       <input type="hidden" name="return_to" value="">
       <input type="hidden" name="favorite_property_id" value="">
       <div class="villa-login-ajax-error" id="villaLoginAjaxError" role="alert" hidden></div>
-      <label for="villaLoginIdentity">E-posta veya kullanıcı adı</label>
+      <label for="villaLoginIdentity"><?= e(villa_ui('E-posta veya kullanıcı adı')) ?></label>
       <input id="villaLoginIdentity" name="identity" autocomplete="username" required>
-      <label for="villaLoginPassword">Şifre</label>
+      <label for="villaLoginPassword"><?= e(villa_ui('Şifre')) ?></label>
       <input id="villaLoginPassword" name="password" type="password" autocomplete="current-password" required>
-      <button type="submit" class="villa-login-submit">Giriş Yap</button>
+      <button type="submit" class="villa-login-submit"><?= e(villa_ui('Giriş Yap')) ?></button>
     </form>
-    <div class="villa-login-foot">Hesabınız yok mu? <a href="<?= e(app_url('/register')) ?>">Misafir hesabı oluşturun</a></div>
+    <div class="villa-login-foot"><?= e(villa_ui('Hesabınız yok mu?')) ?> <a href="<?= e(app_url('/register')) ?>"><?= e(villa_ui('Misafir hesabı oluşturun')) ?></a></div>
   <?php endif; ?>
 </aside>
 <script id="villa-ajax-login-handler">
@@ -112,15 +112,15 @@ if ($drawerUser !== null) {
   var kicker=head.querySelector('.villa-account-drawer-kicker');
   var title=head.querySelector('#villaAccountDrawerTitle');
   var name=head.querySelector('.villa-account-drawer-heading p');
-  kicker.textContent='HESAP MENÜSÜ';
-  title.textContent='Hoş geldiniz';
-  name.textContent=data.user.label||'Hesabınız';
+  kicker.textContent=<?= json_encode(villa_ui('HESAP MENÜSÜ'),JSON_HEX_TAG|JSON_HEX_AMP|JSON_HEX_APOS|JSON_HEX_QUOT) ?>;
+  title.textContent=<?= json_encode(villa_ui('Hoş geldiniz'),JSON_HEX_TAG|JSON_HEX_AMP|JSON_HEX_APOS|JSON_HEX_QUOT) ?>;
+  name.textContent=data.user.label||<?= json_encode(villa_ui('Hesabınız'),JSON_HEX_TAG|JSON_HEX_AMP|JSON_HEX_APOS|JSON_HEX_QUOT) ?>;
 
   Array.from(drawer.children).forEach(function(child){if(child!==head)child.remove();});
-  var role=element('div','villa-account-drawer-role',data.user.role_label||'Misafir');
+  var role=element('div','villa-account-drawer-role',data.user.role_label||<?= json_encode(villa_ui('Misafir'),JSON_HEX_TAG|JSON_HEX_AMP|JSON_HEX_APOS|JSON_HEX_QUOT) ?>);
   drawer.appendChild(role);
   var nav=element('nav','villa-account-drawer-menu');
-  nav.setAttribute('aria-label','Hesap menüsü');
+  nav.setAttribute('aria-label',<?= json_encode(villa_ui('Hesap menüsü'),JSON_HEX_TAG|JSON_HEX_AMP|JSON_HEX_APOS|JSON_HEX_QUOT) ?>);
   (data.menus||[]).forEach(function(item){
    var link=element('a','');
    link.href=item.url;
@@ -135,7 +135,7 @@ if ($drawerUser !== null) {
   var footer=element('div','villa-account-drawer-footer');
   var home=element('a','villa-account-drawer-home');
   home.href=data.home_url;
-  home.append(document.createTextNode('Siteyi görüntüle '),element('span','', '↗'));
+  home.append(document.createTextNode(<?= json_encode(villa_ui('Siteyi görüntüle '),JSON_HEX_TAG|JSON_HEX_AMP|JSON_HEX_APOS|JSON_HEX_QUOT) ?>),element('span','', '↗'));
   footer.appendChild(home);
   var logout=element('form','villa-account-drawer-logout');
   logout.method='post';logout.action=data.logout_url;
@@ -146,7 +146,7 @@ if ($drawerUser !== null) {
 
   var accountPath=appPath(data.user.role==='customer'?'/account/bookings':(data.user.role==='vendor'?'/vendor':'/admin'));
   document.querySelectorAll('[data-auth-link]').forEach(function(link){
-   var label=data.user.label||'Hesabım';
+   var label=data.user.label||<?= json_encode(villa_ui('Hesabım'),JSON_HEX_TAG|JSON_HEX_AMP|JSON_HEX_APOS|JSON_HEX_QUOT) ?>;
    var textNodes=Array.from(link.childNodes).filter(function(node){return node.nodeType===Node.TEXT_NODE&&node.textContent.trim()!=='';});
    if(textNodes.length){textNodes[0].textContent=' '+label+' ';textNodes.slice(1).forEach(function(node){node.remove();});}
    else if(!link.querySelector('[data-auth-label]')&&!link.querySelector('svg'))link.appendChild(element('span','',label));
@@ -170,11 +170,11 @@ if ($drawerUser !== null) {
    var oldIcon=trigger.querySelector('svg');
    if(oldIcon)oldIcon.replaceWith(icon);else trigger.insertBefore(icon,trigger.firstChild);
    var caption=trigger.querySelector('span');
-   if(caption)caption.textContent='Hesabım';
+   if(caption)caption.textContent=<?= json_encode(villa_ui('Hesabım'),JSON_HEX_TAG|JSON_HEX_AMP|JSON_HEX_APOS|JSON_HEX_QUOT) ?>;
    trigger.removeAttribute('data-login-trigger');
    trigger.setAttribute('data-account-drawer-trigger','');
-   trigger.setAttribute('aria-label','Hesabım');
-   trigger.setAttribute('title','Hesabım');
+   trigger.setAttribute('aria-label',<?= json_encode(villa_ui('Hesabım'),JSON_HEX_TAG|JSON_HEX_AMP|JSON_HEX_APOS|JSON_HEX_QUOT) ?>);
+   trigger.setAttribute('title',<?= json_encode(villa_ui('Hesabım'),JSON_HEX_TAG|JSON_HEX_AMP|JSON_HEX_APOS|JSON_HEX_QUOT) ?>);
    if(trigger.tagName==='A')trigger.href=accountPath;
   });
   form.reset();
@@ -187,14 +187,14 @@ if ($drawerUser !== null) {
   try{
    var response=await fetch(form.dataset.endpoint,{method:'POST',body:new FormData(form),credentials:'same-origin',headers:{'X-Requested-With':'XMLHttpRequest','Accept':'application/json'}});
    var data=await response.json();
-   if(!response.ok||!data.ok)throw new Error(data.message||'Giriş yapılamadı. Bilgilerinizi kontrol edin.');
+   if(!response.ok||!data.ok)throw new Error(data.message||<?= json_encode(villa_ui('Giriş yapılamadı. Bilgilerinizi kontrol edin.'),JSON_HEX_TAG|JSON_HEX_AMP|JSON_HEX_APOS|JSON_HEX_QUOT) ?>);
    renderAccount(data);
    var close=drawer.querySelector('#villaAccountDrawerClose');
    if(close)close.click();
   }catch(error){
-   if(errorBox){errorBox.textContent=error.message||'Bağlantı hatası. Lütfen tekrar deneyin.';errorBox.hidden=false;}
+   if(errorBox){errorBox.textContent=error.message||<?= json_encode(villa_ui('Bağlantı hatası. Lütfen tekrar deneyin.'),JSON_HEX_TAG|JSON_HEX_AMP|JSON_HEX_APOS|JSON_HEX_QUOT) ?>;errorBox.hidden=false;}
   }finally{
-   if(submit){submit.disabled=false;submit.textContent=submit.dataset.originalText||'Giriş Yap';}
+   if(submit){submit.disabled=false;submit.textContent=submit.dataset.originalText||<?= json_encode(villa_ui('Giriş Yap'),JSON_HEX_TAG|JSON_HEX_AMP|JSON_HEX_APOS|JSON_HEX_QUOT) ?>;}
   }
  });
 })();
