@@ -8,10 +8,10 @@ $fontOptions = [
     'Raleway'=>'Raleway','PT Sans'=>'PT Sans','Libre Baskerville'=>'Libre Baskerville',
 ];
 $groups = [
-    'headings'=>['Başlıklar','H1, H2, H3 ve diğer başlık etiketleri'],
-    'span'=>['Span metinleri','Span etiketiyle gösterilen kısa metinler'],
-    'paragraph'=>['Paragraflar','Tüm paragraf metinleri'],
-    'paragraph_links'=>['Paragraf içi bağlantılar','Yalnızca paragrafların içindeki metin bağlantıları; butonlar hariç'],
+    'headings'=>['Headings','H1, H2, H3 and other heading elements'],
+    'span'=>['Span text','Short text displayed in span elements'],
+    'paragraph'=>['Paragraphs','All paragraph text'],
+    'paragraph_links'=>['Paragraph links','Text links inside paragraphs only; excluding buttons'],
 ];
 ?>
 <!doctype html><html lang="<?= e(\App\Core\Translator::locale()) ?>"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title><?= e(villa_ui('Tema Tipografi Ayarları')) ?></title>
