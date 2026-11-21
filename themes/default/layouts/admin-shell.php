@@ -14,38 +14,38 @@ return static function (string $html, string $requestPath, string $platformMode)
         if ($appVersion === '') $appVersion = '—';
         // Keep the same three navigation groups on the first load and every AJAX page.
         $groups = [
-            'Yönetim' => [
-                '/admin' => 'Genel Bakış',
-                '/admin/properties' => 'Konaklamalar',
-                '/admin/bookings' => 'Rezervasyonlar',
-                '/admin/cancellations' => 'İptal Talepleri',
-                '/admin/finance' => 'Finans ve Ödemeler',
-                '/admin/users' => 'Kullanıcılar',
-                '/admin/reviews' => 'Değerlendirmeler',
-                '/admin/locations' => 'Lokasyonlar',
-                '/admin/categories' => 'Kategoriler',
-                '/admin/amenities' => 'Villa Özellikleri',
+            'Management' => [
+                '/admin' => 'Overview',
+                '/admin/properties' => 'Properties',
+                '/admin/bookings' => 'Bookings',
+                '/admin/cancellations' => 'Cancellation requests',
+                '/admin/finance' => 'Finance and payments',
+                '/admin/users' => 'Users',
+                '/admin/reviews' => 'Reviews',
+                '/admin/locations' => 'Locations',
+                '/admin/categories' => 'Categories',
+                '/admin/amenities' => 'Amenities',
             ],
-            'Web Sitesi' => [
-                '/admin/pages' => 'Sayfa Yönetimi',
-                '/admin/navigation' => 'Menü Yönetimi',
-                '/admin/blog' => 'Blog Yönetimi',
-                '/admin/blog/categories' => 'Blog Kategorileri',
-                '/admin/newsletter' => 'E-posta Aboneleri',
-                '/admin/messages' => 'İletişim Mesajları',
-                '/admin/theme-design' => 'Tema Ayarları',
+            'Website' => [
+                '/admin/pages' => 'Page management',
+                '/admin/navigation' => 'Menu management',
+                '/admin/blog' => 'Blog management',
+                '/admin/blog/categories' => 'Blog categories',
+                '/admin/newsletter' => 'Email subscribers',
+                '/admin/messages' => 'Contact messages',
+                '/admin/theme-design' => 'Theme settings',
                 '/admin/themes' => Translator::get('admin.themes.title'),
             ],
-            'Sistem' => [
-                '/admin/settings' => 'Ayarlar',
-                '/admin/updates' => 'Güncelleme Merkezi',
-                '/admin/header-settings' => 'Üst Bilgi Ayarları',
-                '/admin/translations' => 'Çeviriler',
-                '/admin/performance' => 'Sistem Tanılama',
+            'System' => [
+                '/admin/settings' => 'Settings',
+                '/admin/updates' => 'Update center',
+                '/admin/header-settings' => 'Header settings',
+                '/admin/translations' => 'Translations',
+                '/admin/performance' => 'System diagnostics',
             ],
         ];
         if ($platformMode === 'multi_vendor') {
-            $groups['Yönetim']['/admin/vendors'] = 'Ev Sahipleri';
+            $groups['Management']['/admin/vendors'] = 'Property owners';
         }
 
         // Dashboard and sub-pages are reduced to content only; the shell below is the single admin layout.

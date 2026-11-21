@@ -471,7 +471,7 @@ $labels = [
   const allowed=['image/png','image/jpeg','image/webp'];
   if(!allowed.includes(file.type)||file.size>4*1024*1024){
    input.value='';
-   status.textContent=file.size>4*1024*1024?'Dosya 4 MB sınırını aşıyor.':<?= json_encode('Select a PNG, JPG or WebP image.',JSON_HEX_TAG|JSON_HEX_AMP|JSON_HEX_APOS|JSON_HEX_QUOT) ?>;
+   status.textContent=file.size>4*1024*1024?'File exceeds the 4 MB limit.':<?= json_encode('Select a PNG, JPG or WebP image.',JSON_HEX_TAG|JSON_HEX_AMP|JSON_HEX_APOS|JSON_HEX_QUOT) ?>;
    return;
   }
   if(currentUrl)URL.revokeObjectURL(currentUrl);
@@ -528,10 +528,10 @@ $labels = [
    editor.focus();
    const selection=window.getSelection();
    if(!selection||selection.isCollapsed){window.alert(<?= json_encode('Select the text to link first.',JSON_HEX_TAG|JSON_HEX_AMP|JSON_HEX_APOS|JSON_HEX_QUOT) ?>);return;}
-   const url=window.prompt('Bağlantı adresini girin (https://, mailto: veya tel:):','https://');
+   const url=window.prompt('Enter a link URL (https://, mailto: or tel:):','https://');
    if(url===null)return;
    const value=url.trim();
-   if(!/^(https?:|mailto:|tel:|\/|#)/i.test(value)){window.alert('Lütfen geçerli bir https://, http://, mailto:, tel: veya site içi bağlantı girin.');return;}
+   if(!/^(https?:|mailto:|tel:|\/|#)/i.test(value)){window.alert('Enter a valid https://, http://, mailto:, tel: or internal link.');return;}
    document.execCommand('createLink',false,value);
    sync();
   });
@@ -565,12 +565,12 @@ $labels = [
    if(!file){preview.hidden=true;status.textContent=<?= json_encode('No file selected.',JSON_HEX_TAG|JSON_HEX_AMP|JSON_HEX_APOS|JSON_HEX_QUOT) ?>;return;}
    const maxSize=parseInt(input.dataset.themeFileMax||'0',10);
    if(maxSize>0&&file.size>maxSize){
-    input.value='';preview.hidden=true;status.textContent='Dosya boyutu 4 MB sınırını aşıyor.';return;
+    input.value='';preview.hidden=true;status.textContent='File size exceeds the 4 MB limit.';return;
    }
    const kind=input.dataset.themeFileKind||'';
    const mime=(file.type||'').toLowerCase();
-   if(kind==='image'&&mime.indexOf('image/')!==0){input.value='';preview.hidden=true;status.textContent='Lütfen geçerli bir görsel dosyası seçin.';return;}
-   if(kind==='video'&&mime.indexOf('video/')!==0){input.value='';preview.hidden=true;status.textContent='Lütfen MP4 veya WebM video dosyası seçin.';return;}
+   if(kind==='image'&&mime.indexOf('image/')!==0){input.value='';preview.hidden=true;status.textContent='Select a valid image file.';return;}
+   if(kind==='video'&&mime.indexOf('video/')!==0){input.value='';preview.hidden=true;status.textContent='Select an MP4 or WebM video file.';return;}
    objectUrl=URL.createObjectURL(file);
    const media=document.createElement(kind==='video'?'video':'img');
    media.src=objectUrl;

@@ -111,7 +111,7 @@ $groups = [
     if (heightInput) {
         const preview = document.createElement('div');
         preview.className = 'type-preview';
-        preview.innerHTML = '<strong>Üst bilgi çubuğu yüksekliği önizlemesi</strong><div class="topbar-height-sample" style="display:flex;align-items:center;justify-content:center;min-height:64px;background:#176b50;color:#fff;border-radius:7px;padding:6px 12px;font-size:13px;font-weight:700">Telefon · Sosyal medya · İletişim</div>';
+        preview.innerHTML = '<strong>Header bar height preview</strong><div class="topbar-height-sample" style="display:flex;align-items:center;justify-content:center;min-height:64px;background:#176b50;color:#fff;border-radius:7px;padding:6px 12px;font-size:13px;font-weight:700">Telefon · Sosyal medya · İletişim</div>';
         heightInput.closest('.type-panel').appendChild(preview);
         const sample = preview.querySelector('.topbar-height-sample');
         const updateHeight = function () { sample.style.minHeight = Math.max(52, Math.min(100, Number(heightInput.value) || 64)) + 'px'; };
