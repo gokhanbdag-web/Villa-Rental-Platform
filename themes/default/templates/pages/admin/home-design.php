@@ -52,7 +52,7 @@ uksort($sections,static fn($a,$b)=>$orders[$a]<=>$orders[$b]);
 <form method="post" action="<?= e(app_url('/admin/pages/home-design')) ?>" id="home-design">
 <?= csrf_field() ?><input type="hidden" name="language_code" value="<?= e($locale) ?>"><input type="hidden" name="design_key" value="<?= e($designKey) ?>"><input type="hidden" name="design" id="home-data">
 <div class="toolbar"><button type="submit">Ana sayfayı kaydet</button><button type="submit" id="home-preview" formaction="<?= e(app_url('/homepage-design-preview')) ?>" formtarget="homepage-preview">Önizlemeyi güncelle</button><a href="<?= e(app_url('/admin/pages?lang='.rawurlencode($locale))) ?>">Sayfalara dön</a></div>
-<div class="workspace"><div>
+<p>Önizlemede bir bölüme dokunarak alanlarını açabilirsiniz.</p><div class="workspace"><div>
 <?php foreach($sections as $key=>[$label,$order]):
     $baseSection=in_array($key,['hero','featured','hosts','destinations'],true);
     $visible=($key==='featured'||$key==='banner'||(bool)($homeSections[$key]['is_active']??true)) && (!$baseSection || ($demo && empty($genericLayout['rows'])));
@@ -61,7 +61,7 @@ uksort($sections,static fn($a,$b)=>$orders[$a]<=>$orders[$b]);
 <label><input type="checkbox" data-field="visible" data-default="<?= $visible?1:0 ?>" <?= ($settings['visible']??$visible)?'checked':'' ?>> Görünür</label>
 <label>Sıra <input type="number" min="0" max="2147483647" required data-field="order" data-default="<?= (int)(in_array($key,['banner','destinations'],true)?$order:($homeSections[$key]['sort_order']??$order)) ?>" value="<?= (int)$orders[$key] ?>"></label>
 <?php foreach($fields[$key] as $field=>$fieldLabel): ?><label><?= e($fieldLabel) ?><textarea rows="2" data-field="<?= e($field) ?>"><?= e($settings[$field]??$defaults[$field]??'') ?></textarea></label><?php endforeach; ?>
-<button type="button" data-reset>Tema değerlerine dön</button></details>
+<button type="button" data-move="-1">Yukarı taşı</button> <button type="button" data-move="1">Aşağı taşı</button> <button type="button" data-reset>Tema değerlerine dön</button></details>
 <?php endforeach; ?></div><iframe name="homepage-preview" title="Ana sayfa önizlemesi" sandbox="allow-scripts"></iframe></div></form></main>
 <script>
 (() => {
@@ -83,6 +83,35 @@ uksort($sections,static fn($a,$b)=>$orders[$a]<=>$orders[$b]);
                 else field.value=field.type==='number'?field.dataset.default:(defaults[field.dataset.field]??'');
             }
         });
+    }
+    const panels=Array.from(form.querySelectorAll('[data-section]'));
+    const previewFrame=form.querySelector('iframe');
+    window.addEventListener('message',event=>{
+        if (event.source!==previewFrame.contentWindow) return;
+        const panel=panels.find(item=>item.dataset.section===event.data?.homepageSection);
+        if (panel) {
+            panel.open=true;
+            panel.querySelector('textarea')?.focus();
+        }
+    });
+    for (const panel of panels) {
+        for (const button of panel.querySelectorAll('[data-move]')) {
+            button.addEventListener('click',()=>{
+                const ordered=Array.from(panel.parentElement.querySelectorAll('[data-section]'));
+                ordered.sort((a,b)=>a.querySelector('[data-field=order]').valueAsNumber-b.querySelector('[data-field=order]').valueAsNumber);
+                const index=ordered.indexOf(panel), next=index+Number(button.dataset.move);
+                if (next<0 || next>=ordered.length) return;
+                [ordered[index],ordered[next]]=[ordered[next],ordered[index]];
+                const parent=panel.parentElement;
+                ordered.forEach((item,i)=>{
+                    const input=item.querySelector('[data-field=order]');
+                    input.value=(i+1)*10;
+                    input.dispatchEvent(new Event('input'));
+                    parent.appendChild(item);
+                });
+                button.focus();
+            });
+        }
     }
     form.addEventListener('submit',()=>{ document.getElementById('home-data').value=JSON.stringify(state); });
     form.requestSubmit(document.getElementById('home-preview'));

@@ -416,4 +416,28 @@ require __DIR__ . '/partials/footer.php';
 $footerMarkup = (string) ob_get_clean();
 $html = preg_replace('~</body>~i', $footerMarkup . '</body>', $html, 1) ?? $html;
 
+if (isset($preview)) {
+    $selectSection=<<<'HTML'
+<script>
+document.addEventListener('click',function(event) {
+    const section=event.target.closest('main.home-sections section');
+    if (!section) return;
+    const selectors={
+        hero:'.hero,.mobile-premium-search',trust:'.med-trust',featured:'.home-accommodations',
+        latest:'.med-latest',banner:'.med-family-banner',concepts:'.med-concepts',
+        hosts:'.wrap:has(.host-banner)',reviews:'.med-reviews',support:'.med-support',
+        destinations:'.destination-section,:has(> .wrap > .destination-editorial-grid)'
+    };
+    for (const [key,selector] of Object.entries(selectors)) {
+        if (!section.matches(selector)) continue;
+        event.preventDefault();
+        event.stopImmediatePropagation();
+        window.parent.postMessage({homepageSection:key},window.location.origin);
+        break;
+    }
+},true);
+</script>
+HTML;
+    $html=str_replace('</body>',$selectSection.'</body>',$html);
+}
 echo $html;

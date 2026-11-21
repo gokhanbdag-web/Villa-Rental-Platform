@@ -468,7 +468,7 @@ function villa_selected_homepage(PDO $pdo): ?array
     return $query->fetch(PDO::FETCH_ASSOC) ?: null;
 }
 
-$renderHomepage = static function (?array $preview = null): void {
+function villa_render_homepage(string $locale, ?array $preview = null): void {
     $homePage = villa_selected_homepage(Database::connection());
     villa_perf_mark('home:begin');
     $pdo=Database::connection();
@@ -480,7 +480,6 @@ $renderHomepage = static function (?array $preview = null): void {
     villa_perf_mark('home:csrf_token_ready');
     if (session_status() === PHP_SESSION_ACTIVE) session_write_close();
     villa_perf_mark('home:session_released_after_csrf');
-    $locale = $preview['locale'] ?? Translator::locale();
     villa_perf_mark('home:mode_loaded');
     $mode=(string)($pdo->query("SELECT setting_value FROM settings WHERE setting_key='app.mode' LIMIT 1")->fetchColumn() ?: 'single_vendor');
     $content=villa_site_content($pdo,$locale);
@@ -590,8 +589,11 @@ $renderHomepage = static function (?array $preview = null): void {
         if (isset($homeDesign['featured']['featured_'.$field])) $homeSections['featured'][$field]=$homeDesign['featured']['featured_'.$field];
     }
     ThemeManager::render('landing.php', get_defined_vars());
-};
-$router->get('/', static function () use ($renderHomepage): void { $renderHomepage(); });
+}
+$router->get('/', static function (): void {
+    $locale = Translator::locale();
+    villa_render_homepage($locale);
+});
 
 $homeEditorRequest = static function (): array {
     Auth::requirePermission('admin.pages.edit');
@@ -607,10 +609,11 @@ $homeEditorRequest = static function (): array {
     catch (InvalidArgumentException $e) { http_response_code(422); exit('Bölüm ayarlarını ve görsel adreslerini kontrol edin.'); }
     return compact('locale','key','design');
 };
-$router->post('/homepage-design-preview',static function () use ($homeEditorRequest,$renderHomepage): void {
+$router->post('/homepage-design-preview',static function () use ($homeEditorRequest): void {
     $request=$homeEditorRequest();
     header('Cache-Control: private, no-store');
-    $renderHomepage($request);
+    Translator::setLocale($request['locale']);
+    villa_render_homepage($request['locale'],$request);
 });
 $router->post('/admin/pages/home-design',static function () use ($homeEditorRequest): void {
     $request=$homeEditorRequest();
