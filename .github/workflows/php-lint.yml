@@ -141,6 +141,8 @@ jobs:
         run: php tests/admin-blog-responsive-smoke.php
       - name: Run admin sidebar active-state smoke test
         run: php tests/admin-sidebar-active-state-smoke.php
+      - name: Run English-first locale resolver smoke test
+        run: php tests/english-first-locale-smoke.php
       - name: Run public locale consistency smoke test
         run: php tests/public-locale-consistency-smoke.php
       - name: Run public language selector smoke test

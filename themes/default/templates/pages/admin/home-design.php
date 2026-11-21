@@ -43,26 +43,26 @@ foreach ($sections as $key=>[$label,$order]) {
 uksort($sections,static fn($a,$b)=>$orders[$a]<=>$orders[$b]);
 ?>
 <!doctype html><html lang="<?= e(\App\Core\Translator::locale()) ?>"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
-<title><?= e('Homepage design') ?></title>
+<title><?= e(villa_ui('Homepage design')) ?></title>
 <style>
 .home-editor{padding:1rem;color:#24332a;font:1rem system-ui}.home-editor .workspace{display:grid;grid-template-columns:minmax(17rem,24rem) 1fr;gap:1rem}.home-editor details{border:1px solid #ccd8cd;padding:.75rem;border-radius:.5rem;margin:.5rem 0}.home-editor summary{cursor:pointer;font-weight:600}.home-editor label{display:block;margin:.6rem 0}.home-editor input:not([type=checkbox]),.home-editor textarea{display:block;width:100%;box-sizing:border-box;font:inherit;padding:.5rem}.home-editor iframe{position:sticky;top:1rem;width:100%;height:76vh;border:1px solid #ccd8cd;background:white}.home-editor button{padding:.55rem .85rem;cursor:pointer}.home-editor .toolbar{display:flex;gap:.5rem;flex-wrap:wrap;margin:1rem 0}@media(max-width:800px){.home-editor .workspace{grid-template-columns:1fr}.home-editor iframe{position:static;height:65vh}}
 </style></head><body><main class="home-editor">
-<h1><?= e('Homepage design ·') ?> <?= e($locale) ?></h1>
-<?php if(isset($_GET['saved'])): ?><p role="status"><?= e('Homepage layout saved.') ?></p><?php endif; ?>
+<h1><?= e(villa_ui('Homepage design ·')) ?> <?= e($locale) ?></h1>
+<?php if(isset($_GET['saved'])): ?><p role="status"><?= e(villa_ui('Homepage layout saved.')) ?></p><?php endif; ?>
 <form method="post" action="<?= e(app_url('/admin/pages/home-design')) ?>" id="home-design">
 <?= csrf_field() ?><input type="hidden" name="language_code" value="<?= e($locale) ?>"><input type="hidden" name="design_key" value="<?= e($designKey) ?>"><input type="hidden" name="design" id="home-data">
-<div class="toolbar"><button type="submit"><?= e('Save homepage') ?></button><button type="submit" id="home-preview" formaction="<?= e(app_url('/homepage-design-preview')) ?>" formtarget="homepage-preview"><?= e('Update preview') ?></button><a href="<?= e(app_url('/admin/pages?lang='.rawurlencode($locale))) ?>"><?= e('Back to pages') ?></a></div>
-<p><?= e('Select a section in the preview to edit its fields.') ?></p><div class="workspace"><div>
+<div class="toolbar"><button type="submit"><?= e(villa_ui('Save homepage')) ?></button><button type="submit" id="home-preview" formaction="<?= e(app_url('/homepage-design-preview')) ?>" formtarget="homepage-preview"><?= e(villa_ui('Update preview')) ?></button><a href="<?= e(app_url('/admin/pages?lang='.rawurlencode($locale))) ?>"><?= e(villa_ui('Back to pages')) ?></a></div>
+<p><?= e(villa_ui('Select a section in the preview to edit its fields.')) ?></p><div class="workspace"><div>
 <?php foreach($sections as $key=>[$label,$order]):
     $baseSection=in_array($key,['hero','featured','hosts','destinations'],true);
     $visible=($key==='featured'||$key==='banner'||(bool)($homeSections[$key]['is_active']??true)) && (!$baseSection || ($demo && empty($genericLayout['rows'])));
     $settings=$design[$key]??[]; ?>
 <details data-section="<?= e($key) ?>"><summary><?= e(villa_ui($label)) ?></summary>
-<label><input type="checkbox" data-field="visible" data-default="<?= $visible?1:0 ?>" <?= ($settings['visible']??$visible)?'checked':'' ?>> <?= e('Visible') ?></label>
-<label><?= e('Order') ?> <input type="number" min="0" max="2147483647" required data-field="order" data-default="<?= (int)(in_array($key,['banner','destinations'],true)?$order:($homeSections[$key]['sort_order']??$order)) ?>" value="<?= (int)$orders[$key] ?>"></label>
+<label><input type="checkbox" data-field="visible" data-default="<?= $visible?1:0 ?>" <?= ($settings['visible']??$visible)?'checked':'' ?>> <?= e(villa_ui('Visible')) ?></label>
+<label><?= e(villa_ui('Order')) ?> <input type="number" min="0" max="2147483647" required data-field="order" data-default="<?= (int)(in_array($key,['banner','destinations'],true)?$order:($homeSections[$key]['sort_order']??$order)) ?>" value="<?= (int)$orders[$key] ?>"></label>
 <?php foreach($fields[$key] as $field=>$fieldLabel): ?><label><?= e(villa_ui($fieldLabel)) ?><textarea rows="2" data-field="<?= e($field) ?>"><?= e($settings[$field]??$defaults[$field]??'') ?></textarea></label><?php endforeach; ?>
-<button type="button" data-move="-1"><?= e('Move up') ?></button> <button type="button" data-move="1"><?= e('Move down') ?></button> <button type="button" data-reset><?= e('Restore theme defaults') ?></button></details>
-<?php endforeach; ?></div><iframe name="homepage-preview" title="<?= e('Homepage preview') ?>" sandbox="allow-scripts"></iframe></div></form></main>
+<button type="button" data-move="-1"><?= e(villa_ui('Move up')) ?></button> <button type="button" data-move="1"><?= e(villa_ui('Move down')) ?></button> <button type="button" data-reset><?= e(villa_ui('Restore theme defaults')) ?></button></details>
+<?php endforeach; ?></div><iframe name="homepage-preview" title="<?= e(villa_ui('Homepage preview')) ?>" sandbox="allow-scripts"></iframe></div></form></main>
 <script>
 (() => {
     const form=document.getElementById('home-design');

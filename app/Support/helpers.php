@@ -309,11 +309,25 @@ function delete_property_media(PDO $pdo, int $propertyId, int $mediaId): void {
     }
 }
 
-/** Translate application-owned interface labels before escaping for their output context. */
+/**
+ * Resolve interface labels from an English source string. Legacy Turkish call
+ * sites are normalized to English until their templates have been migrated.
+ * Database translations override bundled fallbacks for each active locale.
+ */
 function villa_ui(string $label): string
 {
-    if (\App\Core\Translator::locale() !== 'en') return $label;
     static $english;
+    static $turkishByEnglish;
     $english ??= require __DIR__ . '/ui-en.php';
-    return $english[$label] ?? $label;
+    $source = $english[$label] ?? $label;
+    $translated = \App\Core\Translator::get($source);
+    if ($translated !== $source) return $translated;
+    // Existing sites may store the older Turkish-keyed translations.
+    $legacy = \App\Core\Translator::get($label);
+    if ($legacy !== $label) return $legacy;
+    if (\App\Core\Translator::locale() === 'tr') {
+        $turkishByEnglish ??= array_flip($english);
+        return isset($english[$label]) ? $label : ($turkishByEnglish[$source] ?? $source);
+    }
+    return $source;
 }
