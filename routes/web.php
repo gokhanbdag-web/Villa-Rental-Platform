@@ -471,29 +471,9 @@ $router->get('/', static function (): void {
         $homeStmt->execute([$homeId]);
         $homePage=$homeStmt->fetch(PDO::FETCH_ASSOC) ?: null;
     }
-    // Existing installations keep their current homepage until an administrator
-    // explicitly publishes and selects a CMS page. Never break the live site.
-    if($homePage){
-    $pdo=$homePdo;
-    $page=$homePage;
-    $locale=(string)$page['language_code'];
-    $content=villa_site_content($pdo,$locale);
-    $siteName=$content['site_name']??'VillaStay';
-    $navigation=villa_navigation_tree($pdo,'header',$locale);
-    $footerNavigation=villa_navigation_tree($pdo,'footer',$locale);
-    $mode=(string)($pdo->query("SELECT setting_value FROM settings WHERE setting_key='app.mode' LIMIT 1")->fetchColumn() ?: 'single_vendor');
-    $user=Auth::user();
-    $destinations=[];$featuredProperties=[];$latestProperties=[];$categories=[];$stylePhotos=[];
-    $blogPosts=[];
-    $pageLayout=null;
-    $layoutStmt=$pdo->prepare('SELECT layout_json FROM cms_page_layouts WHERE page_key=? AND language_code=? LIMIT 1');
-    $layoutStmt->execute(['page:'.(int)$page['id'],$locale]);
-    $layoutRaw=$layoutStmt->fetchColumn();
-    if(is_string($layoutRaw))$pageLayout=json_decode($layoutRaw,true);
-    $isHomepage=true;
-    ThemeManager::render('page.php',get_defined_vars());
-    return;
-    }
+    // Render the existing functional homepage shell for both legacy and CMS
+    // layouts. This retains live search, listings, navigation and scripts.
+    // The CMS layout is loaded below after the homepage data is prepared.
     villa_perf_mark('home:begin');
     $pdo=Database::connection();
     villa_perf_mark('home:database_connected');
@@ -598,7 +578,8 @@ $router->get('/', static function (): void {
     $demoHomepageEnabled=(string)($pdo->query("SELECT setting_value FROM settings WHERE setting_key='app.demo_enabled' LIMIT 1")->fetchColumn() ?: '1')!=='0';
     $pageLayout=null;
     $layoutStmt=$pdo->prepare('SELECT layout_json FROM cms_page_layouts WHERE page_key=? AND language_code=? LIMIT 1');
-    $layoutStmt->execute(['home',$locale]);
+    $layoutKey=$homePage ? 'page:'.(int)$homePage['id'] : 'home';
+    $layoutStmt->execute([$layoutKey,$locale]);
     $layoutRaw=$layoutStmt->fetchColumn();
     if(is_string($layoutRaw))$pageLayout=json_decode($layoutRaw,true);
     ThemeManager::render('landing.php', get_defined_vars());
