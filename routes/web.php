@@ -2561,7 +2561,10 @@ $router->post('/admin/categories/delete', static function (): void {
 $router->get('/admin/navigation', static function (): void {
     Auth::requireRole(['super_admin','admin']);
     $pdo=Database::connection();
-    $items=$pdo->query('SELECT * FROM navigation_items ORDER BY location,COALESCE(parent_id,0),sort_order,id')->fetchAll();
+    $locale=Translator::locale();
+    $menuItems=$pdo->prepare('SELECT * FROM navigation_items WHERE language_code=? ORDER BY location,COALESCE(parent_id,0),sort_order,id');
+    $menuItems->execute([$locale]);
+    $items=$menuItems->fetchAll();
     $mode=(string)($pdo->query("SELECT setting_value FROM settings WHERE setting_key='app.mode' LIMIT 1")->fetchColumn() ?: 'single_vendor');
     $systemPages=[
         ['label'=>'Ana Sayfa','url'=>'/'],
@@ -2573,7 +2576,9 @@ $router->get('/admin/navigation', static function (): void {
         ['label'=>'Rezervasyonlarım','url'=>'/account/bookings'],
     ];
     if($mode==='multi_vendor')$systemPages[]=['label'=>'Ev Sahibi Kaydı','url'=>'/vendor/register'];
-    $cmsPages=$pdo->query("SELECT title,slug FROM cms_pages WHERE language_code='tr' AND status='published' ORDER BY title")->fetchAll();
+    $pageOptions=$pdo->prepare("SELECT title,slug FROM cms_pages WHERE language_code=? AND status='published' ORDER BY title");
+    $pageOptions->execute([$locale]);
+    $cmsPages=$pageOptions->fetchAll();
     $editItem=null;$editId=(int)($_GET['edit']??0);
     if($editId>0){$find=$pdo->prepare('SELECT * FROM navigation_items WHERE id=? LIMIT 1');$find->execute([$editId]);$editItem=$find->fetch()?:null;}
     ThemeManager::renderTemplate('templates/pages/admin/navigation.php', get_defined_vars());
@@ -2584,13 +2589,14 @@ $router->post('/admin/navigation/save', static function (): void {
     $location=in_array($_POST['location']??'', ['header','footer'],true)?$_POST['location']:'header';
     $target=($_POST['target']??'')==='_blank'?'_blank':'_self';
     $sort=max(0,min(9999,(int)($_POST['sort_order']??10)));$active=isset($_POST['is_active'])?1:0;$parentId=max(0,(int)($_POST['parent_id']??0));
-    if($id>0){$current=$pdo->prepare('SELECT location,parent_id FROM navigation_items WHERE id=? LIMIT 1');$current->execute([$id]);$currentRow=$current->fetch();if($currentRow&&(int)($currentRow['parent_id']??0)===0&&(string)$currentRow['location']!==$location){$has=$pdo->prepare('SELECT 1 FROM navigation_items WHERE parent_id=? LIMIT 1');$has->execute([$id]);if($has->fetchColumn()){http_response_code(422);exit(villa_ui('Alt menüleri bulunan ana öğenin konumunu değiştirmeden önce alt öğelerini taşıyın.'));}}}if($parentId>0){$p=$pdo->prepare('SELECT id,parent_id,location FROM navigation_items WHERE id=? LIMIT 1');$p->execute([$parentId]);$parent=$p->fetch();if(!$parent||(int)$parent['id']===$id||(string)$parent['location']!==$location||(int)($parent['parent_id']??0)>0){http_response_code(422);exit(villa_ui('Alt menü yalnızca aynı konumdaki bir ana menüye bağlanabilir.'));}$hasChildren=$pdo->prepare('SELECT 1 FROM navigation_items WHERE parent_id=? LIMIT 1');$hasChildren->execute([$id]);if($id>0&&$hasChildren->fetchColumn()){http_response_code(422);exit(villa_ui('Alt menüsü bulunan bir öğeyi başka bir öğenin altına taşıyamazsınız. Önce alt öğelerini taşıyın.'));}}
+    if($id>0){$current=$pdo->prepare('SELECT location,parent_id,language_code FROM navigation_items WHERE id=? LIMIT 1');$current->execute([$id]);$currentRow=$current->fetch();if($currentRow&&(int)($currentRow['parent_id']??0)===0&&(string)$currentRow['location']!==$location){$has=$pdo->prepare('SELECT 1 FROM navigation_items WHERE parent_id=? LIMIT 1');$has->execute([$id]);if($has->fetchColumn()){http_response_code(422);exit(villa_ui('Alt menüleri bulunan ana öğenin konumunu değiştirmeden önce alt öğelerini taşıyın.'));}}}if($parentId>0){$p=$pdo->prepare('SELECT id,parent_id,location,language_code FROM navigation_items WHERE id=? LIMIT 1');$p->execute([$parentId]);$parent=$p->fetch();if(!$parent||$parent['language_code']!==($currentRow['language_code']??Translator::locale())||(int)$parent['id']===$id||(string)$parent['location']!==$location||(int)($parent['parent_id']??0)>0){http_response_code(422);exit(villa_ui('Alt menü yalnızca aynı konumdaki bir ana menüye bağlanabilir.'));}$hasChildren=$pdo->prepare('SELECT 1 FROM navigation_items WHERE parent_id=? LIMIT 1');$hasChildren->execute([$id]);if($id>0&&$hasChildren->fetchColumn()){http_response_code(422);exit(villa_ui('Alt menüsü bulunan bir öğeyi başka bir öğenin altına taşıyamazsınız. Önce alt öğelerini taşıyın.'));}}
     $validUrl=$url!==''&&!preg_match('/[\r\n\\x00-\\x1F]/',$url)&&!str_starts_with($url,'//')&&(str_starts_with($url,'/')||preg_match('#^https?://#i',$url));
     if($label===''||mb_strlen($label)>120||!$validUrl){http_response_code(422);exit(villa_ui('Menü adı veya bağlantı adresi geçersiz.'));}
     // A navigation URL may exist only once per location and language. Detect it
     // before writing so the admin receives a useful message instead of a PDO fatal.
     $duplicate=$pdo->prepare('SELECT id,label FROM navigation_items WHERE location=? AND language_code=? AND url=? AND id<>? LIMIT 1');
-    $duplicate->execute([$location,'tr',$url,$id]);
+    $itemLocale=$currentRow['language_code'] ?? Translator::locale();
+    $duplicate->execute([$location,$itemLocale,$url,$id]);
     if($duplicate->fetch()){
         redirect('/admin/navigation?error=duplicate');
         return;
@@ -2601,7 +2607,7 @@ $router->post('/admin/navigation/save', static function (): void {
     }else{
         $s=$pdo->prepare('INSERT INTO navigation_items(location,parent_id,language_code,label,url,target,sort_order,is_active) VALUES(?,?,?,?,?,?,?,?)');
         try {
-            $s->execute([$location,$parentId?:null,'tr',$label,$url,$target,$sort,$active]);
+            $s->execute([$location,$parentId?:null,$itemLocale,$label,$url,$target,$sort,$active]);
         } catch (\PDOException $exception) {
             if ((string)$exception->getCode()==='23000') {
                 redirect('/admin/navigation?error=duplicate');
@@ -2616,7 +2622,7 @@ $router->post('/admin/navigation/reorder', static function (): void {
     Auth::requireRole(['super_admin','admin']);verify_csrf();header('Content-Type: application/json; charset=utf-8');
     $payload=json_decode((string)($_POST['tree']??''),true);
     if(!is_array($payload)){http_response_code(422);echo json_encode(['ok'=>false,'message'=>villa_ui('Sıralama verisi geçersiz.')]);return;}
-    $pdo=Database::connection();$all=$pdo->query('SELECT id,location,parent_id FROM navigation_items')->fetchAll(PDO::FETCH_ASSOC);$known=[];foreach($all as $row)$known[(int)$row['id']]=$row;
+    $pdo=Database::connection();$menuRows=$pdo->prepare('SELECT id,location,parent_id FROM navigation_items WHERE language_code=?');$menuRows->execute([Translator::locale()]);$all=$menuRows->fetchAll(PDO::FETCH_ASSOC);$known=[];foreach($all as $row)$known[(int)$row['id']]=$row;
     $seen=[];$updates=[];
     foreach(['header','footer'] as $location){
         $group=$payload[$location]??[];if(!is_array($group))continue;$order=0;
@@ -2706,7 +2712,7 @@ $router->get('/admin/pages/layout', static function (): void {
     Auth::requirePermission('admin.pages.edit');
     $pdo=Database::connection();
     $key=(string)($_GET['page']??'');
-    $locale=(string)($_GET['lang']??'tr');
+    $locale=(string)($_GET['lang']??Translator::locale());
     $selectedHome=villa_selected_homepage($pdo);
     if ($key==='home') {
         $language=$pdo->prepare('SELECT code FROM languages WHERE code=? AND is_active=1');
@@ -2776,7 +2782,7 @@ $router->get('/admin/pages/new', static function (): void {
     $pdo = Database::connection();
     $languages = $pdo->query('SELECT code,name,is_default FROM languages WHERE is_active=1 ORDER BY is_default DESC,name')->fetchAll(PDO::FETCH_ASSOC);
     $activeCodes = array_column($languages, 'code');
-    $locale = trim((string)($_GET['lang'] ?? 'tr'));
+    $locale = trim((string)($_GET['lang'] ?? Translator::locale()));
     if (!in_array($locale, $activeCodes, true)) $locale = (string)($activeCodes[0] ?? 'tr');
     $page = ['language_code' => $locale];
     $pageTemplates=$pdo->query('SELECT id,name,category FROM cms_page_templates ORDER BY category,name')->fetchAll(PDO::FETCH_ASSOC);

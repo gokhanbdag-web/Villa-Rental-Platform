@@ -4,7 +4,7 @@ declare(strict_types=1);
 $exploreContent = is_array($content ?? null) ? $content : [];
 $exploreText = static function (string $key, string $fallback = '') use ($exploreContent): string {
     $value = trim((string)($exploreContent[$key] ?? ''));
-    return $value !== '' ? $value : $fallback;
+    return $value !== '' ? $value : villa_ui($fallback);
 };
 $exploreImageUrl = static function (string $key, string $fallback = '') use ($exploreText): string {
     $value = $exploreText($key, $fallback);

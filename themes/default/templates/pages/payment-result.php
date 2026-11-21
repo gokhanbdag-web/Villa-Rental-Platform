@@ -27,7 +27,7 @@ if ($isPaidClosedReview) {
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title><?= e($title) ?> · <?= e($booking['booking_code']) ?></title>
+<title><?= e(villa_ui($title)) ?> · <?= e($booking['booking_code']) ?></title>
 <?php
 $paymentThemeSlug = \App\Core\ThemeManager::activeSlug();
 $paymentDefaultCss = \App\Core\ThemeManager::resolveFile('style.css', 'default');
@@ -62,8 +62,8 @@ $paymentActiveCss = $paymentThemeSlug !== 'default' ? \App\Core\ThemeManager::re
 <div class="payment-result-wrap">
 <section class="payment-result-card" aria-live="polite">
 <div class="payment-result-icon <?= $isSuccess ? 'success' : ($isFailed ? 'failed' : 'review') ?>"><?= $isSuccess ? '✓' : ($isFailed ? '!' : '…') ?></div>
-<h1><?= e($title) ?></h1>
-<p><?= e($description) ?></p>
+<h1><?= e(villa_ui($title)) ?></h1>
+<p><?= e(villa_ui($description)) ?></p>
 <div class="payment-result-code"><span><?= e(villa_ui('Rezervasyon kodunuz')) ?></span><strong><?= e($booking['booking_code']) ?></strong><div class="payment-result-meta"><?= e($booking['property_title']) ?> · <?= e(number_format((float)$booking['total'],2,',','.')) ?> <?= e($booking['currency']) ?></div></div>
 <nav class="payment-result-actions">
 <?php if($isFailed): ?><a class="primary" href="<?= e(app_url('/checkout/'.rawurlencode((string)$booking['booking_code']))) ?>"><?= e(villa_ui('Tekrar ödeme yap')) ?></a><?php endif; ?>

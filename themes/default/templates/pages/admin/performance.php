@@ -143,10 +143,10 @@ pre{white-space:pre-wrap;overflow-wrap:anywhere;max-height:240px;overflow:auto;b
       const data=await response.json();
       requests=parseRows(data.performance); sqlRows=parseRows(data.slow_sql);
       const counts=data.log_counts||{};
-      $('logStorageCount').textContent=(Number(counts.performance||0)+Number(counts.slow_sql||0)).toLocaleString('tr-TR')+' kayıt';
+      $('logStorageCount').textContent=(Number(counts.performance||0)+Number(counts.slow_sql||0)).toLocaleString(document.documentElement.lang || 'en')+' kayıt';
       $('diagnosticNote').textContent=data.note||'Performans kayıtları başarıyla yüklendi.';
       render();
-      $('updatedAt').textContent='Son güncelleme: '+new Date().toLocaleString('tr-TR');
+      $('updatedAt').textContent='Son güncelleme: '+new Date().toLocaleString(document.documentElement.lang || 'en');
     } catch(error) {
       $('diagnosticNote').textContent='Tanılama verileri alınamadı: '+error.message;
       $('requestTable').innerHTML='<div class="empty">Veriler yüklenemedi.</div>';
@@ -166,7 +166,7 @@ pre{white-space:pre-wrap;overflow-wrap:anywhere;max-height:240px;overflow:auto;b
       const result=await response.json();
       if(!response.ok||!result.success)throw new Error(result.error||'Temizleme işlemi başarısız oldu.');
       const removed=Object.values(result.results||{}).reduce((sum,item)=>sum+Number(item.removed||0),0);
-      $('cleanupResult').textContent=removed.toLocaleString('tr-TR')+' eski kayıt silindi. Kalan kayıtlar: '+Object.values(result.results||{}).reduce((sum,item)=>sum+Number(item.remaining||0),0).toLocaleString('tr-TR')+'.';
+      $('cleanupResult').textContent=removed.toLocaleString(document.documentElement.lang || 'en')+' eski kayıt silindi. Kalan kayıtlar: '+Object.values(result.results||{}).reduce((sum,item)=>sum+Number(item.remaining||0),0).toLocaleString(document.documentElement.lang || 'en')+'.';
       await load();
     }catch(error){$('cleanupResult').textContent='Temizleme hatası: '+error.message;}
     finally{button.disabled=false;button.textContent='Eski kayıtları temizle';}

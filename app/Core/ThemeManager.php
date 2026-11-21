@@ -1376,9 +1376,11 @@ final class ThemeManager
         }
 
         // Back-to-top remains available on desktop; mobile uses the fixed bottom navigation instead.
-        $backToTopMarkup = <<<'HTML'
+        $backToTopLabel = e(villa_ui('Sayfanın başına dön'));
+        $backToTopTitle = e(villa_ui('Yukarı çık'));
+        $backToTopMarkup = <<<HTML
 <style>@media(max-width:760px){.villa-back-to-top{display:none!important}}</style>
-<button type="button" class="villa-back-to-top" id="villaBackToTop" aria-label="Sayfanın başına dön" title="Yukarı çık">
+<button type="button" class="villa-back-to-top" id="villaBackToTop" aria-label="{$backToTopLabel}" title="{$backToTopTitle}">
     <span class="villa-back-to-top__orbit" aria-hidden="true"></span>
     <svg viewBox="0 0 24 24" width="25" height="25" fill="none" aria-hidden="true">
         <path d="M12 19V5M6.5 10.5 12 5l5.5 5.5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
