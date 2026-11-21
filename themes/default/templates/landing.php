@@ -150,7 +150,7 @@ $regionSubtitle=trim((string)($content['home_regions_subtitle']??''));
 $regionEyebrow=trim((string)($content['home_regions_eyebrow']??'KEŞFETMEYE BAŞLA'));
 if(empty($homeDesign['destinations']) && $medSectionActive('destinations') && ($regionTitle!==''||$regionSubtitle!==''||$regionEyebrow!=='')){
     $html=preg_replace_callback('~(<span class="pill villa-eyebrow">).*?(</span><h2>).*?(</h2><p>).*?(</p>)~s',static function(array $m)use($regionTitle,$regionSubtitle,$regionEyebrow):string{
-        return $m[1].e($regionEyebrow).$m[2].e($regionTitle!==''?$regionTitle:'Bölgeleri keşfedin').$m[3].e($regionSubtitle).$m[4];
+        return $m[1].e(villa_ui($regionEyebrow)).$m[2].e(villa_ui($regionTitle!==''?$regionTitle:'Bölgeleri keşfedin')).$m[3].e(villa_ui($regionSubtitle)).$m[4];
     },$html,1)??$html;
 }
 $html=preg_replace('~<section class="section" style="[^"]*"><div class="wrap"><div class="section-head"><div><span class="pill villa-eyebrow">TATİL TARZINI SEÇ</span>.*?</section>~s','',$html,1)??$html;
