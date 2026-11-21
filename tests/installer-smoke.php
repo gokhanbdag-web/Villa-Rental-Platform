@@ -796,7 +796,7 @@ try {
         && str_contains($deleteRouteSource, "DELETE FROM users WHERE id=? AND role='customer'")
         && !str_contains($deleteRouteSource, 'UPDATE bookings SET guest_user_id=NULL'),
         'Admin member deletion must be CSRF-protected, enforce role hierarchy and preserve vendor and booking history.');
-    assertSmoke(str_contains($adminUsersViewSource, 'action="/admin/users/delete"') && str_contains($adminUsersViewSource, 'Üyeyi sil') && str_contains($adminUsersViewSource, 'confirm('), 'Admin user list must expose a confirmed delete action for eligible members.');
+    assertSmoke(str_contains($adminUsersViewSource, 'action="/admin/users/delete"') && str_contains($adminUsersViewSource, 'Delete user') && str_contains($adminUsersViewSource, 'confirm('), 'Admin user list must expose a confirmed delete action for eligible members.');
     $adminShellSource = (string)file_get_contents($root . '/themes/default/layouts/admin-shell.php');
     assertSmoke(str_contains($themeRoutesSource, "/admin/header-settings/social-icons") && !str_contains($themeRoutesSource, 'PageBuilder') && !str_contains($themeRoutesSource, '/admin/builder') && !str_contains($adminShellSource, '/admin/builder'), 'Builder routes and navigation must be removed while shared top information settings remain available.');
     $themeDesignViewSource = (string)file_get_contents($root . '/themes/default/templates/pages/admin/theme-design.php');
