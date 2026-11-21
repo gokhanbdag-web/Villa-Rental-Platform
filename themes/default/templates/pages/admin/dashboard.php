@@ -19,7 +19,7 @@ $recentBookings = isset($recentBookings) && is_array($recentBookings) ? $recentB
 $mode = isset($mode) ? (string)$mode : 'single_vendor';
 $user = \App\Core\Auth::user();
 $adminUrl = static fn(string $path): string => app_url($path);
-$statusLabels = ['pending'=>villa_ui('Bekliyor'),'confirmed'=>villa_ui('Onaylandı'),'cancelled'=>villa_ui('İptal edildi'),'completed'=>villa_ui('Tamamlandı'),'rejected'=>'Reddedildi'];
+$statusLabels = ['pending'=>villa_ui('Bekliyor'),'confirmed'=>villa_ui('Onaylandı'),'cancelled'=>villa_ui('İptal edildi'),'completed'=>villa_ui('Tamamlandı'),'rejected'=>villa_ui('Reddedildi')];
 ?>
 <!doctype html>
 <html lang="<?= e(\App\Core\Translator::locale()) ?>"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title><?= e(\App\Core\Translator::get('admin.dashboard')) ?></title>
@@ -42,7 +42,7 @@ a{color:#176b50;text-decoration:none;transition:color .18s ease,background-color
 <?php if (($mode ?? 'single_vendor') === 'multi_vendor'): ?><a href="<?= e($adminUrl('/admin/vendors')) ?>">♧ Ev sahipleri</a><?php endif; ?>
 <div class="nav-label" style="margin-top:12px"><?= e(villa_ui('WEB SİTESİ')) ?></div><a href="<?= e($adminUrl('/admin/categories')) ?>">▤ Kategoriler</a><a href="<?= e($adminUrl('/admin/amenities')) ?>"><?= e(villa_ui('✧ Villa özellikleri')) ?></a><a href="<?= e($adminUrl('/admin/locations')) ?>">⌖ Lokasyonlar</a><a href="<?= e($adminUrl('/admin/homepage')) ?>"><?= e(villa_ui('▧ Ana sayfa bölümleri')) ?></a><a href="<?= e($adminUrl('/admin/content')) ?>"><?= e(villa_ui('✎ Web sitesi içerikleri')) ?></a><a href="<?= e($adminUrl('/admin/navigation')) ?>"><?= e(villa_ui('☷ Menü yönetimi')) ?></a><a href="<?= e($adminUrl('/admin/pages')) ?>"><?= e(villa_ui('▧ İçerik sayfaları')) ?></a>
 <div class="nav-label" style="margin-top:12px"><?= e(villa_ui('SİSTEM')) ?></div><a href="<?= e($adminUrl('/admin/settings')) ?>"><?= e(villa_ui('⚙ Platform ayarları')) ?></a><a href="<?= e($adminUrl('/admin/translations')) ?>"><?= e(villa_ui('文 Çeviriler')) ?></a></aside>
-<main><div class="page-heading"><div><div class="eyebrow"><?= e(villa_ui('YÖNETİM MERKEZİ')) ?></div><h1><?= e(\App\Core\Translator::get('admin.overview')) ?></h1><p><?= e(villa_ui('Rezervasyonları, konaklamaları ve platform hareketlerini tek ekrandan takip edin.')) ?></p></div><a class="quick-add" href="<?= e($adminUrl('/admin/properties/new')) ?>">＋ Yeni konaklama</a></div>
+<main><div class="page-heading"><div><div class="eyebrow"><?= e(villa_ui('YÖNETİM MERKEZİ')) ?></div><h1><?= e(\App\Core\Translator::get('admin.overview')) ?></h1><p><?= e(villa_ui('Rezervasyonları, konaklamaları ve platform hareketlerini tek ekrandan takip edin.')) ?></p></div><a class="quick-add" href="<?= e($adminUrl('/admin/properties/new')) ?>"><?= e(villa_ui('＋ Yeni konaklama')) ?></a></div>
 <section class="cards">
 <div class="metric"><div class="metric-head"><span><?= e(villa_ui('Toplam konaklama')) ?></span><span class="metric-icon">⌂</span></div><strong><?= number_format($metrics['properties']) ?></strong><div class="metric-foot"><?= number_format($metrics['published_properties']) ?> <?= e(villa_ui('yayında')) ?></div></div>
 <div class="metric"><div class="metric-head"><span><?= e(villa_ui('Toplam rezervasyon')) ?></span><span class="metric-icon">▣</span></div><strong><?= number_format($metrics['bookings']) ?></strong><div class="metric-foot"><?= number_format($metrics['confirmed']) ?> <?= e(villa_ui('onaylandı')) ?></div></div>
