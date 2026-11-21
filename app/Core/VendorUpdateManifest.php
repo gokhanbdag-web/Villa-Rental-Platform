@@ -13,7 +13,7 @@ final class VendorUpdateManifest
         $url = self::URL;
         $parts = parse_url($url);
         if (!is_array($parts) || ($parts['scheme'] ?? '') !== 'https' || ($parts['host'] ?? '') !== 'kodvadisi.com.tr') {
-            $result['error'] = 'Güncelleme kaynağı geçersiz.';
+            $result['error'] = 'Invalid update source.';
             return $result;
         }
         $body = false;
@@ -34,13 +34,13 @@ final class VendorUpdateManifest
             $body = @file_get_contents($url, false, $context, 0, 65537);
         }
         if (!is_string($body) || strlen($body) > 65536) {
-            $result['error'] = 'Güncelleme sunucusuna ulaşılamıyor.';
+            $result['error'] = 'Cannot reach the update server.';
             return $result;
         }
         $data = json_decode($body, true);
         if (!is_array($data) || !isset($data['version']) || !is_string($data['version'])
             || !preg_match('/^\d+\.\d+\.\d+$/D', $data['version'])) {
-            $result['error'] = 'Güncelleme bildirimi geçersiz.';
+            $result['error'] = 'Invalid update manifest.';
             return $result;
         }
         $result['connected'] = true;
