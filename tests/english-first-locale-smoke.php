@@ -15,7 +15,13 @@ try {
     if (villa_ui($legacy) !== $english || villa_ui($english) !== $english) {
         throw new RuntimeException('English locale did not normalize legacy UI labels.');
     }
+    foreach (['Your dream holiday awaits' => 'Hayalinizdeki tatil sizi bekliyor', 'MAKE YOUR HOLIDAY SPECIAL' => 'TATİLİNİZİ GÜZELLEŞTİRİN', 'Sea, nature and peace… Discover your ideal holiday home.' => 'Deniz, doğa ve huzur… Size en uygun tatil evini keşfedin.'] as $source => $expectedTurkish) {
+        if (villa_ui($source) !== $source) throw new RuntimeException('Homepage source is not English-first: ' . $source);
+    }
     $locale->setValue(null, 'tr');
+    foreach (['Your dream holiday awaits' => 'Hayalinizdeki tatil sizi bekliyor', 'MAKE YOUR HOLIDAY SPECIAL' => 'TATİLİNİZİ GÜZELLEŞTİRİN', 'Sea, nature and peace… Discover your ideal holiday home.' => 'Deniz, doğa ve huzur… Size en uygun tatil evini keşfedin.'] as $source => $expectedTurkish) {
+        if (villa_ui($source) !== $expectedTurkish) throw new RuntimeException('Homepage Turkish fallback missing: ' . $source);
+    }
     if (villa_ui($legacy) !== $legacy || villa_ui($english) !== $legacy) {
         throw new RuntimeException('Turkish locale did not resolve English-first UI labels.');
     }
