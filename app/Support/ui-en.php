@@ -1834,4 +1834,9 @@ return [
     "Konaklamaları keşfet" => "Explore properties",
     "Size uygun tatil villalarını, özel havuzlu evleri ve benzersiz konaklamaları keşfedin." => "Discover holiday villas, private-pool homes and unique stays.",
     "Konaklamaları göster" => "Show properties",
+    "Minimum fiyat" => "Minimum price",
+    "Maksimum fiyat" => "Maximum price",
+    "Favorilere ekle" => "Add to favorites",
+    "gece" => "night",
+    " sonuç arasından size uygun olanı seçin." => "results — find your ideal stay.",
 ];
