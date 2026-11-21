@@ -442,7 +442,7 @@ $router->post('/admin/locations/import', static function (): void {
             }
             $pdo->commit();
             $counts['inserted']+=$rowInserted;$counts['existing']+=$rowExisting;
-        }catch(Throwable $e){if($pdo->inTransaction())$pdo->rollBack();$counts['errors']++;if(count($errorRows)<100)$errorRows[]=['line'=>$line,'message'=>$e->getMessage()];}
+        }catch(Throwable $e){if($pdo->inTransaction())$pdo->rollBack();$counts['errors']++;if(count($errorRows)<100)$errorRows[]=['line'=>$line,'message'=>villa_ui($e->getMessage())];}
     }
     fclose($handle);
     $locations=$pdo->query("SELECT l.*,p.name AS parent_name FROM locations l LEFT JOIN locations p ON p.id=l.parent_id ORDER BY FIELD(l.location_type,'country','city','district','neighborhood'),p.name,l.sort_order,l.name")->fetchAll();
@@ -971,9 +971,9 @@ $router->post('/villa/{slug}/reserve', static function (array $params): void {
         $seasonStmt=$pdo->prepare('SELECT name,date_from,date_to,nightly_price,min_nights,checkin_weekdays,checkout_weekdays FROM property_seasonal_prices WHERE property_id=? AND date_from < ? AND date_to > ? ORDER BY date_from');
         $seasonStmt->execute([(int)$property['id'],$outRaw,$inRaw]);$seasons=$seasonStmt->fetchAll(PDO::FETCH_ASSOC);
         if($conflict->fetchColumn()||$unavailable){$pdo->rollBack();http_response_code(409);exit(villa_ui('Seçtiğiniz tarihler artık müsait değil. Lütfen yeni tarih seçin.'));}
-        try{\App\Core\BookingStayRules::validate($checkIn,$checkOut,$seasons);}catch(InvalidArgumentException $e){$pdo->rollBack();http_response_code(422);exit($e->getMessage());}
+        try{\App\Core\BookingStayRules::validate($checkIn,$checkOut,$seasons);}catch(InvalidArgumentException $e){$pdo->rollBack();http_response_code(422);exit(e(villa_ui($e->getMessage())));}
         $subtotal=\App\Core\BookingRateCalculator::staySubtotal($current,$checkIn,$checkOut,$seasons,$rules);
-        try{$extras=\App\Core\BookingExtras::calculate($current,$earlyRequested,$lateRequested);}catch(InvalidArgumentException $e){$pdo->rollBack();http_response_code(422);exit($e->getMessage());}
+        try{$extras=\App\Core\BookingExtras::calculate($current,$earlyRequested,$lateRequested);}catch(InvalidArgumentException $e){$pdo->rollBack();http_response_code(422);exit(e(villa_ui($e->getMessage())));}
         if($createNewAccount){
             $create=$pdo->prepare("INSERT INTO users(username,email,password_hash,role,status,created_at) VALUES(?,?,?,'customer','active',NOW())");
             $create->execute([$newUsername,$email,password_hash($password,PASSWORD_DEFAULT)]);$userId=(int)$pdo->lastInsertId();
@@ -1670,7 +1670,7 @@ $router->post('/account/bookings/cancel-request', static function (): void {
         $insert->execute([$bookingId,(int)$user['id'],$reason,$estimate['days_before_checkin'],(int)($policy['booking.cancellation.free_days']??7),$estimate['refund_percent'],$estimate['refund_amount'],(string)$booking['currency']]);
         $pdo->commit();redirect('/account/bookings');
     }catch(PDOException $e){if($pdo->inTransaction())$pdo->rollBack();if((string)$e->getCode()==='23000'){http_response_code(409);exit(villa_ui('Bu rezervasyon için zaten bekleyen bir iptal talebi var.'));}error_log('Cancellation request failed: '.$e->getMessage());http_response_code(500);exit(villa_ui('İptal talebi kaydedilemedi.'));}
-    catch(Throwable $e){if($pdo->inTransaction())$pdo->rollBack();http_response_code(422);exit($e->getMessage());}
+    catch(Throwable $e){if($pdo->inTransaction())$pdo->rollBack();http_response_code(422);exit(e(villa_ui($e->getMessage())));}
 });
 
 
@@ -1724,7 +1724,7 @@ $router->get('/account/email/verify', static function (): void {
         $_SESSION['villa_profile_notice']='E-posta adresiniz başarıyla doğrulandı ve güncellendi.';
         if(!isset($_SESSION['user'])||(int)($_SESSION['user']['id']??0)!==(int)$record['user_id'])redirect('/login');
         redirect('/account/profile');
-    }catch(Throwable $e){if($pdo->inTransaction())$pdo->rollBack();http_response_code(400);exit(e($e->getMessage()));}
+    }catch(Throwable $e){if($pdo->inTransaction())$pdo->rollBack();http_response_code(400);exit(e(villa_ui($e->getMessage())));}
 });
 $router->post('/account/password', static function (): void {
     $user=Auth::user();if(!$user)redirect('/login');verify_csrf();
@@ -2086,7 +2086,7 @@ $router->post('/vendor/bookings/status', static function (): void {
             if($blocked->fetchColumn()){$pdo->rollBack();http_response_code(409);exit(villa_ui('Bu rezervasyon tarihleri takvimde kapatılmış.'));}
             $seasonStmt=$pdo->prepare('SELECT date_from,date_to,min_nights,checkin_weekdays,checkout_weekdays FROM property_seasonal_prices WHERE property_id=? AND date_from < ? AND date_to > ? ORDER BY date_from');
             $seasonStmt->execute([$propertyId,$booking['check_out'],$booking['check_in']]);$staySeasons=$seasonStmt->fetchAll(PDO::FETCH_ASSOC);
-            try{\App\Core\BookingStayRules::validate(new DateTimeImmutable($booking['check_in']),new DateTimeImmutable($booking['check_out']),$staySeasons);}catch(InvalidArgumentException $e){$pdo->rollBack();http_response_code(409);exit($e->getMessage());}
+            try{\App\Core\BookingStayRules::validate(new DateTimeImmutable($booking['check_in']),new DateTimeImmutable($booking['check_out']),$staySeasons);}catch(InvalidArgumentException $e){$pdo->rollBack();http_response_code(409);exit(e(villa_ui($e->getMessage())));}
         }
         $u=$pdo->prepare('UPDATE bookings SET status=? WHERE id=? AND status=?');
         $u->execute([$status,$id,(string)$booking['status']]);
@@ -4056,9 +4056,9 @@ $router->post('/admin/bookings/manual', static function (): void {
         foreach($rules as $rule){if($rule['status']!=='available'){$pdo->rollBack();http_response_code(409);exit(villa_ui('Seçilen tarihlerden biri takvimde kapalı.'));}}
         $seasonStmt=$pdo->prepare('SELECT name,date_from,date_to,nightly_price,min_nights,checkin_weekdays,checkout_weekdays FROM property_seasonal_prices WHERE property_id=? AND date_from < ? AND date_to > ? ORDER BY date_from');
         $seasonStmt->execute([$propertyId,$outRaw,$inRaw]);$seasons=$seasonStmt->fetchAll(PDO::FETCH_ASSOC);
-        try{\App\Core\BookingStayRules::validate($checkIn,$checkOut,$seasons);}catch(InvalidArgumentException $e){$pdo->rollBack();http_response_code(422);exit($e->getMessage());}
+        try{\App\Core\BookingStayRules::validate($checkIn,$checkOut,$seasons);}catch(InvalidArgumentException $e){$pdo->rollBack();http_response_code(422);exit(e(villa_ui($e->getMessage())));}
         $subtotal=\App\Core\BookingRateCalculator::staySubtotal($property,$checkIn,$checkOut,$seasons,$rules);
-        try{$extras=\App\Core\BookingExtras::calculate($property,$earlyRequested,$lateRequested);}catch(InvalidArgumentException $e){$pdo->rollBack();http_response_code(422);exit($e->getMessage());}
+        try{$extras=\App\Core\BookingExtras::calculate($property,$earlyRequested,$lateRequested);}catch(InvalidArgumentException $e){$pdo->rollBack();http_response_code(422);exit(e(villa_ui($e->getMessage())));}
         $fees=round((float)$property['cleaning_fee']+(float)$extras['fees'],2);$calculated=round($subtotal+$fees,2);
         $entered=$totalInput;$total=$entered===''?$calculated:(float)$entered;
         if($total<0||!is_finite($total)){$pdo->rollBack();http_response_code(422);exit(villa_ui('Toplam tutar geçersiz.'));}
@@ -4118,7 +4118,7 @@ $router->post('/admin/bookings/status', static function (): void {
             if($blocked->fetchColumn()){$pdo->rollBack();http_response_code(409);exit(villa_ui('Bu rezervasyon tarihleri takvimde kapatılmış.'));}
             $seasonStmt=$pdo->prepare('SELECT date_from,date_to,min_nights,checkin_weekdays,checkout_weekdays FROM property_seasonal_prices WHERE property_id=? AND date_from < ? AND date_to > ? ORDER BY date_from');
             $seasonStmt->execute([$propertyId,$booking['check_out'],$booking['check_in']]);$staySeasons=$seasonStmt->fetchAll(PDO::FETCH_ASSOC);
-            try{\App\Core\BookingStayRules::validate(new DateTimeImmutable($booking['check_in']),new DateTimeImmutable($booking['check_out']),$staySeasons);}catch(InvalidArgumentException $e){$pdo->rollBack();http_response_code(409);exit($e->getMessage());}
+            try{\App\Core\BookingStayRules::validate(new DateTimeImmutable($booking['check_in']),new DateTimeImmutable($booking['check_out']),$staySeasons);}catch(InvalidArgumentException $e){$pdo->rollBack();http_response_code(409);exit(e(villa_ui($e->getMessage())));}
         }
 
         $update=$pdo->prepare('UPDATE bookings SET status=? WHERE id=?');$update->execute([$status,$id]);
@@ -4177,7 +4177,7 @@ $router->post('/admin/cancellations/review', static function (): void {
         $audit=$pdo->prepare('INSERT INTO audit_logs(user_id,action,entity_type,entity_id,ip_address,details,created_at) VALUES(?,?,?,?,?,?,NOW())');
         $audit->execute([(int)Auth::user()['id'],'booking.cancellation_'.$decision,'booking',$bookingId,$_SERVER['REMOTE_ADDR']??null,json_encode(['request_id'=>$requestId,'refund_amount'=>$request['refund_amount'],'refund_percent'=>$request['refund_percent_snapshot'],'note'=>$note],JSON_UNESCAPED_UNICODE)]);
         $pdo->commit();if($decision==='approved'){try{\App\Core\SmsService::enqueueBookingStatus($pdo,$booking,'cancelled');}catch(Throwable $smsError){error_log('Cancellation SMS enqueue failed: '.$smsError->getMessage());}}redirect('/admin/cancellations');
-    }catch(Throwable $e){if($pdo->inTransaction())$pdo->rollBack();http_response_code(409);exit($e->getMessage());}
+    }catch(Throwable $e){if($pdo->inTransaction())$pdo->rollBack();http_response_code(409);exit(e(villa_ui($e->getMessage())));}
 });
 
 $router->get('/admin/payments/manual', static function (): void {
@@ -4233,7 +4233,7 @@ $router->post('/admin/payments/manual/refunds/create', static function (): void 
     try{
         \App\Core\ManualBankRefundService::request(Database::connection(),(int)$actor['id'],$paymentId,$amount,$reason);
     }catch(\InvalidArgumentException|\RuntimeException $e){
-        http_response_code(409);exit(e($e->getMessage()));
+        http_response_code(409);exit(e(villa_ui($e->getMessage())));
     }
     redirect('/admin/payments/manual');
 });

@@ -18,7 +18,7 @@ $navHtml = '<nav class="nav" id="siteNavigation">' . (string)ob_get_clean() . '<
 
 $themeSiteName = (string)($content['site_name'] ?? $siteName ?? 'VillaStay');
 $brand = '<a class="theme-brand ' . e($accountBrandClass) . '" href="' . e(app_url('/')) . '"><span class="theme-brand-name">' . e($themeSiteName) . '</span></a>';
-$toggle = '<button class="mobile-menu-toggle theme-menu-toggle" id="menuToggle" type="button" aria-label="<?= e(villa_ui('Menüyü aç')) ?>" aria-controls="siteNavigation" aria-expanded="false"><span class="menu-open-mark">☰</span><span class="menu-close-mark">×</span></button>';
+$toggle = '<button class="mobile-menu-toggle theme-menu-toggle" id="menuToggle" type="button" aria-label="' . e(villa_ui('Menüyü aç')) . '" aria-controls="siteNavigation" aria-expanded="false"><span class="menu-open-mark">☰</span><span class="menu-close-mark">×</span></button>';
 $header = '<header class="theme-header ' . e($accountHeaderClass) . '"><div class="theme-header-inner">' . $brand . $toggle . $navHtml . '</div></header><div class="drawer-overlay" id="menuOverlay"></div>';
 $html = preg_replace_callback('~<body\\b[^>]*>~i', static fn(array $match): string => $match[0] . $header, $html, 1) ?? $html;
 $accountPath = (string)(parse_url((string)($_SERVER['REQUEST_URI'] ?? ''), PHP_URL_PATH) ?: '');
@@ -28,7 +28,7 @@ $accountLinks = [
     ['/account/notifications','Bildirimler'],
     ['/account/reviews','Yorumlarım'],
 ];
-$accountNav = '<nav class="villa-account-nav" aria-label="<?= e(villa_ui('Hesap menüsü')) ?>">';
+$accountNav = '<nav class="villa-account-nav" aria-label="' . e(villa_ui('Hesap menüsü')) . '">';
 foreach ($accountLinks as [$path,$label]) {
     $linkPath = (string)(parse_url(app_url($path), PHP_URL_PATH) ?: $path);
     $active = $accountPath === $linkPath || str_starts_with($accountPath, rtrim($linkPath, '/') . '/');
